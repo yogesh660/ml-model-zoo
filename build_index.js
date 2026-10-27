@@ -8,12 +8,159 @@ const regressionCount = models.filter(m => m.cat === 'regression').length;
 const classificationCount = models.filter(m => m.cat === 'classification').length;
 const clusteringCount = models.filter(m => m.cat === 'clustering').length;
 
+// Concept definitions for the Learn section
+const concepts = [
+  {
+    id: 'confusion-matrix',
+    title: 'Confusion Matrix & Diagnostic Error Analysis',
+    catGroup: 'diagnostics',
+    catLabel: 'Diagnostics',
+    category: 'Evaluation & Diagnostics',
+    readingTime: '6 min read',
+    modelsCount: '16',
+    searchName: 'confusion matrix true positive false positive type i type ii errors accuracy paradox precision recall f1 classification',
+    lead: 'The foundational diagnostic grid for classification, isolating Type I (false alarm) and Type II (miss) errors and exposing the accuracy paradox on imbalanced datasets.'
+  },
+  {
+    id: 'loss-functions',
+    title: 'Loss Functions & Optimization Landscapes',
+    catGroup: 'optimization',
+    catLabel: 'Optimization',
+    category: 'Optimization & Loss Theory',
+    readingTime: '8 min read',
+    modelsCount: '47',
+    searchName: 'loss function mse mae huber cross entropy log loss hinge loss optimization convex gradient',
+    lead: 'Mathematical formulations and gradients for MSE, MAE, Huber, Binary Cross-Entropy (Log Loss), and Hinge Loss across continuous and discrete models.'
+  },
+  {
+    id: 'cost-vs-loss-vs-error',
+    title: 'Loss Function vs. Cost Function vs. Error Function',
+    catGroup: 'theory',
+    catLabel: 'Foundations',
+    category: 'Optimization & Loss Theory',
+    readingTime: '5 min read',
+    modelsCount: '47',
+    searchName: 'cost function loss function error function metric difference definition objective',
+    lead: 'Demystifying the formal mathematical taxonomy: instance-level loss L, aggregate cost J(theta), and non-differentiable evaluation error metrics.'
+  },
+  {
+    id: 'feature-selection',
+    title: 'Feature Selection & VIF Collinearity Techniques',
+    catGroup: 'preprocessing',
+    catLabel: 'Preprocessing',
+    category: 'Feature Engineering & Selection',
+    readingTime: '9 min read',
+    modelsCount: '47',
+    searchName: 'feature selection variance inflation factor vif multicollinearity filter wrapper embedded rfe lasso mutual information',
+    lead: 'Comprehensive taxonomy comparing Filter (Correlation/Mutual Info), Wrapper (RFE), and Embedded (Lasso) techniques, plus diagnosing multicollinearity via VIF.'
+  },
+  {
+    id: 'precision-recall-f1',
+    title: 'Precision, Recall, Specificity & F1-Score',
+    catGroup: 'diagnostics',
+    catLabel: 'Diagnostics',
+    category: 'Evaluation & Diagnostics',
+    readingTime: '7 min read',
+    modelsCount: '16',
+    searchName: 'precision recall specificity f1 score harmonic mean threshold tuning false positive false negative',
+    lead: 'The fundamental tradeoff dynamics between positive predictive value, sensitivity, and their harmonic balance across classification threshold sweeps.'
+  },
+  {
+    id: 'roc-auc',
+    title: 'ROC Curve & Area Under the Curve (AUC)',
+    catGroup: 'diagnostics',
+    catLabel: 'Diagnostics',
+    category: 'Evaluation & Diagnostics',
+    readingTime: '6 min read',
+    modelsCount: '16',
+    searchName: 'roc auc receiver operating characteristic curve area under curve true positive rate false positive rate discrimination threshold',
+    lead: 'Threshold-invariant evaluation of binary classifiers, quantifying rank-order discrimination capacity and probabilistic separation capacity.'
+  },
+  {
+    id: 'regression-metrics',
+    title: 'Regression Evaluation Metrics & Residual Diagnostics',
+    catGroup: 'diagnostics',
+    catLabel: 'Diagnostics',
+    category: 'Evaluation & Diagnostics',
+    readingTime: '8 min read',
+    modelsCount: '17',
+    searchName: 'regression metrics rmse mse mae r2 adjusted r2 residual analysis homoscedasticity normality gauss markov',
+    lead: 'Comprehensive evaluation for continuous prediction: MSE, RMSE, MAE, R², Adjusted R², and verifying Gauss-Markov residual assumptions.'
+  },
+  {
+    id: 'clustering-metrics',
+    title: 'Clustering Evaluation Metrics & Cluster Validation',
+    catGroup: 'diagnostics',
+    catLabel: 'Diagnostics',
+    category: 'Evaluation & Diagnostics',
+    readingTime: '7 min read',
+    modelsCount: '14',
+    searchName: 'clustering metrics silhouette analysis elbow method inertia davies bouldin wcss unsupervised validation',
+    lead: 'Internal and external cluster validation diagnostics: Silhouette Analysis s(i), Davies-Bouldin Index, Inertia, and the Elbow criterion.'
+  },
+  {
+    id: 'bias-variance-tradeoff',
+    title: 'The Bias-Variance Decomposition & Generalization',
+    catGroup: 'theory',
+    catLabel: 'Foundations',
+    category: 'Foundational ML Theory',
+    readingTime: '8 min read',
+    modelsCount: '47',
+    searchName: 'bias variance tradeoff underfitting overfitting irreducible error generalization model complexity',
+    lead: 'The fundamental theoretical constraint governing predictive modeling: decomposing expected test error into underfitting, variance, and noise.'
+  },
+  {
+    id: 'regularization',
+    title: 'Regularization Techniques: L1, L2 & Elastic Net',
+    catGroup: 'theory',
+    catLabel: 'Foundations',
+    category: 'Foundational ML Theory',
+    readingTime: '8 min read',
+    modelsCount: '47',
+    searchName: 'regularization l1 lasso l2 ridge elastic net shrinkage weight decay sparsity tikhonov prior',
+    lead: 'Constrained parameter shrinkage dynamics: geometry of L1 diamond sparsity versus L2 spherical weight decay and Bayesian prior interpretations.'
+  },
+  {
+    id: 'cross-validation',
+    title: 'Cross-Validation & Resampling Strategies',
+    catGroup: 'theory',
+    catLabel: 'Foundations',
+    category: 'Foundational ML Theory',
+    readingTime: '6 min read',
+    modelsCount: '47',
+    searchName: 'cross validation k fold stratified k fold time series split data leakage resampling out of fold',
+    lead: 'Data hygiene, out-of-fold estimation, stratified resampling, time-series windows, and leak-free model evaluation strategies.'
+  },
+  {
+    id: 'exploratory-data-analysis',
+    title: 'Exploratory Data Analysis (EDA) Fundamentals',
+    catGroup: 'preprocessing',
+    catLabel: 'Preprocessing',
+    category: 'Feature Engineering & Preprocessing',
+    readingTime: '8 min read',
+    modelsCount: '47',
+    searchName: 'exploratory data analysis eda distributions skewness correlation outliers missing values imputation box cox',
+    lead: 'The systematic pipeline for inspecting distributions, identifying outliers, validating collinearity, and assessing skewness before model training.'
+  },
+  {
+    id: 'gradient-descent',
+    title: 'Gradient Descent & Numerical Optimization',
+    catGroup: 'optimization',
+    catLabel: 'Optimization',
+    category: 'Optimization & Loss Theory',
+    readingTime: '7 min read',
+    modelsCount: '47',
+    searchName: 'gradient descent optimization batch sgd mini batch learning rate momentum rmsprop adam numerical solvers',
+    lead: 'Iterative first-order optimization algorithms: Batch Gradient Descent, Stochastic (SGD), Mini-batch, Momentum, RMSprop, and Adam.'
+  }
+];
+
 const cardsHtml = models.map(m => {
   const metricChips = m.metrics.map(met => `<span><b>${met.label}</b> ${met.val}</span>`).join(' ');
   return `      <a href="${m.href}" class="model-card spot reveal" data-cat="${m.cat}" data-name="${m.searchName.toLowerCase()}">
         <div class="card-top">
           <span class="cat-badge ${m.cat}">${m.cat}</span>
-          <span class="dataset-pill">Multi-Dataset Benchmark</span>
+          <span class="dataset-pill">Modular Benchmarks</span>
         </div>
         <div class="card-subfamily">${m.subfamily}</div>
         <h3>${m.title}</h3>
@@ -27,16 +174,34 @@ const cardsHtml = models.map(m => {
       </a>`;
 }).join('\n');
 
+const conceptCardsHtml = concepts.map(c => {
+  return `      <a href="concepts/${c.id}/index.html" class="concept-card spot reveal" data-concept-cat="${c.catGroup}" data-name="${c.searchName.toLowerCase()}">
+        <div class="card-top">
+          <span class="cat-badge concept">${c.catLabel}</span>
+          <span class="dataset-pill">${c.readingTime}</span>
+        </div>
+        <div class="card-subfamily">${c.category}</div>
+        <h3>${c.title}</h3>
+        <p>${c.lead}</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> ${c.modelsCount} Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>`;
+}).join('\n');
+
 const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070709">
-  <title>Machine Learning Model Zoo & Concepts Hub · Yogesh Awate</title>
-  <meta name="description" content="A one-stop educational laboratory and architectural benchmark suite featuring 47 distinct machine learning algorithms, modular multi-dataset EDA, feature selection comparisons, and 13 core ML theory deep dives.">
-  <meta property="og:title" content="Machine Learning Model Zoo & Concepts Hub · Yogesh Awate">
-  <meta property="og:description" content="Mathematical derivations, modular multi-dataset benchmarks, and interconnected ML concepts.">
+  <title>Machine Learning Model Zoo & Learn Hub · Yogesh Awate</title>
+  <meta name="description" content="The one-stop educational laboratory: Learn 47 machine learning architectures and 13 core theory & diagnostic concepts with interactive modular datasets, derivations, and EDA.">
+  <meta property="og:title" content="Machine Learning Model Zoo & Learn Hub · Yogesh Awate">
+  <meta property="og:description" content="Learn 47 ML models and 13 foundational concepts with modular datasets and derivations.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,7 +210,7 @@ const htmlContent = `<!DOCTYPE html>
   <script>document.documentElement.classList.add('js')</script>
 </head>
 <body class="page-zoo">
-  <a class="skip" href="#catalog">Skip to catalog</a>
+  <a class="skip" href="#learn">Skip to Learn</a>
 
   <!-- Fixed Navigation matching yogesh660.github.io -->
   <nav id="nav">
@@ -58,8 +223,7 @@ const htmlContent = `<!DOCTYPE html>
       <a href="https://yogesh660.github.io/work/">Work</a>
       <a href="https://yogesh660.github.io/projects/">Projects</a>
       <a href="https://yogesh660.github.io/about/">About</a>
-      <a href="#catalog" class="active" aria-current="page">Catalog</a>
-      <a href="concepts/index.html">Concepts Hub (13)</a>
+      <a href="#learn" class="active" aria-current="page">Learn</a>
       <a href="#contact">Contact</a>
       <a class="pill" href="https://github.com/yogesh660" target="_blank" rel="noopener">GitHub <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </div>
@@ -74,24 +238,24 @@ const htmlContent = `<!DOCTYPE html>
     <div class="hero-name" aria-hidden="true">MODEL<br>ZOO</div>
 
     <div class="hero-card hero-intro">
-      <p class="availability rise" style="--d:1"><i></i>47 Architectures · Modular Multi-Dataset · 13 Concept Guides</p>
+      <p class="availability rise" style="--d:1"><i></i>60 Learning Units · 47 ML Models · 13 Core Concepts</p>
       <p class="kicker rise" style="--d:2">The One-Stop Machine Learning Laboratory</p>
       <h1><span class="line"><span class="rise" style="--d:3">Machine Learning</span></span><span class="line"><span class="rise dim" style="--d:4">Model Zoo.</span></span></h1>
       <p class="focus rise" style="--d:5">A pedagogical reference suite featuring step-by-step mathematical derivations, exploratory data analysis (EDA), feature selection comparisons with explicit technical justifications, interactive multi-dataset benchmarking, and hyperlinked concept deep dives.</p>
       <div class="actions rise" style="--d:6">
-        <a class="button light" href="#catalog">Explore 47 Models <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="button ghost" href="concepts/index.html">Concepts Hub (13) &rarr;</a>
+        <a class="button light" href="#learn">Explore &amp; Learn (60 Units) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+        <a class="button ghost" href="https://github.com/yogesh660" target="_blank" rel="noopener">View GitHub Repo</a>
       </div>
     </div>
 
     <aside class="hero-card hero-side rise" style="--d:7">
-      <small>Architectural Scope</small>
-      <p>Every model built with modular multi-dataset benchmarks, EDA, feature selection trade-offs, and theory links.</p>
+      <small>Curriculum Scope</small>
+      <p>Explore 47 end-to-end models and 13 foundational concepts with modular datasets, derivations, and diagnostic plots.</p>
       
       <div class="hero-stats-grid">
         <div class="stat-box">
           <strong data-count="47" data-suffix="">47</strong>
-          <span>Total Models</span>
+          <span>ML Models</span>
         </div>
         <div class="stat-box">
           <strong data-count="13" data-suffix="">13</strong>
@@ -103,13 +267,13 @@ const htmlContent = `<!DOCTYPE html>
         </div>
         <div class="stat-box">
           <strong data-count="${classificationCount + clusteringCount}" data-suffix="">${classificationCount + clusteringCount}</strong>
-          <span>Classif & Cluster</span>
+          <span>Classif &amp; Cluster</span>
         </div>
       </div>
 
-      <a class="side-cta" href="concepts/index.html">
+      <a class="side-cta" href="#learn">
         <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10M6 14h6"/></svg>
-        <span>Browse 13 Concept Guides</span>
+        <span>Start Learning (Models &amp; Concepts)</span>
         <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
       </a>
 
@@ -127,32 +291,32 @@ const htmlContent = `<!DOCTYPE html>
     <div class="track">
       <span>Ordinary Least Squares</span><i></i>
       <span>Confusion Matrix</span><i></i>
-      <span>Ridge & Lasso</span><i></i>
-      <span>VIF & Multicollinearity</span><i></i>
-      <span>XGBoost & LightGBM</span><i></i>
+      <span>Ridge &amp; Lasso</span><i></i>
+      <span>VIF &amp; Multicollinearity</span><i></i>
+      <span>XGBoost &amp; LightGBM</span><i></i>
       <span>ROC-AUC Curves</span><i></i>
       <span>Support Vector Machines</span><i></i>
       <span>Bias-Variance Tradeoff</span><i></i>
       <span>Random Forest</span><i></i>
       <span>Loss vs Cost vs Error</span><i></i>
       <span>Gaussian Mixture Models</span><i></i>
-      <span>Precision & Recall</span><i></i>
-      <span>K-Means & DBSCAN</span><i></i>
+      <span>Precision &amp; Recall</span><i></i>
+      <span>K-Means &amp; DBSCAN</span><i></i>
       <span>Exploratory Data Analysis</span><i></i>
       <span>Stratified Cross-Validation</span><i></i>
       <span>Ordinary Least Squares</span><i></i>
       <span>Confusion Matrix</span><i></i>
-      <span>Ridge & Lasso</span><i></i>
-      <span>VIF & Multicollinearity</span><i></i>
-      <span>XGBoost & LightGBM</span><i></i>
+      <span>Ridge &amp; Lasso</span><i></i>
+      <span>VIF &amp; Multicollinearity</span><i></i>
+      <span>XGBoost &amp; LightGBM</span><i></i>
       <span>ROC-AUC Curves</span><i></i>
       <span>Support Vector Machines</span><i></i>
       <span>Bias-Variance Tradeoff</span><i></i>
       <span>Random Forest</span><i></i>
       <span>Loss vs Cost vs Error</span><i></i>
       <span>Gaussian Mixture Models</span><i></i>
-      <span>Precision & Recall</span><i></i>
-      <span>K-Means & DBSCAN</span><i></i>
+      <span>Precision &amp; Recall</span><i></i>
+      <span>K-Means &amp; DBSCAN</span><i></i>
       <span>Exploratory Data Analysis</span><i></i>
       <span>Stratified Cross-Validation</span><i></i>
     </div>
@@ -163,7 +327,7 @@ const htmlContent = `<!DOCTYPE html>
     <div class="inner">
       <div class="head reveal">
         <div>
-          <span class="tag">01 / Pedagogy & Methodology</span>
+          <span class="tag">01 / Pedagogy &amp; Methodology</span>
           <h2>A true one-stop learning lab.</h2>
         </div>
         <p>No isolated formulas or naked charts. Every architecture is dissected through intuitive mental models, mathematical proofs, real EDA, and justified feature selection.</p>
@@ -192,90 +356,74 @@ const htmlContent = `<!DOCTYPE html>
     </div>
   </section>
 
-  <!-- Interactive Model Catalog Section -->
-  <section id="catalog" class="section">
+  <!-- UNIFIED LEARN SECTION (Models + Concepts) -->
+  <section id="learn" class="section">
     <div class="head reveal">
       <div>
-        <span class="tag">02 / Model Catalog</span>
-        <h2>Explore 47 architectures.</h2>
+        <span class="tag">02 / Learn Hub</span>
+        <h2>47 Models. 13 Concepts.</h2>
       </div>
-      <p>Filter by paradigm or search across algorithms, mathematical formulations, and evaluation metrics.</p>
+      <p>Your one-stop curriculum: explore production ML architectures or dive into foundational mathematical theory and diagnostics.</p>
     </div>
 
-    <!-- Controls: Filter Pills & Search Box -->
+    <!-- Primary Learn Switcher: [ Models ] vs [ Concepts ] -->
+    <div class="learn-main-tabs reveal">
+      <button class="learn-tab active" id="learnTabModels" onclick="switchLearnTab('models')">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span>ML Models &amp; Architectures</span>
+        <span class="learn-tab-count">47</span>
+      </button>
+      <button class="learn-tab" id="learnTabConcepts" onclick="switchLearnTab('concepts')">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10M6 14h6"/></svg>
+        <span>Foundational Concepts</span>
+        <span class="learn-tab-count">13</span>
+      </button>
+    </div>
+
+    <!-- Controls: Sub-filters & Live Search Box -->
     <div class="controls-wrap reveal">
-      <div class="filters">
+      <!-- Sub-filters for Models -->
+      <div class="filters" id="modelFilters">
         <button class="filter on" data-cat="all">All Models <b>(47)</b></button>
         <button class="filter" data-cat="regression">Regression <b>(${regressionCount})</b></button>
         <button class="filter" data-cat="classification">Classification <b>(${classificationCount})</b></button>
         <button class="filter" data-cat="clustering">Clustering <b>(${clusteringCount})</b></button>
       </div>
 
+      <!-- Sub-filters for Concepts -->
+      <div class="filters" id="conceptFilters" style="display:none;">
+        <button class="filter on" data-concept-cat="all">All Concepts <b>(13)</b></button>
+        <button class="filter" data-concept-cat="diagnostics">Diagnostics &amp; Metrics <b>(5)</b></button>
+        <button class="filter" data-concept-cat="optimization">Optimization &amp; Loss <b>(3)</b></button>
+        <button class="filter" data-concept-cat="preprocessing">Preprocessing &amp; EDA <b>(2)</b></button>
+        <button class="filter" data-concept-cat="theory">Foundational Theory <b>(3)</b></button>
+      </div>
+
+      <!-- Live Search Box -->
       <div class="search-box">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="Search 47 architectures, equations, datasets..." autocomplete="off">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search models, algorithms, concepts..." autocomplete="off">
         <button id="searchClear" class="search-clear" aria-label="Clear search">&times;</button>
       </div>
     </div>
 
     <div id="filterCount" class="filter-status reveal">Showing 47 of 47 architectures</div>
 
-    <!-- Models Grid -->
-    <main class="models-grid" id="modelsGrid">
+    <!-- Models Grid (47 models) -->
+    <main class="models-grid" id="modelsContainer">
 ${cardsHtml}
-
-      <!-- Empty State -->
-      <div id="emptyState" class="empty-state">
-        <h3>No matching architectures found</h3>
-        <p>Try modifying your search query or reset the active category filter.</p>
-        <button class="button light small" onclick="resetZooFilters()">Reset Filters</button>
-      </div>
     </main>
-  </section>
 
-  <!-- Concepts Spotlight Band -->
-  <section class="section band">
-    <div class="inner">
-      <div class="head reveal">
-        <div>
-          <span class="tag">03 / Knowledge Graph</span>
-          <h2>13 Core ML Theory Guides.</h2>
-        </div>
-        <a class="text-link" href="concepts/index.html">View All 13 Deep Dives <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+    <!-- Concepts Grid (13 concepts) -->
+    <div class="models-grid" id="conceptsContainer" style="display:none;">
+${conceptCardsHtml}
+    </div>
 
-      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
-        <a href="concepts/confusion-matrix/index.html" class="feature-card spot reveal">
-          <span class="card-num">Diagnostics</span>
-          <h3>Confusion Matrix</h3>
-          <p>TP, FP, TN, FN, Type I / Type II errors, and the accuracy paradox on imbalanced datasets.</p>
-        </a>
-        <a href="concepts/loss-functions/index.html" class="feature-card spot reveal">
-          <span class="card-num">Optimization</span>
-          <h3>Loss Functions</h3>
-          <p>MSE, MAE, Huber, Log Loss / Cross-Entropy, Hinge Loss, and optimization gradients.</p>
-        </a>
-        <a href="concepts/cost-vs-loss-vs-error/index.html" class="feature-card spot reveal">
-          <span class="card-num">Theory</span>
-          <h3>Cost vs Loss vs Error</h3>
-          <p>Instance loss vs aggregate cost function vs non-differentiable evaluation metrics.</p>
-        </a>
-        <a href="concepts/feature-selection/index.html" class="feature-card spot reveal">
-          <span class="card-num">Preprocessing</span>
-          <h3>Feature Selection (VIF)</h3>
-          <p>Filter, Wrapper, and Embedded methods, plus diagnosing multicollinearity via VIF.</p>
-        </a>
-        <a href="concepts/bias-variance-tradeoff/index.html" class="feature-card spot reveal">
-          <span class="card-num">Foundations</span>
-          <h3>Bias-Variance Tradeoff</h3>
-          <p>Decomposing expected generalization error into underfitting, variance, and noise.</p>
-        </a>
-        <a href="concepts/regularization/index.html" class="feature-card spot reveal">
-          <span class="card-num">Theory</span>
-          <h3>L1 & L2 Regularization</h3>
-          <p>Geometry of L1 diamond sparsity versus L2 spherical weight shrinkage.</p>
-        </a>
-      </div>
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state">
+      <h3>No matching results found</h3>
+      <p>Try modifying your search query or reset the filter.</p>
+      <button class="button light small" onclick="resetZooFilters()">Reset Filters</button>
     </div>
   </section>
 
@@ -309,7 +457,7 @@ ${cardsHtml}
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div class="footlinks">
-      <a href="concepts/index.html">Concepts (13)</a>
+      <a href="#learn">Learn Hub (60)</a>
       <a href="https://yogesh660.github.io/work/">Work</a>
       <a href="https://yogesh660.github.io/projects/">Projects</a>
       <a href="https://yogesh660.github.io/about/">About</a>
@@ -324,4 +472,4 @@ ${cardsHtml}
 `;
 
 fs.writeFileSync('index.html', htmlContent);
-console.log('Successfully regenerated index.html with Concepts Hub integration!');
+console.log('Successfully regenerated index.html with unified Learn Hub!');

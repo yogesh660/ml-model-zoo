@@ -60,6 +60,23 @@ h1, h2, h3, h4, p { margin: 0; }
 code, pre, .font-mono { font-family: var(--mono); }
 ::selection { background: rgba(140, 124, 255, 0.35); color: #fff; }
 
+/* KaTeX Specific Overrides */
+.katex {
+  font-size: 1.1em;
+  color: var(--ink);
+  text-rendering: optimizeLegibility;
+}
+.katex-display {
+  margin: 12px 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+.katex-display > .katex {
+  white-space: normal;
+  text-align: center;
+}
+
 /* Navigation */
 nav#nav {
   position: sticky;

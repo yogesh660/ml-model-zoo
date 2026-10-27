@@ -62,6 +62,23 @@ h1, h2, h3, h4, p { margin: 0; }
 code, pre, .font-mono { font-family: var(--mono); }
 ::selection { background: rgba(140, 124, 255, 0.35); color: #fff; }
 
+/* KaTeX Specific Overrides */
+.katex {
+  font-size: 1.1em;
+  color: var(--ink);
+  text-rendering: optimizeLegibility;
+}
+.katex-display {
+  margin: 12px 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+.katex-display > .katex {
+  white-space: normal;
+  text-align: center;
+}
+
 /* Navigation */
 nav#nav {
   position: sticky;
@@ -229,7 +246,7 @@ main.concept-content {
 
 /* Math Card */
 .math-card {
-  padding: 26px 24px;
+  padding: 24px 24px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -264,9 +281,10 @@ main.concept-content {
   color: var(--muted);
 }
 .concept-table td {
-  padding: 14px 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: var(--soft);
+  vertical-align: middle;
 }
 .concept-table tr:last-child td { border-bottom: none; }
 .concept-table td.highlight {
@@ -274,8 +292,8 @@ main.concept-content {
   font-weight: 600;
 }
 .concept-table td.code-val {
-  font-family: var(--mono);
-  color: var(--violet-2);
+  color: var(--ink);
+  text-align: center;
 }
 
 /* Confusion Matrix Grid */

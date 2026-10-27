@@ -3,14 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clustering Evaluation Metrics & Cluster Validation · ML Concepts Hub · Yogesh Awate</title>
+  <title>Clustering Evaluation Metrics & Cluster Validation · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -19,16 +36,16 @@
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../index.html">Concepts</a>
+        <a href="../../index.html#learn-concepts">Concepts</a>
         <span class="sep">/</span>
         <span>Clustering Evaluation Metrics & Cluster Validation</span>
       </div>
     </div>
     <div class="nav-right">
-      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
-      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -52,14 +69,14 @@
               <span class="card-num">Metric 1 / Tightness</span>
               <h3>Inertia (WCSS)</h3>
               <p>Within-Cluster Sum of Squares:</p>
-              <code>\text{WCSS} = \sum_{k=1}^K \sum_{x \in C_k} \|x - \mu_k\|^2</code>
+              <div class="math-card" style="padding:12px; margin-top:6px;">$$\text{WCSS} = \sum_{k=1}^K \sum_{x \in C_k} \|x - \mu_k\|^2$$</div>
               <p>Used in the Elbow method to find inflection point where diminishing returns occur.</p>
             </div>
             <div class="feature-card">
               <span class="card-num">Metric 2 / Relative Cohesion</span>
               <h3>Silhouette Score</h3>
               <p>Measures how similar instance $i$ is to its own cluster versus the nearest neighboring cluster:</p>
-              <code>s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}</code>
+              <div class="math-card" style="padding:12px; margin-top:6px;">$$s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}$$</div>
               <p>Range $[-1, +1]$. Values $> 0.5$ indicate robust, separable cluster boundaries.</p>
             </div>
             <div class="feature-card">
@@ -97,8 +114,8 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../index.html">All Concepts Hub</a> &bull;
-      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>

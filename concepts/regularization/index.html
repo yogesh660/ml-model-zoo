@@ -3,14 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Regularization Techniques: L1, L2 & Elastic Net · ML Concepts Hub · Yogesh Awate</title>
+  <title>Regularization Techniques: L1, L2 & Elastic Net · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -19,16 +36,16 @@
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../index.html">Concepts</a>
+        <a href="../../index.html#learn-concepts">Concepts</a>
         <span class="sep">/</span>
         <span>Regularization Techniques: L1, L2 & Elastic Net</span>
       </div>
     </div>
     <div class="nav-right">
-      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
-      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -61,21 +78,21 @@
               <tbody>
                 <tr>
                   <td class="highlight">Ridge (L2 / Tikhonov)</td>
-                  <td class="code-val">\lambda \sum \beta_j^2</td>
+                  <td class="code-val">$$\lambda \sum_{j=1}^p \beta_j^2$$</td>
                   <td>Hypersphere / Smooth Circle</td>
                   <td>No (shrinks weights toward 0 asymptotically)</td>
                   <td>Gaussian Prior $\beta_j \sim \mathcal{N}(0, \tau^2)$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Lasso (L1)</td>
-                  <td class="code-val">\lambda \sum |\beta_j|</td>
+                  <td class="code-val">$$\lambda \sum_{j=1}^p |\beta_j|$$</td>
                   <td>Diamond / Polytope with sharp corners</td>
                   <td><strong>Yes</strong> (forces weights strictly to 0.0)</td>
                   <td>Laplace Prior $\beta_j \sim \text{Laplace}(0, b)$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Elastic Net</td>
-                  <td class="code-val">\lambda_1 \|\beta\|_1 + \lambda_2 \|\beta\|_2^2</td>
+                  <td class="code-val">$$\lambda_1 \|\beta\|_1 + \lambda_2 \|\beta\|_2^2$$</td>
                   <td>Convex combination of diamond and circle</td>
                   <td>Selective (groups correlated predictors)</td>
                   <td>Mixed Gaussian-Laplace prior</td>
@@ -112,8 +129,8 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../index.html">All Concepts Hub</a> &bull;
-      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>

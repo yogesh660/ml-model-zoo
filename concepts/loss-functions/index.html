@@ -3,14 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Loss Functions & Optimization Landscapes · ML Concepts Hub · Yogesh Awate</title>
+  <title>Loss Functions & Optimization Landscapes · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -19,16 +36,16 @@
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../index.html">Concepts</a>
+        <a href="../../index.html#learn-concepts">Concepts</a>
         <span class="sep">/</span>
         <span>Loss Functions & Optimization Landscapes</span>
       </div>
     </div>
     <div class="nav-right">
-      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
-      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -57,7 +74,7 @@
               <span class="card-num">02 / Aggregate Cost</span>
               <h3>Cost Function $J(\theta)$</h3>
               <p>The aggregate empirical expectation computed over the <strong>entire training dataset</strong> (or mini-batch), frequently augmented with a regularization penalty $\Omega(\theta)$:</p>
-              <code>J(\theta) = \frac{1}{n} \sum_{i=1}^n \mathcal{L}(\hat{y}^{(i)}, y^{(i)}) + \lambda \Omega(\theta)</code>
+              <div class="math-card" style="padding:14px; margin-top:8px;">$$J(\theta) = \frac{1}{n} \sum_{i=1}^n \mathcal{L}(\hat{y}^{(i)}, y^{(i)}) + \lambda \Omega(\theta)$$</div>
             </div>
             <div class="feature-card">
               <span class="card-num">03 / Optimization Goal</span>
@@ -91,29 +108,29 @@
               <tbody>
                 <tr>
                   <td class="highlight">Mean Squared Error (MSE / L2)</td>
-                  <td class="code-val">\frac{1}{2}(y - \hat{y})^2</td>
-                  <td class="code-val">-(y - \hat{y})</td>
+                  <td class="code-val">$$\mathcal{L} = \frac{1}{2}(y - \hat{y})^2$$</td>
+                  <td class="code-val">$$-(y - \hat{y})$$</td>
                   <td>Low (errors grow quadratically)</td>
                   <td>OLS, Ridge, Polynomial Regression, Gaussian Process</td>
                 </tr>
                 <tr>
                   <td class="highlight">Mean Absolute Error (MAE / L1)</td>
-                  <td class="code-val">|y - \hat{y}|</td>
-                  <td class="code-val">-\text{sgn}(y - \hat{y})</td>
+                  <td class="code-val">$$\mathcal{L} = |y - \hat{y}|$$</td>
+                  <td class="code-val">$$-\text{sgn}(y - \hat{y})$$</td>
                   <td>High (linear penalty on residuals)</td>
                   <td>Median regression, financial datasets with heavy tails</td>
                 </tr>
                 <tr>
                   <td class="highlight">Huber Loss (Smooth L1)</td>
-                  <td class="code-val">\begin{cases} \frac{1}{2}e^2 & |e| \le \delta \\ \delta(|e| - \frac{1}{2}\delta) & \text{otherwise} \end{cases}</td>
-                  <td class="code-val">\begin{cases} -e & |e| \le \delta \\ -\delta\text{sgn}(e) & \text{otherwise} \end{cases}</td>
+                  <td class="code-val">$$\begin{cases} \frac{1}{2}e^2 & |e| \le \delta \\ \delta(|e| - \frac{1}{2}\delta) & \text{otherwise} \end{cases}$$</td>
+                  <td class="code-val">$$\begin{cases} -e & |e| \le \delta \\ -\delta\text{sgn}(e) & \text{otherwise} \end{cases}$$</td>
                   <td>Optimal (quadratic for small errors, linear for anomalies)</td>
                   <td>Robust Regression, Gradient Boosting, Object Detection</td>
                 </tr>
                 <tr>
                   <td class="highlight">Epsilon-Insensitive Loss</td>
-                  <td class="code-val">\max(0, |y - \hat{y}| - \epsilon)</td>
-                  <td class="code-val">0 \text{ if } |e| \le \epsilon, \text{ else } -\text{sgn}(e)</td>
+                  <td class="code-val">$$\max(0, |y - \hat{y}| - \epsilon)$$</td>
+                  <td class="code-val">$$\begin{cases} 0 & |e| \le \epsilon \\ -\text{sgn}(e) & \text{otherwise} \end{cases}$$</td>
                   <td>High (ignores errors within margin tube $\epsilon$)</td>
                   <td>Support Vector Regression (SVR)</td>
                 </tr>
@@ -193,8 +210,8 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../index.html">All Concepts Hub</a> &bull;
-      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>

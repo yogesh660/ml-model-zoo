@@ -1,6 +1,7 @@
 /**
  * Machine Learning Model Zoo - Interactive Scripts
  * Styled to match Yogesh Awate's portfolio: https://yogesh660.github.io/
+ * Powers the unified "Learn" Section (47 Models + 13 Concepts)
  */
 
 (function () {
@@ -10,10 +11,8 @@
   const menu = document.getElementById('menu');
   const searchInput = document.getElementById('searchInput');
   const searchClear = document.getElementById('searchClear');
-  const filterButtons = document.querySelectorAll('.filter');
-  const modelCards = document.querySelectorAll('.model-card');
-  const emptyState = document.getElementById('emptyState');
   const filterCountEl = document.getElementById('filterCount');
+  const emptyState = document.getElementById('emptyState');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(pointer: fine)').matches;
 
@@ -86,61 +85,123 @@
 
   document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
 
-  // 5. Category Filtering and Live Search
-  let currentCategory = 'all';
+  // 5. Unified Learn Tab Switcher (Models vs Concepts)
+  let activeLearnTab = 'models'; // 'models' or 'concepts'
+  let currentModelCategory = 'all';
+  let currentConceptCategory = 'all';
   let searchQuery = '';
 
-  function applyFilters() {
-    let visibleCount = 0;
-    const query = searchQuery.trim().toLowerCase();
+  const learnTabModels = document.getElementById('learnTabModels');
+  const learnTabConcepts = document.getElementById('learnTabConcepts');
+  const modelsContainer = document.getElementById('modelsContainer');
+  const conceptsContainer = document.getElementById('conceptsContainer');
+  const modelFilters = document.getElementById('modelFilters');
+  const conceptFilters = document.getElementById('conceptFilters');
 
-    modelCards.forEach(card => {
-      const cat = card.dataset.cat || '';
-      const searchData = (card.dataset.name || '').toLowerCase();
+  const modelCards = document.querySelectorAll('#modelsContainer .model-card');
+  const conceptCards = document.querySelectorAll('#conceptsContainer .concept-card');
+  const modelFilterBtns = document.querySelectorAll('#modelFilters .filter');
+  const conceptFilterBtns = document.querySelectorAll('#conceptFilters .filter');
 
-      const matchCat = (currentCategory === 'all' || cat === currentCategory);
-      const matchSearch = (!query || searchData.includes(query));
+  window.switchLearnTab = function (tab) {
+    activeLearnTab = tab;
 
-      if (matchCat && matchSearch) {
-        card.classList.remove('hide');
-        card.classList.add('in');
-        visibleCount++;
-      } else {
-        card.classList.add('hide');
-      }
-    });
-
-    // Update filter buttons
-    filterButtons.forEach(btn => {
-      btn.classList.toggle('on', btn.dataset.cat === currentCategory);
-    });
-
-    // Update count indicator
-    if (filterCountEl) {
-      filterCountEl.textContent = `Showing ${visibleCount} of ${modelCards.length} architectures`;
+    if (tab === 'models') {
+      learnTabModels.classList.add('active');
+      learnTabConcepts.classList.remove('active');
+      modelsContainer.style.display = 'grid';
+      conceptsContainer.style.display = 'none';
+      modelFilters.style.display = 'flex';
+      conceptFilters.style.display = 'none';
+      history.replaceState(null, '', '#learn-models');
+    } else {
+      learnTabConcepts.classList.add('active');
+      learnTabModels.classList.remove('active');
+      modelsContainer.style.display = 'none';
+      conceptsContainer.style.display = 'grid';
+      modelFilters.style.display = 'none';
+      conceptFilters.style.display = 'flex';
+      history.replaceState(null, '', '#learn-concepts');
     }
 
-    // Toggle Empty State
+    applyLearnFilters();
+  };
+
+  function applyLearnFilters() {
+    const query = searchQuery.trim().toLowerCase();
+    let visibleCount = 0;
+
+    if (activeLearnTab === 'models') {
+      modelCards.forEach(card => {
+        const cat = card.dataset.cat || '';
+        const searchData = (card.dataset.name || '').toLowerCase();
+
+        const matchCat = (currentModelCategory === 'all' || cat === currentModelCategory);
+        const matchSearch = (!query || searchData.includes(query));
+
+        if (matchCat && matchSearch) {
+          card.classList.remove('hide');
+          card.classList.add('in');
+          visibleCount++;
+        } else {
+          card.classList.add('hide');
+        }
+      });
+
+      modelFilterBtns.forEach(btn => {
+        btn.classList.toggle('on', btn.dataset.cat === currentModelCategory);
+      });
+
+      if (filterCountEl) {
+        filterCountEl.textContent = `Showing ${visibleCount} of ${modelCards.length} architectures`;
+      }
+    } else {
+      conceptCards.forEach(card => {
+        const cat = card.dataset.conceptCat || '';
+        const searchData = (card.dataset.name || '').toLowerCase();
+
+        const matchCat = (currentConceptCategory === 'all' || cat === currentConceptCategory);
+        const matchSearch = (!query || searchData.includes(query));
+
+        if (matchCat && matchSearch) {
+          card.classList.remove('hide');
+          card.classList.add('in');
+          visibleCount++;
+        } else {
+          card.classList.add('hide');
+        }
+      });
+
+      conceptFilterBtns.forEach(btn => {
+        btn.classList.toggle('on', btn.dataset.conceptCat === currentConceptCategory);
+      });
+
+      if (filterCountEl) {
+        filterCountEl.textContent = `Showing ${visibleCount} of ${conceptCards.length} core concepts`;
+      }
+    }
+
     if (emptyState) {
       emptyState.classList.toggle('show', visibleCount === 0);
     }
-
-    // Toggle search clear button
     if (searchClear) {
       searchClear.style.display = query ? 'block' : 'none';
     }
   }
 
-  // Button clicks
-  filterButtons.forEach(btn => {
+  // Model filter clicks
+  modelFilterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      currentCategory = btn.dataset.cat;
-      if (currentCategory !== 'all') {
-        history.replaceState(null, '', `#${currentCategory}`);
-      } else {
-        history.replaceState(null, '', location.pathname);
-      }
-      applyFilters();
+      currentModelCategory = btn.dataset.cat;
+      applyLearnFilters();
+    });
+  });
+
+  // Concept filter clicks
+  conceptFilterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentConceptCategory = btn.dataset.conceptCat;
+      applyLearnFilters();
     });
   });
 
@@ -148,7 +209,7 @@
   if (searchInput) {
     searchInput.addEventListener('input', e => {
       searchQuery = e.target.value;
-      applyFilters();
+      applyLearnFilters();
     });
   }
 
@@ -158,24 +219,27 @@
       searchInput.value = '';
       searchQuery = '';
       searchInput.focus();
-      applyFilters();
+      applyLearnFilters();
     });
   }
 
-  // Reset filters from empty state
   window.resetZooFilters = function () {
-    currentCategory = 'all';
+    currentModelCategory = 'all';
+    currentConceptCategory = 'all';
     searchQuery = '';
     if (searchInput) searchInput.value = '';
-    history.replaceState(null, '', location.pathname);
-    applyFilters();
+    applyLearnFilters();
   };
 
-  // Check URL hash on load
-  const hash = location.hash.slice(1).toLowerCase();
-  if (['regression', 'classification', 'clustering'].includes(hash)) {
-    currentCategory = hash;
+  // URL Hash routing
+  const hash = location.hash.toLowerCase();
+  if (hash === '#learn-concepts' || hash === '#concepts') {
+    switchLearnTab('concepts');
+  } else if (['#regression', '#classification', '#clustering'].includes(hash)) {
+    switchLearnTab('models');
+    currentModelCategory = hash.slice(1);
+    applyLearnFilters();
+  } else {
+    applyLearnFilters();
   }
-
-  applyFilters();
 })();

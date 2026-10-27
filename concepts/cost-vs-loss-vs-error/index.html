@@ -3,14 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Loss Function vs. Cost Function vs. Error Function · ML Concepts Hub · Yogesh Awate</title>
+  <title>Loss Function vs. Cost Function vs. Error Function · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -19,16 +36,16 @@
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../index.html">Concepts</a>
+        <a href="../../index.html#learn-concepts">Concepts</a>
         <span class="sep">/</span>
         <span>Loss Function vs. Cost Function vs. Error Function</span>
       </div>
     </div>
     <div class="nav-right">
-      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
-      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -61,19 +78,19 @@
                   <td class="highlight">Loss Function $\mathcal{L}(y, \hat{y})$</td>
                   <td>Single sample $(x_i, y_i)$</td>
                   <td>Differentiable target evaluated per instance</td>
-                  <td class="code-val">\frac{1}{2}(y_i - \hat{y}_i)^2 \quad \text{or} \quad -y_i \log(p_i)</td>
+                  <td class="code-val">$$\frac{1}{2}(y_i - \hat{y}_i)^2 \quad \text{or} \quad -y_i \log(p_i)$$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Cost Function $J(\theta)$</td>
                   <td>Full dataset or mini-batch</td>
                   <td>Direct mathematical objective being optimized by solver</td>
-                  <td class="code-val">\frac{1}{n} \sum \mathcal{L} + \lambda \|w\|^2</td>
+                  <td class="code-val">$$\frac{1}{n} \sum_{i=1}^n \mathcal{L} + \lambda \|w\|^2$$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Error Function / Metric</td>
                   <td>Evaluation benchmark</td>
                   <td>Interpretable score for humans (often non-differentiable)</td>
-                  <td class="code-val">\text{Accuracy}, \text{ROC-AUC}, \text{F1-Score}, \text{RMSE}</td>
+                  <td class="code-val">$$\text{Accuracy}, \quad \text{ROC-AUC}, \quad \text{F1-Score}, \quad \text{RMSE}$$</td>
                 </tr>
               </tbody>
             </table>
@@ -107,8 +124,8 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../index.html">All Concepts Hub</a> &bull;
-      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>

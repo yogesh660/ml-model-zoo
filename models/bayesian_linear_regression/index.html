@@ -3,14 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bayesian Linear Regression · Modular Architectural Lab · Yogesh Awate</title>
+  <title>Bayesian Linear Regression · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="../../model.css">
 </head>
@@ -20,16 +37,16 @@
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Model Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../../concepts/index.html">Concepts Hub</a>
+        <a href="../../index.html#learn-models">Models</a>
         <span class="sep">/</span>
         <span>Bayesian Linear Regression</span>
       </div>
     </div>
     <div class="nav-badges">
       <span class="badge-cat regression">regression</span>
-      <a href="../../concepts/index.html" class="nav-concepts-link">Concepts Hub (13) &rarr;</a>
+      <a href="../../index.html#learn" class="nav-concepts-link">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -87,23 +104,23 @@
         <div class="derivation-step">
           <div class="step-header">
             <span class="step-num">Step 01</span>
-            <span class="step-title">Formulate the Objective & Loss Function</span>
+            <span class="step-title">Conjugate Gaussian Prior & Likelihood Formulation</span>
           </div>
           <div class="step-formula">
-            $$\mathcal{L}(\theta) = \frac{1}{n} \sum_{i=1}^n \ell(f(x_i; \theta), y_i) + \lambda \Omega(\theta)$$
+            $$p(w) = \mathcal{N}(0, \alpha^{-1} I), \quad p(y \mid X, w, \beta) = \mathcal{N}(y \mid Xw, \beta^{-1} I)$$
           </div>
-          <p class="step-desc">The model formalizes its goal through a dedicated <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a>, penalizing discrepancies between hypotheses and ground truth while optionally applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization</a> penalties $\Omega(\theta)$.</p>
+          <p class="step-desc">Places an isotropic Gaussian prior over weight vector $w$ with precision $\alpha$. Targets $y$ follow a Gaussian likelihood conditioned on $Xw$ with noise precision $\beta$.</p>
         </div>
 
         <div class="derivation-step">
           <div class="step-header">
             <span class="step-num">Step 02</span>
-            <span class="step-title">Computing the Gradient & Optimality Conditions</span>
+            <span class="step-title">Analytical Gaussian Posterior & Predictive Distribution</span>
           </div>
           <div class="step-formula">
-            $$\nabla_\theta \mathcal{L}(\theta) = 0 \implies \theta^* = \arg\min_\theta \mathcal{L}(\theta)$$
+            $$p(w \mid X, y) = \mathcal{N}(\mu_N, \Sigma_N), \quad \Sigma_N = (\alpha I + \beta X^T X)^{-1}, \quad \mu_N = \beta \Sigma_N X^T y$$
           </div>
-          <p class="step-desc">Finding optimal weights $\theta^*$ requires setting the analytical gradient to zero (for closed-form solutions) or iteratively following the steepest descent path via <a class="concept-link" href="../../concepts/gradient-descent/index.html">Gradient Descent</a>.</p>
+          <p class="step-desc">By Bayesian conjugacy, the posterior distribution is also Gaussian. For query point $x_*$, the predictive variance $\sigma_*^2 = \frac{1}{\beta} + x_*^T \Sigma_N x_*$ provides exact epistemic uncertainty quantification.</p>
         </div>
       </div>
     </section>
@@ -362,8 +379,8 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../../concepts/index.html">Concepts Hub</a> &bull;
-      <a href="../../index.html">All 47 Architectures</a>
+      <a href="../../index.html#learn-concepts">Concepts Hub</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>

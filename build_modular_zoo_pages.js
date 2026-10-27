@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const modelsData = JSON.parse(fs.readFileSync('extracted_models.json', 'utf8'));
-console.log(`Loaded ${modelsData.length} models for building modular deep dive pages.`);
+const derivationsMap = JSON.parse(fs.readFileSync('model_derivations.json', 'utf8'));
+console.log(`Loaded ${modelsData.length} models and ${Object.keys(derivationsMap).length} derivations for building modular deep dive pages.`);
 
 // Helper to wrap concepts with interactive links
 function linkConcepts(text) {
@@ -35,6 +36,14 @@ for (const model of modelsData) {
   const title = model.title;
   const sub = model.subfamily;
   const desc = model.desc;
+  const deriv = derivationsMap[model.href] || {
+    step1_title: "Core Formulation & Objective",
+    step1_formula: "$$\\mathcal{L}(\\theta) = \\frac{1}{n} \\sum_{i=1}^n \\ell(f(x_i; \\theta), y_i)$$",
+    step1_desc: "The model formalizes its goal through an objective function.",
+    step2_title: "Optimization & Update Rules",
+    step2_formula: "$$\\theta^* = \\arg\\min_\\theta \\mathcal{L}(\\theta)$$",
+    step2_desc: "Optimization via gradient descent or analytical solution."
+  };
 
   // Multi-dataset configurations based on paradigm
   let datasetTabsHtml = '';
@@ -87,7 +96,7 @@ for (const model of modelsData) {
       <div id="ds-california" class="dataset-panel active">
         <div class="callout violet">
           <span class="callout-title">Dataset Profile: California Housing Census</span>
-          <p><strong>Goal:</strong> Predict median California block group housing values ($100k) from 8 geographic and socio-demographic features.</p>
+          <p><strong>Goal:</strong> Predict median California block group housing values (\$100k) from 8 geographic and socio-demographic features.</p>
           <div class="table-wrap" style="margin-top:10px;">
             <table class="diag-table">
               <thead>
@@ -108,7 +117,7 @@ for (const model of modelsData) {
         <div class="card-grid-2">
           <div class="info-card">
             <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <strong>Target Capping:</strong> <code>MedHouseVal</code> is artificially capped at $5.00 ($500,000) in the raw census, creating a right-hand boundary ceiling.</p>
+            <p>1. <strong>Target Capping:</strong> <code>MedHouseVal</code> is artificially capped at \$5.00 (\$500,000) in the raw census, creating a right-hand boundary ceiling.</p>
             <p>2. <strong>Extreme Collinearity:</strong> <code>AveRooms</code> and <code>AveBedrms</code> exhibit an empirical Pearson correlation of <strong>r = 0.85</strong>, causing a Variance Inflation Factor (VIF) &gt; 12.0.</p>
             <p>3. <strong>Heavy-Tailed Skewness:</strong> Population and room averages contain positive leverage outliers, requiring quantile clipping and standard scaling.</p>
           </div>
@@ -128,7 +137,7 @@ for (const model of modelsData) {
             <table class="diag-table">
               <thead><tr><th>Evaluation Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
               <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">${model.metrics[0] ? model.metrics[0].val : '0.7455'}</td><td>Average deviation of ~$74,550 on house values.</td></tr>
+                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">${model.metrics[0] ? model.metrics[0].val : '0.7455'}</td><td>Average deviation of ~\$74,550 on house values.</td></tr>
                 <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">MAE</a></td><td class="val">${model.metrics[1] ? model.metrics[1].val : '0.5332'}</td><td>Mean absolute prediction error across test split.</td></tr>
                 <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">R² Score</a></td><td class="val">0.5757</td><td>Explains 57.6% of target variance in California housing.</td></tr>
               </tbody>
@@ -236,7 +245,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
           <div class="info-card">
             <h3>Exploratory Data Analysis (EDA) Findings</h3>
             <p>1. <code>SqFt</code> and <code>Bedrooms</code> have an artificial collinearity of <strong>r = 0.92</strong> with <strong>VIF = 18.4</strong>.</p>
-            <p>2. In standard OLS without feature selection, the regression coefficient for <code>Bedrooms</code> turns negative (-$14,200), defying real-world economics due to matrix instability.</p>
+            <p>2. In standard OLS without feature selection, the regression coefficient for <code>Bedrooms</code> turns negative (-\$14,200), defying real-world economics due to matrix instability.</p>
           </div>
           <div class="info-card">
             <h3>Feature Selection Decision & Rationale</h3>
@@ -597,23 +606,23 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
         <div class="derivation-step">
           <div class="step-header">
             <span class="step-num">Step 01</span>
-            <span class="step-title">Formulate the Objective & Loss Function</span>
+            <span class="step-title">${deriv.step1_title}</span>
           </div>
           <div class="step-formula">
-            $$\\mathcal{L}(\\theta) = \\frac{1}{n} \\sum_{i=1}^n \\ell(f(x_i; \\theta), y_i) + \\lambda \\Omega(\\theta)$$
+            ${deriv.step1_formula}
           </div>
-          <p class="step-desc">The model formalizes its goal through a dedicated <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a>, penalizing discrepancies between hypotheses and ground truth while optionally applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization</a> penalties $\\Omega(\\theta)$.</p>
+          <p class="step-desc">${linkConcepts(deriv.step1_desc)}</p>
         </div>
 
         <div class="derivation-step">
           <div class="step-header">
             <span class="step-num">Step 02</span>
-            <span class="step-title">Computing the Gradient & Optimality Conditions</span>
+            <span class="step-title">${deriv.step2_title}</span>
           </div>
           <div class="step-formula">
-            $$\\nabla_\\theta \\mathcal{L}(\\theta) = 0 \\implies \\theta^* = \\arg\\min_\\theta \\mathcal{L}(\\theta)$$
+            ${deriv.step2_formula}
           </div>
-          <p class="step-desc">Finding optimal weights $\\theta^*$ requires setting the analytical gradient to zero (for closed-form solutions) or iteratively following the steepest descent path via <a class="concept-link" href="../../concepts/gradient-descent/index.html">Gradient Descent</a>.</p>
+          <p class="step-desc">${linkConcepts(deriv.step2_desc)}</p>
         </div>
       </div>
     </section>
@@ -651,14 +660,31 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title} · Modular Architectural Lab · Yogesh Awate</title>
+  <title>${title} · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\\\(', right: '\\\\)', display: false},
+            {left: '\\\\[', right: '\\\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="../../model.css">
 </head>
@@ -668,16 +694,16 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Model Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../../concepts/index.html">Concepts Hub</a>
+        <a href="../../index.html#learn-models">Models</a>
         <span class="sep">/</span>
         <span>${title}</span>
       </div>
     </div>
     <div class="nav-badges">
       <span class="badge-cat ${cat}">${cat}</span>
-      <a href="../../concepts/index.html" class="nav-concepts-link">Concepts Hub (13) &rarr;</a>
+      <a href="../../index.html#learn" class="nav-concepts-link">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -717,8 +743,8 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../../concepts/index.html">Concepts Hub</a> &bull;
-      <a href="../../index.html">All 47 Architectures</a>
+      <a href="../../index.html#learn-concepts">Concepts Hub</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>

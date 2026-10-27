@@ -10,7 +10,11 @@ A comprehensive architectural benchmark suite and educational laboratory featuri
   - `metrics.json`: Exported validation metrics.
 - **`datasets/raw/`**: Standardized benchmarking datasets (California Housing, Titanic, Mall Customers).
 
-## Model Catalog (47 Models)
+## Learn Hub: Models & Concepts (60 Units)
+
+The unified **Learn** curriculum consists of **47 Models** and **13 Foundational Concepts**:
+- **47 Algorithmic Models**: Step-by-step mathematical derivations, modular multi-dataset benchmarking, EDA insights, and justified feature selection.
+- **13 Core Concept Guides**: Loss functions, Confusion Matrix, Bias-Variance Tradeoff, VIF Multicollinearity, Feature Selection, and ROC-AUC.
 
 ### 1. Regression Models (17)
 - Ordinary Least Squares (OLS) Linear Regression

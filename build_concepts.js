@@ -6,7 +6,7 @@ if (!fs.existsSync(conceptsDir)) {
   fs.mkdirSync(conceptsDir, { recursive: true });
 }
 
-// Concept definitions
+// Concept definitions with properly delimited mathematical formulas ($$ for block, $ for inline)
 const concepts = [
   {
     id: 'loss-functions',
@@ -31,7 +31,7 @@ const concepts = [
               <span class="card-num">02 / Aggregate Cost</span>
               <h3>Cost Function $J(\\theta)$</h3>
               <p>The aggregate empirical expectation computed over the <strong>entire training dataset</strong> (or mini-batch), frequently augmented with a regularization penalty $\\Omega(\\theta)$:</p>
-              <code>J(\\theta) = \\frac{1}{n} \\sum_{i=1}^n \\mathcal{L}(\\hat{y}^{(i)}, y^{(i)}) + \\lambda \\Omega(\\theta)</code>
+              <div class="math-card" style="padding:14px; margin-top:8px;">$$J(\\theta) = \\frac{1}{n} \\sum_{i=1}^n \\mathcal{L}(\\hat{y}^{(i)}, y^{(i)}) + \\lambda \\Omega(\\theta)$$</div>
             </div>
             <div class="feature-card">
               <span class="card-num">03 / Optimization Goal</span>
@@ -60,29 +60,29 @@ const concepts = [
               <tbody>
                 <tr>
                   <td class="highlight">Mean Squared Error (MSE / L2)</td>
-                  <td class="code-val">\\frac{1}{2}(y - \\hat{y})^2</td>
-                  <td class="code-val">-(y - \\hat{y})</td>
+                  <td class="code-val">$$\\mathcal{L} = \\frac{1}{2}(y - \\hat{y})^2$$</td>
+                  <td class="code-val">$$-(y - \\hat{y})$$</td>
                   <td>Low (errors grow quadratically)</td>
                   <td>OLS, Ridge, Polynomial Regression, Gaussian Process</td>
                 </tr>
                 <tr>
                   <td class="highlight">Mean Absolute Error (MAE / L1)</td>
-                  <td class="code-val">|y - \\hat{y}|</td>
-                  <td class="code-val">-\\text{sgn}(y - \\hat{y})</td>
+                  <td class="code-val">$$\\mathcal{L} = |y - \\hat{y}|$$</td>
+                  <td class="code-val">$$-\\text{sgn}(y - \\hat{y})$$</td>
                   <td>High (linear penalty on residuals)</td>
                   <td>Median regression, financial datasets with heavy tails</td>
                 </tr>
                 <tr>
                   <td class="highlight">Huber Loss (Smooth L1)</td>
-                  <td class="code-val">\\begin{cases} \\frac{1}{2}e^2 & |e| \\le \\delta \\\\ \\delta(|e| - \\frac{1}{2}\\delta) & \\text{otherwise} \\end{cases}</td>
-                  <td class="code-val">\\begin{cases} -e & |e| \\le \\delta \\\\ -\\delta\\text{sgn}(e) & \\text{otherwise} \\end{cases}</td>
+                  <td class="code-val">$$\\begin{cases} \\frac{1}{2}e^2 & |e| \\le \\delta \\\\ \\delta(|e| - \\frac{1}{2}\\delta) & \\text{otherwise} \\end{cases}$$</td>
+                  <td class="code-val">$$\\begin{cases} -e & |e| \\le \\delta \\\\ -\\delta\\text{sgn}(e) & \\text{otherwise} \\end{cases}$$</td>
                   <td>Optimal (quadratic for small errors, linear for anomalies)</td>
                   <td>Robust Regression, Gradient Boosting, Object Detection</td>
                 </tr>
                 <tr>
                   <td class="highlight">Epsilon-Insensitive Loss</td>
-                  <td class="code-val">\\max(0, |y - \\hat{y}| - \\epsilon)</td>
-                  <td class="code-val">0 \\text{ if } |e| \\le \\epsilon, \\text{ else } -\\text{sgn}(e)</td>
+                  <td class="code-val">$$\\max(0, |y - \\hat{y}| - \\epsilon)$$</td>
+                  <td class="code-val">$$\\begin{cases} 0 & |e| \\le \\epsilon \\\\ -\\text{sgn}(e) & \\text{otherwise} \\end{cases}$$</td>
                   <td>High (ignores errors within margin tube $\\epsilon$)</td>
                   <td>Support Vector Regression (SVR)</td>
                 </tr>
@@ -183,31 +183,31 @@ const concepts = [
               <tbody>
                 <tr>
                   <td class="highlight">Accuracy</td>
-                  <td class="code-val">\\frac{TP + TN}{TP + TN + FP + FN}</td>
+                  <td class="code-val">$$\\frac{\\text{TP} + \\text{TN}}{\\text{TP} + \\text{TN} + \\text{FP} + \\text{FN}}$$</td>
                   <td>What fraction of all predictions were correct?</td>
                   <td>Misleading on imbalanced datasets (e.g. 99% accuracy on 1% rare fraud).</td>
                 </tr>
                 <tr>
                   <td class="highlight">Precision (Positive Predictive Value)</td>
-                  <td class="code-val">\\frac{TP}{TP + FP}</td>
+                  <td class="code-val">$$\\frac{\\text{TP}}{\\text{TP} + \\text{FP}}$$</td>
                   <td>When the model claims Positive, how often is it right?</td>
                   <td>Critical when False Positives are expensive (spam filters, hiring candidate shortlisting).</td>
                 </tr>
                 <tr>
                   <td class="highlight">Recall (Sensitivity / True Positive Rate)</td>
-                  <td class="code-val">\\frac{TP}{TP + FN}</td>
+                  <td class="code-val">$$\\frac{\\text{TP}}{\\text{TP} + \\text{FN}}$$</td>
                   <td>What percentage of actual Positives did the model catch?</td>
                   <td>Crucial when False Negatives are catastrophic (cancer screening, defect detection, fraud).</td>
                 </tr>
                 <tr>
                   <td class="highlight">Specificity (True Negative Rate)</td>
-                  <td class="code-val">\\frac{TN}{TN + FP}</td>
+                  <td class="code-val">$$\\frac{\\text{TN}}{\\text{TN} + \\text{FP}}$$</td>
                   <td>What percentage of actual Negatives were correctly identified?</td>
                   <td>Evaluates the model's resistance to false alarms.</td>
                 </tr>
                 <tr>
                   <td class="highlight">F1-Score</td>
-                  <td class="code-val">2 \\cdot \\frac{\\text{Precision} \\cdot \\text{Recall}}{\\text{Precision} + \\text{Recall}}</td>
+                  <td class="code-val">$$2 \\cdot \\frac{\\text{Precision} \\cdot \\text{Recall}}{\\text{Precision} + \\text{Recall}}$$</td>
                   <td>Harmonic mean balancing Precision and Recall.</td>
                   <td>Primary benchmark metric for skewed class distributions.</td>
                 </tr>
@@ -223,7 +223,7 @@ const concepts = [
           <div class="callout violet">
             <span class="callout-title">Why Accuracy Fails in Production</span>
             <p>Consider a credit card fraud detection dataset with 10,000 transactions, where only 20 transactions ($0.2\\%$) are fraudulent. A naive "dummy" model that blindly predicts <strong>Negative (No Fraud)</strong> for every single transaction achieves an impressive <strong>99.8% Accuracy</strong>.</p>
-            <p>However, its Recall is <strong>0.0%</strong>: it catches zero fraud cases, rendering it useless in practice. The Confusion Matrix immediately exposes this catastrophic failure by displaying $TP=0$ and $FN=20$.</p>
+            <p>However, its Recall is <strong>0.0%</strong>: it catches zero fraud cases, rendering it useless in practice. The Confusion Matrix immediately exposes this catastrophic failure by displaying $\\text{TP}=0$ and $\\text{FN}=20$.</p>
           </div>
         `
       }
@@ -390,7 +390,7 @@ const concepts = [
             <p>The arithmetic mean is dominated by large values. If Precision = 1.0 and Recall = 0.0, the arithmetic mean is $0.50$ (suggesting decent performance), despite the model failing completely on recall.</p>
             <p>The harmonic mean takes the reciprocal of values, heavily penalizing extreme disparities:</p>
             <div class="math-card">
-              $$F_1 = \\frac{2}{\\frac{1}{\\text{Precision}} + \\frac{1}{\\text{Recall}}} = 2 \\cdot \\frac{\\text{Precision} \\cdot \\text{Recall}}{\\text{Precision} + \\text{Recall}} = \\frac{2 \\cdot TP}{2 \\cdot TP + FP + FN}$$
+              $$F_1 = \\frac{2}{\\frac{1}{\\text{Precision}} + \\frac{1}{\\text{Recall}}} = 2 \\cdot \\frac{\\text{Precision} \\cdot \\text{Recall}}{\\text{Precision} + \\text{Recall}} = \\frac{2 \\cdot \\text{TP}}{2 \\cdot \\text{TP} + \\text{FP} + \\text{FN}}$$
             </div>
             <p>If either Precision or Recall drops to zero, $F_1 \\to 0$.</p>
           </div>
@@ -417,7 +417,7 @@ const concepts = [
         content: `
           <p>The ROC curve plots the <strong>True Positive Rate (Sensitivity)</strong> against the <strong>False Positive Rate (1 - Specificity)</strong> across every possible classification threshold $\\tau \\in [0, 1]$:</p>
           <div class="math-card">
-            $$\\text{TPR}(\\tau) = \\frac{TP(\\tau)}{TP(\\tau) + FN(\\tau)}, \\quad \\text{FPR}(\\tau) = \\frac{FP(\\tau)}{FP(\\tau) + TN(\\tau)}$$
+            $$\\text{TPR}(\\tau) = \\frac{\\text{TP}(\\tau)}{\\text{TP}(\\tau) + \\text{FN}(\\tau)}, \\quad \\text{FPR}(\\tau) = \\frac{\\text{FP}(\\tau)}{\\text{FP}(\\tau) + \\text{TN}(\\tau)}$$
           </div>
           <div class="callout cyan">
             <span class="callout-title">Probabilistic Interpretation of AUC</span>
@@ -465,35 +465,35 @@ const concepts = [
               <tbody>
                 <tr>
                   <td class="highlight">MSE</td>
-                  <td class="code-val">\\frac{1}{n} \\sum (y_i - \\hat{y}_i)^2</td>
+                  <td class="code-val">$$\\frac{1}{n} \\sum_{i=1}^n (y_i - \\hat{y}_i)^2$$</td>
                   <td>$\\text{Unit}^2$</td>
                   <td>Extremely High</td>
                   <td>Differentiable; standard optimization loss.</td>
                 </tr>
                 <tr>
                   <td class="highlight">RMSE</td>
-                  <td class="code-val">\\sqrt{\\frac{1}{n} \\sum (y_i - \\hat{y}_i)^2}</td>
+                  <td class="code-val">$$\\sqrt{\\frac{1}{n} \\sum_{i=1}^n (y_i - \\hat{y}_i)^2}$$</td>
                   <td>$\\text{Unit}$</td>
                   <td>High</td>
                   <td>Directly interpretable in target's natural units.</td>
                 </tr>
                 <tr>
                   <td class="highlight">MAE</td>
-                  <td class="code-val">\\frac{1}{n} \\sum |y_i - \\hat{y}_i|</td>
+                  <td class="code-val">$$\\frac{1}{n} \\sum_{i=1}^n |y_i - \\hat{y}_i|$$</td>
                   <td>$\\text{Unit}$</td>
                   <td>Low / Robust</td>
                   <td>Represents expected absolute dollar/unit deviation.</td>
                 </tr>
                 <tr>
                   <td class="highlight">R² (Determination)</td>
-                  <td class="code-val">1 - \\frac{\\sum (y_i - \\hat{y}_i)^2}{\\sum (y_i - \\bar{y})^2}</td>
+                  <td class="code-val">$$1 - \\frac{\\sum (y_i - \\hat{y}_i)^2}{\\sum (y_i - \\bar{y})^2}$$</td>
                   <td>Unitless ($(-\\infty, 1]$)</td>
                   <td>Moderate</td>
                   <td>Proportion of variance explained by model.</td>
                 </tr>
                 <tr>
                   <td class="highlight">Adjusted R²</td>
-                  <td class="code-val">1 - \\left( \\frac{1 - R^2}{n - p - 1} \\right)(n - 1)</td>
+                  <td class="code-val">$$1 - \\left( \\frac{1 - R^2}{n - p - 1} \\right)(n - 1)$$</td>
                   <td>Unitless</td>
                   <td>Moderate</td>
                   <td>Penalizes introduction of irrelevant features.</td>
@@ -545,14 +545,14 @@ const concepts = [
               <span class="card-num">Metric 1 / Tightness</span>
               <h3>Inertia (WCSS)</h3>
               <p>Within-Cluster Sum of Squares:</p>
-              <code>\\text{WCSS} = \\sum_{k=1}^K \\sum_{x \\in C_k} \\|x - \\mu_k\\|^2</code>
+              <div class="math-card" style="padding:12px; margin-top:6px;">$$\\text{WCSS} = \\sum_{k=1}^K \\sum_{x \\in C_k} \\|x - \\mu_k\\|^2$$</div>
               <p>Used in the Elbow method to find inflection point where diminishing returns occur.</p>
             </div>
             <div class="feature-card">
               <span class="card-num">Metric 2 / Relative Cohesion</span>
               <h3>Silhouette Score</h3>
               <p>Measures how similar instance $i$ is to its own cluster versus the nearest neighboring cluster:</p>
-              <code>s(i) = \\frac{b(i) - a(i)}{\\max(a(i), b(i))}</code>
+              <div class="math-card" style="padding:12px; margin-top:6px;">$$s(i) = \\frac{b(i) - a(i)}{\\max(a(i), b(i))}$$</div>
               <p>Range $[-1, +1]$. Values $> 0.5$ indicate robust, separable cluster boundaries.</p>
             </div>
             <div class="feature-card">
@@ -635,21 +635,21 @@ const concepts = [
               <tbody>
                 <tr>
                   <td class="highlight">Ridge (L2 / Tikhonov)</td>
-                  <td class="code-val">\\lambda \\sum \\beta_j^2</td>
+                  <td class="code-val">$$\\lambda \\sum_{j=1}^p \\beta_j^2$$</td>
                   <td>Hypersphere / Smooth Circle</td>
                   <td>No (shrinks weights toward 0 asymptotically)</td>
                   <td>Gaussian Prior $\\beta_j \\sim \\mathcal{N}(0, \\tau^2)$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Lasso (L1)</td>
-                  <td class="code-val">\\lambda \\sum |\\beta_j|</td>
+                  <td class="code-val">$$\\lambda \\sum_{j=1}^p |\\beta_j|$$</td>
                   <td>Diamond / Polytope with sharp corners</td>
                   <td><strong>Yes</strong> (forces weights strictly to 0.0)</td>
                   <td>Laplace Prior $\\beta_j \\sim \\text{Laplace}(0, b)$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Elastic Net</td>
-                  <td class="code-val">\\lambda_1 \\|\\beta\\|_1 + \\lambda_2 \\|\\beta\\|_2^2</td>
+                  <td class="code-val">$$\\lambda_1 \\|\\beta\\|_1 + \\lambda_2 \\|\\beta\\|_2^2$$</td>
                   <td>Convex combination of diamond and circle</td>
                   <td>Selective (groups correlated predictors)</td>
                   <td>Mixed Gaussian-Laplace prior</td>
@@ -799,19 +799,19 @@ const concepts = [
                   <td class="highlight">Loss Function $\\mathcal{L}(y, \\hat{y})$</td>
                   <td>Single sample $(x_i, y_i)$</td>
                   <td>Differentiable target evaluated per instance</td>
-                  <td class="code-val">\\frac{1}{2}(y_i - \\hat{y}_i)^2 \\quad \\text{or} \\quad -y_i \\log(p_i)</td>
+                  <td class="code-val">$$\\frac{1}{2}(y_i - \\hat{y}_i)^2 \\quad \\text{or} \\quad -y_i \\log(p_i)$$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Cost Function $J(\\theta)$</td>
                   <td>Full dataset or mini-batch</td>
                   <td>Direct mathematical objective being optimized by solver</td>
-                  <td class="code-val">\\frac{1}{n} \\sum \\mathcal{L} + \\lambda \\|w\\|^2</td>
+                  <td class="code-val">$$\\frac{1}{n} \\sum_{i=1}^n \\mathcal{L} + \\lambda \\|w\\|^2$$</td>
                 </tr>
                 <tr>
                   <td class="highlight">Error Function / Metric</td>
                   <td>Evaluation benchmark</td>
                   <td>Interpretable score for humans (often non-differentiable)</td>
-                  <td class="code-val">\\text{Accuracy}, \\text{ROC-AUC}, \\text{F1-Score}, \\text{RMSE}</td>
+                  <td class="code-val">$$\\text{Accuracy}, \\quad \\text{ROC-AUC}, \\quad \\text{F1-Score}, \\quad \\text{RMSE}$$</td>
                 </tr>
               </tbody>
             </table>
@@ -856,14 +856,31 @@ for (const c of concepts) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${c.title} · ML Concepts Hub · Yogesh Awate</title>
+  <title>${c.title} · Learn ML · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\\\(', right: '\\\\)', display: false},
+            {left: '\\\\[', right: '\\\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -872,16 +889,16 @@ for (const c of concepts) {
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <div class="nav-breadcrumbs">
-        <a href="../../index.html">Zoo</a>
+        <a href="../../index.html#learn">Learn</a>
         <span class="sep">/</span>
-        <a href="../index.html">Concepts</a>
+        <a href="../../index.html#learn-concepts">Concepts</a>
         <span class="sep">/</span>
         <span>${c.title}</span>
       </div>
     </div>
     <div class="nav-right">
-      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
-      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
     </div>
   </nav>
 
@@ -906,8 +923,8 @@ ${sectionsHtml}
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../index.html">All Concepts Hub</a> &bull;
-      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
@@ -949,13 +966,13 @@ const hubHtml = `<!DOCTYPE html>
     <div class="brand-wrap">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
       <span class="brand-divider">/</span>
-      <a href="../index.html" class="brand-sub">Model Zoo</a>
+      <a href="../index.html#learn" class="brand-sub">Learn</a>
       <span class="brand-divider">/</span>
       <span class="brand-sub">Concepts Hub</span>
     </div>
     <div class="navlinks" id="navlinks">
-      <a href="../index.html">Zoo Catalog (47)</a>
-      <a href="#hub" class="active">Concepts</a>
+      <a href="../index.html#learn-models">Models (47)</a>
+      <a href="#hub" class="active">Concepts (13)</a>
       <a href="https://yogesh660.github.io/work/">Work</a>
       <a href="https://github.com/yogesh660" target="_blank" rel="noopener" class="pill">GitHub</a>
     </div>
@@ -980,7 +997,7 @@ const hubHtml = `<!DOCTYPE html>
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div class="footlinks">
-      <a href="../index.html">Model Zoo (47)</a>
+      <a href="../index.html#learn">Back to Learn Hub</a> &bull;
       <a href="https://yogesh660.github.io/about/">About</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
