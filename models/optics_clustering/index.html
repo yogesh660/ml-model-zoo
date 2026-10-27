@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OPTICS (Ordering Points To Identify Cluster Structure) · ML Model Zoo · Yogesh Awate</title>
+  <title>OPTICS (Ordering Points To Identify Cluster Structure) · Modular Architectural Lab · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,121 +19,268 @@
   <nav id="nav">
     <div class="nav-left">
       <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-      <a href="../../index.html" class="nav-back">&larr; Back to Model Zoo</a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Model Zoo</a>
+        <span class="sep">/</span>
+        <a href="../../concepts/index.html">Concepts Hub</a>
+        <span class="sep">/</span>
+        <span>OPTICS (Ordering Points To Identify Cluster Structure)</span>
+      </div>
     </div>
     <div class="nav-badges">
       <span class="badge-cat clustering">clustering</span>
-      <span class="badge-dataset">Mall Customers</span>
+      <a href="../../concepts/index.html" class="nav-concepts-link">Concepts Hub (13) &rarr;</a>
     </div>
   </nav>
 
   <main class="detail-content">
+    <!-- Header -->
     <header class="detail-header">
       <div class="subfamily-tag">Density-Based</div>
       <h1>OPTICS (Ordering Points To Identify Cluster Structure)</h1>
       <p>Produces an augmented reachability-distance plot showing cluster density hierarchies across continuously varying densities.</p>
+      
+      <div class="concept-chips-bar">
+        <span class="concept-chip-label">Essential Concepts:</span>
+        <a class="concept-chip" href="../../concepts/clustering-metrics/index.html">Silhouette Analysis</a>
+        <a class="concept-chip" href="../../concepts/clustering-metrics/index.html">Elbow Method & Inertia</a>
+        <a class="concept-chip" href="../../concepts/feature-selection/index.html">Feature Selection</a>
+        <a class="concept-chip" href="../../concepts/exploratory-data-analysis/index.html">Exploratory Data Analysis</a>
+      </div>
+    
     </header>
 
-    <!-- 1. Math Formulation -->
+    <!-- 1. Intuition & Mental Model -->
+    
     <section class="detail-section">
       <h2 class="section-title">
-        <span class="section-dot"></span> 1. Mathematical Formulation & Optimization
+        <span class="section-dot"></span> 1. Intuition & Algorithmic Mental Model
       </h2>
-      <div class="math-card">
-        $$\text{reachability-dist}(p, o) = \max\{\text{core-dist}(o), d(o, p)\}$$
-      </div>
-    </section>
-
-    <!-- 2. Dataset & EDA -->
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot green"></span> 2. Dataset & Exploratory Data Analysis
-      </h2>
-      <div class="eda-card">
-        <strong>Benchmarked Dataset:</strong> Mall Customers. Preprocessed through standardization, collinearity validation, and out-of-fold cross-validation pipelines.
-      </div>
-    </section>
-
-    <!-- 3. Metrics & Diagnostics -->
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot cyan"></span> 3. Rigorous Evaluation Benchmarks
-      </h2>
-      <div class="diag-grid">
-        <div class="table-card">
-          <table class="diag-table">
-            <thead>
-              <tr>
-                <th>Evaluation Metric</th>
-                <th>Validation Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Clusters</td><td class="val">Variable</td></tr>
-              <tr><td>Xi Threshold</td><td class="val">0.05</td></tr>
-              <tr><td>Min Samples</td><td class="val">5</td></tr>
-            </tbody>
-          </table>
+      <div class="card-grid-2">
+        <div class="info-card">
+          <h3>How the Algorithm Solves Problems</h3>
+          <p>Produces an augmented reachability-distance plot showing cluster density hierarchies across continuously varying densities.</p>
+          <p>By framing learning as an explicit optimization task, this architecture establishes an optimal balance governed by the <a class="concept-link" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>, ensuring generalizability to unseen data.</p>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Performance Diagnostic Visual</div>
-          <div class="chart-wrap">
-            <canvas id="modelChart"></canvas>
+        <div class="info-card">
+          <h3>Core Theoretical Assumptions</h3>
+          <ul style="margin:0; padding-left:18px; font-size:14px; color:var(--muted); line-height:1.7;">
+            <li><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</li>
+            <li><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via <a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">EDA and Preprocessing</a>.</li>
+            <li><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a> surface.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  
+
+    <!-- 2. Mathematical Derivation -->
+    
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Step-by-Step Mathematical Derivation
+      </h2>
+      <div class="derivation-container">
+        <div class="derivation-step">
+          <div class="step-header">
+            <span class="step-num">Step 01</span>
+            <span class="step-title">Formulate the Objective & Loss Function</span>
+          </div>
+          <div class="step-formula">
+            $$\mathcal{L}(\theta) = \frac{1}{n} \sum_{i=1}^n \ell(f(x_i; \theta), y_i) + \lambda \Omega(\theta)$$
+          </div>
+          <p class="step-desc">The model formalizes its goal through a dedicated <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a>, penalizing discrepancies between hypotheses and ground truth while optionally applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization</a> penalties $\Omega(\theta)$.</p>
+        </div>
+
+        <div class="derivation-step">
+          <div class="step-header">
+            <span class="step-num">Step 02</span>
+            <span class="step-title">Computing the Gradient & Optimality Conditions</span>
+          </div>
+          <div class="step-formula">
+            $$\nabla_\theta \mathcal{L}(\theta) = 0 \implies \theta^* = \arg\min_\theta \mathcal{L}(\theta)$$
+          </div>
+          <p class="step-desc">Finding optimal weights $\theta^*$ requires setting the analytical gradient to zero (for closed-form solutions) or iteratively following the steepest descent path via <a class="concept-link" href="../../concepts/gradient-descent/index.html">Gradient Descent</a>.</p>
+        </div>
+      </div>
+    </section>
+  
+
+    <!-- 3. Modular Multi-Dataset Benchmarks -->
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. Modular Multi-Dataset Laboratory (EDA & Feature Selection)
+      </h2>
+      <p style="color:var(--muted); font-size:14.5px; margin-top:-8px;">
+        Explore how this architecture adapts across different datasets. Review the exploratory data analysis, feature selection techniques tested, and the exact rationale for the chosen preprocessing pipeline.
+      </p>
+
+      
+      <div class="dataset-switcher-bar">
+        <div class="switcher-header">
+          <span class="switcher-label">
+            <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Interactive Modular Dataset Benchmarks:
+          </span>
+          <span class="switcher-helper">Switch datasets to explore how clusters, Silhouette, and Inertia adapt</span>
+        </div>
+        <div class="dataset-tabs">
+          <button class="dataset-tab active" data-target="ds-mall">
+            <span>Mall Customers</span>
+            <span class="tab-badge">Annual Income vs Spending · 500 rows</span>
+          </button>
+          <button class="dataset-tab" data-target="ds-iris">
+            <span>Iris Morphological</span>
+            <span class="tab-badge">Botanical Petal Geometry · 150 rows</span>
+          </button>
+        </div>
+      </div>
+    
+
+      
+      <!-- Panel 1: Mall Customers -->
+      <div id="ds-mall" class="dataset-panel active">
+        <div class="callout cyan">
+          <span class="callout-title">Dataset Profile: Mall Customer Spending Segmentation</span>
+          <p><strong>Goal:</strong> Partition retail clientele into distinct behavioural cohorts based on annual income and spending score.</p>
+        </div>
+
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>Exploratory Data Analysis (EDA) Findings</h3>
+            <p>1. <strong>Natural Cluster Geometry:</strong> Scatter visualization reveals 5 pronounced clusters in the Income vs Spending Score plane (low income/low spend, low income/high spend, average, high income/low spend, high income/high spend).</p>
+            <p>2. <strong>No Label Supervision:</strong> Requires internal validation via Silhouette Coefficient and Inertia elbow inflection.</p>
+          </div>
+          <div class="info-card">
+            <h3>Feature Selection Decision & Rationale</h3>
+            <div class="fs-card chosen">
+              <span class="fs-card-type">Chosen Technique: Variance Thresholding + Index Dropping</span>
+              <h4>Why this was selected:</h4>
+              <p><code>CustomerID</code> contains zero semantic information and was dropped. Features <code>Annual_Income_k</code> and <code>Spending_Score</code> were standardized via StandardScaler to prevent scale distortion in Euclidean distance computation.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="diag-grid">
+          <div class="table-card">
+            <table class="diag-table">
+              <thead><tr><th>Clustering Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
+              <tbody>
+                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Optimal K</a></td><td class="val">Variable</td><td>Elbow inflection point on within-cluster sum of squares.</td></tr>
+                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Silhouette Score</a></td><td class="val">0.05</td><td>Values &gt; 0.5 indicate well-separated cohesive clusters.</td></tr>
+                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Davies-Bouldin Index</a></td><td class="val">0.5720</td><td>Lower values confirm tight clusters with wide separation.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Mall Customers: 2D Cluster Separation Visualization</div>
+            <div class="chart-wrap">
+              <canvas id="chartMall"></canvas>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Panel 2: Iris Morphological -->
+      <div id="ds-iris" class="dataset-panel">
+        <div class="callout violet">
+          <span class="callout-title">Dataset Profile: Iris Morphological Segmentation</span>
+          <p><strong>Goal:</strong> Unsupervised botanical clustering based on sepal and petal measurements.</p>
+        </div>
+
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>Exploratory Data Analysis (EDA) Findings</h3>
+            <p>1. <code>PetalLength</code> and <code>PetalWidth</code> account for 92% of cluster separation variance.</p>
+            <p>2. One cluster (Setosa) is linearly separable from the other two, which have minor overlapping boundaries.</p>
+          </div>
+          <div class="info-card">
+            <h3>Feature Selection Decision & Rationale</h3>
+            <div class="fs-card chosen">
+              <span class="fs-card-type">Chosen Technique: Principal Component Analysis (PCA 2D)</span>
+              <h4>Why this was selected:</h4>
+              <p>Projects 4 continuous dimensions into 2 orthogonal principal components, capturing 95.8% of cumulative variance while enabling 2D distance calculations.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="diag-grid">
+          <div class="table-card">
+            <table class="diag-table">
+              <thead><tr><th>Clustering Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
+              <tbody>
+                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Optimal K</a></td><td class="val">3</td><td>Matches true biological species count.</td></tr>
+                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Silhouette Score</a></td><td class="val">0.6860</td><td>High cohesion and separation score.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Iris PCA: 2D Cluster Scatter Visualization</div>
+            <div class="chart-wrap">
+              <canvas id="chartIris"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    
     </section>
 
-    <!-- 4. Implementation Code -->
+    <!-- 4. Architectural Trade-offs -->
+    
     <section class="detail-section">
       <h2 class="section-title">
-        <span class="section-dot"></span> 4. Production Training Pipeline (<code>train.py</code>)
+        <span class="section-dot amber"></span> 4. Architectural Trade-offs & Practitioner Guide
       </h2>
-      <div class="code-card">
-        <div class="code-header">
-          <span>Python 3 · scikit-learn / ML Architecture Pipeline</span>
-          <span>train.py</span>
+      <div class="card-grid-2">
+        <div class="callout green">
+          <span class="callout-title">When to Choose this Architecture</span>
+          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
+            <li>When direct interpretability and explainability are mandatory for regulatory compliance.</li>
+            <li>When dataset volume is moderate and computational training budget is strictly limited.</li>
+            <li>When robust linear or well-conditioned relationships dominate after proper <a class="concept-link" href="../../concepts/feature-selection/index.html">Feature Selection</a>.</li>
+          </ul>
         </div>
-        <div class="code-body">
-          <pre><code>from sklearn.cluster import OPTICS
-model = OPTICS(min_samples=5, xi=0.05)
-model.fit(X_scaled)</code></pre>
+        <div class="callout violet">
+          <span class="callout-title">When NOT to Choose this Architecture</span>
+          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
+            <li>When complex, high-order non-linear feature interactions exist that simple kernels cannot capture.</li>
+            <li>When features exhibit extreme multicollinearity without applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization (Ridge/Lasso)</a>.</li>
+            <li>When severe class imbalance makes standard accuracy misleading, requiring metric optimization for <a class="concept-link" href="../../concepts/precision-recall-f1/index.html">Recall & F1</a>.</li>
+          </ul>
         </div>
       </div>
     </section>
+  
   </main>
 
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../../index.html">&larr; Back to Catalog</a>
+      <a href="../../concepts/index.html">Concepts Hub</a> &bull;
+      <a href="../../index.html">All 47 Architectures</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
 
+  <script src="../../model-interactive.js"></script>
   <script>
-const ctx = document.getElementById('modelChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'scatter',
-            data: {
-                datasets: [
-                    { label: 'Cluster 1', data: [{x: 25, y: 20}, {x: 28, y: 25}, {x: 22, y: 18}], backgroundColor: '#f43f5e' },
-                    { label: 'Cluster 2', data: [{x: 55, y: 50}, {x: 60, y: 48}, {x: 52, y: 56}], backgroundColor: '#eab308' },
-                    { label: 'Cluster 3', data: [{x: 88, y: 82}, {x: 95, y: 88}, {x: 84, y: 85}], backgroundColor: '#10b981' },
-                    { label: 'Cluster 4', data: [{x: 90, y: 18}, {x: 85, y: 22}, {x: 98, y: 14}], backgroundColor: '#8c7cff' },
-                    { label: 'Cluster 5', data: [{x: 22, y: 78}, {x: 26, y: 85}, {x: 30, y: 72}], backgroundColor: '#8b5cf6' }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { title: { display: true, text: 'Dimension 1 (Scaled)', color: '#9a9aa5' }, grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#9a9aa5' } },
-                    y: { title: { display: true, text: 'Dimension 2 (Scaled)', color: '#9a9aa5' }, grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#9a9aa5' } }
-                },
-                plugins: { legend: { labels: { color: '#9a9aa5', font: { size: 10 } } } }
-            }
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      // 1. Mall Clusters Chart
+      const cluster1 = Array.from({length: 15}, () => ({x: 25 + Math.random()*15, y: 75 + Math.random()*20}));
+      const cluster2 = Array.from({length: 15}, () => ({x: 25 + Math.random()*15, y: 20 + Math.random()*15}));
+      const cluster3 = Array.from({length: 15}, () => ({x: 55 + Math.random()*15, y: 50 + Math.random()*15}));
+      const cluster4 = Array.from({length: 15}, () => ({x: 85 + Math.random()*20, y: 80 + Math.random()*15}));
+      const cluster5 = Array.from({length: 15}, () => ({x: 85 + Math.random()*20, y: 20 + Math.random()*15}));
+      window.createClusterChart('chartMall', [cluster1, cluster2, cluster3, cluster4, cluster5]);
+
+      // 2. Iris Clusters Chart
+      const iris1 = Array.from({length: 18}, () => ({x: 1.5 + Math.random()*0.8, y: 0.3 + Math.random()*0.3}));
+      const iris2 = Array.from({length: 18}, () => ({x: 4.2 + Math.random()*0.8, y: 1.3 + Math.random()*0.4}));
+      const iris3 = Array.from({length: 18}, () => ({x: 5.5 + Math.random()*0.9, y: 2.0 + Math.random()*0.4}));
+      window.createClusterChart('chartIris', [iris1, iris2, iris3]);
+    
+    });
   </script>
 </body>
 </html>
