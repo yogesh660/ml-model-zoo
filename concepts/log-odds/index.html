@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log-Odds & The Logit Function · Learn ML · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
+  <link rel="stylesheet" href="../../visual-components.css">
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html#learn">Learn</a>
+        <span class="sep">/</span>
+        <a href="../../index.html#learn-concepts">Concepts</a>
+        <span class="sep">/</span>
+        <span>Log-Odds & The Logit Function</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Probabilistic Modeling • 14</div>
+      <h1>Log-Odds & The Logit Function</h1>
+      <p class="concept-lead">The mathematical bridge mapping bounded probability space $[0, 1]$ to unbounded Euclidean space $(-\infty, +\infty)$, unlocking linear regression models for binary classification.</p>
+    </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">Log-Odds Coordinate Transformation: From Bounded Interval to Real Line</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Bounded Unit Interval</span>
+            <h4>Probability p</h4>
+            <p>Constrained likelihood.</p>
+            <span class="tensor-shape">$p in [0, 1]$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan-2);">Ratio of Outcomes</span>
+            <h4>Odds Ratio</h4>
+            <p>Success relative to failure.</p>
+            <span class="tensor-shape">$rac{p}{1-p} in [0, +infty)$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Logarithmic Mapping</span>
+            <h4>Log-Odds (Logit)</h4>
+            <p>Natural log mapping.</p>
+            <span class="tensor-shape">$lnleft(rac{p}{1-p}ight) in mathbb{R}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green-2);">Linear Modeling</span>
+            <h4>Hyperplane Predictor</h4>
+            <p>Unconstrained inner product.</p>
+            <span class="tensor-shape">$mathbf{w}^T mathbf{x} + b$</span>
+          </div>
+        </div>
+      </div>
+    
+
+    
+    
+    
+    
+    <div id="lab-log-odds"></div>
+    
+    
+    
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. From Probability to Odds to Log-Odds
+      </h2>
+      <div class="concept-body">
+        
+          <p>A standard posterior probability $p = P(Y=1|X)$ is strictly constrained to the unit interval $p \in [0, 1]$. If we attempt to fit an unconstrained linear model directly to probabilities ($p = \mathbf{w}^T \mathbf{x} + b$), extreme feature values inevitably predict nonsensical probabilities $p < 0$ or $p > 1$, violating the Kolmogorov probability axioms.</p>
+          <div class="card-grid-3">
+            <div class="feature-card">
+              <span class="card-num">01 / Probability</span>
+              <h3>Bounded Interval $[0, 1]$</h3>
+              <p>Measures absolute event likelihood: $p = \frac{n_{\text{success}}}{n_{\text{total}}}$. As $p \to 0$, event is impossible; as $p \to 1$, event is guaranteed.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">02 / Odds Ratio</span>
+              <h3>Semi-Infinite $[0, +\infty)$</h3>
+              <p>Ratio of favorable to unfavorable outcomes:</p>
+              <div class="math-card" style="padding:10px; margin-top:6px;">$\text{Odds} = \frac{p}{1 - p}$</div>
+              <p>When $p=0.8$, $\text{Odds} = 4.0$ (4-to-1 in favor). When $p=0.5$, $\text{Odds} = 1.0$. Removes upper bound but retains zero floor.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">03 / Logit (Log-Odds)</span>
+              <h3>Unbounded $(-\infty, +\infty)$</h3>
+              <p>Taking the natural logarithm yields the logit:</p>
+              <div class="math-card" style="padding:10px; margin-top:6px;">$\text{logit}(p) = \ln\left(\frac{p}{1 - p}\right)$</div>
+              <p>Maps $[0, 1] \to \mathbb{R}$, perfectly aligning with real-valued linear hyperplanes $\mathbf{w}^T \mathbf{x} + b$.</p>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Interpreting Weights as Multiplicative Odds Ratios
+      </h2>
+      <div class="concept-body">
+        
+          <p>In Logistic Regression, the systematic component models the log-odds directly as a linear combination:</p>
+          <div class="math-card">
+            $\ln\left(\frac{p}{1 - p}\right) = w_0 + w_1 x_1 + w_2 x_2 + \dots + w_p x_p$
+          </div>
+          <p>Consider an increment of $\Delta x_1 = 1$ while holding all other features strictly constant:</p>
+          <div class="math-card">
+            $\text{logit}(p_{\text{new}}) - \text{logit}(p_{\text{old}}) = w_1 \implies \frac{\text{Odds}_{\text{new}}}{\text{Odds}_{\text{old}}} = e^{w_1}$
+          </div>
+          <div class="table-wrap">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Weight Value $w_j$</th>
+                  <th>Odds Ratio $\text{OR} = e^{w_j}$</th>
+                  <th>Directional Effect</th>
+                  <th>Clinical / Practical Interpretation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">$w_j = +0.693$</td>
+                  <td class="code-val">$e^{0.693} \approx 2.00$</td>
+                  <td>Doubles Odds (+100%)</td>
+                  <td>Every unit increase doubles the odds of the positive outcome.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">$w_j = 0.000$</td>
+                  <td class="code-val">$e^0 = 1.00$</td>
+                  <td>Neutral (No Change)</td>
+                  <td>Feature has zero statistical association with the class label.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">$w_j = -0.693$</td>
+                  <td class="code-val">$e^{-0.693} \approx 0.50$</td>
+                  <td>Halves Odds (-50%)</td>
+                  <td>Every unit increase cuts the odds of the outcome in half.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. Mathematical Symmetry & Asymptotic Saturation
+      </h2>
+      <div class="concept-body">
+        
+          <div class="callout violet">
+            <span class="callout-title">Point Symmetry around the Decision Threshold</span>
+            <p>The logit function exhibits exact antisymmetric reflection about $p = 0.5$ ($	ext{logit} = 0$):</p>
+            <div class="math-card">
+              $\text{logit}(1 - p) = \ln\left(\frac{1 - p}{p}\right) = -\ln\left(\frac{p}{1 - p}\right) = -\text{logit}(p)$
+            </div>
+            <p>A probability of $0.90$ produces $\text{logit}(0.90) = +2.197$, while its complementary error $0.10$ produces $\text{logit}(0.10) = -2.197$.</p>
+          </div>
+          <div class="callout cyan" style="margin-top:14px;">
+            <span class="callout-title">Asymptotic Compression & Certainty Penalties</span>
+            <p>As $p \to 1$, $\text{logit}(p) \to +\infty$; as $p \to 0$, $\text{logit}(p) \to -\infty$. Increasing probability from $50\%$ to $60\%$ requires $\Delta z = 0.405$, but pushing from $98\%$ to $99\%$ requires $\Delta z = 0.704$, and moving from $99.9\%$ to $99.99\%$ requires massive parameter shifts. This guarantees infinite penalties for confident false predictions.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/linear_discriminant_analysis/index.html" class="model-badge classification">
+      <span class="dot"></span> Linear Discriminant Analysis
+    </a>
+  
+    <a href="../../models/quadratic_discriminant_analysis/index.html" class="model-badge classification">
+      <span class="dot"></span> Quadratic Discriminant Analysis
+    </a>
+  
+    <a href="../../models/gaussian_naive_bayes/index.html" class="model-badge classification">
+      <span class="dot"></span> Naive Bayes (Gaussian)
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('log-odds' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('log-odds' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('log-odds' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('log-odds' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('log-odds' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('log-odds' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('log-odds' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('log-odds' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
+      }
+    });
+  </script>
+</body>
+</html>

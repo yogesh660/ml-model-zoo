@@ -1,7 +1,7 @@
 /**
- * Machine Learning Model Zoo - Interactive Scripts
+ * Learn Platform - Interactive Scripts
  * Styled to match Yogesh Awate's portfolio: https://yogesh660.github.io/
- * Powers the unified "Learn" Section (47 Models + 13 Concepts)
+ * Powers the unified Learn Platform (47 Models + 17 Concepts = 64 Learning Units)
  */
 
 (function () {
@@ -85,14 +85,12 @@
 
   document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
 
-  // 5. Unified Learn Tab Switcher (Models vs Concepts)
-  let activeLearnTab = 'models'; // 'models' or 'concepts'
+  // 5. Unified Learn Tab Switcher & Domain Filtering
+  let activeLearnTab = 'all'; // 'all', 'models', 'concepts', 'stats', 'ds', 'diagnostics', 'optimization'
   let currentModelCategory = 'all';
   let currentConceptCategory = 'all';
   let searchQuery = '';
 
-  const learnTabModels = document.getElementById('learnTabModels');
-  const learnTabConcepts = document.getElementById('learnTabConcepts');
   const modelsContainer = document.getElementById('modelsContainer');
   const conceptsContainer = document.getElementById('conceptsContainer');
   const modelFilters = document.getElementById('modelFilters');
@@ -102,25 +100,73 @@
   const conceptCards = document.querySelectorAll('#conceptsContainer .concept-card');
   const modelFilterBtns = document.querySelectorAll('#modelFilters .filter');
   const conceptFilterBtns = document.querySelectorAll('#conceptFilters .filter');
+  const curriculumPills = document.querySelectorAll('.curriculum-pill');
 
   window.switchLearnTab = function (tab) {
     activeLearnTab = tab;
 
-    if (tab === 'models') {
-      learnTabModels.classList.add('active');
-      learnTabConcepts.classList.remove('active');
+    curriculumPills.forEach(pill => {
+      const id = pill.id;
+      const matches = (
+        (tab === 'all' && id === 'pillAll') ||
+        (tab === 'models' && id === 'pillModels') ||
+        (tab === 'stats' && id === 'pillStats') ||
+        (tab === 'ds' && id === 'pillDS') ||
+        (tab === 'diagnostics' && id === 'pillDiag') ||
+        (tab === 'optimization' && id === 'pillOpt') ||
+        (tab === 'concepts' && id === 'pillStats')
+      );
+      pill.classList.toggle('active', matches);
+    });
+
+    if (tab === 'all') {
+      modelsContainer.style.display = 'grid';
+      conceptsContainer.style.display = 'grid';
+      modelFilters.style.display = 'flex';
+      conceptFilters.style.display = 'none';
+      currentConceptCategory = 'all';
+      history.replaceState(null, '', '#learn');
+    } else if (tab === 'models') {
       modelsContainer.style.display = 'grid';
       conceptsContainer.style.display = 'none';
       modelFilters.style.display = 'flex';
       conceptFilters.style.display = 'none';
       history.replaceState(null, '', '#learn-models');
-    } else {
-      learnTabConcepts.classList.add('active');
-      learnTabModels.classList.remove('active');
+    } else if (tab === 'stats') {
       modelsContainer.style.display = 'none';
       conceptsContainer.style.display = 'grid';
       modelFilters.style.display = 'none';
       conceptFilters.style.display = 'flex';
+      currentConceptCategory = 'theory';
+      history.replaceState(null, '', '#learn-statistics');
+    } else if (tab === 'ds') {
+      modelsContainer.style.display = 'none';
+      conceptsContainer.style.display = 'grid';
+      modelFilters.style.display = 'none';
+      conceptFilters.style.display = 'flex';
+      currentConceptCategory = 'preprocessing';
+      history.replaceState(null, '', '#learn-datascience');
+    } else if (tab === 'diagnostics') {
+      modelsContainer.style.display = 'none';
+      conceptsContainer.style.display = 'grid';
+      modelFilters.style.display = 'none';
+      conceptFilters.style.display = 'flex';
+      currentConceptCategory = 'diagnostics';
+      history.replaceState(null, '', '#learn-diagnostics');
+    } else if (tab === 'optimization') {
+      modelsContainer.style.display = 'none';
+      conceptsContainer.style.display = 'grid';
+      modelFilters.style.display = 'none';
+      conceptFilters.style.display = 'flex';
+      currentConceptCategory = 'optimization';
+      history.replaceState(null, '', '#learn-optimization');
+    } else {
+      // General concepts
+      modelsContainer.style.display = 'none';
+      conceptsContainer.style.display = 'grid';
+      modelFilters.style.display = 'none';
+      conceptFilters.style.display = 'flex';
+      currentConceptCategory = 'all';
       history.replaceState(null, '', '#learn-concepts');
     }
 
@@ -129,9 +175,14 @@
 
   function applyLearnFilters() {
     const query = searchQuery.trim().toLowerCase();
-    let visibleCount = 0;
+    let visibleModels = 0;
+    let visibleConcepts = 0;
 
-    if (activeLearnTab === 'models') {
+    const showModels = (activeLearnTab === 'all' || activeLearnTab === 'models');
+    const showConcepts = (activeLearnTab !== 'models');
+
+    // Filter Models
+    if (showModels) {
       modelCards.forEach(card => {
         const cat = card.dataset.cat || '';
         const searchData = (card.dataset.name || '').toLowerCase();
@@ -142,20 +193,17 @@
         if (matchCat && matchSearch) {
           card.classList.remove('hide');
           card.classList.add('in');
-          visibleCount++;
+          visibleModels++;
         } else {
           card.classList.add('hide');
         }
       });
-
-      modelFilterBtns.forEach(btn => {
-        btn.classList.toggle('on', btn.dataset.cat === currentModelCategory);
-      });
-
-      if (filterCountEl) {
-        filterCountEl.textContent = `Showing ${visibleCount} of ${modelCards.length} architectures`;
-      }
     } else {
+      modelCards.forEach(c => c.classList.add('hide'));
+    }
+
+    // Filter Concepts
+    if (showConcepts) {
       conceptCards.forEach(card => {
         const cat = card.dataset.conceptCat || '';
         const searchData = (card.dataset.name || '').toLowerCase();
@@ -166,30 +214,46 @@
         if (matchCat && matchSearch) {
           card.classList.remove('hide');
           card.classList.add('in');
-          visibleCount++;
+          visibleConcepts++;
         } else {
           card.classList.add('hide');
         }
       });
+    } else {
+      conceptCards.forEach(c => c.classList.add('hide'));
+    }
 
-      conceptFilterBtns.forEach(btn => {
-        btn.classList.toggle('on', btn.dataset.conceptCat === currentConceptCategory);
-      });
+    // Update filter buttons active states
+    modelFilterBtns.forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.cat === currentModelCategory);
+    });
+    conceptFilterBtns.forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.conceptCat === currentConceptCategory);
+    });
 
-      if (filterCountEl) {
-        filterCountEl.textContent = `Showing ${visibleCount} of ${conceptCards.length} core concepts`;
+    const totalVisible = visibleModels + visibleConcepts;
+
+    if (filterCountEl) {
+      if (activeLearnTab === 'all') {
+        filterCountEl.textContent = query
+          ? `Showing ${totalVisible} units (${visibleModels} models, ${visibleConcepts} concepts) matching "${query}"`
+          : `Showing all ${totalVisible} learning units (47 models + 17 foundational concepts)`;
+      } else if (activeLearnTab === 'models') {
+        filterCountEl.textContent = `Showing ${visibleModels} of 47 ML architectures`;
+      } else {
+        filterCountEl.textContent = `Showing ${visibleConcepts} of 17 core concepts`;
       }
     }
 
     if (emptyState) {
-      emptyState.classList.toggle('show', visibleCount === 0);
+      emptyState.classList.toggle('show', totalVisible === 0);
     }
     if (searchClear) {
       searchClear.style.display = query ? 'block' : 'none';
     }
   }
 
-  // Model filter clicks
+  // Model sub-filter clicks
   modelFilterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       currentModelCategory = btn.dataset.cat;
@@ -197,7 +261,7 @@
     });
   });
 
-  // Concept filter clicks
+  // Concept sub-filter clicks
   conceptFilterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       currentConceptCategory = btn.dataset.conceptCat;
@@ -228,18 +292,24 @@
     currentConceptCategory = 'all';
     searchQuery = '';
     if (searchInput) searchInput.value = '';
-    applyLearnFilters();
+    switchLearnTab('all');
   };
 
-  // URL Hash routing
+  // URL Hash routing on page load
   const hash = location.hash.toLowerCase();
   if (hash === '#learn-concepts' || hash === '#concepts') {
     switchLearnTab('concepts');
+  } else if (hash === '#learn-statistics' || hash === '#statistics') {
+    switchLearnTab('stats');
+  } else if (hash === '#learn-datascience' || hash === '#datascience') {
+    switchLearnTab('ds');
+  } else if (hash === '#learn-models' || hash === '#models') {
+    switchLearnTab('models');
   } else if (['#regression', '#classification', '#clustering'].includes(hash)) {
     switchLearnTab('models');
     currentModelCategory = hash.slice(1);
     applyLearnFilters();
   } else {
-    applyLearnFilters();
+    switchLearnTab('all');
   }
 })();

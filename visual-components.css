@@ -329,32 +329,33 @@
 }
 
 .pipeline-diagram {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
   position: relative;
   padding: 12px 0;
 }
 
 .pipeline-node {
-  flex: 1;
-  min-width: 160px;
   background: #0e0e14;
   border: 1px solid var(--line-2, rgba(255, 255, 255, 0.16));
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   position: relative;
-  transition: transform .2s, border-color .2s;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
 }
 
 .pipeline-node:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--violet, #8c7cff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.pipeline-arrow {
+  display: none;
 }
 
 .pipeline-badge {
@@ -419,8 +420,16 @@
 }
 
 .dissect-symbol {
-  font: 600 15px var(--mono, "DM Mono", monospace);
+  font-size: 15px;
+  line-height: 1.4;
   color: var(--cyan, #56d9ff);
+  display: block;
+  min-height: 26px;
+}
+
+.dissect-symbol .katex {
+  color: var(--cyan, #56d9ff) !important;
+  font-size: 1.12em;
 }
 
 .dissect-role {

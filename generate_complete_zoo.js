@@ -8,19 +8,40 @@ console.log(`Loaded ${modelsData.length} models and ${Object.keys(derivationsMap
 // Helper to wrap concepts with interactive links
 function linkConcepts(text) {
   if (!text) return '';
-  return text
-    .replace(/\bConfusion Matrix\b/g, '<a class="concept-link" href="../../concepts/confusion-matrix/index.html">Confusion Matrix <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bLoss Function\b/g, '<a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bCost Function\b/g, '<a class="concept-link" href="../../concepts/cost-vs-loss-vs-error/index.html">Cost Function <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bFeature Selection\b/g, '<a class="concept-link" href="../../concepts/feature-selection/index.html">Feature Selection <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bVariance Inflation Factor\b/g, '<a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bMulticollinearity\b/g, '<a class="concept-link" href="../../concepts/feature-selection/index.html">Multicollinearity <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bExploratory Data Analysis\b/g, '<a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">Exploratory Data Analysis (EDA) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bBias-Variance Tradeoff\b/g, '<a class="concept-link" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bRegularization\b/g, '<a class="concept-link" href="../../concepts/regularization/index.html">Regularization <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bCross-Validation\b/g, '<a class="concept-link" href="../../concepts/cross-validation/index.html">Cross-Validation <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bROC-AUC\b/g, '<a class="concept-link" href="../../concepts/roc-auc/index.html">ROC-AUC <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>')
-    .replace(/\bGradient Descent\b/g, '<a class="concept-link" href="../../concepts/gradient-descent/index.html">Gradient Descent <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>');
+  const map = [
+    { regex: /\bquasi-Newton optimization\b/gi, html: '<a class="concept-link" href="../../concepts/quasi-newton-and-lbfgs/index.html">quasi-Newton optimization <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bL-BFGS\b/g, html: '<a class="concept-link" href="../../concepts/quasi-newton-and-lbfgs/index.html">L-BFGS <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bBernoulli log-likelihood\b/gi, html: '<a class="concept-link" href="../../concepts/maximum-likelihood-estimation/index.html">Bernoulli log-likelihood <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bMaximum Likelihood Estimation\b/gi, html: '<a class="concept-link" href="../../concepts/maximum-likelihood-estimation/index.html">Maximum Likelihood Estimation <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bsigmoid link function\b/gi, html: '<a class="concept-link" href="../../concepts/sigmoid-and-link-functions/index.html">sigmoid link function <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\blog-odds\b/gi, html: '<a class="concept-link" href="../../concepts/log-odds/index.html">log-odds <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bConfusion Matrix\b/g, html: '<a class="concept-link" href="../../concepts/confusion-matrix/index.html">Confusion Matrix <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bLoss Function\b/g, html: '<a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bCost Function\b/g, html: '<a class="concept-link" href="../../concepts/cost-vs-loss-vs-error/index.html">Cost Function <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bFeature Selection\b/g, html: '<a class="concept-link" href="../../concepts/feature-selection/index.html">Feature Selection <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bVariance Inflation Factor\b/g, html: '<a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bMulticollinearity\b/g, html: '<a class="concept-link" href="../../concepts/feature-selection/index.html">Multicollinearity <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bExploratory Data Analysis\b/g, html: '<a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">Exploratory Data Analysis (EDA) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bBias-Variance Tradeoff\b/g, html: '<a class="concept-link" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bRegularization\b/g, html: '<a class="concept-link" href="../../concepts/regularization/index.html">Regularization <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bCross-Validation\b/g, html: '<a class="concept-link" href="../../concepts/cross-validation/index.html">Cross-Validation <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bROC-AUC\b/g, html: '<a class="concept-link" href="../../concepts/roc-auc/index.html">ROC-AUC <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' },
+    { regex: /\bGradient Descent\b/g, html: '<a class="concept-link" href="../../concepts/gradient-descent/index.html">Gradient Descent <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>' }
+  ];
+
+  let placeholders = [];
+  let out = text;
+  map.forEach((item, idx) => {
+    out = out.replace(item.regex, () => {
+      const ph = `___CONCEPT_PH_${idx}_${placeholders.length}___`;
+      placeholders.push({ ph, html: item.html });
+      return ph;
+    });
+  });
+  placeholders.forEach(p => {
+    out = out.replace(p.ph, p.html);
+  });
+  return out;
 }
 
 // Helper to render scrollable raw dataset preview table
@@ -80,54 +101,324 @@ function renderDatasetTable(csvFilename, targetCol, maxRows = 12) {
 }
 
 // Helper to build computational pipeline block diagram
-function buildPipelineDiagram(title, cat) {
-  const isReg = cat === 'regression';
-  const isCls = cat === 'classification';
+function buildAssumptions(title, cat, sub) {
+  const isLinearReg = title.includes('Ordinary Least Squares') || title.includes('Polynomial');
+  const isRegLinear = title.includes('Ridge') || title.includes('Lasso') || title.includes('Elastic Net') || title.includes('Bayesian');
+  const isLogistic = title.includes('Logistic') || title.includes('Discriminant') || title.includes('Naive Bayes');
+  const isSVM = title.includes('Support Vector') || title.includes('SVM');
+  const isTreeEnsemble = title.includes('Tree') || title.includes('Forest') || title.includes('Boost') || title.includes('AdaBoost') || title.includes('Gradient Boosting');
+  const isCluster = cat === 'clustering';
+
+  if (isLinearReg) {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Linearity in Parameters:</strong> The expected response is a linear combination of coefficients $y = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\varepsilon}$.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Strict Exogeneity:</strong> Conditional error expectation is zero ($\mathbb{E}[\boldsymbol{\varepsilon} \mid \mathbf{X}] = \mathbf{0}$), ensuring zero omitted variable bias.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>No Multicollinearity:</strong> Full column rank $\text{rank}(\mathbf{X}) = p+1$, ensuring $(\mathbf{X}^T \mathbf{X})$ is non-singular and invertible.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Spherical Homoscedasticity:</strong> Constant error variance $\text{Var}(\varepsilon_i \mid \mathbf{X}) = \sigma^2$ across all observations.</div></li>
+    `;
+  } else if (isRegLinear) {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Scaling Invariance:</strong> Predictors must be standardized ($\mu=0, \sigma=1$) to prevent arbitrary penalty bias across features.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Prior Weight Distribution:</strong> Implicit Gaussian (L2 Ridge) or Laplacian (L1 Lasso) prior centered at zero.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Collinearity Resilience:</strong> Tikhonov regularization $\lambda \mathbf{I}$ guarantees invertibility even when $\mathbf{X}^T \mathbf{X}$ is singular.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Sparsity or Shrinkage:</strong> Assumes true parameter vector is sparse (L1) or dense with small isotropic magnitude (L2).</div></li>
+    `;
+  } else if (isLogistic) {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Linearity in Log-Odds:</strong> Linear relationship between predictors and the logit link $\ln(p / (1-p)) = \mathbf{w}^T \mathbf{x} + b$.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Bernoulli Error Distribution:</strong> Observations $y_i \in \{0, 1\}$ follow independent Bernoulli trials conditional on features.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Absence of Complete Separation:</strong> No linear boundary perfectly separates classes, preventing infinite coefficient divergence.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Independent Observations:</strong> Sample instances are identically and independently distributed ($i.i.d.$).</div></li>
+    `;
+  } else if (isSVM) {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Hilbert Metric Space:</strong> Data is linearly separable in transformed feature space $\phi(\mathbf{x}) \in \mathcal{H}$ induced by the kernel.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Geometric Margin Maximization:</strong> Boundary depends solely on critical support vectors ($\\alpha_i > 0$), ignoring interior points.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Scale Sensitivity:</strong> Distance-based kernel evaluation requires careful normalization (StandardScaler).</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Convex Slack Regularization:</strong> Soft-margin parameter $C$ balances margin width against misclassification penalties.</div></li>
+    `;
+  } else if (isTreeEnsemble) {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Non-Parametric Geometry:</strong> Makes zero assumptions about underlying feature distributions or error normality.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Monotonic Scale Invariance:</strong> Invariant to monotonic feature transformations; scaling or outlier clipping is unnecessary.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Axis-Aligned Partitioning:</strong> Approximates decision manifolds via orthogonal recursive splits along single features.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Ensemble Diversity:</strong> Bagging or gradient boosting relies on combining de-correlated trees to extinguish variance or bias.</div></li>
+    `;
+  } else if (isCluster) {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Distance Metric Validity:</strong> Euclidean or density metric reliably reflects true semantic domain similarity.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Geometric Cluster Compactness:</strong> Assumes clusters exhibit convex spherical geometry (K-Means) or connected density (DBSCAN).</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Equal Feature Weighting:</strong> Features must be standardized so wide-range covariates do not dominate Euclidean distance.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Absence of Dominant Outliers:</strong> Extreme noise points must be filtered or handled via robust core density thresholds.</div></li>
+    `;
+  } else {
+    return `
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via EDA and Preprocessing.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous Loss Function surface.</div></li>
+    `;
+  }
+}
+
+// Helper to build realistic, step-by-step computational pipeline block diagrams tailored to the algorithm
+function buildPipelineDiagram(title, cat, sub) {
+  const isLinearReg = title.includes('Ordinary Least Squares') || title.includes('Polynomial');
+  const isRegLinear = title.includes('Ridge') || title.includes('Lasso') || title.includes('Elastic Net') || title.includes('Bayesian');
+  const isLogistic = title.includes('Logistic') || title.includes('Discriminant');
+  const isSVM = title.includes('Support Vector') || title.includes('SVM');
+  const isTreeEnsemble = title.includes('Tree') || title.includes('Forest') || title.includes('Boost') || title.includes('AdaBoost') || title.includes('Gradient Boosting');
+  const isCluster = cat === 'clustering';
+
+  let steps = [];
+
+  if (isLinearReg) {
+    steps = [
+      {
+        badge: 'Step 01 &bull; Design Formulation',
+        title: 'Design Matrix Augmentation',
+        desc: 'Augment $n$ observations with column of 1s for intercept.',
+        shape: '$\\tilde{\\mathbf{X}} = [\\mathbf{1}, \\mathbf{X}] \\in \\mathbb{R}^{n \\times (p+1)}$'
+      },
+      {
+        badge: 'Step 02 &bull; Sufficient Statistics',
+        title: 'Gram Covariance &amp; Cross-Products',
+        desc: 'Compute outer products and feature-target correlation vector.',
+        shape: '$\\mathbf{X}^T \\mathbf{X} \\in \\mathbb{R}^{(p+1)\\times(p+1)}, \\; \\mathbf{X}^T \\mathbf{y} \\in \\mathbb{R}^{p+1}$'
+      },
+      {
+        badge: 'Step 03 &bull; Closed-Form Solver',
+        title: 'Normal Equations Inversion',
+        desc: 'Compute optimal weights directly via Cholesky / QR solver.',
+        shape: '$\\hat{\\boldsymbol{\\beta}} = (\\mathbf{X}^T \\mathbf{X})^{-1} \\mathbf{X}^T \\mathbf{y}$'
+      },
+      {
+        badge: 'Step 04 &bull; Subspace Projection',
+        title: 'Orthogonal Hat Projection',
+        desc: 'Project target $\\mathbf{y}$ onto $\\text{Col}(\\mathbf{X})$ with residuals $\\mathbf{e} \\perp \\mathbf{X}$.',
+        shape: '$\\hat{\\mathbf{y}} = \\mathbf{H}\\mathbf{y}, \\quad \\mathbf{H} = \\mathbf{X}(\\mathbf{X}^T \\mathbf{X})^{-1}\\mathbf{X}^T$'
+      },
+      {
+        badge: 'Step 05 &bull; Production Scoring',
+        title: 'Real-Time Vector Inference',
+        desc: 'Compute inner product for unseen test observations.',
+        shape: '$\\hat{y}_{\\text{test}} = \\mathbf{x}_{\\text{test}}^T \\hat{\\boldsymbol{\\beta}} \\in \\mathbb{R}$'
+      }
+    ];
+  } else if (isRegLinear) {
+    steps = [
+      {
+        badge: 'Step 01 &bull; Normalization',
+        title: 'Feature Standardization',
+        desc: 'Center and scale features to ensure uniform penalty shrinkage.',
+        shape: '$\\mathbf{X}_{\\text{std}} = \\frac{\\mathbf{X} - \\boldsymbol{\\mu}}{\\boldsymbol{\\sigma}} \\in \\mathbb{R}^{n \\times p}$'
+      },
+      {
+        badge: 'Step 02 &bull; Objective Formulation',
+        title: 'Penalized Loss Landscape',
+        desc: 'Augment RSS with L1 diamond or L2 Euclidean sphere penalty.',
+        shape: '$J(\\boldsymbol{\\beta}) = \\text{RSS} + \\lambda \\Omega(\\boldsymbol{\\beta})$'
+      },
+      {
+        badge: 'Step 03 &bull; Shrinkage Solver',
+        title: 'Gram Shift / Coordinate Descent',
+        desc: 'Shift eigenvalues by $\\lambda \\mathbf{I}$ or apply soft-thresholding.',
+        shape: '$\\hat{\\boldsymbol{\\beta}} = (\\mathbf{X}^T \\mathbf{X} + \\lambda \\mathbf{I})^{-1} \\mathbf{X}^T \\mathbf{y}$'
+      },
+      {
+        badge: 'Step 04 &bull; Variance Suppression',
+        title: 'Sparsity &amp; Conditioning',
+        desc: 'Zero-out weak features or dampen extreme collinear swings.',
+        shape: '$\\text{Tr}(\\text{Cov}(\\hat{\\boldsymbol{\\beta}})) \\ll \\text{Tr}_{\\text{OLS}}$'
+      },
+      {
+        badge: 'Step 05 &bull; Regularized Scoring',
+        title: 'Low-Variance Inference',
+        desc: 'Compute stable, regularized continuous predictions.',
+        shape: '$\\hat{y} = \\mathbf{x}_{\\text{new}}^T \\hat{\\boldsymbol{\\beta}}_{\\text{reg}} \\in \\mathbb{R}$'
+      }
+    ];
+  } else if (isLogistic) {
+    steps = [
+      {
+        badge: 'Step 01 &bull; Input Covariates',
+        title: 'Predictor Space &amp; Weights',
+        desc: 'Feature covariates and learnable parameter vector.',
+        shape: '$\\mathbf{x} \\in \\mathbb{R}^p, \\quad \\mathbf{w} \\in \\mathbb{R}^p, \\; b \\in \\mathbb{R}$'
+      },
+      {
+        badge: 'Step 02 &bull; Linear Score',
+        title: 'Logit Combiner',
+        desc: 'Compute unconstrained real-valued log-odds hyperplane score.',
+        shape: '$z = \\mathbf{w}^T \\mathbf{x} + b \\in (-\infty, +\infty)$'
+      },
+      {
+        badge: 'Step 03 &bull; Link Transformation',
+        title: 'Sigmoid Probability Squashing',
+        desc: 'Invert logit mapping to calibrate continuous probabilities.',
+        shape: '$p = \\sigma(z) = \\frac{1}{1 + e^{-z}} \\in [0, 1]$'
+      },
+      {
+        badge: 'Step 04 &bull; Convex Optimization',
+        title: 'Bernoulli MLE &amp; L-BFGS',
+        desc: 'Maximize joint log-likelihood via quasi-Newton recursion.',
+        shape: '$\\nabla_{\\mathbf{w}} \\ell = \\mathbf{X}^T (\\mathbf{y} - \\mathbf{p}) = \\mathbf{0}$'
+      },
+      {
+        badge: 'Step 05 &bull; Decision Rule',
+        title: 'Classification Cutoff Rule',
+        desc: 'Assign discrete class label at decision threshold $\\tau = 0.50$.',
+        shape: '$\\hat{y} = \\mathbb{I}(\\sigma(\\mathbf{w}^T \\mathbf{x} + b) \\ge 0.50) \\in \\{0, 1\\}$'
+      }
+    ];
+  } else if (isSVM) {
+    steps = [
+      {
+        badge: 'Step 01 &bull; Bipolar Sample Space',
+        title: 'Input Covariates &amp; Classes',
+        desc: 'Continuous feature vectors with binary margin classes.',
+        shape: '$\\mathbf{x}_i \\in \\mathbb{R}^p, \\quad y_i \\in \\{-1, +1\\}$'
+      },
+      {
+        badge: 'Step 02 &bull; Hilbert Space',
+        title: 'Kernel Metric Mapping',
+        desc: 'Compute inner products in implicit high-dimensional space.',
+        shape: '$K(\\mathbf{x}_i, \\mathbf{x}_j) = \\exp(-\\gamma \\|\\mathbf{x}_i - \\mathbf{x}_j\\|^2)$'
+      },
+      {
+        badge: 'Step 03 &bull; Dual Optimization',
+        title: 'Quadratic Programming',
+        desc: 'Maximize margin width subject to box constraints $0 \\le \\alpha_i \\le C$.',
+        shape: '$\\max_{\\boldsymbol{\\alpha}} \\sum \\alpha_i - \\frac{1}{2}\\sum \\alpha_i \\alpha_j y_i y_j K_{ij}$'
+      },
+      {
+        badge: 'Step 04 &bull; Sparsity Filtering',
+        title: 'Support Vector Isolation',
+        desc: 'Discard interior points; retain only active margin vectors.',
+        shape: '$\\text{Sparsity: } |\\text{SV}| \\ll n \\text{ Points}$'
+      },
+      {
+        badge: 'Step 05 &bull; Margin Inference',
+        title: 'Sign Decision Hyperplane',
+        desc: 'Evaluate test sample against retained support vectors.',
+        shape: '$\\hat{y} = \\text{sgn}\\left(\\sum_{i \\in \\text{SV}} \\alpha_i y_i K(\\mathbf{x}_i, \\mathbf{x}) + b\\right)$'
+      }
+    ];
+  } else if (isTreeEnsemble) {
+    steps = [
+      {
+        badge: 'Step 01 &bull; Input Partition Space',
+        title: 'Raw Covariates &amp; Target',
+        desc: 'Continuous &amp; categorical feature matrix with labels.',
+        shape: '$\\mathcal{D} = \\{(\\mathbf{x}_i, y_i)\\}_{i=1}^n$'
+      },
+      {
+        badge: 'Step 02 &bull; Resampling Engine',
+        title: 'Bootstrap / Gradient Residuals',
+        desc: 'Draw bootstrap sample with replacement or compute pseudo-residuals.',
+        shape: '$\\mathcal{D}_b \\sim \\mathcal{D} \\text{ or } r_{im} = -\\frac{\\partial \\mathcal{L}}{\\partial \\hat{y}_i}$'
+      },
+      {
+        badge: 'Step 03 &bull; Greedy Splitting',
+        title: 'Optimal Impurity Cutoff',
+        desc: 'Scan candidate thresholds maximizing Gini / Variance reduction.',
+        shape: '$\\arg\\max_{(j, \\tau)} \\Delta I = I(S) - \\sum \\frac{|S_v|}{|S|}I(S_v)$'
+      },
+      {
+        badge: 'Step 04 &bull; Forest / Boost Chain',
+        title: 'Additive Tree Assembly',
+        desc: 'Aggregate de-correlated trees or sequential boosting stages.',
+        shape: '$F_M(\\mathbf{x}) = F_0(\\mathbf{x}) + \\sum_{m=1}^M \\eta f_m(\\mathbf{x})$'
+      },
+      {
+        badge: 'Step 05 &bull; Ensemble Consensus',
+        title: 'Consensus Inference',
+        desc: 'Route query down trees and pool votes or average leaf outputs.',
+        shape: '$\\hat{y} = \\text{mode}\\{f_m(\\mathbf{x})\\} \\text{ or } \\frac{1}{M}\\sum f_m(\\mathbf{x})$'
+      }
+    ];
+  } else if (isCluster) {
+    steps = [
+      {
+        badge: 'Step 01 &bull; Unlabeled Space',
+        title: 'Unsupervised Metric Cloud',
+        desc: 'Feature coordinates without supervisory ground-truth labels.',
+        shape: '$\\mathbf{X} \\in \\mathbb{R}^{n \\times p}$'
+      },
+      {
+        badge: 'Step 02 &bull; Seeding / Density Scan',
+        title: 'Initialization Protocol',
+        desc: 'Spread initial seeds via k-Means++ or compute density radii.',
+        shape: '$P(\\mathbf{x}) \\propto D(\\mathbf{x})^2 \\text{ or } N_\\varepsilon(\\mathbf{x})$'
+      },
+      {
+        badge: 'Step 03 &bull; Expectation (E-Step)',
+        title: 'Voronoi Assignment',
+        desc: 'Assign each instance to nearest centroid or core neighborhood.',
+        shape: '$C_k = \\{\\mathbf{x}_i : \\|\\mathbf{x}_i - \\boldsymbol{\\mu}_k\\|^2 \\le \\|\\mathbf{x}_i - \\boldsymbol{\\mu}_j\\|^2\\}$'
+      },
+      {
+        badge: 'Step 04 &bull; Maximization (M-Step)',
+        title: 'Centroid Relocation',
+        desc: 'Recompute cluster centers of mass until shift $\\Delta \\boldsymbol{\\mu} &lt; \\epsilon$.',
+        shape: '$\\boldsymbol{\\mu}_k^{(t+1)} = \\frac{1}{|C_k|}\\sum_{\\mathbf{x}_i \\in C_k} \\mathbf{x}_i$'
+      },
+      {
+        badge: 'Step 05 &bull; Cluster Scoring',
+        title: 'Partition Inference',
+        desc: 'Assign unseen query point to nearest learned cluster centroid.',
+        shape: '$\\hat{k} = \\arg\\min_k \\|\\mathbf{x}_{\\text{new}} - \\boldsymbol{\\mu}_k\\|_2 \\in \\{1..K\\}$'
+      }
+    ];
+  } else {
+    // Default high-precision 5-step fallback
+    steps = [
+      {
+        badge: 'Step 01 &bull; Input Space',
+        title: 'Feature Space Representation',
+        desc: 'Continuous and discrete covariates formatted into design matrix.',
+        shape: '$\\mathbf{X} \\in \\mathbb{R}^{n \\times p}$'
+      },
+      {
+        badge: 'Step 02 &bull; Preprocessing &amp; Scaling',
+        title: 'Standardization &amp; Encoding',
+        desc: 'Ensure consistent feature scale and handle missing values.',
+        shape: '$\\mu = 0, \\; \\sigma^2 = 1$'
+      },
+      {
+        badge: 'Step 03 &bull; Optimization Engine',
+        title: 'Objective Function Minimization',
+        desc: 'Optimize parameters to minimize empirical task risk.',
+        shape: '$\\min_{\\boldsymbol{\\theta}} J(\\boldsymbol{\\theta})$'
+      },
+      {
+        badge: 'Step 04 &bull; Parameter Convergence',
+        title: 'Hypothesis Verification',
+        desc: 'Validate learned model parameters against convergence tolerance.',
+        shape: '$\\nabla J(\\boldsymbol{\\theta}) \\to \\mathbf{0}$'
+      },
+      {
+        badge: 'Step 05 &bull; Production Inference',
+        title: 'Prediction Scoring Engine',
+        desc: 'Execute forward inference pass for new incoming test samples.',
+        shape: '${cat === "regression" ? "\\hat{y} = f(\\mathbf{x}) \\in \\mathbb{R}" : cat === "classification" ? "\\hat{y} \\in \\{0, 1\\}" : "k \\in \\{1..K\\}"}'
+      }
+    ];
+  }
+
+  const nodesHtml = steps.map(s => `
+        <div class="pipeline-node">
+          <span class="pipeline-badge">${s.badge}</span>
+          <h4>${s.title}</h4>
+          <p>${s.desc}</p>
+          <span class="tensor-shape">${s.shape}</span>
+        </div>
+  `).join('\n');
+
   return `
     <div class="pipeline-box">
-      <span class="canvas-tag">End-to-End System Architecture & Computational Dataflow</span>
+      <span class="canvas-tag">End-to-End System Architecture &amp; Computational Dataflow</span>
       <div class="pipeline-diagram">
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Input Space</span>
-          <h4>Feature Matrix X</h4>
-          <p>Continuous & discrete covariates.</p>
-          <span class="tensor-shape">Shape: ℝ^{n × p}</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Preprocessing</span>
-          <h4>EDA & Scaling</h4>
-          <p>StandardScaler / Robust clipping.</p>
-          <span class="tensor-shape">μ = 0, σ² = 1</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Feature Selection</span>
-          <h4>Dimensionality</h4>
-          <p>VIF pruning / Mutual Information.</p>
-          <span class="tensor-shape">k \ll p Features</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node" style="border-color:var(--violet);">
-          <span class="pipeline-badge" style="color:var(--cyan);">Model Engine</span>
-          <h4>${title}</h4>
-          <p>Hypothesis transformation.</p>
-          <span class="tensor-shape">f(X; θ)</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Optimization</span>
-          <h4>Loss Function J</h4>
-          <p>${isReg ? 'MSE / Regularized L2 Loss' : isCls ? 'Cross-Entropy / Hinge Loss' : 'WCSS Inertia / Density'}</p>
-          <span class="tensor-shape">min_θ J(θ)</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Inference</span>
-          <h4>Prediction Target</h4>
-          <p>${isReg ? 'Continuous prediction ŷ ∈ ℝ' : isCls ? 'Discrete class ŷ ∈ {0, 1}' : 'Cluster partition C_k'}</p>
-          <span class="tensor-shape">${isReg ? 'ŷ = f(x)' : isCls ? 'P(Y=1|x) ≥ τ' : 'k ∈ {1..K}'}</span>
-        </div>
+${nodesHtml}
       </div>
     </div>
   `;
@@ -144,6 +435,9 @@ for (const model of modelsData) {
   if (!fs.existsSync(indexPath)) continue;
 
   const cat = model.cat; // regression, classification, clustering
+  const isReg = cat === 'regression';
+  const isCls = cat === 'classification';
+  const isClust = cat === 'clustering';
   const title = model.title;
   const sub = model.subfamily;
   const desc = model.desc;
@@ -424,8 +718,10 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
         <a class="concept-chip" href="../../concepts/precision-recall-f1/index.html">Precision, Recall & F1</a>
         <a class="concept-chip" href="../../concepts/roc-auc/index.html">ROC-AUC Analysis</a>
         <a class="concept-chip" href="../../concepts/loss-functions/index.html">Cross-Entropy Loss</a>
-        <a class="concept-chip" href="../../concepts/feature-selection/index.html">Feature Selection</a>
-        <a class="concept-chip" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>
+        <a class="concept-chip" href="../../concepts/log-odds/index.html">Log-Odds</a>
+        <a class="concept-chip" href="../../concepts/sigmoid-and-link-functions/index.html">Sigmoid Link</a>
+        <a class="concept-chip" href="../../concepts/maximum-likelihood-estimation/index.html">Bernoulli MLE</a>
+        <a class="concept-chip" href="../../concepts/quasi-newton-and-lbfgs/index.html">Quasi-Newton (L-BFGS)</a>
       </div>
     `;
 
@@ -706,14 +1002,12 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
         <div class="info-card">
           <h3>Core Theoretical Assumptions</h3>
           <ul class="assumptions-checklist">
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via <a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">EDA and Preprocessing</a>.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a> surface.</div></li>
+${buildAssumptions(title, cat, sub)}
           </ul>
         </div>
       </div>
 
-      ${buildPipelineDiagram(title, cat)}
+      ${buildPipelineDiagram(title, cat, sub)}
     </section>
   `;
 
@@ -728,6 +1022,76 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
   `;
 
   // Step-by-Step Derivation content
+  let dissectCards = '';
+  if (isCls) {
+    dissectCards = `
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathbf{X} \\in \\mathbb{R}^{n \\times p}, \\; y_i \\in \\{0, 1\\}$</span>
+          <span class="dissect-role">Feature Matrix &amp; Ground Truth</span>
+          <span class="dissect-desc">Batch of $n$ instances with $p$ predictors paired with discrete target class labels.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathbf{w}^T \\mathbf{x} + b = 0$</span>
+          <span class="dissect-role">Separating Decision Boundary</span>
+          <span class="dissect-desc">Parametric hyperplane partitioning feature space into discrete categorical classification regions.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathcal{L}_{\\text{CE}} / \\mathcal{L}_{\\text{Hinge}}$</span>
+          <span class="dissect-role">Loss Objective Functional</span>
+          <span class="dissect-desc">Empirical log-loss or margin penalty quantifying discrepancy between probabilities and labels.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\tau \\in (0, 1), \\; C > 0$</span>
+          <span class="dissect-role">Decision &amp; Slack Envelope</span>
+          <span class="dissect-desc">Classification decision cutoff threshold $\\tau$ and soft-margin regularization trade-off parameter $C$.</span>
+        </div>`;
+  } else if (isClust) {
+    dissectCards = `
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathcal{D} = \\{\\mathbf{x}_1, \\dots, \\mathbf{x}_n\\} \\subset \\mathbb{R}^p$</span>
+          <span class="dissect-role">Unlabeled Input Manifold</span>
+          <span class="dissect-desc">Continuous $p$-dimensional feature observations without prior ground-truth target annotations.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\boldsymbol{\\mu}_k \\in \\mathbb{R}^p, \\; k \\in \\{1..K\\}$</span>
+          <span class="dissect-role">Cluster Exemplar Centroids</span>
+          <span class="dissect-desc">Geometric centroids or density modes representing partitioned clusters in metric space.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathcal{J}_{\\text{WCSS}} / \\log p(\\mathbf{X})$</span>
+          <span class="dissect-role">Inertia / Likelihood Objective</span>
+          <span class="dissect-desc">Objective measuring within-cluster sum-of-squares compactness or mixture log-likelihood.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$K, \\; \\epsilon, \\; \\text{MinPts}$</span>
+          <span class="dissect-role">Partitioning Envelope</span>
+          <span class="dissect-desc">Controls cluster granularity, epsilon neighborhood radius, or minimum core density threshold.</span>
+        </div>`;
+  } else {
+    // Regression
+    dissectCards = `
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathbf{X} \\in \\mathbb{R}^{n \\times p}$</span>
+          <span class="dissect-role">Design Feature Matrix</span>
+          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized continuous predictors.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\boldsymbol{\\beta} \\in \\mathbb{R}^p, \\; \\beta_0 \\in \\mathbb{R}$</span>
+          <span class="dissect-role">Learnable Parameter Vector</span>
+          <span class="dissect-desc">Model coefficients and bias learned via closed-form normal inversion or gradient descent.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\mathcal{L}_{\\text{MSE}}(\\boldsymbol{\\beta}) = \\frac{1}{2n} \\|\\mathbf{y} - \\mathbf{X}\\boldsymbol{\\beta}\\|_2^2$</span>
+          <span class="dissect-role">Objective Cost Functional</span>
+          <span class="dissect-desc">Empirical risk penalty measuring squared Euclidean residual distance against continuous ground truth.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">$\\lambda \\ge 0, \\; \\alpha, \\; \\eta$</span>
+          <span class="dissect-role">Hyperparameter Envelope</span>
+          <span class="dissect-desc">Controls regularization capacity ($L_1 / L_2$ shrinkage), elastic mix ratio, or learning step size.</span>
+        </div>`;
+  }
+
   const derivationHtml = `
     <section class="detail-section">
       <h2 class="section-title">
@@ -735,26 +1099,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
       </h2>
 
       <div class="math-dissection-grid">
-        <div class="dissect-card">
-          <span class="dissect-symbol">X \\in \\mathbb{R}^{n \\times p}</span>
-          <span class="dissect-role">Design Feature Matrix</span>
-          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized predictors.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">\\beta / w \\in \\mathbb{R}^p</span>
-          <span class="dissect-role">Learnable Parameter Vector</span>
-          <span class="dissect-desc">Model coefficients learned via closed-form inversion or gradient descent.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">\\mathcal{L}(\\theta) / J(\\theta)</span>
-          <span class="dissect-role">Objective Cost Functional</span>
-          <span class="dissect-desc">Empirical risk penalty measuring discrepancy between ground truth and predictions.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">\\lambda / C / \\eta</span>
-          <span class="dissect-role">Hyperparameter Envelope</span>
-          <span class="dissect-desc">Controls regularization capacity, margin violation penalty, or learning step size.</span>
-        </div>
+        ${dissectCards}
       </div>
 
       <div class="derivation-container" style="margin-top:20px;">
@@ -815,7 +1160,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
             Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
           </p>
           <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Apply $L_2$ Ridge shrinkage ($\lambda > 0$) or prune tree depth.</li>
+            <li>Apply $L_2$ Ridge shrinkage ($\\lambda > 0$) or prune tree depth.</li>
             <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
             <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
           </ul>
@@ -826,7 +1171,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
             High-leverage anomalies drag the optimization surface away from the true data generating manifold.
           </p>
           <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Use robust losses like Huber Loss ($\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
+            <li>Use robust losses like Huber Loss ($\\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
             <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
             <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
           </ul>
@@ -893,7 +1238,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
     <header class="detail-header">
       <div class="subfamily-tag">${sub}</div>
       <h1>${title}</h1>
-      <p>${desc}</p>
+      <p>${linkConcepts(desc)}</p>
       ${conceptChipsHtml}
     </header>
 

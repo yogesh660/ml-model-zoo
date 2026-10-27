@@ -64,8 +64,10 @@
         <a class="concept-chip" href="../../concepts/precision-recall-f1/index.html">Precision, Recall & F1</a>
         <a class="concept-chip" href="../../concepts/roc-auc/index.html">ROC-AUC Analysis</a>
         <a class="concept-chip" href="../../concepts/loss-functions/index.html">Cross-Entropy Loss</a>
-        <a class="concept-chip" href="../../concepts/feature-selection/index.html">Feature Selection</a>
-        <a class="concept-chip" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>
+        <a class="concept-chip" href="../../concepts/log-odds/index.html">Log-Odds</a>
+        <a class="concept-chip" href="../../concepts/sigmoid-and-link-functions/index.html">Sigmoid Link</a>
+        <a class="concept-chip" href="../../concepts/maximum-likelihood-estimation/index.html">Bernoulli MLE</a>
+        <a class="concept-chip" href="../../concepts/quasi-newton-and-lbfgs/index.html">Quasi-Newton (L-BFGS)</a>
       </div>
     
     </header>
@@ -85,58 +87,60 @@
         <div class="info-card">
           <h3>Core Theoretical Assumptions</h3>
           <ul class="assumptions-checklist">
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via <a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">EDA and Preprocessing</a>.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a> surface.</div></li>
+
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Linearity in Log-Odds:</strong> Linear relationship between predictors and the logit link $ln(p / (1-p)) = mathbf{w}^T mathbf{x} + b$.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Bernoulli Error Distribution:</strong> Observations $y_i in {0, 1}$ follow independent Bernoulli trials conditional on features.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Absence of Complete Separation:</strong> No linear boundary perfectly separates classes, preventing infinite coefficient divergence.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Independent Observations:</strong> Sample instances are identically and independently distributed ($i.i.d.$).</div></li>
+    
           </ul>
         </div>
       </div>
 
       
     <div class="pipeline-box">
-      <span class="canvas-tag">End-to-End System Architecture & Computational Dataflow</span>
+      <span class="canvas-tag">End-to-End System Architecture &amp; Computational Dataflow</span>
       <div class="pipeline-diagram">
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Input Space</span>
-          <h4>Feature Matrix X</h4>
-          <p>Continuous & discrete covariates.</p>
-          <span class="tensor-shape">Shape: ℝ^{n × p}</span>
+          <span class="pipeline-badge">Step 01 &bull; Input Space</span>
+          <h4>Feature Space Representation</h4>
+          <p>Continuous and discrete covariates formatted into design matrix.</p>
+          <span class="tensor-shape">$\mathbf{X} \in \mathbb{R}^{n \times p}$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Preprocessing</span>
-          <h4>EDA & Scaling</h4>
-          <p>StandardScaler / Robust clipping.</p>
-          <span class="tensor-shape">μ = 0, σ² = 1</span>
+          <span class="pipeline-badge">Step 02 &bull; Preprocessing &amp; Scaling</span>
+          <h4>Standardization &amp; Encoding</h4>
+          <p>Ensure consistent feature scale and handle missing values.</p>
+          <span class="tensor-shape">$\mu = 0, \; \sigma^2 = 1$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Feature Selection</span>
-          <h4>Dimensionality</h4>
-          <p>VIF pruning / Mutual Information.</p>
-          <span class="tensor-shape">k ll p Features</span>
+          <span class="pipeline-badge">Step 03 &bull; Optimization Engine</span>
+          <h4>Objective Function Minimization</h4>
+          <p>Optimize parameters to minimize empirical task risk.</p>
+          <span class="tensor-shape">$\min_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node" style="border-color:var(--violet);">
-          <span class="pipeline-badge" style="color:var(--cyan);">Model Engine</span>
-          <h4>Gaussian Naive Bayes</h4>
-          <p>Hypothesis transformation.</p>
-          <span class="tensor-shape">f(X; θ)</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Optimization</span>
-          <h4>Loss Function J</h4>
-          <p>Cross-Entropy / Hinge Loss</p>
-          <span class="tensor-shape">min_θ J(θ)</span>
+          <span class="pipeline-badge">Step 04 &bull; Parameter Convergence</span>
+          <h4>Hypothesis Verification</h4>
+          <p>Validate learned model parameters against convergence tolerance.</p>
+          <span class="tensor-shape">$\nabla J(\boldsymbol{\theta}) \to \mathbf{0}$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Inference</span>
-          <h4>Prediction Target</h4>
-          <p>Discrete class ŷ ∈ {0, 1}</p>
-          <span class="tensor-shape">P(Y=1|x) ≥ τ</span>
+          <span class="pipeline-badge">Step 05 &bull; Production Inference</span>
+          <h4>Prediction Scoring Engine</h4>
+          <p>Execute forward inference pass for new incoming test samples.</p>
+          <span class="tensor-shape">${cat === "regression" ? "\hat{y} = f(\mathbf{x}) \in \mathbb{R}" : cat === "classification" ? "\hat{y} \in \{0, 1\}" : "k \in \{1..K\}"}</span>
         </div>
+  
       </div>
     </div>
   
@@ -161,25 +165,26 @@
       </h2>
 
       <div class="math-dissection-grid">
+        
         <div class="dissect-card">
-          <span class="dissect-symbol">X \in \mathbb{R}^{n \times p}</span>
-          <span class="dissect-role">Design Feature Matrix</span>
-          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized predictors.</span>
+          <span class="dissect-symbol">$\mathbf{X} \in \mathbb{R}^{n \times p}, \; y_i \in \{0, 1\}$</span>
+          <span class="dissect-role">Feature Matrix &amp; Ground Truth</span>
+          <span class="dissect-desc">Batch of $n$ instances with $p$ predictors paired with discrete target class labels.</span>
         </div>
         <div class="dissect-card">
-          <span class="dissect-symbol">\beta / w \in \mathbb{R}^p</span>
-          <span class="dissect-role">Learnable Parameter Vector</span>
-          <span class="dissect-desc">Model coefficients learned via closed-form inversion or gradient descent.</span>
+          <span class="dissect-symbol">$\mathbf{w}^T \mathbf{x} + b = 0$</span>
+          <span class="dissect-role">Separating Decision Boundary</span>
+          <span class="dissect-desc">Parametric hyperplane partitioning feature space into discrete categorical classification regions.</span>
         </div>
         <div class="dissect-card">
-          <span class="dissect-symbol">\mathcal{L}(\theta) / J(\theta)</span>
-          <span class="dissect-role">Objective Cost Functional</span>
-          <span class="dissect-desc">Empirical risk penalty measuring discrepancy between ground truth and predictions.</span>
+          <span class="dissect-symbol">$\mathcal{L}_{\text{CE}} / \mathcal{L}_{\text{Hinge}}$</span>
+          <span class="dissect-role">Loss Objective Functional</span>
+          <span class="dissect-desc">Empirical log-loss or margin penalty quantifying discrepancy between probabilities and labels.</span>
         </div>
         <div class="dissect-card">
-          <span class="dissect-symbol">\lambda / C / \eta</span>
-          <span class="dissect-role">Hyperparameter Envelope</span>
-          <span class="dissect-desc">Controls regularization capacity, margin violation penalty, or learning step size.</span>
+          <span class="dissect-symbol">$\tau \in (0, 1), \; C > 0$</span>
+          <span class="dissect-role">Decision &amp; Slack Envelope</span>
+          <span class="dissect-desc">Classification decision cutoff threshold $\tau$ and soft-margin regularization trade-off parameter $C$.</span>
         </div>
       </div>
 
@@ -546,7 +551,7 @@
             Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
           </p>
           <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Apply $L_2$ Ridge shrinkage ($lambda > 0$) or prune tree depth.</li>
+            <li>Apply $L_2$ Ridge shrinkage ($\lambda > 0$) or prune tree depth.</li>
             <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
             <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
           </ul>
@@ -557,7 +562,7 @@
             High-leverage anomalies drag the optimization surface away from the true data generating manifold.
           </p>
           <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Use robust losses like Huber Loss ($delta = 1.0$) or Soft-Margin Slack ($C$).</li>
+            <li>Use robust losses like Huber Loss ($\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
             <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
             <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
           </ul>

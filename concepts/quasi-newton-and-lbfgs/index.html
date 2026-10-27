@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quasi-Newton Optimization & L-BFGS · Learn ML · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
+  <link rel="stylesheet" href="../../visual-components.css">
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html#learn">Learn</a>
+        <span class="sep">/</span>
+        <a href="../../index.html#learn-concepts">Concepts</a>
+        <span class="sep">/</span>
+        <span>Quasi-Newton Optimization & L-BFGS</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Numerical Solvers • 17</div>
+      <h1>Quasi-Newton Optimization & L-BFGS</h1>
+      <p class="concept-lead">Scaling Newton-Raphson curvature acceleration to high-dimensional datasets by approximating the inverse Hessian through limited-memory gradient displacements.</p>
+    </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">Optimization Hierarchy: First-Order vs Full Newton vs L-BFGS</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">First-Order</span>
+            <h4>Gradient Descent</h4>
+            <p>Steepest gradient only.</p>
+            <span class="tensor-shape">$O(p) 	ext{ ops} ;cdot; 	ext{Oscillates}$</span>
+          </div>
+          <div class="pipeline-arrow">vs</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber-2);">Full Second-Order</span>
+            <h4>Newton-Raphson</h4>
+            <p>Exact Hessian inversion.</p>
+            <span class="tensor-shape">$O(p^3) 	ext{ ops} ;cdot; 	ext{Memory heavy}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green-2);">Quasi-Newton</span>
+            <h4>BFGS Secant</h4>
+            <p>Rank-2 curvature update.</p>
+            <span class="tensor-shape">$O(p^2) 	ext{ ops} ;cdot; 	ext{No inversion}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Industry Benchmark</span>
+            <h4>L-BFGS (Two-Loop)</h4>
+            <p>History buffer $m in [5, 20]$.</p>
+            <span class="tensor-shape">$O(mp) 	ext{ ops} ;cdot; 	ext{Optimal}$</span>
+          </div>
+        </div>
+      </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+    <div id="lab-optimization-solvers"></div>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot amber"></span> 1. First-Order vs. Second-Order Optimization
+      </h2>
+      <div class="concept-body">
+        
+          <p>Optimization algorithms balance convergence speed against computational cost per step:</p>
+          <div class="card-grid-2">
+            <div class="feature-card">
+              <span class="card-num">First-Order / Gradient Descent</span>
+              <h3>$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \alpha \nabla f(\boldsymbol{\theta}_k)$</h3>
+              <p>Relies strictly on first derivatives (steepest descent). In ill-conditioned ravines (anisotropic curvature), the gradient points almost perpendicularly to the optimal basin, causing violent oscillations and glacial progress.</p>
+              <div class="math-card" style="padding:8px; margin-top:8px;">$\text{Complexity: } O(p) \text{ time, } O(p) \text{ memory}$</div>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Second-Order / Newton-Raphson</span>
+              <h3>$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \mathbf{H}_k^{-1} \nabla f(\boldsymbol{\theta}_k)$</h3>
+              <p>Incorporates local curvature via the Hessian $\mathbf{H}_k = \nabla^2 f$. Steps directly target the center of the quadratic osculating bowl, exhibiting quadratic convergence (doubling accurate digits each step).</p>
+              <div class="math-card" style="padding:8px; margin-top:8px;">$\text{Complexity: } O(p^3) \text{ time, } O(p^2) \text{ memory}$</div>
+            </div>
+          </div>
+          <div class="callout violet" style="margin-top:16px;">
+            <span class="callout-title">The Computational Roadblock</span>
+            <p>For modern datasets with $p = 10,000$ features, storing $\mathbf{H} \in \mathbb{R}^{p \times p}$ demands $10^8$ floats ($400\text{ MB}$), and computing $\mathbf{H}^{-1}$ via Gaussian elimination requires $O(p^3) = 10^{12}$ floating-point operations <em>every single iteration</em>. Full Newton is completely intractable for high-dimensional models.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. The Quasi-Newton Paradigm & The Secant Condition
+      </h2>
+      <div class="concept-body">
+        
+          <p>Quasi-Newton methods eliminate both the computation and inversion of the Hessian. Instead, they build an iterative approximation $\mathbf{B}_k \approx \mathbf{H}_k$ (or directly $\mathbf{H}_k \approx \mathbf{B}_k^{-1}$) utilizing only changes in parameter positions $\mathbf{s}_k$ and gradient differences $\mathbf{y}_k$:</p>
+          <div class="math-card">
+            $\mathbf{s}_k = \boldsymbol{\theta}_{k+1} - \boldsymbol{\theta}_k, \qquad \mathbf{y}_k = \nabla f(\boldsymbol{\theta}_{k+1}) - \nabla f(\boldsymbol{\theta}_k)$
+          </div>
+          <p>The core mathematical requirement is the <strong>Secant Equation</strong>:</p>
+          <div class="math-card">
+            $\mathbf{H}_{k+1} \mathbf{y}_k = \mathbf{s}_k$
+          </div>
+          <p><strong>The BFGS Update Formula</strong> (Broyden-Fletcher-Goldfarb-Shanno, 1970) provides the rank-2 update preserving positive definiteness and symmetry:</p>
+          <div class="math-card">
+            $\mathbf{H}_{k+1} = (\mathbf{I} - \rho_k \mathbf{s}_k \mathbf{y}_k^T) \mathbf{H}_k (\mathbf{I} - \rho_k \mathbf{y}_k \mathbf{s}_k^T) + \rho_k \mathbf{s}_k \mathbf{s}_k^T, \quad \rho_k = \frac{1}{\mathbf{y}_k^T \mathbf{s}_k}$
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. L-BFGS & Two-Loop Recursion: The Industry Standard
+      </h2>
+      <div class="concept-body">
+        
+          <p>While BFGS eliminates the $O(p^3)$ inversion, storing the dense $p \times p$ matrix $\mathbf{H}_k$ still consumes prohibitive $O(p^2)$ memory. <strong>Limited-Memory BFGS (L-BFGS)</strong> (Nocedal, 1980) completely discards the matrix $\mathbf{H}_k$!</p>
+          <div class="callout green">
+            <span class="callout-title">The Limited-Memory History Buffer</span>
+            <p>Instead of maintaining a full matrix, L-BFGS retains only the $m$ most recent displacement pairs:</p>
+            <div class="math-card">
+              $\{(\mathbf{s}_i, \mathbf{y}_i)\}_{i=k-m}^{k-1}, \quad m \in [5, 20]$
+            </div>
+            <p>Using the legendary <strong>Two-Loop Recursion algorithm</strong>, L-BFGS computes the exact descent direction $\mathbf{d}_k = -\mathbf{H}_k \mathbf{g}_k$ using only $4mp$ operations and $2mp$ memory storage!</p>
+          </div>
+          <div class="table-wrap" style="margin-top:14px;">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Iteration Complexity</th>
+                  <th>Memory Footprint</th>
+                  <th>Convergence Rate</th>
+                  <th>Role in Scikit-Learn</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">Gradient Descent (SGD)</td>
+                  <td class="code-val">$O(p)$</td>
+                  <td class="code-val">$O(p)$</td>
+                  <td>Linear (Slow in ravines)</td>
+                  <td>Deep learning, online streaming data</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Newton-Raphson</td>
+                  <td class="code-val">$O(p^3)$</td>
+                  <td class="code-val">$O(p^2)$</td>
+                  <td>Quadratic (Extremely fast)</td>
+                  <td>Small GLMs with few features ($p < 500$)</td>
+                </tr>
+                <tr>
+                  <td class="highlight">BFGS</td>
+                  <td class="code-val">$O(p^2)$</td>
+                  <td class="code-val">$O(p^2)$</td>
+                  <td>Superlinear</td>
+                  <td>Medium problems ($p < 2,000$)</td>
+                </tr>
+                <tr>
+                  <td class="highlight">L-BFGS</td>
+                  <td class="code-val">$O(mp)$</td>
+                  <td class="code-val">$O(mp)$</td>
+                  <td>Superlinear</td>
+                  <td><strong>Default gold-standard solver for Logistic Regression & MLP</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/multilayer_perceptron_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Multilayer Perceptron (MLP)
+    </a>
+  
+    <a href="../../models/ridge_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ridge Regression
+    </a>
+  
+    <a href="../../models/elastic_net_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Elastic Net Regression
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('quasi-newton-and-lbfgs' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('quasi-newton-and-lbfgs' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('quasi-newton-and-lbfgs' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('quasi-newton-and-lbfgs' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('quasi-newton-and-lbfgs' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('quasi-newton-and-lbfgs' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('quasi-newton-and-lbfgs' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('quasi-newton-and-lbfgs' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
+      }
+    });
+  </script>
+</body>
+</html>

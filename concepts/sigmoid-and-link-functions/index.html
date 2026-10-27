@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Sigmoid Function & Activation Link Mechanisms · Learn ML · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
+  <link rel="stylesheet" href="../../visual-components.css">
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html#learn">Learn</a>
+        <span class="sep">/</span>
+        <a href="../../index.html#learn-concepts">Concepts</a>
+        <span class="sep">/</span>
+        <span>The Sigmoid Function & Activation Link Mechanisms</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Functional Mapping • 15</div>
+      <h1>The Sigmoid Function & Activation Link Mechanisms</h1>
+      <p class="concept-lead">The canonical inverse link function converting unconstrained linear hyperplanes into calibrated posterior probabilities, and the mathematical backbone of neural activation layers.</p>
+    </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">Generalized Linear Model (GLM) Canonical Activation Pathway</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Input Predictors</span>
+            <h4>Features & Weights</h4>
+            <p>Dot product summation.</p>
+            <span class="tensor-shape">$z = mathbf{w}^T mathbf{x} + b$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan-2);">Inverse Link Function</span>
+            <h4>Logistic Sigmoid &sigma;(z)</h4>
+            <p>Non-linear saturation curve.</p>
+            <span class="tensor-shape">$sigma(z) = rac{1}{1 + e^{-z}}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Posterior Probability</span>
+            <h4>Calibrated Mean &mu;</h4>
+            <p>Expectation $mathbb{E}[Y|X]$.</p>
+            <span class="tensor-shape">$P(Y=1|X) in [0, 1]$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber-2);">Decision Rule</span>
+            <h4>Binary Classification</h4>
+            <p>Threshold cutoff $	au=0.5$.</p>
+            <span class="tensor-shape">$hat{y} = mathbb{I}(sigma(z) ge 0.5)$</span>
+          </div>
+        </div>
+      </div>
+    
+
+    
+    
+    
+    
+    
+    <div id="lab-sigmoid"></div>
+    
+    
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 1. Definition & Inversion of the Logit Transformation
+      </h2>
+      <div class="concept-body">
+        
+          <p>The standard Logistic Sigmoid function $\sigma(z)$ is the exact algebraic inverse of the logit transformation. Solving for probability $p$ in terms of linear score $z$:</p>
+          <div class="math-card">
+            $z = \ln\left(\frac{p}{1 - p}\right) \implies e^z = \frac{p}{1 - p} \implies p = e^z(1 - p) \implies p = \frac{e^z}{1 + e^z} = \frac{1}{1 + e^{-z}}$
+          </div>
+          <p>Key mathematical checkpoints on the real number line:</p>
+          <div class="card-grid-3">
+            <div class="feature-card">
+              <span class="card-num">Lower Asymptote</span>
+              <h3>$\lim_{z \to -\infty} \sigma(z) = 0$</h3>
+              <p>Predicts zero probability for overwhelmingly negative linear scores.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Inflection Threshold</span>
+              <h3>$\sigma(0) = 0.50$</h3>
+              <p>The exact decision hyperplane boundary where class odds are $1:1$.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Upper Asymptote</span>
+              <h3>$\lim_{z \to +\infty} \sigma(z) = 1$</h3>
+              <p>Predicts guaranteed certainty for strong positive linear evidence.</p>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 2. The Derivative & The Vanishing Gradient Problem
+      </h2>
+      <div class="concept-body">
+        
+          <p>One of the most computational useful properties of the sigmoid function in calculus and backpropagation is that its first derivative is expressed entirely in terms of its output:</p>
+          <div class="math-card">
+            $\frac{d}{dz}\sigma(z) = \sigma(z)(1 - \sigma(z))$
+          </div>
+          <p><strong>Proof via Quotient / Chain Rule:</strong></p>
+          <div class="math-card">
+            $\frac{d}{dz}(1 + e^{-z})^{-1} = -(1 + e^{-z})^{-2} \cdot (-e^{-z}) = \frac{e^{-z}}{(1 + e^{-z})^2} = \left(\frac{1}{1 + e^{-z}}\right) \left(\frac{e^{-z}}{1 + e^{-z}}\right) = \sigma(z)(1 - \sigma(z))$
+          </div>
+          <div class="callout amber">
+            <span class="callout-title">The Vanishing Gradient Bottleneck in Deep Architectures</span>
+            <p>Because $\sigma(z) \in [0, 1]$, the quadratic product $\sigma(1 - \sigma)$ reaches an absolute maximum at $\sigma(z) = 0.5$ ($z=0$):</p>
+            <div class="math-card">$\max \sigma'(z) = 0.5 \times (1 - 0.5) = 0.25$</div>
+            <p>When $|z| \ge 4$, $\sigma'(z) < 0.017 \to 0$. In deep neural networks, computing gradients via the chain rule multiplies these factors across $L$ layers: $\prod_{l=1}^L \sigma' \le (0.25)^L$. For a 10-layer network, $(0.25)^{10} \approx 9.5 \times 10^{-7}$, extinguishing parameter updates entirely. This prompted modern deep learning to adopt ReLU/GELU for hidden layers while retaining Sigmoid for binary probability heads.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. Generalized Linear Models (GLMs) & Link Functions
+      </h2>
+      <div class="concept-body">
+        
+          <p>In Generalized Linear Models (Nelder & Wedderburn, 1972), models are unified through three formal components:</p>
+          <div class="card-grid-3">
+            <div class="feature-card">
+              <span class="card-num">Component A</span>
+              <h3>Random Component</h3>
+              <p>Target $Y$ drawn from an exponential family distribution (Bernoulli, Poisson, Gaussian, Gamma).</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Component B</span>
+              <h3>Systematic Linear Score</h3>
+              <p>Linear combination of predictors:</p>
+              <div class="math-card" style="padding:8px; margin-top:4px;">$\eta = \mathbf{w}^T \mathbf{x} + b$</div>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Component C</span>
+              <h3>Link Function $g(\mu) = \eta$</h3>
+              <p>Transforms distribution mean $\mu = \mathbb{E}[Y]$ to linear space $\eta$.</p>
+            </div>
+          </div>
+          <p style="margin-top:16px;">For Bernoulli distributions, the <strong>canonical link</strong> is the logit link $g(p) = \ln(p / (1-p))$, and its inverse link $g^{-1}(\eta) = \sigma(\eta)$ is the Logistic Sigmoid. Alternative link functions include the <strong>Probit Link</strong> (inverse normal CDF $\Phi^{-1}(p)$) and the asymmetric <strong>Complementary Log-Log (cloglog)</strong> link $\ln(-\ln(1 - p))$.</p>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/multilayer_perceptron_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Multilayer Perceptron
+    </a>
+  
+    <a href="../../models/linear_svm_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Support Vector Machine (Platt Scaling)
+    </a>
+  
+    <a href="../../models/elastic_net_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Elastic Net Classifier
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('sigmoid-and-link-functions' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('sigmoid-and-link-functions' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('sigmoid-and-link-functions' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('sigmoid-and-link-functions' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('sigmoid-and-link-functions' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('sigmoid-and-link-functions' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('sigmoid-and-link-functions' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('sigmoid-and-link-functions' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -65,21 +65,21 @@
             <span class="pipeline-badge">Input</span>
             <h4>Continuous Logits z</h4>
             <p>Raw model output score.</p>
-            <span class="tensor-shape">z = w^T x + b</span>
+            <span class="tensor-shape">$z = \mathbf{w}^T \mathbf{x} + b$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node">
             <span class="pipeline-badge">Probability</span>
             <h4>Sigmoid Link &sigma;(z)</h4>
             <p>Mapped to unit interval [0, 1].</p>
-            <span class="tensor-shape">p \in [0, 1]</span>
+            <span class="tensor-shape">$p \in [0, 1]$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--amber);">
             <span class="pipeline-badge" style="color:var(--amber);">Decision Boundary</span>
             <h4>Cutoff Threshold &tau;</h4>
             <p>Separates positive vs negative.</p>
-            <span class="tensor-shape">&tau; = 0.50</span>
+            <span class="tensor-shape">$\tau = 0.50$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--violet);">
@@ -93,13 +93,17 @@
             <span class="pipeline-badge">Derived Rates</span>
             <h4>Metric Calculus</h4>
             <p>Precision, Recall, F1-Score.</p>
-            <span class="tensor-shape">F1 = 2PR / (P + R)</span>
+            <span class="tensor-shape">$\text{F1} = \frac{2PR}{P + R}$</span>
           </div>
         </div>
       </div>
     
 
     <div id="lab-confusion-matrix"></div>
+    
+    
+    
+    
     
     
     
@@ -250,7 +254,7 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
       <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
@@ -264,6 +268,10 @@
         if ('confusion-matrix' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
         if ('confusion-matrix' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
         if ('confusion-matrix' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('confusion-matrix' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('confusion-matrix' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('confusion-matrix' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('confusion-matrix' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
       }
     });
   </script>

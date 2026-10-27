@@ -824,11 +824,343 @@ const concepts = [
       { name: 'Logistic Regression', url: '../../models/logistic_regression/index.html', cat: 'classification' },
       { name: 'Support Vector Classifier', url: '../../models/support_vector_classifier/index.html', cat: 'classification' }
     ]
+  },
+  {
+    "id": "log-odds",
+    "title": "Log-Odds & The Logit Function",
+    "category": "Probability & Link Theory",
+    "badgeClass": "violet",
+    "lead": "The mathematical bridge mapping bounded probability space $[0, 1]$ to unbounded Euclidean space $(-\\infty, +\\infty)$, unlocking linear regression models for binary classification.",
+    "kicker": "Probabilistic Modeling • 14",
+    "sections": [
+      {
+        "title": "From Probability to Odds to Log-Odds",
+        "dot": "violet",
+        "content": "\n          <p>A standard posterior probability $p = P(Y=1|X)$ is strictly constrained to the unit interval $p \\in [0, 1]$. If we attempt to fit an unconstrained linear model directly to probabilities ($p = \\mathbf{w}^T \\mathbf{x} + b$), extreme feature values inevitably predict nonsensical probabilities $p < 0$ or $p > 1$, violating the Kolmogorov probability axioms.</p>\n          <div class=\"card-grid-3\">\n            <div class=\"feature-card\">\n              <span class=\"card-num\">01 / Probability</span>\n              <h3>Bounded Interval $[0, 1]$</h3>\n              <p>Measures absolute event likelihood: $p = \\frac{n_{\\text{success}}}{n_{\\text{total}}}$. As $p \\to 0$, event is impossible; as $p \\to 1$, event is guaranteed.</p>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">02 / Odds Ratio</span>\n              <h3>Semi-Infinite $[0, +\\infty)$</h3>\n              <p>Ratio of favorable to unfavorable outcomes:</p>\n              <div class=\"math-card\" style=\"padding:10px; margin-top:6px;\">$\\text{Odds} = \\frac{p}{1 - p}$</div>\n              <p>When $p=0.8$, $\\text{Odds} = 4.0$ (4-to-1 in favor). When $p=0.5$, $\\text{Odds} = 1.0$. Removes upper bound but retains zero floor.</p>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">03 / Logit (Log-Odds)</span>\n              <h3>Unbounded $(-\\infty, +\\infty)$</h3>\n              <p>Taking the natural logarithm yields the logit:</p>\n              <div class=\"math-card\" style=\"padding:10px; margin-top:6px;\">$\\text{logit}(p) = \\ln\\left(\\frac{p}{1 - p}\\right)$</div>\n              <p>Maps $[0, 1] \\to \\mathbb{R}$, perfectly aligning with real-valued linear hyperplanes $\\mathbf{w}^T \\mathbf{x} + b$.</p>\n            </div>\n          </div>\n        "
+      },
+      {
+        "title": "Interpreting Weights as Multiplicative Odds Ratios",
+        "dot": "cyan",
+        "content": "\n          <p>In Logistic Regression, the systematic component models the log-odds directly as a linear combination:</p>\n          <div class=\"math-card\">\n            $\\ln\\left(\\frac{p}{1 - p}\\right) = w_0 + w_1 x_1 + w_2 x_2 + \\dots + w_p x_p$\n          </div>\n          <p>Consider an increment of $\\Delta x_1 = 1$ while holding all other features strictly constant:</p>\n          <div class=\"math-card\">\n            $\\text{logit}(p_{\\text{new}}) - \\text{logit}(p_{\\text{old}}) = w_1 \\implies \\frac{\\text{Odds}_{\\text{new}}}{\\text{Odds}_{\\text{old}}} = e^{w_1}$\n          </div>\n          <div class=\"table-wrap\">\n            <table class=\"concept-table\">\n              <thead>\n                <tr>\n                  <th>Weight Value $w_j$</th>\n                  <th>Odds Ratio $\\text{OR} = e^{w_j}$</th>\n                  <th>Directional Effect</th>\n                  <th>Clinical / Practical Interpretation</th>\n                </tr>\n              </thead>\n              <tbody>\n                <tr>\n                  <td class=\"highlight\">$w_j = +0.693$</td>\n                  <td class=\"code-val\">$e^{0.693} \\approx 2.00$</td>\n                  <td>Doubles Odds (+100%)</td>\n                  <td>Every unit increase doubles the odds of the positive outcome.</td>\n                </tr>\n                <tr>\n                  <td class=\"highlight\">$w_j = 0.000$</td>\n                  <td class=\"code-val\">$e^0 = 1.00$</td>\n                  <td>Neutral (No Change)</td>\n                  <td>Feature has zero statistical association with the class label.</td>\n                </tr>\n                <tr>\n                  <td class=\"highlight\">$w_j = -0.693$</td>\n                  <td class=\"code-val\">$e^{-0.693} \\approx 0.50$</td>\n                  <td>Halves Odds (-50%)</td>\n                  <td>Every unit increase cuts the odds of the outcome in half.</td>\n                </tr>\n              </tbody>\n            </table>\n          </div>\n        "
+      },
+      {
+        "title": "Mathematical Symmetry & Asymptotic Saturation",
+        "dot": "green",
+        "content": "\n          <div class=\"callout violet\">\n            <span class=\"callout-title\">Point Symmetry around the Decision Threshold</span>\n            <p>The logit function exhibits exact antisymmetric reflection about $p = 0.5$ ($\text{logit} = 0$):</p>\n            <div class=\"math-card\">\n              $\\text{logit}(1 - p) = \\ln\\left(\\frac{1 - p}{p}\\right) = -\\ln\\left(\\frac{p}{1 - p}\\right) = -\\text{logit}(p)$\n            </div>\n            <p>A probability of $0.90$ produces $\\text{logit}(0.90) = +2.197$, while its complementary error $0.10$ produces $\\text{logit}(0.10) = -2.197$.</p>\n          </div>\n          <div class=\"callout cyan\" style=\"margin-top:14px;\">\n            <span class=\"callout-title\">Asymptotic Compression & Certainty Penalties</span>\n            <p>As $p \\to 1$, $\\text{logit}(p) \\to +\\infty$; as $p \\to 0$, $\\text{logit}(p) \\to -\\infty$. Increasing probability from $50\\%$ to $60\\%$ requires $\\Delta z = 0.405$, but pushing from $98\\%$ to $99\\%$ requires $\\Delta z = 0.704$, and moving from $99.9\\%$ to $99.99\\%$ requires massive parameter shifts. This guarantees infinite penalties for confident false predictions.</p>\n          </div>\n        "
+      }
+    ],
+    "relatedModels": [
+      {
+        "name": "Logistic Regression",
+        "url": "../../models/logistic_regression/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Linear Discriminant Analysis",
+        "url": "../../models/linear_discriminant_analysis/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Quadratic Discriminant Analysis",
+        "url": "../../models/quadratic_discriminant_analysis/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Naive Bayes (Gaussian)",
+        "url": "../../models/gaussian_naive_bayes/index.html",
+        "cat": "classification"
+      }
+    ]
+  },
+  {
+    "id": "sigmoid-and-link-functions",
+    "title": "The Sigmoid Function & Activation Link Mechanisms",
+    "category": "Generalized Linear Models & Activations",
+    "badgeClass": "cyan",
+    "lead": "The canonical inverse link function converting unconstrained linear hyperplanes into calibrated posterior probabilities, and the mathematical backbone of neural activation layers.",
+    "kicker": "Functional Mapping • 15",
+    "sections": [
+      {
+        "title": "Definition & Inversion of the Logit Transformation",
+        "dot": "cyan",
+        "content": "\n          <p>The standard Logistic Sigmoid function $\\sigma(z)$ is the exact algebraic inverse of the logit transformation. Solving for probability $p$ in terms of linear score $z$:</p>\n          <div class=\"math-card\">\n            $z = \\ln\\left(\\frac{p}{1 - p}\\right) \\implies e^z = \\frac{p}{1 - p} \\implies p = e^z(1 - p) \\implies p = \\frac{e^z}{1 + e^z} = \\frac{1}{1 + e^{-z}}$\n          </div>\n          <p>Key mathematical checkpoints on the real number line:</p>\n          <div class=\"card-grid-3\">\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Lower Asymptote</span>\n              <h3>$\\lim_{z \\to -\\infty} \\sigma(z) = 0$</h3>\n              <p>Predicts zero probability for overwhelmingly negative linear scores.</p>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Inflection Threshold</span>\n              <h3>$\\sigma(0) = 0.50$</h3>\n              <p>The exact decision hyperplane boundary where class odds are $1:1$.</p>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Upper Asymptote</span>\n              <h3>$\\lim_{z \\to +\\infty} \\sigma(z) = 1$</h3>\n              <p>Predicts guaranteed certainty for strong positive linear evidence.</p>\n            </div>\n          </div>\n        "
+      },
+      {
+        "title": "The Derivative & The Vanishing Gradient Problem",
+        "dot": "violet",
+        "content": "\n          <p>One of the most computational useful properties of the sigmoid function in calculus and backpropagation is that its first derivative is expressed entirely in terms of its output:</p>\n          <div class=\"math-card\">\n            $\\frac{d}{dz}\\sigma(z) = \\sigma(z)(1 - \\sigma(z))$\n          </div>\n          <p><strong>Proof via Quotient / Chain Rule:</strong></p>\n          <div class=\"math-card\">\n            $\\frac{d}{dz}(1 + e^{-z})^{-1} = -(1 + e^{-z})^{-2} \\cdot (-e^{-z}) = \\frac{e^{-z}}{(1 + e^{-z})^2} = \\left(\\frac{1}{1 + e^{-z}}\\right) \\left(\\frac{e^{-z}}{1 + e^{-z}}\\right) = \\sigma(z)(1 - \\sigma(z))$\n          </div>\n          <div class=\"callout amber\">\n            <span class=\"callout-title\">The Vanishing Gradient Bottleneck in Deep Architectures</span>\n            <p>Because $\\sigma(z) \\in [0, 1]$, the quadratic product $\\sigma(1 - \\sigma)$ reaches an absolute maximum at $\\sigma(z) = 0.5$ ($z=0$):</p>\n            <div class=\"math-card\">$\\max \\sigma'(z) = 0.5 \\times (1 - 0.5) = 0.25$</div>\n            <p>When $|z| \\ge 4$, $\\sigma'(z) < 0.017 \\to 0$. In deep neural networks, computing gradients via the chain rule multiplies these factors across $L$ layers: $\\prod_{l=1}^L \\sigma' \\le (0.25)^L$. For a 10-layer network, $(0.25)^{10} \\approx 9.5 \\times 10^{-7}$, extinguishing parameter updates entirely. This prompted modern deep learning to adopt ReLU/GELU for hidden layers while retaining Sigmoid for binary probability heads.</p>\n          </div>\n        "
+      },
+      {
+        "title": "Generalized Linear Models (GLMs) & Link Functions",
+        "dot": "green",
+        "content": "\n          <p>In Generalized Linear Models (Nelder & Wedderburn, 1972), models are unified through three formal components:</p>\n          <div class=\"card-grid-3\">\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Component A</span>\n              <h3>Random Component</h3>\n              <p>Target $Y$ drawn from an exponential family distribution (Bernoulli, Poisson, Gaussian, Gamma).</p>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Component B</span>\n              <h3>Systematic Linear Score</h3>\n              <p>Linear combination of predictors:</p>\n              <div class=\"math-card\" style=\"padding:8px; margin-top:4px;\">$\\eta = \\mathbf{w}^T \\mathbf{x} + b$</div>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Component C</span>\n              <h3>Link Function $g(\\mu) = \\eta$</h3>\n              <p>Transforms distribution mean $\\mu = \\mathbb{E}[Y]$ to linear space $\\eta$.</p>\n            </div>\n          </div>\n          <p style=\"margin-top:16px;\">For Bernoulli distributions, the <strong>canonical link</strong> is the logit link $g(p) = \\ln(p / (1-p))$, and its inverse link $g^{-1}(\\eta) = \\sigma(\\eta)$ is the Logistic Sigmoid. Alternative link functions include the <strong>Probit Link</strong> (inverse normal CDF $\\Phi^{-1}(p)$) and the asymmetric <strong>Complementary Log-Log (cloglog)</strong> link $\\ln(-\\ln(1 - p))$.</p>\n        "
+      }
+    ],
+    "relatedModels": [
+      {
+        "name": "Logistic Regression",
+        "url": "../../models/logistic_regression/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Multilayer Perceptron",
+        "url": "../../models/multilayer_perceptron_classifier/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Support Vector Machine (Platt Scaling)",
+        "url": "../../models/linear_svm_classifier/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Elastic Net Classifier",
+        "url": "../../models/elastic_net_regression/index.html",
+        "cat": "regression"
+      }
+    ]
+  },
+  {
+    "id": "maximum-likelihood-estimation",
+    "title": "Maximum Likelihood Estimation & Bernoulli Log-Likelihood",
+    "category": "Statistical Estimation & Optimization",
+    "badgeClass": "green",
+    "lead": "The principled statistical framework for fitting parametric models by finding parameter weights that maximize the joint probability of observing the empirical training data.",
+    "kicker": "Statistical Inference • 16",
+    "sections": [
+      {
+        "title": "The Principle of Maximum Likelihood",
+        "dot": "green",
+        "content": "\n          <p>Given an observed dataset $\\mathcal{D} = \\{(\\mathbf{x}_1, y_1), \\dots, (\\mathbf{x}_n, y_n)\\}$ drawn independently and identically distributed ($i.i.d.$) from a data generation process parameterized by unknown weights $\\mathbf{w}$, the <strong>Likelihood function</strong> $L(\\mathbf{w})$ quantifies the probability of observing this exact sample:</p>\n          <div class=\"math-card\">\n            $L(\\mathbf{w}) = P(\\mathcal{D}; \\mathbf{w}) = \\prod_{i=1}^n P(y_i \\mid \\mathbf{x}_i; \\mathbf{w})$\n          </div>\n          <p>The Maximum Likelihood principle seeks optimal weights $\\hat{\\mathbf{w}}_{\\text{MLE}}$ that make the empirical data most plausible:</p>\n          <div class=\"math-card\">\n            $\\hat{\\mathbf{w}}_{\\text{MLE}} = \\arg\\max_{\\mathbf{w}} L(\\mathbf{w})$\n          </div>\n          <div class=\"callout cyan\">\n            <span class=\"callout-title\">Why the Log-Likelihood Transformation is Mandatory</span>\n            <p>Multiplying thousands of probabilities $p_i \\in (0, 1)$ precipitates severe numerical arithmetic underflow ($p_1 \\times p_2 \\dots < 10^{-308} \\to 0$). Since the natural logarithm is strictly monotonically increasing, $\\arg\\max L(\\mathbf{w}) \\equiv \\arg\\max \\ln L(\\mathbf{w})$. Taking the logarithm converts product chains into numerically stable summations:</p>\n            <div class=\"math-card\">\n              $\\ell(\\mathbf{w}) = \\ln L(\\mathbf{w}) = \\sum_{i=1}^n \\ln P(y_i \\mid \\mathbf{x}_i; \\mathbf{w})$\n            </div>\n          </div>\n        "
+      },
+      {
+        "title": "Derivation of Bernoulli Log-Likelihood & Binary Cross-Entropy",
+        "dot": "violet",
+        "content": "\n          <p>In binary classification with labels $y_i \\in \\{0, 1\\}$, each observation is a Bernoulli trial with success probability $p_i = \\sigma(\\mathbf{w}^T \\mathbf{x}_i)$. The unified Probability Mass Function (PMF) is:</p>\n          <div class=\"math-card\">\n            $P(Y = y_i \\mid \\mathbf{x}_i) = p_i^{y_i} (1 - p_i)^{1 - y_i}$\n          </div>\n          <p>Under the $i.i.d.$ assumption, the joint likelihood is:</p>\n          <div class=\"math-card\">\n            $L(\\mathbf{w}) = \\prod_{i=1}^n p_i^{y_i} (1 - p_i)^{1 - y_i}$\n          </div>\n          <p>Taking the natural logarithm yields the <strong>Bernoulli Log-Likelihood</strong>:</p>\n          <div class=\"math-card\">\n            $\\ell(\\mathbf{w}) = \\sum_{i=1}^n \\left[ y_i \\ln(p_i) + (1 - y_i) \\ln(1 - p_i) \\right]$\n          </div>\n          <div class=\"callout green\" style=\"margin-top:14px;\">\n            <span class=\"callout-title\">The Exact Identity with Binary Cross-Entropy (BCE)</span>\n            <p>In machine learning, algorithms minimize loss rather than maximizing likelihood. Multiplying by $-\\frac{1}{n}$ defines the empirical cost function:</p>\n            <div class=\"math-card\">\n              $J(\\mathbf{w}) = -\\frac{1}{n}\\ell(\\mathbf{w}) = -\\frac{1}{n}\\sum_{i=1}^n \\left[ y_i \\ln(p_i) + (1 - y_i) \\ln(1 - p_i) \\right] = \\mathcal{L}_{\\text{BCE}}(\\mathbf{w})$\n            </div>\n            <p>Maximizing Bernoulli log-likelihood is mathematically and computationally equivalent to minimizing Binary Cross-Entropy loss.</p>\n          </div>\n        "
+      },
+      {
+        "title": "Score Function, Hessian Matrix & Strict Concavity",
+        "dot": "cyan",
+        "content": "\n          <p>Applying the chain rule $\\frac{\\partial \\ell}{\\partial w_j} = \\sum_{i=1}^n \\frac{\\partial \\ell}{\\partial p_i} \\frac{\\partial p_i}{\\partial z_i} \\frac{\\partial z_i}{\\partial w_j}$ yields the <strong>Score Vector (Gradient)</strong>:</p>\n          <div class=\"math-card\">\n            $\\nabla_{\\mathbf{w}} \\ell(\\mathbf{w}) = \\sum_{i=1}^n (y_i - p_i) \\mathbf{x}_i = \\mathbf{X}^T (\\mathbf{y} - \\mathbf{p})$\n          </div>\n          <p>Notice the exact structural parallel to Ordinary Least Squares (OLS) normal equations $\\mathbf{X}^T (\\mathbf{y} - \\hat{\\mathbf{y}})$!</p>\n          <p>Differentiating a second time yields the <strong>Hessian Matrix</strong>:</p>\n          <div class=\"math-card\">\n            $\\mathbf{H} = \\nabla_{\\mathbf{w}}^2 \\ell(\\mathbf{w}) = -\\sum_{i=1}^n p_i(1 - p_i) \\mathbf{x}_i \\mathbf{x}_i^T = -\\mathbf{X}^T \\mathbf{W} \\mathbf{X}$\n          </div>\n          <p>where $\\mathbf{W} = \\text{diag}(p_i(1 - p_i))$ is a diagonal weighting matrix with strictly positive diagonal elements $p_i(1 - p_i) > 0$.</p>\n          <div class=\"callout violet\" style=\"margin-top:14px;\">\n            <span class=\"callout-title\">Guarantee of Unique Global Optimum</span>\n            <p>For any non-zero vector $\\mathbf{v} \\in \\mathbb{R}^p$, $\\mathbf{v}^T \\mathbf{H} \\mathbf{v} = -(\\mathbf{X} \\mathbf{v})^T \\mathbf{W} (\\mathbf{X} \\mathbf{v}) \\le 0$. Hence, $\\mathbf{H}$ is <strong>negative semi-definite everywhere</strong>. The Bernoulli log-likelihood surface is strictly concave with <strong>zero local minima or saddle points</strong>: every stationary point $\\nabla \\ell = \\mathbf{0}$ is the unique global maximum!</p>\n          </div>\n        "
+      }
+    ],
+    "relatedModels": [
+      {
+        "name": "Logistic Regression",
+        "url": "../../models/logistic_regression/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Ordinary Least Squares (OLS)",
+        "url": "../../models/ols_linear_regression/index.html",
+        "cat": "regression"
+      },
+      {
+        "name": "Gaussian Naive Bayes",
+        "url": "../../models/gaussian_naive_bayes/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Linear Discriminant Analysis",
+        "url": "../../models/linear_discriminant_analysis/index.html",
+        "cat": "classification"
+      }
+    ]
+  },
+  {
+    "id": "quasi-newton-and-lbfgs",
+    "title": "Quasi-Newton Optimization & L-BFGS",
+    "category": "Second-Order Optimization & Solvers",
+    "badgeClass": "amber",
+    "lead": "Scaling Newton-Raphson curvature acceleration to high-dimensional datasets by approximating the inverse Hessian through limited-memory gradient displacements.",
+    "kicker": "Numerical Solvers • 17",
+    "sections": [
+      {
+        "title": "First-Order vs. Second-Order Optimization",
+        "dot": "amber",
+        "content": "\n          <p>Optimization algorithms balance convergence speed against computational cost per step:</p>\n          <div class=\"card-grid-2\">\n            <div class=\"feature-card\">\n              <span class=\"card-num\">First-Order / Gradient Descent</span>\n              <h3>$\\boldsymbol{\\theta}_{k+1} = \\boldsymbol{\\theta}_k - \\alpha \\nabla f(\\boldsymbol{\\theta}_k)$</h3>\n              <p>Relies strictly on first derivatives (steepest descent). In ill-conditioned ravines (anisotropic curvature), the gradient points almost perpendicularly to the optimal basin, causing violent oscillations and glacial progress.</p>\n              <div class=\"math-card\" style=\"padding:8px; margin-top:8px;\">$\\text{Complexity: } O(p) \\text{ time, } O(p) \\text{ memory}$</div>\n            </div>\n            <div class=\"feature-card\">\n              <span class=\"card-num\">Second-Order / Newton-Raphson</span>\n              <h3>$\\boldsymbol{\\theta}_{k+1} = \\boldsymbol{\\theta}_k - \\mathbf{H}_k^{-1} \\nabla f(\\boldsymbol{\\theta}_k)$</h3>\n              <p>Incorporates local curvature via the Hessian $\\mathbf{H}_k = \\nabla^2 f$. Steps directly target the center of the quadratic osculating bowl, exhibiting quadratic convergence (doubling accurate digits each step).</p>\n              <div class=\"math-card\" style=\"padding:8px; margin-top:8px;\">$\\text{Complexity: } O(p^3) \\text{ time, } O(p^2) \\text{ memory}$</div>\n            </div>\n          </div>\n          <div class=\"callout violet\" style=\"margin-top:16px;\">\n            <span class=\"callout-title\">The Computational Roadblock</span>\n            <p>For modern datasets with $p = 10,000$ features, storing $\\mathbf{H} \\in \\mathbb{R}^{p \\times p}$ demands $10^8$ floats ($400\\text{ MB}$), and computing $\\mathbf{H}^{-1}$ via Gaussian elimination requires $O(p^3) = 10^{12}$ floating-point operations <em>every single iteration</em>. Full Newton is completely intractable for high-dimensional models.</p>\n          </div>\n        "
+      },
+      {
+        "title": "The Quasi-Newton Paradigm & The Secant Condition",
+        "dot": "cyan",
+        "content": "\n          <p>Quasi-Newton methods eliminate both the computation and inversion of the Hessian. Instead, they build an iterative approximation $\\mathbf{B}_k \\approx \\mathbf{H}_k$ (or directly $\\mathbf{H}_k \\approx \\mathbf{B}_k^{-1}$) utilizing only changes in parameter positions $\\mathbf{s}_k$ and gradient differences $\\mathbf{y}_k$:</p>\n          <div class=\"math-card\">\n            $\\mathbf{s}_k = \\boldsymbol{\\theta}_{k+1} - \\boldsymbol{\\theta}_k, \\qquad \\mathbf{y}_k = \\nabla f(\\boldsymbol{\\theta}_{k+1}) - \\nabla f(\\boldsymbol{\\theta}_k)$\n          </div>\n          <p>The core mathematical requirement is the <strong>Secant Equation</strong>:</p>\n          <div class=\"math-card\">\n            $\\mathbf{H}_{k+1} \\mathbf{y}_k = \\mathbf{s}_k$\n          </div>\n          <p><strong>The BFGS Update Formula</strong> (Broyden-Fletcher-Goldfarb-Shanno, 1970) provides the rank-2 update preserving positive definiteness and symmetry:</p>\n          <div class=\"math-card\">\n            $\\mathbf{H}_{k+1} = (\\mathbf{I} - \\rho_k \\mathbf{s}_k \\mathbf{y}_k^T) \\mathbf{H}_k (\\mathbf{I} - \\rho_k \\mathbf{y}_k \\mathbf{s}_k^T) + \\rho_k \\mathbf{s}_k \\mathbf{s}_k^T, \\quad \\rho_k = \\frac{1}{\\mathbf{y}_k^T \\mathbf{s}_k}$\n          </div>\n        "
+      },
+      {
+        "title": "L-BFGS & Two-Loop Recursion: The Industry Standard",
+        "dot": "green",
+        "content": "\n          <p>While BFGS eliminates the $O(p^3)$ inversion, storing the dense $p \\times p$ matrix $\\mathbf{H}_k$ still consumes prohibitive $O(p^2)$ memory. <strong>Limited-Memory BFGS (L-BFGS)</strong> (Nocedal, 1980) completely discards the matrix $\\mathbf{H}_k$!</p>\n          <div class=\"callout green\">\n            <span class=\"callout-title\">The Limited-Memory History Buffer</span>\n            <p>Instead of maintaining a full matrix, L-BFGS retains only the $m$ most recent displacement pairs:</p>\n            <div class=\"math-card\">\n              $\\{(\\mathbf{s}_i, \\mathbf{y}_i)\\}_{i=k-m}^{k-1}, \\quad m \\in [5, 20]$\n            </div>\n            <p>Using the legendary <strong>Two-Loop Recursion algorithm</strong>, L-BFGS computes the exact descent direction $\\mathbf{d}_k = -\\mathbf{H}_k \\mathbf{g}_k$ using only $4mp$ operations and $2mp$ memory storage!</p>\n          </div>\n          <div class=\"table-wrap\" style=\"margin-top:14px;\">\n            <table class=\"concept-table\">\n              <thead>\n                <tr>\n                  <th>Algorithm</th>\n                  <th>Iteration Complexity</th>\n                  <th>Memory Footprint</th>\n                  <th>Convergence Rate</th>\n                  <th>Role in Scikit-Learn</th>\n                </tr>\n              </thead>\n              <tbody>\n                <tr>\n                  <td class=\"highlight\">Gradient Descent (SGD)</td>\n                  <td class=\"code-val\">$O(p)$</td>\n                  <td class=\"code-val\">$O(p)$</td>\n                  <td>Linear (Slow in ravines)</td>\n                  <td>Deep learning, online streaming data</td>\n                </tr>\n                <tr>\n                  <td class=\"highlight\">Newton-Raphson</td>\n                  <td class=\"code-val\">$O(p^3)$</td>\n                  <td class=\"code-val\">$O(p^2)$</td>\n                  <td>Quadratic (Extremely fast)</td>\n                  <td>Small GLMs with few features ($p < 500$)</td>\n                </tr>\n                <tr>\n                  <td class=\"highlight\">BFGS</td>\n                  <td class=\"code-val\">$O(p^2)$</td>\n                  <td class=\"code-val\">$O(p^2)$</td>\n                  <td>Superlinear</td>\n                  <td>Medium problems ($p < 2,000$)</td>\n                </tr>\n                <tr>\n                  <td class=\"highlight\">L-BFGS</td>\n                  <td class=\"code-val\">$O(mp)$</td>\n                  <td class=\"code-val\">$O(mp)$</td>\n                  <td>Superlinear</td>\n                  <td><strong>Default gold-standard solver for Logistic Regression & MLP</strong></td>\n                </tr>\n              </tbody>\n            </table>\n          </div>\n        "
+      }
+    ],
+    "relatedModels": [
+      {
+        "name": "Logistic Regression",
+        "url": "../../models/logistic_regression/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Multilayer Perceptron (MLP)",
+        "url": "../../models/multilayer_perceptron_classifier/index.html",
+        "cat": "classification"
+      },
+      {
+        "name": "Ridge Regression",
+        "url": "../../models/ridge_regression/index.html",
+        "cat": "regression"
+      },
+      {
+        "name": "Elastic Net Regression",
+        "url": "../../models/elastic_net_regression/index.html",
+        "cat": "regression"
+      }
+    ]
   }
 ];
 
 // Helper to build conceptual architecture block diagrams
 function getConceptDiagram(id) {
+  if (id === 'log-odds') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Log-Odds Coordinate Transformation: From Bounded Interval to Real Line</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Bounded Unit Interval</span>
+            <h4>Probability p</h4>
+            <p>Constrained likelihood.</p>
+            <span class="tensor-shape">$p \in [0, 1]$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan-2);">Ratio of Outcomes</span>
+            <h4>Odds Ratio</h4>
+            <p>Success relative to failure.</p>
+            <span class="tensor-shape">$\frac{p}{1-p} \in [0, +\infty)$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Logarithmic Mapping</span>
+            <h4>Log-Odds (Logit)</h4>
+            <p>Natural log mapping.</p>
+            <span class="tensor-shape">$\ln\left(\frac{p}{1-p}\right) \in \mathbb{R}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green-2);">Linear Modeling</span>
+            <h4>Hyperplane Predictor</h4>
+            <p>Unconstrained inner product.</p>
+            <span class="tensor-shape">$\mathbf{w}^T \mathbf{x} + b$</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (id === 'sigmoid-and-link-functions') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Generalized Linear Model (GLM) Canonical Activation Pathway</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Input Predictors</span>
+            <h4>Features & Weights</h4>
+            <p>Dot product summation.</p>
+            <span class="tensor-shape">$z = \mathbf{w}^T \mathbf{x} + b$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan-2);">Inverse Link Function</span>
+            <h4>Logistic Sigmoid &sigma;(z)</h4>
+            <p>Non-linear saturation curve.</p>
+            <span class="tensor-shape">$\sigma(z) = \frac{1}{1 + e^{-z}}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Posterior Probability</span>
+            <h4>Calibrated Mean &mu;</h4>
+            <p>Expectation $\mathbb{E}[Y|X]$.</p>
+            <span class="tensor-shape">$P(Y=1|X) \in [0, 1]$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber-2);">Decision Rule</span>
+            <h4>Binary Classification</h4>
+            <p>Threshold cutoff $\tau=0.5$.</p>
+            <span class="tensor-shape">$\hat{y} = \mathbb{I}(\sigma(z) \ge 0.5)$</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (id === 'maximum-likelihood-estimation') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Maximum Likelihood Optimization Pipeline: From Samples to Global Maximum</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Empirical Data</span>
+            <h4>i.i.d. Samples</h4>
+            <p>Observations & labels.</p>
+            <span class="tensor-shape">$\{(\mathbf{x}_i, y_i)\}_{i=1}^n$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green-2);">Joint Likelihood</span>
+            <h4>Bernoulli Product</h4>
+            <p>Joint sample probability.</p>
+            <span class="tensor-shape">$\prod p_i^{y_i} (1-p_i)^{1-y_i}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Log Transformation</span>
+            <h4>Log-Likelihood &ell;(w)</h4>
+            <p>Numerically stable sum.</p>
+            <span class="tensor-shape">$\sum [y_i \ln p_i + (1-y_i)\ln(1-p_i)]$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan-2);">Convex Solver</span>
+            <h4>Newton / L-BFGS</h4>
+            <p>Score $\mathbf{X}^T(\mathbf{y}-\mathbf{p}) = \mathbf{0}$.</p>
+            <span class="tensor-shape">$\hat{\mathbf{w}}_{\text{MLE}} = \arg\max \ell(\mathbf{w})$</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (id === 'quasi-newton-and-lbfgs') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Optimization Hierarchy: First-Order vs Full Newton vs L-BFGS</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">First-Order</span>
+            <h4>Gradient Descent</h4>
+            <p>Steepest gradient only.</p>
+            <span class="tensor-shape">$O(p) \text{ ops} \;\cdot\; \text{Oscillates}$</span>
+          </div>
+          <div class="pipeline-arrow">vs</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber-2);">Full Second-Order</span>
+            <h4>Newton-Raphson</h4>
+            <p>Exact Hessian inversion.</p>
+            <span class="tensor-shape">$O(p^3) \text{ ops} \;\cdot\; \text{Memory heavy}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green-2);">Quasi-Newton</span>
+            <h4>BFGS Secant</h4>
+            <p>Rank-2 curvature update.</p>
+            <span class="tensor-shape">$O(p^2) \text{ ops} \;\cdot\; \text{No inversion}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Industry Benchmark</span>
+            <h4>L-BFGS (Two-Loop)</h4>
+            <p>History buffer $m \in [5, 20]$.</p>
+            <span class="tensor-shape">$O(mp) \text{ ops} \;\cdot\; \text{Optimal}$</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
   if (id === 'confusion-matrix') {
     return `
       <div class="pipeline-box">
@@ -838,21 +1170,21 @@ function getConceptDiagram(id) {
             <span class="pipeline-badge">Input</span>
             <h4>Continuous Logits z</h4>
             <p>Raw model output score.</p>
-            <span class="tensor-shape">z = w^T x + b</span>
+            <span class="tensor-shape">$z = \\mathbf{w}^T \\mathbf{x} + b$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node">
             <span class="pipeline-badge">Probability</span>
             <h4>Sigmoid Link &sigma;(z)</h4>
             <p>Mapped to unit interval [0, 1].</p>
-            <span class="tensor-shape">p \\in [0, 1]</span>
+            <span class="tensor-shape">$p \\in [0, 1]$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--amber);">
             <span class="pipeline-badge" style="color:var(--amber);">Decision Boundary</span>
             <h4>Cutoff Threshold &tau;</h4>
             <p>Separates positive vs negative.</p>
-            <span class="tensor-shape">&tau; = 0.50</span>
+            <span class="tensor-shape">$\\tau = 0.50$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--violet);">
@@ -866,7 +1198,7 @@ function getConceptDiagram(id) {
             <span class="pipeline-badge">Derived Rates</span>
             <h4>Metric Calculus</h4>
             <p>Precision, Recall, F1-Score.</p>
-            <span class="tensor-shape">F1 = 2PR / (P + R)</span>
+            <span class="tensor-shape">$\\text{F1} = \\frac{2PR}{P + R}$</span>
           </div>
         </div>
       </div>
@@ -881,35 +1213,35 @@ function getConceptDiagram(id) {
             <span class="pipeline-badge">Residual</span>
             <h4>Prediction Error e</h4>
             <p>Distance between hypothesis & truth.</p>
-            <span class="tensor-shape">e_i = y_i - \\hat{y}_i</span>
+            <span class="tensor-shape">$e_i = y_i - \\hat{y}_i$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--cyan);">
             <span class="pipeline-badge" style="color:var(--cyan);">Continuous</span>
             <h4>Regression Losses</h4>
             <p>MSE (L2), MAE (L1), Huber (&delta;).</p>
-            <span class="tensor-shape">\\mathcal{L}_{MSE} = \\frac{1}{2} e^2</span>
+            <span class="tensor-shape">$\\mathcal{L}_{\\text{MSE}} = \\frac{1}{2} e^2$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--violet);">
             <span class="pipeline-badge" style="color:var(--violet-2);">Discrete</span>
             <h4>Classification Losses</h4>
             <p>Binary Log-loss, Hinge, Softmax.</p>
-            <span class="tensor-shape">\\mathcal{L}_{BCE} = -y \\ln p</span>
+            <span class="tensor-shape">$\\mathcal{L}_{\\text{BCE}} = -y \\ln p$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node">
             <span class="pipeline-badge">Aggregate</span>
             <h4>Cost Function J(&theta;)</h4>
             <p>Empirical risk + Regularizer.</p>
-            <span class="tensor-shape">J = \\frac{1}{n}\\sum \\mathcal{L} + \\lambda \\Omega</span>
+            <span class="tensor-shape">$J = \\frac{1}{n}\\sum \\mathcal{L} + \\lambda \\Omega$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node">
             <span class="pipeline-badge">Optimization</span>
             <h4>Gradient Descent</h4>
             <p>Backpropagation parameter update.</p>
-            <span class="tensor-shape">&theta; \\leftarrow &theta; - \\eta \\nabla J</span>
+            <span class="tensor-shape">$\\theta \\leftarrow \\theta - \\eta \\nabla J$</span>
           </div>
         </div>
       </div>
@@ -952,7 +1284,7 @@ function getConceptDiagram(id) {
             <span class="pipeline-badge">Output</span>
             <h4>Optimal Subset k</h4>
             <p>Minimal collinearity, max signal.</p>
-            <span class="tensor-shape">k \\ll p (VIF < 5.0)</span>
+            <span class="tensor-shape">$k \\ll p \\text{ (VIF } < 5.0)$</span>
           </div>
         </div>
       </div>
@@ -965,21 +1297,21 @@ function getConceptDiagram(id) {
         <div class="pipeline-diagram">
           <div class="pipeline-node" style="border-color:var(--cyan);">
             <span class="pipeline-badge" style="color:var(--cyan);">Underfitting</span>
-            <h4>High Bias (d = 1)</h4>
+            <h4>High Bias ($d = 1$)</h4>
             <p>Oversimplified linear hypothesis.</p>
             <span class="tensor-shape">High Train & Test Error</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--green);">
             <span class="pipeline-badge" style="color:var(--green);">Optimal Balance</span>
-            <h4>Sweet Spot (d = 3)</h4>
+            <h4>Sweet Spot ($d = 3$)</h4>
             <p>Captures true latent data manifold.</p>
             <span class="tensor-shape">Minimal Expected Risk</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--red);">
             <span class="pipeline-badge" style="color:var(--red);">Overfitting</span>
-            <h4>High Variance (d \\ge 9)</h4>
+            <h4>High Variance ($d \\ge 9$)</h4>
             <p>Memorizes noise & spurious variance.</p>
             <span class="tensor-shape">Low Train, Explosive Test</span>
           </div>
@@ -1120,6 +1452,10 @@ for (const c of concepts) {
     ${c.id === 'loss-functions' ? '<div id="lab-loss-functions"></div>' : ''}
     ${c.id === 'bias-variance-tradeoff' ? '<div id="lab-bias-variance"></div>' : ''}
     ${c.id === 'feature-selection' ? '<div id="lab-feature-selection"></div>' : ''}
+    ${c.id === 'log-odds' ? '<div id="lab-log-odds"></div>' : ''}
+    ${c.id === 'sigmoid-and-link-functions' ? '<div id="lab-sigmoid"></div>' : ''}
+    ${c.id === 'maximum-likelihood-estimation' ? '<div id="lab-mle-bernoulli"></div>' : ''}
+    ${c.id === 'quasi-newton-and-lbfgs' ? '<div id="lab-optimization-solvers"></div>' : ''}
 
 ${sectionsHtml}
 
@@ -1135,7 +1471,7 @@ ${sectionsHtml}
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
       <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
@@ -1149,6 +1485,10 @@ ${sectionsHtml}
         if ('${c.id}' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
         if ('${c.id}' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
         if ('${c.id}' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('${c.id}' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('${c.id}' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('${c.id}' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('${c.id}' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
       }
     });
   </script>
@@ -1178,7 +1518,7 @@ const hubHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Machine Learning Concepts Hub · 13 Deep Dives · Yogesh Awate</title>
+  <title>Machine Learning Concepts Hub · 17 Deep Dives · Yogesh Awate</title>
   <meta name="theme-color" content="#070709">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1196,7 +1536,7 @@ const hubHtml = `<!DOCTYPE html>
     </div>
     <div class="navlinks" id="navlinks">
       <a href="../index.html#learn-models">Models (47)</a>
-      <a href="#hub" class="active">Concepts (13)</a>
+      <a href="#hub" class="active">Concepts (17)</a>
       <a href="https://yogesh660.github.io/work/">Work</a>
       <a href="https://github.com/yogesh660" target="_blank" rel="noopener" class="pill">GitHub</a>
     </div>
@@ -1206,7 +1546,7 @@ const hubHtml = `<!DOCTYPE html>
     <div class="head">
       <div>
         <span class="tag">Knowledge Graph & Theory</span>
-        <h2>13 Essential ML Concepts.</h2>
+        <h2>17 Essential ML Concepts.</h2>
       </div>
       <p>A structured compendium of evaluation metrics, optimization theory, feature selection mechanisms, and diagnostic criteria interconnecting all 47 architectures.</p>
     </div>

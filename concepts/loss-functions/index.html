@@ -65,35 +65,35 @@
             <span class="pipeline-badge">Residual</span>
             <h4>Prediction Error e</h4>
             <p>Distance between hypothesis & truth.</p>
-            <span class="tensor-shape">e_i = y_i - \hat{y}_i</span>
+            <span class="tensor-shape">$e_i = y_i - \hat{y}_i$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--cyan);">
             <span class="pipeline-badge" style="color:var(--cyan);">Continuous</span>
             <h4>Regression Losses</h4>
             <p>MSE (L2), MAE (L1), Huber (&delta;).</p>
-            <span class="tensor-shape">\mathcal{L}_{MSE} = \frac{1}{2} e^2</span>
+            <span class="tensor-shape">$\mathcal{L}_{\text{MSE}} = \frac{1}{2} e^2$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node" style="border-color:var(--violet);">
             <span class="pipeline-badge" style="color:var(--violet-2);">Discrete</span>
             <h4>Classification Losses</h4>
             <p>Binary Log-loss, Hinge, Softmax.</p>
-            <span class="tensor-shape">\mathcal{L}_{BCE} = -y \ln p</span>
+            <span class="tensor-shape">$\mathcal{L}_{\text{BCE}} = -y \ln p$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node">
             <span class="pipeline-badge">Aggregate</span>
             <h4>Cost Function J(&theta;)</h4>
             <p>Empirical risk + Regularizer.</p>
-            <span class="tensor-shape">J = \frac{1}{n}\sum \mathcal{L} + \lambda \Omega</span>
+            <span class="tensor-shape">$J = \frac{1}{n}\sum \mathcal{L} + \lambda \Omega$</span>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-node">
             <span class="pipeline-badge">Optimization</span>
             <h4>Gradient Descent</h4>
             <p>Backpropagation parameter update.</p>
-            <span class="tensor-shape">&theta; \leftarrow &theta; - \eta \nabla J</span>
+            <span class="tensor-shape">$\theta \leftarrow \theta - \eta \nabla J$</span>
           </div>
         </div>
       </div>
@@ -101,6 +101,10 @@
 
     
     <div id="lab-loss-functions"></div>
+    
+    
+    
+    
     
     
 
@@ -258,7 +262,7 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div>
-      <a href="../../index.html#learn-concepts">All 13 Concepts</a> &bull;
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
       <a href="../../index.html#learn">Back to Learn Hub</a>
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
@@ -272,6 +276,10 @@
         if ('loss-functions' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
         if ('loss-functions' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
         if ('loss-functions' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('loss-functions' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('loss-functions' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('loss-functions' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('loss-functions' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
       }
     });
   </script>

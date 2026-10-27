@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070709">
-  <title>Machine Learning Model Zoo & Learn Hub · Yogesh Awate</title>
-  <meta name="description" content="The one-stop educational laboratory: Learn 47 machine learning architectures and 13 core theory & diagnostic concepts with interactive modular datasets, derivations, and EDA.">
-  <meta property="og:title" content="Machine Learning Model Zoo & Learn Hub · Yogesh Awate">
-  <meta property="og:description" content="Learn 47 ML models and 13 foundational concepts with modular datasets and derivations.">
+  <title>Learn: Data Science, Machine Learning &amp; Statistics &bull; Yogesh Awate</title>
+  <meta name="description" content="A comprehensive, mathematically rigorous learning platform covering Data Science, Statistical Foundations, and 47 Machine Learning Architectures with interactive laboratories, derivations, and modular EDA benchmarks.">
+  <meta property="og:title" content="Learn: Data Science, Machine Learning &amp; Statistics &bull; Yogesh Awate">
+  <meta property="og:description" content="Master 47 ML models, 17 foundational concepts, EDA workflows, and statistical inference with modular datasets and interactive simulations.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,14 +23,15 @@
     <div class="brand-wrap">
       <a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, Home">YA<span>.</span></a>
       <span class="brand-divider">/</span>
-      <span class="brand-sub">Model Zoo</span>
+      <span class="brand-sub">Learn</span>
     </div>
     <div class="navlinks" id="navlinks">
-      <a href="https://yogesh660.github.io/work/">Work</a>
-      <a href="https://yogesh660.github.io/projects/">Projects</a>
+      <a href="#pillars">Pillars</a>
+      <a href="#learn-models" onclick="switchLearnTab('models')">Models (47)</a>
+      <a href="#learn-concepts" onclick="switchLearnTab('concepts')">Statistics &amp; Theory (17)</a>
+      <a href="#datasets">Datasets &amp; EDA</a>
+      <a href="#roadmap">Roadmap</a>
       <a href="https://yogesh660.github.io/about/">About</a>
-      <a href="#learn" class="active" aria-current="page">Learn</a>
-      <a href="#contact">Contact</a>
       <a class="pill" href="https://github.com/yogesh660" target="_blank" rel="noopener">GitHub <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </div>
     <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks">
@@ -41,22 +42,22 @@
   <!-- Hero Section with glowing ambient backdrop -->
   <header class="hero">
     <div class="hero-stage" aria-hidden="true"><i></i><i></i><i></i></div>
-    <div class="hero-name" aria-hidden="true">MODEL<br>ZOO</div>
+    <div class="hero-name" aria-hidden="true">LEARN</div>
 
     <div class="hero-card hero-intro">
-      <p class="availability rise" style="--d:1"><i></i>60 Learning Units · 47 ML Models · 13 Core Concepts</p>
-      <p class="kicker rise" style="--d:2">The One-Stop Machine Learning Laboratory</p>
-      <h1><span class="line"><span class="rise" style="--d:3">Machine Learning</span></span><span class="line"><span class="rise dim" style="--d:4">Model Zoo.</span></span></h1>
-      <p class="focus rise" style="--d:5">A pedagogical reference suite featuring step-by-step mathematical derivations, exploratory data analysis (EDA), feature selection comparisons with explicit technical justifications, interactive multi-dataset benchmarking, and hyperlinked concept deep dives.</p>
+      <p class="availability rise" style="--d:1"><i></i>64 Active Learning Units &bull; Data Science, ML &amp; Statistics</p>
+      <p class="kicker rise" style="--d:2">The Unified Knowledge Engine</p>
+      <h1><span class="line"><span class="rise" style="--d:3">Data Science, ML</span></span><span class="line"><span class="rise dim" style="--d:4">&amp; Statistics.</span></span></h1>
+      <p class="focus rise" style="--d:5">An exhaustive, mathematically rigorous, and code-verified learning platform. Explore foundational statistical theory, exploratory data science workflows, robust feature selection mechanisms, diagnostic evaluation matrices, and 47 production machine learning algorithms.</p>
       <div class="actions rise" style="--d:6">
-        <a class="button light" href="#learn">Explore &amp; Learn (60 Units) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="button ghost" href="https://github.com/yogesh660" target="_blank" rel="noopener">View GitHub Repo</a>
+        <a class="button light" href="#learn">Explore Curriculum (64 Units) <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+        <a class="button ghost" href="#pillars">View Core Pillars</a>
       </div>
     </div>
 
     <aside class="hero-card hero-side rise" style="--d:7">
       <small>Curriculum Scope</small>
-      <p>Explore 47 end-to-end models and 13 foundational concepts with modular datasets, derivations, and diagnostic plots.</p>
+      <p>Explore 47 end-to-end models and 17 foundational concepts with modular datasets, derivations, and diagnostic plots.</p>
       
       <div class="hero-stats-grid">
         <div class="stat-box">
@@ -64,17 +65,26 @@
           <span>ML Models</span>
         </div>
         <div class="stat-box">
-          <strong data-count="13" data-suffix="">13</strong>
+          <strong data-count="17" data-suffix="">17</strong>
           <span>Core Concepts</span>
         </div>
         <div class="stat-box">
-          <strong data-count="17" data-suffix="">17</strong>
-          <span>Regression</span>
+          <strong data-count="6" data-suffix="">6</strong>
+          <span>Modular Datasets</span>
         </div>
         <div class="stat-box">
-          <strong data-count="30" data-suffix="">30</strong>
-          <span>Classif &amp; Cluster</span>
+          <strong data-count="4" data-suffix="">4</strong>
+          <span>Core Pillars</span>
         </div>
+      </div>
+
+      <div style="margin: 14px 0 16px; display: flex; flex-wrap: wrap; gap: 6px;">
+        <span class="roadmap-tech-pill" style="background: rgba(140, 124, 255, 0.15); color: var(--violet-2); border: 1px solid rgba(140, 124, 255, 0.3);">Data Science &bull; Active</span>
+        <span class="roadmap-tech-pill" style="background: rgba(86, 217, 255, 0.15); color: var(--cyan); border: 1px solid rgba(86, 217, 255, 0.3);">Machine Learning &bull; Active</span>
+        <span class="roadmap-tech-pill" style="background: rgba(116, 223, 155, 0.15); color: var(--green); border: 1px solid rgba(116, 223, 155, 0.3);">Statistics &bull; Active</span>
+        <span class="roadmap-tech-pill" style="color: var(--dim);">Deep Learning &bull; Roadmap</span>
+        <span class="roadmap-tech-pill" style="color: var(--dim);">NLP &bull; Roadmap</span>
+        <span class="roadmap-tech-pill" style="color: var(--dim);">Agentic AI &bull; Roadmap</span>
       </div>
 
       <a class="side-cta" href="#learn">
@@ -88,7 +98,7 @@
         <a href="https://github.com/yogesh660" target="_blank" rel="noopener">GitHub <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
         <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener">Medium <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
       </div>
-      <span class="where">Pune, India · Published on GitHub Pages</span>
+      <span class="where">Pune, India &bull; Published on GitHub Pages</span>
     </aside>
   </header>
 
@@ -96,93 +106,210 @@
   <div class="marquee" aria-hidden="true">
     <div class="track">
       <span>Ordinary Least Squares</span><i></i>
+      <span>Maximum Likelihood Estimation</span><i></i>
+      <span>Exploratory Data Analysis</span><i></i>
+      <span>Sigmoid &amp; Link Functions</span><i></i>
       <span>Confusion Matrix</span><i></i>
-      <span>Ridge &amp; Lasso</span><i></i>
       <span>VIF &amp; Multicollinearity</span><i></i>
-      <span>XGBoost &amp; LightGBM</span><i></i>
-      <span>ROC-AUC Curves</span><i></i>
-      <span>Support Vector Machines</span><i></i>
+      <span>L-BFGS &amp; Quasi-Newton</span><i></i>
+      <span>Gradient Descent</span><i></i>
+      <span>XGBoost &amp; Ensembles</span><i></i>
+      <span>Log-Odds &amp; Logit</span><i></i>
       <span>Bias-Variance Tradeoff</span><i></i>
+      <span>Support Vector Machines</span><i></i>
+      <span>Feature Selection</span><i></i>
+      <span>ROC-AUC Curves</span><i></i>
+      <span>Regularization L1/L2</span><i></i>
       <span>Random Forest</span><i></i>
       <span>Loss vs Cost vs Error</span><i></i>
       <span>Gaussian Mixture Models</span><i></i>
       <span>Precision &amp; Recall</span><i></i>
       <span>K-Means &amp; DBSCAN</span><i></i>
-      <span>Exploratory Data Analysis</span><i></i>
-      <span>Stratified Cross-Validation</span><i></i>
-      <span>Ordinary Least Squares</span><i></i>
-      <span>Confusion Matrix</span><i></i>
-      <span>Ridge &amp; Lasso</span><i></i>
-      <span>VIF &amp; Multicollinearity</span><i></i>
-      <span>XGBoost &amp; LightGBM</span><i></i>
-      <span>ROC-AUC Curves</span><i></i>
-      <span>Support Vector Machines</span><i></i>
-      <span>Bias-Variance Tradeoff</span><i></i>
-      <span>Random Forest</span><i></i>
-      <span>Loss vs Cost vs Error</span><i></i>
-      <span>Gaussian Mixture Models</span><i></i>
-      <span>Precision &amp; Recall</span><i></i>
-      <span>K-Means &amp; DBSCAN</span><i></i>
-      <span>Exploratory Data Analysis</span><i></i>
-      <span>Stratified Cross-Validation</span><i></i>
+      <span>Bernoulli Log-Likelihood</span><i></i>
+      <span>Cross-Validation</span><i></i>
     </div>
   </div>
 
-  <!-- Methodology / Standards Section -->
-  <section class="section band">
-    <div class="inner">
-      <div class="head reveal">
-        <div>
-          <span class="tag">01 / Pedagogy &amp; Methodology</span>
-          <h2>A true one-stop learning lab.</h2>
+  <!-- SECTION 01: The Three Core Pillars of Learning -->
+  <section id="pillars" class="section">
+    <div class="head reveal">
+      <div>
+        <span class="tag">01 / Foundational Pillars</span>
+        <h2>Three interconnected disciplines. Zero gaps.</h2>
+      </div>
+      <p>True mastery in applied intelligence requires fluency across the entire mathematical and empirical pipeline, connecting statistics, data science, and algorithmic modeling.</p>
+    </div>
+
+    <div class="pillar-grid reveal">
+      <!-- Pillar 1: Statistics -->
+      <div class="pillar-card stats spot">
+        <div class="pillar-header">
+          <span class="pillar-num">Pillar 01</span>
+          <span class="pillar-badge">Theory &amp; Inference</span>
         </div>
-        <p>No isolated formulas or naked charts. Every architecture is dissected through intuitive mental models, mathematical proofs, real EDA, and justified feature selection.</p>
+        <h3>Mathematical Statistics &amp; Probability</h3>
+        <p>The formal calculus of uncertainty, parametric distributions, coordinate transformations, and parameter estimation governing machine learning.</p>
+        <ul class="pillar-topics">
+          <li><strong>Bounded vs Unbounded Spaces:</strong> Probability, Odds &amp; Log-Odds (Logit)</li>
+          <li><strong>Generalized Linear Models (GLMs):</strong> Canonical Sigmoid Link functions</li>
+          <li><strong>Parameter Estimation:</strong> Maximum Likelihood Estimation (MLE) &amp; Bernoulli Likelihood</li>
+          <li><strong>Optimization Landscapes:</strong> Hessian matrices, convexity &amp; information geometry</li>
+          <li><strong>Generalization Bounds:</strong> Bias-Variance decomposition &amp; irreducible noise</li>
+        </ul>
+        <div class="pillar-footer">
+          <a href="#learn" onclick="switchLearnTab('stats')">Explore Statistical Concepts &rarr;</a>
+          <span>5 Core Units</span>
+        </div>
       </div>
 
-      <div class="standards reveal">
-        <div class="standard">
-          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10M6 14h6"/></svg>
-          <span class="num">01</span>
-          <h3>Step-by-Step Derivations</h3>
-          <p>Analytical closed-form proofs and optimization steps rendered with KaTeX, linking directly to our <a href="concepts/loss-functions/index.html" style="color:var(--violet-2); text-decoration:underline;">Loss Functions Guide</a>.</p>
+      <!-- Pillar 2: Data Science -->
+      <div class="pillar-card ds spot">
+        <div class="pillar-header">
+          <span class="pillar-num">Pillar 02</span>
+          <span class="pillar-badge">Empirical Engineering</span>
         </div>
-        <div class="standard">
-          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-          <span class="num">02</span>
-          <h3>Modular Multi-Dataset EDA</h3>
-          <p>Switch between real-world datasets directly inside model pages. Inspect target skewness, collinearity matrices, and outlier handling via our <a href="concepts/exploratory-data-analysis/index.html" style="color:var(--violet-2); text-decoration:underline;">EDA Guide</a>.</p>
+        <h3>Data Science &amp; Exploratory Analysis</h3>
+        <p>Diagnostic investigation, distribution transformation, and disciplined feature selection before model fitting.</p>
+        <ul class="pillar-topics">
+          <li><strong>Systematic EDA Protocol:</strong> Handling missingness, target skewness &amp; power transforms</li>
+          <li><strong>Missing Value Imputation:</strong> Mean, Median, MICE &amp; KNN imputation strategies</li>
+          <li><strong>Outlier Diagnostics:</strong> Interquartile ranges (IQR), Z-scores &amp; robust clipping</li>
+          <li><strong>Feature Selection Taxonomy:</strong> Filter (Correlation/MI), Wrapper (RFE), Embedded (Lasso)</li>
+          <li><strong>Collinearity Diagnostics:</strong> Variance Inflation Factor (VIF) &amp; condition numbers</li>
+        </ul>
+        <div class="pillar-footer">
+          <a href="#learn" onclick="switchLearnTab('ds')">Explore Data Science Workflows &rarr;</a>
+          <span>3 Core Units</span>
         </div>
-        <div class="standard">
-          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
-          <span class="num">03</span>
-          <h3>Feature Selection Trade-Offs</h3>
-          <p>Detailed technical justifications for choosing Filter, Wrapper, or Embedded methods, linking to our comprehensive <a href="concepts/feature-selection/index.html" style="color:var(--violet-2); text-decoration:underline;">Feature Selection Guide</a>.</p>
+      </div>
+
+      <!-- Pillar 3: Machine Learning -->
+      <div class="pillar-card ml spot">
+        <div class="pillar-header">
+          <span class="pillar-num">Pillar 03</span>
+          <span class="pillar-badge">47 Architectures</span>
+        </div>
+        <h3>Machine Learning Models &amp; Algorithms</h3>
+        <p>Production mathematical algorithms spanning continuous regression, discrete classification, and unsupervised manifold clustering.</p>
+        <ul class="pillar-topics">
+          <li><strong>Linear &amp; Regularized Hyperplanes:</strong> OLS, Ridge, Lasso, ElasticNet, SGD</li>
+          <li><strong>Margin Classifiers:</strong> Linear SVM, Kernel RBF Hilbert spaces, Platt scaling</li>
+          <li><strong>Non-Linear Tree Ensembles:</strong> Random Forest, ExtraTrees, AdaBoost, XGBoost, LightGBM</li>
+          <li><strong>Numerical Solvers:</strong> First-Order (SGD, Adam) vs Second-Order (Quasi-Newton L-BFGS)</li>
+          <li><strong>Unsupervised Manifolds:</strong> K-Means, DBSCAN, Gaussian Mixture Models, PCA, t-SNE</li>
+        </ul>
+        <div class="pillar-footer">
+          <a href="#learn" onclick="switchLearnTab('models')">Browse 47 ML Architectures &rarr;</a>
+          <span>47 Production Models</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- UNIFIED LEARN SECTION (Models + Concepts) -->
+  <!-- SECTION 02: Modular Benchmark Datasets Showcase -->
+  <section id="datasets" class="section band">
+    <div class="inner">
+      <div class="head reveal">
+        <div>
+          <span class="tag">02 / Empirical Verification</span>
+          <h2>Modular benchmark datasets.</h2>
+        </div>
+        <p>No model is an island. Switch real-world datasets inside model pages to inspect EDA transformations, collinearity, and feature selection choices.</p>
+      </div>
+
+      <div class="dataset-showcase-grid reveal">
+        <!-- Dataset 1: California Housing -->
+        <div class="dataset-card spot">
+          <div class="dataset-card-top">
+            <span class="dataset-type-pill regression">Continuous Regression</span>
+            <span style="font:500 11px var(--mono); color:var(--soft);">20,640 Records</span>
+          </div>
+          <h4>California Housing</h4>
+          <p>Predicting median house values from spatial coordinates, census block demographics, and room distributions.</p>
+          <div class="dataset-meta-list">
+            <span><strong>Key EDA:</strong> Right-skewed income target, spatial latitude/longitude clusters.</span>
+            <span><strong>Feature Selection:</strong> VIF drops redundant AveBedrms collinearity with AveRooms.</span>
+            <span><strong>Evaluated On:</strong> OLS, Ridge, Lasso, ElasticNet, SVR, Decision Trees, XGBoost.</span>
+          </div>
+        </div>
+
+        <!-- Dataset 2: Titanic Survival -->
+        <div class="dataset-card spot">
+          <div class="dataset-card-top">
+            <span class="dataset-type-pill classification">Binary Classification</span>
+            <span style="font:500 11px var(--mono); color:var(--soft);">891 Records</span>
+          </div>
+          <h4>Titanic Passenger Survival</h4>
+          <p>Binary outcome survival prediction modeling socioeconomic status, passenger demographics, and family size.</p>
+          <div class="dataset-meta-list">
+            <span><strong>Key EDA:</strong> Missing age median imputation, bimodal age curves, title extraction.</span>
+            <span><strong>Feature Selection:</strong> Mutual information isolates Sex and Pclass as dominant factors.</span>
+            <span><strong>Evaluated On:</strong> Logistic Regression, LDA, QDA, Naive Bayes, Random Forest.</span>
+          </div>
+        </div>
+
+        <!-- Dataset 3: Breast Cancer Wisconsin -->
+        <div class="dataset-card spot">
+          <div class="dataset-card-top">
+            <span class="dataset-type-pill classification">High-Dim Classification</span>
+            <span style="font:500 11px var(--mono); color:var(--soft);">569 Records &bull; 30 Features</span>
+          </div>
+          <h4>Breast Cancer Wisconsin</h4>
+          <p>Cell nucleus characteristics digitized from fine needle aspirate (FNA) images diagnosing malignant vs benign tissue.</p>
+          <div class="dataset-meta-list">
+            <span><strong>Key EDA:</strong> Strong geometric correlation between radius, perimeter, and area.</span>
+            <span><strong>Feature Selection:</strong> Standard scaling and correlation thresholding eliminate redundant variance.</span>
+            <span><strong>Evaluated On:</strong> SVM (Linear &amp; RBF), MLP Classifier, KNN, Logistic Regression.</span>
+          </div>
+        </div>
+
+        <!-- Dataset 4: Wine Quality & Customer Segments -->
+        <div class="dataset-card spot">
+          <div class="dataset-card-top">
+            <span class="dataset-type-pill clustering">Unsupervised &amp; Multi-Class</span>
+            <span style="font:500 11px var(--mono); color:var(--soft);">178 - 1,599 Records</span>
+          </div>
+          <h4>Wine Quality &amp; Customer Segments</h4>
+          <p>Physicochemical compositions and customer behavioral spending profiles for density geometry benchmarking.</p>
+          <div class="dataset-meta-list">
+            <span><strong>Key EDA:</strong> Varying attribute scales requiring z-score normalization and PCA projections.</span>
+            <span><strong>Feature Selection:</strong> Silhouette score maximization and Elbow method (WCSS).</span>
+            <span><strong>Evaluated On:</strong> K-Means, DBSCAN, Agglomerative Hierarchical, GMM, Mean Shift.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 03: UNIFIED LEARN CURRICULUM (Models + Concepts) -->
   <section id="learn" class="section">
     <div class="head reveal">
       <div>
-        <span class="tag">02 / Learn Hub</span>
-        <h2>47 Models. 13 Concepts.</h2>
+        <span class="tag">03 / Master Curriculum</span>
+        <h2>64 Learning Units.</h2>
       </div>
       <p>Your one-stop curriculum: explore production ML architectures or dive into foundational mathematical theory and diagnostics.</p>
     </div>
 
-    <!-- Primary Learn Switcher: [ Models ] vs [ Concepts ] -->
-    <div class="learn-main-tabs reveal">
-      <button class="learn-tab active" id="learnTabModels" onclick="switchLearnTab('models')">
-        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-        <span>ML Models &amp; Architectures</span>
-        <span class="learn-tab-count">47</span>
+    <!-- Quick Curriculum Domain Filter Pills -->
+    <div class="curriculum-nav-pills reveal">
+      <button class="curriculum-pill active" id="pillAll" onclick="switchLearnTab('all')">
+        All Learning Units <span class="badge-count">(64)</span>
       </button>
-      <button class="learn-tab" id="learnTabConcepts" onclick="switchLearnTab('concepts')">
-        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10M6 14h6"/></svg>
-        <span>Foundational Concepts</span>
-        <span class="learn-tab-count">13</span>
+      <button class="curriculum-pill" id="pillModels" onclick="switchLearnTab('models')">
+        ML Architectures <span class="badge-count">(47)</span>
+      </button>
+      <button class="curriculum-pill" id="pillStats" onclick="switchLearnTab('stats')">
+        Statistics &amp; Probability <span class="badge-count">(5)</span>
+      </button>
+      <button class="curriculum-pill" id="pillDS" onclick="switchLearnTab('ds')">
+        Data Science &amp; EDA <span class="badge-count">(3)</span>
+      </button>
+      <button class="curriculum-pill" id="pillDiag" onclick="switchLearnTab('diagnostics')">
+        Diagnostics &amp; Metrics <span class="badge-count">(5)</span>
+      </button>
+      <button class="curriculum-pill" id="pillOpt" onclick="switchLearnTab('optimization')">
+        Optimization &amp; Solvers <span class="badge-count">(4)</span>
       </button>
     </div>
 
@@ -198,22 +325,22 @@
 
       <!-- Sub-filters for Concepts -->
       <div class="filters" id="conceptFilters" style="display:none;">
-        <button class="filter on" data-concept-cat="all">All Concepts <b>(13)</b></button>
-        <button class="filter" data-concept-cat="diagnostics">Diagnostics &amp; Metrics <b>(5)</b></button>
-        <button class="filter" data-concept-cat="optimization">Optimization &amp; Loss <b>(3)</b></button>
-        <button class="filter" data-concept-cat="preprocessing">Preprocessing &amp; EDA <b>(2)</b></button>
-        <button class="filter" data-concept-cat="theory">Foundational Theory <b>(3)</b></button>
+        <button class="filter on" data-concept-cat="all">All Concepts <b>(17)</b></button>
+        <button class="filter" data-concept-cat="theory">Statistics &amp; Theory <b>(5)</b></button>
+        <button class="filter" data-concept-cat="optimization">Optimization <b>(4)</b></button>
+        <button class="filter" data-concept-cat="diagnostics">Diagnostics <b>(5)</b></button>
+        <button class="filter" data-concept-cat="preprocessing">Data Science &amp; EDA <b>(3)</b></button>
       </div>
 
       <!-- Live Search Box -->
       <div class="search-box">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="Search models, algorithms, concepts..." autocomplete="off">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search models, algorithms, statistical concepts..." autocomplete="off">
         <button id="searchClear" class="search-clear" aria-label="Clear search">&times;</button>
       </div>
     </div>
 
-    <div id="filterCount" class="filter-status reveal">Showing 47 of 47 architectures</div>
+    <div id="filterCount" class="filter-status reveal">Showing 64 of 64 learning units</div>
 
     <!-- Models Grid (47 models) -->
     <main class="models-grid" id="modelsContainer">
@@ -924,7 +1051,7 @@
       </a>
     </main>
 
-    <!-- Concepts Grid (13 concepts) -->
+    <!-- Concepts Grid (17 concepts) -->
     <div class="models-grid" id="conceptsContainer" style="display:none;">
       <a href="concepts/confusion-matrix/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="confusion matrix true positive false positive type i type ii errors accuracy paradox precision recall f1 classification">
         <div class="card-top">
@@ -971,9 +1098,9 @@
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/feature-selection/index.html" class="concept-card spot reveal" data-concept-cat="preprocessing" data-name="feature selection variance inflation factor vif multicollinearity filter wrapper embedded rfe lasso mutual information">
+      <a href="concepts/feature-selection/index.html" class="concept-card spot reveal" data-concept-cat="preprocessing" data-name="feature selection variance inflation factor vif multicollinearity filter wrapper embedded rfe lasso mutual information data science">
         <div class="card-top">
-          <span class="cat-badge concept">Preprocessing</span>
+          <span class="cat-badge concept">Data Science</span>
           <span class="dataset-pill">9 min read</span>
         </div>
         <div class="card-subfamily">Feature Engineering & Selection</div>
@@ -986,14 +1113,14 @@
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/precision-recall-f1/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="precision recall specificity f1 score harmonic mean threshold tuning false positive false negative">
+      <a href="concepts/precision-recall-f1/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="precision recall f1 score specificity sensitivity type i type ii trade-off harmonic mean evaluation">
         <div class="card-top">
           <span class="cat-badge concept">Diagnostics</span>
           <span class="dataset-pill">7 min read</span>
         </div>
         <div class="card-subfamily">Evaluation & Diagnostics</div>
         <h3>Precision, Recall, Specificity & F1-Score</h3>
-        <p>The fundamental tradeoff dynamics between positive predictive value, sensitivity, and their harmonic balance across classification threshold sweeps.</p>
+        <p>Beyond accuracy: navigating the mathematical tension between precision (soundness) and recall (completeness) with the harmonic F1-score and PR curves.</p>
         <div class="card-metrics">
           <div class="chips">
             <span><b>Applied in:</b> 16 Models</span>
@@ -1001,59 +1128,59 @@
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/roc-auc/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="roc auc receiver operating characteristic curve area under curve true positive rate false positive rate discrimination threshold">
-        <div class="card-top">
-          <span class="cat-badge concept">Diagnostics</span>
-          <span class="dataset-pill">6 min read</span>
-        </div>
-        <div class="card-subfamily">Evaluation & Diagnostics</div>
-        <h3>ROC Curve & Area Under the Curve (AUC)</h3>
-        <p>Threshold-invariant evaluation of binary classifiers, quantifying rank-order discrimination capacity and probabilistic separation capacity.</p>
-        <div class="card-metrics">
-          <div class="chips">
-            <span><b>Applied in:</b> 16 Models</span>
-          </div>
-          <span class="card-arrow">&rarr;</span>
-        </div>
-      </a>
-      <a href="concepts/regression-metrics/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="regression metrics rmse mse mae r2 adjusted r2 residual analysis homoscedasticity normality gauss markov">
-        <div class="card-top">
-          <span class="cat-badge concept">Diagnostics</span>
-          <span class="dataset-pill">8 min read</span>
-        </div>
-        <div class="card-subfamily">Evaluation & Diagnostics</div>
-        <h3>Regression Evaluation Metrics & Residual Diagnostics</h3>
-        <p>Comprehensive evaluation for continuous prediction: MSE, RMSE, MAE, R², Adjusted R², and verifying Gauss-Markov residual assumptions.</p>
-        <div class="card-metrics">
-          <div class="chips">
-            <span><b>Applied in:</b> 17 Models</span>
-          </div>
-          <span class="card-arrow">&rarr;</span>
-        </div>
-      </a>
-      <a href="concepts/clustering-metrics/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="clustering metrics silhouette analysis elbow method inertia davies bouldin wcss unsupervised validation">
+      <a href="concepts/roc-auc/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="roc curve receiver operating characteristic auc threshold invariant rank ordering tpr fpr diagnostics">
         <div class="card-top">
           <span class="cat-badge concept">Diagnostics</span>
           <span class="dataset-pill">7 min read</span>
         </div>
         <div class="card-subfamily">Evaluation & Diagnostics</div>
-        <h3>Clustering Evaluation Metrics & Cluster Validation</h3>
-        <p>Internal and external cluster validation diagnostics: Silhouette Analysis s(i), Davies-Bouldin Index, Inertia, and the Elbow criterion.</p>
+        <h3>ROC Curves & Area Under the Curve (AUC)</h3>
+        <p>Threshold-invariant evaluation analyzing True Positive Rate vs False Positive Rate across all decision cutoffs, establishing probabilistic ranking quality.</p>
         <div class="card-metrics">
           <div class="chips">
-            <span><b>Applied in:</b> 14 Models</span>
+            <span><b>Applied in:</b> 16 Models</span>
           </div>
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/bias-variance-tradeoff/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="bias variance tradeoff underfitting overfitting irreducible error generalization model complexity">
+      <a href="concepts/regression-metrics/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="mse rmse mae r2 adjusted r-squared regression error metrics residuals evaluation">
         <div class="card-top">
-          <span class="cat-badge concept">Foundations</span>
+          <span class="cat-badge concept">Diagnostics</span>
           <span class="dataset-pill">8 min read</span>
         </div>
-        <div class="card-subfamily">Foundational ML Theory</div>
+        <div class="card-subfamily">Evaluation & Diagnostics</div>
+        <h3>Regression Evaluation: MSE, RMSE, MAE, R² & Adjusted R²</h3>
+        <p>Comprehensive diagnostic guide comparing absolute vs quadratic penalties, dimensional interpretability, and the penalty mechanism of Adjusted R² against feature bloat.</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> 21 Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="concepts/clustering-metrics/index.html" class="concept-card spot reveal" data-concept-cat="diagnostics" data-name="silhouette score davies bouldin elbow method wcss inertia clustering unsupervised validation">
+        <div class="card-top">
+          <span class="cat-badge concept">Diagnostics</span>
+          <span class="dataset-pill">7 min read</span>
+        </div>
+        <div class="card-subfamily">Evaluation & Diagnostics</div>
+        <h3>Clustering Evaluation: Silhouette, Davies-Bouldin & Elbow</h3>
+        <p>Diagnostic methodologies for unsupervised geometry: assessing cohesion and separation without ground-truth labels using Silhouette Analysis and WCSS.</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> 10 Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="concepts/bias-variance-tradeoff/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="bias variance tradeoff overfitting underfitting generalization error decomposition noise irreducible model complexity">
+        <div class="card-top">
+          <span class="cat-badge concept">Foundations</span>
+          <span class="dataset-pill">9 min read</span>
+        </div>
+        <div class="card-subfamily">Generalization & Validation</div>
         <h3>The Bias-Variance Decomposition & Generalization</h3>
-        <p>The fundamental theoretical constraint governing predictive modeling: decomposing expected test error into underfitting, variance, and noise.</p>
+        <p>The central dilemma of statistical learning: decomposing expected generalization error into irreducible noise, bias squared, and parameter variance.</p>
         <div class="card-metrics">
           <div class="chips">
             <span><b>Applied in:</b> 47 Models</span>
@@ -1061,29 +1188,29 @@
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/regularization/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="regularization l1 lasso l2 ridge elastic net shrinkage weight decay sparsity tikhonov prior">
+      <a href="concepts/regularization/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="regularization l1 l2 lasso ridge elastic net sparsity shrinkage norm penalty constrained optimization">
         <div class="card-top">
           <span class="cat-badge concept">Foundations</span>
           <span class="dataset-pill">8 min read</span>
         </div>
-        <div class="card-subfamily">Foundational ML Theory</div>
-        <h3>Regularization Techniques: L1, L2 & Elastic Net</h3>
-        <p>Constrained parameter shrinkage dynamics: geometry of L1 diamond sparsity versus L2 spherical weight decay and Bayesian prior interpretations.</p>
+        <div class="card-subfamily">Regularization & Shrinkage</div>
+        <h3>Regularization Landscapes: L1 Lasso, L2 Ridge & Elastic Net</h3>
+        <p>Geometric, Bayesian, and numerical mechanisms of parameter shrinkage: why L1 induces exact sparsity on coordinate axes while L2 shrinks isotropic weights smoothly.</p>
         <div class="card-metrics">
           <div class="chips">
-            <span><b>Applied in:</b> 47 Models</span>
+            <span><b>Applied in:</b> 21 Models</span>
           </div>
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/cross-validation/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="cross validation k fold stratified k fold time series split data leakage resampling out of fold">
+      <a href="concepts/cross-validation/index.html" class="concept-card spot reveal" data-concept-cat="preprocessing" data-name="cross validation k-fold stratified time series repeated holdout data leakage validation data science">
         <div class="card-top">
-          <span class="cat-badge concept">Foundations</span>
+          <span class="cat-badge concept">Data Science</span>
           <span class="dataset-pill">6 min read</span>
         </div>
-        <div class="card-subfamily">Foundational ML Theory</div>
+        <div class="card-subfamily">Validation & Resampling</div>
         <h3>Cross-Validation & Resampling Strategies</h3>
-        <p>Data hygiene, out-of-fold estimation, stratified resampling, time-series windows, and leak-free model evaluation strategies.</p>
+        <p>Rigorous validation architectures: K-Fold, Stratified K-Fold, GroupKFold, and TimeSeriesSplit to prevent optimistic data leakage.</p>
         <div class="card-metrics">
           <div class="chips">
             <span><b>Applied in:</b> 47 Models</span>
@@ -1091,14 +1218,14 @@
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
-      <a href="concepts/exploratory-data-analysis/index.html" class="concept-card spot reveal" data-concept-cat="preprocessing" data-name="exploratory data analysis eda distributions skewness correlation outliers missing values imputation box cox">
+      <a href="concepts/exploratory-data-analysis/index.html" class="concept-card spot reveal" data-concept-cat="preprocessing" data-name="exploratory data analysis eda preprocessing missing values outliers skewness box cox standardization normalization data science">
         <div class="card-top">
-          <span class="cat-badge concept">Preprocessing</span>
-          <span class="dataset-pill">8 min read</span>
+          <span class="cat-badge concept">Data Science</span>
+          <span class="dataset-pill">9 min read</span>
         </div>
-        <div class="card-subfamily">Feature Engineering & Preprocessing</div>
-        <h3>Exploratory Data Analysis (EDA) Fundamentals</h3>
-        <p>The systematic pipeline for inspecting distributions, identifying outliers, validating collinearity, and assessing skewness before model training.</p>
+        <div class="card-subfamily">Exploratory Data Science</div>
+        <h3>Exploratory Data Analysis (EDA) & Preprocessing</h3>
+        <p>The systematic scientific protocol for data investigation: handling missingness, target skewness, outlier clipping, and robust standardization.</p>
         <div class="card-metrics">
           <div class="chips">
             <span><b>Applied in:</b> 47 Models</span>
@@ -1121,6 +1248,66 @@
           <span class="card-arrow">&rarr;</span>
         </div>
       </a>
+      <a href="concepts/log-odds/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="log odds logit function odds ratio binary classification link function probability bounded linear logistic regression statistics">
+        <div class="card-top">
+          <span class="cat-badge concept">Statistics</span>
+          <span class="dataset-pill">6 min read</span>
+        </div>
+        <div class="card-subfamily">Probability & Link Theory</div>
+        <h3>Log-Odds & The Logit Function</h3>
+        <p>The mathematical bridge mapping bounded probability space $[0, 1]$ to unbounded Euclidean space $(-\infty, +\infty)$, unlocking linear regression models for binary classification.</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> 6 Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="concepts/sigmoid-and-link-functions/index.html" class="concept-card spot reveal" data-concept-cat="theory" data-name="sigmoid function logistic activation link function glm vanishing gradient derivative neural networks platt scaling statistics">
+        <div class="card-top">
+          <span class="cat-badge concept">Statistics</span>
+          <span class="dataset-pill">7 min read</span>
+        </div>
+        <div class="card-subfamily">Generalized Linear Models & Activations</div>
+        <h3>The Sigmoid Function & Activation Link Mechanisms</h3>
+        <p>The canonical inverse link function converting unconstrained linear hyperplanes into calibrated posterior probabilities, and the mathematical backbone of neural activation layers.</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> 12 Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="concepts/maximum-likelihood-estimation/index.html" class="concept-card spot reveal" data-concept-cat="optimization" data-name="maximum likelihood estimation mle bernoulli log likelihood binary cross entropy bce score function hessian concavity statistics">
+        <div class="card-top">
+          <span class="cat-badge concept">Statistics</span>
+          <span class="dataset-pill">8 min read</span>
+        </div>
+        <div class="card-subfamily">Statistical Estimation & Optimization</div>
+        <h3>Maximum Likelihood Estimation & Bernoulli Log-Likelihood</h3>
+        <p>The principled statistical framework for fitting parametric models by finding parameter weights that maximize the joint probability of observing the empirical training data.</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> 18 Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="concepts/quasi-newton-and-lbfgs/index.html" class="concept-card spot reveal" data-concept-cat="optimization" data-name="quasi newton optimization l-bfgs bfgs hessian secant equation two-loop recursion convex solver logistic regression">
+        <div class="card-top">
+          <span class="cat-badge concept">Optimization</span>
+          <span class="dataset-pill">9 min read</span>
+        </div>
+        <div class="card-subfamily">Second-Order Optimization & Solvers</div>
+        <h3>Quasi-Newton Optimization & L-BFGS</h3>
+        <p>Scaling Newton-Raphson curvature acceleration to high-dimensional datasets by approximating the inverse Hessian through limited-memory gradient displacements.</p>
+        <div class="card-metrics">
+          <div class="chips">
+            <span><b>Applied in:</b> 14 Models</span>
+          </div>
+          <span class="card-arrow">&rarr;</span>
+        </div>
+      </a>
     </div>
 
     <!-- Empty State -->
@@ -1128,6 +1315,107 @@
       <h3>No matching results found</h3>
       <p>Try modifying your search query or reset the filter.</p>
       <button class="button light small" onclick="resetZooFilters()">Reset Filters</button>
+    </div>
+  </section>
+
+  <!-- SECTION 04: FUTURE CURRICULUM HORIZONS (ROADMAP PREVIEW) -->
+  <section id="roadmap" class="section">
+    <div class="head reveal">
+      <div>
+        <span class="tag">04 / Curriculum Roadmap</span>
+        <h2>Future learning horizons.</h2>
+      </div>
+      <p>While Data Science, Machine Learning, and Statistics form our active core curriculum, these advanced specialization tracks are currently in design.</p>
+    </div>
+
+    <div class="roadmap-grid reveal">
+      <!-- Roadmap Track 1: Deep Learning -->
+      <div class="roadmap-card">
+        <div class="roadmap-status">Phase 2 &bull; In Design</div>
+        <h4>Deep Learning &amp; Neural Architectures</h4>
+        <p>From multilayer perceptrons and backpropagation calculus to Convolutional Networks, Residual blocks, and Transformer attention heads.</p>
+        <div class="roadmap-techs">
+          <span class="roadmap-tech-pill">Backprop</span>
+          <span class="roadmap-tech-pill">CNNs</span>
+          <span class="roadmap-tech-pill">ResNet</span>
+          <span class="roadmap-tech-pill">Transformers</span>
+          <span class="roadmap-tech-pill">Attention</span>
+        </div>
+      </div>
+
+      <!-- Roadmap Track 2: NLP -->
+      <div class="roadmap-card">
+        <div class="roadmap-status">Phase 2 &bull; In Design</div>
+        <h4>NLP, NLU, NLG &amp; NER</h4>
+        <p>Text processing pipelines, subword tokenization, Word2Vec, sequence models, Named Entity Recognition, and Large Language Model architectures.</p>
+        <div class="roadmap-techs">
+          <span class="roadmap-tech-pill">Tokenization</span>
+          <span class="roadmap-tech-pill">Word2Vec</span>
+          <span class="roadmap-tech-pill">BERT</span>
+          <span class="roadmap-tech-pill">NER</span>
+          <span class="roadmap-tech-pill">LLMs</span>
+        </div>
+      </div>
+
+      <!-- Roadmap Track 3: Computer Vision -->
+      <div class="roadmap-card">
+        <div class="roadmap-status">Phase 3 &bull; Planned</div>
+        <h4>Computer Vision</h4>
+        <p>Spatial feature extractors, object detection bounding boxes, semantic segmentation, and Vision Transformers (ViT).</p>
+        <div class="roadmap-techs">
+          <span class="roadmap-tech-pill">Convolutions</span>
+          <span class="roadmap-tech-pill">YOLO</span>
+          <span class="roadmap-tech-pill">Segmentation</span>
+          <span class="roadmap-tech-pill">ViT</span>
+        </div>
+      </div>
+
+      <!-- Roadmap Track 4: Agentic AI -->
+      <div class="roadmap-card">
+        <div class="roadmap-status">Phase 3 &bull; Planned</div>
+        <h4>Agentic AI &amp; Autonomous Agents</h4>
+        <p>Reasoning-action loops (ReAct), multi-agent coordination, persistent memory, tool execution, and self-reflection architectures.</p>
+        <div class="roadmap-techs">
+          <span class="roadmap-tech-pill">ReAct Loop</span>
+          <span class="roadmap-tech-pill">Tool Calling</span>
+          <span class="roadmap-tech-pill">Multi-Agent</span>
+          <span class="roadmap-tech-pill">Memory</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 05: Pedagogical Methodology & Standards -->
+  <section class="section band">
+    <div class="inner">
+      <div class="head reveal">
+        <div>
+          <span class="tag">05 / Pedagogy &amp; Methodology</span>
+          <h2>A true one-stop learning lab.</h2>
+        </div>
+        <p>No isolated formulas or naked charts. Every architecture is dissected through intuitive mental models, mathematical proofs, real EDA, and justified feature selection.</p>
+      </div>
+
+      <div class="standards reveal">
+        <div class="standard">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10M6 14h6"/></svg>
+          <span class="num">01</span>
+          <h3>Step-by-Step Derivations</h3>
+          <p>Analytical closed-form proofs and optimization steps rendered with KaTeX, linking directly to our <a href="concepts/loss-functions/index.html" style="color:var(--violet-2); text-decoration:underline;">Loss Functions Guide</a>.</p>
+        </div>
+        <div class="standard">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          <span class="num">02</span>
+          <h3>Modular Multi-Dataset EDA</h3>
+          <p>Switch between real-world datasets directly inside model pages. Inspect target skewness, collinearity matrices, and outlier handling via our <a href="concepts/exploratory-data-analysis/index.html" style="color:var(--violet-2); text-decoration:underline;">EDA Guide</a>.</p>
+        </div>
+        <div class="standard">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+          <span class="num">03</span>
+          <h3>Feature Selection Trade-Offs</h3>
+          <p>Detailed technical justifications for choosing Filter, Wrapper, or Embedded methods, linking to our comprehensive <a href="concepts/feature-selection/index.html" style="color:var(--violet-2); text-decoration:underline;">Feature Selection Guide</a>.</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1161,13 +1449,13 @@
   <footer>
     <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
     <div class="footlinks">
-      <a href="#learn">Learn Hub (60)</a>
+      <a href="#learn">Curriculum (64)</a>
       <a href="https://yogesh660.github.io/work/">Work</a>
       <a href="https://yogesh660.github.io/projects/">Projects</a>
       <a href="https://yogesh660.github.io/about/">About</a>
       <a href="#nav">Top &uarr;</a>
     </div>
-    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+    <span>&copy; 2026 YOGESH AWATE &bull; LEARN PLATFORM &bull; DATA SCIENCE, ML &amp; STATISTICS</span>
   </footer>
 
   <script src="zoo.js" defer></script>

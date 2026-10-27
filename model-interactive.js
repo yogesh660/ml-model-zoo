@@ -61,17 +61,20 @@
             label: 'Predicted vs Ground Truth',
             data: dataPoints,
             backgroundColor: '#8c7cff',
-            borderColor: 'rgba(140, 124, 255, 0.4)',
+            borderColor: '#8c7cff',
             pointRadius: 4,
-            pointHoverRadius: 6
+            pointHoverRadius: 6,
+            pointStyle: 'circle'
           },
           {
             label: 'Parity Line (y = x)',
             type: 'line',
             data: [{ x: minVal, y: minVal }, { x: maxVal, y: maxVal }],
             borderColor: '#ef4444',
-            borderDash: [5, 5],
+            borderWidth: 2,
+            borderDash: [6, 4],
             pointRadius: 0,
+            pointStyle: 'line',
             fill: false
           }
         ]
@@ -92,7 +95,43 @@
           }
         },
         plugins: {
-          legend: { labels: { color: '#9a9aa5', font: { family: 'DM Mono', size: 11 } } },
+          legend: {
+            display: true,
+            labels: {
+              usePointStyle: true,
+              pointStyleWidth: 26,
+              boxWidth: 26,
+              boxHeight: 10,
+              padding: 16,
+              color: '#9a9aa5',
+              font: { family: 'DM Mono', size: 11 },
+              generateLabels: function(chart) {
+                const vis0 = chart.isDatasetVisible(0);
+                const vis1 = chart.isDatasetVisible(1);
+                return [
+                  {
+                    text: 'Predicted vs Ground Truth',
+                    fillStyle: vis0 ? '#8c7cff' : 'rgba(140, 124, 255, 0.2)',
+                    strokeStyle: vis0 ? '#8c7cff' : 'rgba(140, 124, 255, 0.2)',
+                    lineWidth: 0,
+                    pointStyle: 'circle',
+                    hidden: !vis0,
+                    datasetIndex: 0
+                  },
+                  {
+                    text: 'Parity Line (y = x)',
+                    fillStyle: 'transparent',
+                    strokeStyle: vis1 ? '#ef4444' : 'rgba(239, 68, 68, 0.2)',
+                    lineWidth: 2,
+                    lineDash: [6, 4],
+                    pointStyle: 'line',
+                    hidden: !vis1,
+                    datasetIndex: 1
+                  }
+                ];
+              }
+            }
+          },
           tooltip: {
             callbacks: {
               label: function (ctx) {
@@ -151,7 +190,9 @@
       label: `Cluster ${i + 1}`,
       data: pts,
       backgroundColor: colors[i % colors.length],
-      pointRadius: 4
+      borderColor: colors[i % colors.length],
+      pointRadius: 4,
+      pointStyle: 'circle'
     }));
 
     return new Chart(ctx, {
@@ -171,7 +212,16 @@
           }
         },
         plugins: {
-          legend: { labels: { color: '#9a9aa5', font: { family: 'DM Mono', size: 11 } } }
+          legend: {
+            labels: {
+              usePointStyle: true,
+              pointStyleWidth: 10,
+              boxWidth: 10,
+              padding: 16,
+              color: '#9a9aa5',
+              font: { family: 'DM Mono', size: 11 }
+            }
+          }
         }
       }
     });

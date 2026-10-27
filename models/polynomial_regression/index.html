@@ -86,58 +86,60 @@
         <div class="info-card">
           <h3>Core Theoretical Assumptions</h3>
           <ul class="assumptions-checklist">
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via <a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">EDA and Preprocessing</a>.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a> surface.</div></li>
+
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Linearity in Parameters:</strong> The expected response is a linear combination of coefficients $y = mathbf{X}oldsymbol{eta} + oldsymbol{arepsilon}$.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Strict Exogeneity:</strong> Conditional error expectation is zero ($mathbb{E}[oldsymbol{arepsilon} mid mathbf{X}] = mathbf{0}$), ensuring zero omitted variable bias.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>No Multicollinearity:</strong> Full column rank $	ext{rank}(mathbf{X}) = p+1$, ensuring $(mathbf{X}^T mathbf{X})$ is non-singular and invertible.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Spherical Homoscedasticity:</strong> Constant error variance $	ext{Var}(arepsilon_i mid mathbf{X}) = sigma^2$ across all observations.</div></li>
+    
           </ul>
         </div>
       </div>
 
       
     <div class="pipeline-box">
-      <span class="canvas-tag">End-to-End System Architecture & Computational Dataflow</span>
+      <span class="canvas-tag">End-to-End System Architecture &amp; Computational Dataflow</span>
       <div class="pipeline-diagram">
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Input Space</span>
-          <h4>Feature Matrix X</h4>
-          <p>Continuous & discrete covariates.</p>
-          <span class="tensor-shape">Shape: ℝ^{n × p}</span>
+          <span class="pipeline-badge">Step 01 &bull; Design Formulation</span>
+          <h4>Design Matrix Augmentation</h4>
+          <p>Augment $n$ observations with column of 1s for intercept.</p>
+          <span class="tensor-shape">$\tilde{\mathbf{X}} = [\mathbf{1}, \mathbf{X}] \in \mathbb{R}^{n \times (p+1)}$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Preprocessing</span>
-          <h4>EDA & Scaling</h4>
-          <p>StandardScaler / Robust clipping.</p>
-          <span class="tensor-shape">μ = 0, σ² = 1</span>
+          <span class="pipeline-badge">Step 02 &bull; Sufficient Statistics</span>
+          <h4>Gram Covariance &amp; Cross-Products</h4>
+          <p>Compute outer products and feature-target correlation vector.</p>
+          <span class="tensor-shape">$\mathbf{X}^T \mathbf{X} \in \mathbb{R}^{(p+1)\times(p+1)}, \; \mathbf{X}^T \mathbf{y} \in \mathbb{R}^{p+1}$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Feature Selection</span>
-          <h4>Dimensionality</h4>
-          <p>VIF pruning / Mutual Information.</p>
-          <span class="tensor-shape">k ll p Features</span>
+          <span class="pipeline-badge">Step 03 &bull; Closed-Form Solver</span>
+          <h4>Normal Equations Inversion</h4>
+          <p>Compute optimal weights directly via Cholesky / QR solver.</p>
+          <span class="tensor-shape">$\hat{\boldsymbol{\beta}} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
-        <div class="pipeline-node" style="border-color:var(--violet);">
-          <span class="pipeline-badge" style="color:var(--cyan);">Model Engine</span>
-          <h4>Polynomial Regression</h4>
-          <p>Hypothesis transformation.</p>
-          <span class="tensor-shape">f(X; θ)</span>
-        </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Optimization</span>
-          <h4>Loss Function J</h4>
-          <p>MSE / Regularized L2 Loss</p>
-          <span class="tensor-shape">min_θ J(θ)</span>
+          <span class="pipeline-badge">Step 04 &bull; Subspace Projection</span>
+          <h4>Orthogonal Hat Projection</h4>
+          <p>Project target $\mathbf{y}$ onto $\text{Col}(\mathbf{X})$ with residuals $\mathbf{e} \perp \mathbf{X}$.</p>
+          <span class="tensor-shape">$\hat{\mathbf{y}} = \mathbf{H}\mathbf{y}, \quad \mathbf{H} = \mathbf{X}(\mathbf{X}^T \mathbf{X})^{-1}\mathbf{X}^T$</span>
         </div>
-        <div class="pipeline-arrow">&rarr;</div>
+  
+
         <div class="pipeline-node">
-          <span class="pipeline-badge">Inference</span>
-          <h4>Prediction Target</h4>
-          <p>Continuous prediction ŷ ∈ ℝ</p>
-          <span class="tensor-shape">ŷ = f(x)</span>
+          <span class="pipeline-badge">Step 05 &bull; Production Scoring</span>
+          <h4>Real-Time Vector Inference</h4>
+          <p>Compute inner product for unseen test observations.</p>
+          <span class="tensor-shape">$\hat{y}_{\text{test}} = \mathbf{x}_{\text{test}}^T \hat{\boldsymbol{\beta}} \in \mathbb{R}$</span>
         </div>
+  
       </div>
     </div>
   
@@ -162,25 +164,26 @@
       </h2>
 
       <div class="math-dissection-grid">
+        
         <div class="dissect-card">
-          <span class="dissect-symbol">X \in \mathbb{R}^{n \times p}</span>
+          <span class="dissect-symbol">$\mathbf{X} \in \mathbb{R}^{n \times p}$</span>
           <span class="dissect-role">Design Feature Matrix</span>
-          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized predictors.</span>
+          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized continuous predictors.</span>
         </div>
         <div class="dissect-card">
-          <span class="dissect-symbol">\beta / w \in \mathbb{R}^p</span>
+          <span class="dissect-symbol">$\boldsymbol{\beta} \in \mathbb{R}^p, \; \beta_0 \in \mathbb{R}$</span>
           <span class="dissect-role">Learnable Parameter Vector</span>
-          <span class="dissect-desc">Model coefficients learned via closed-form inversion or gradient descent.</span>
+          <span class="dissect-desc">Model coefficients and bias learned via closed-form normal inversion or gradient descent.</span>
         </div>
         <div class="dissect-card">
-          <span class="dissect-symbol">\mathcal{L}(\theta) / J(\theta)</span>
+          <span class="dissect-symbol">$\mathcal{L}_{\text{MSE}}(\boldsymbol{\beta}) = \frac{1}{2n} \|\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\|_2^2$</span>
           <span class="dissect-role">Objective Cost Functional</span>
-          <span class="dissect-desc">Empirical risk penalty measuring discrepancy between ground truth and predictions.</span>
+          <span class="dissect-desc">Empirical risk penalty measuring squared Euclidean residual distance against continuous ground truth.</span>
         </div>
         <div class="dissect-card">
-          <span class="dissect-symbol">\lambda / C / \eta</span>
+          <span class="dissect-symbol">$\lambda \ge 0, \; \alpha, \; \eta$</span>
           <span class="dissect-role">Hyperparameter Envelope</span>
-          <span class="dissect-desc">Controls regularization capacity, margin violation penalty, or learning step size.</span>
+          <span class="dissect-desc">Controls regularization capacity ($L_1 / L_2$ shrinkage), elastic mix ratio, or learning step size.</span>
         </div>
       </div>
 
@@ -737,7 +740,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
             Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
           </p>
           <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Apply $L_2$ Ridge shrinkage ($lambda > 0$) or prune tree depth.</li>
+            <li>Apply $L_2$ Ridge shrinkage ($\lambda > 0$) or prune tree depth.</li>
             <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
             <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
           </ul>
@@ -748,7 +751,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
             High-leverage anomalies drag the optimization surface away from the true data generating manifold.
           </p>
           <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Use robust losses like Huber Loss ($delta = 1.0$) or Soft-Margin Slack ($C$).</li>
+            <li>Use robust losses like Huber Loss ($\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
             <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
             <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
           </ul>

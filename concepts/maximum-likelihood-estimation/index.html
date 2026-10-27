@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maximum Likelihood Estimation & Bernoulli Log-Likelihood · Learn ML · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
+  <script>
+    function renderKatex() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderKatex);
+    window.addEventListener("load", renderKatex);
+  </script>
+  <link rel="stylesheet" href="../../visual-components.css">
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html#learn">Learn</a>
+        <span class="sep">/</span>
+        <a href="../../index.html#learn-concepts">Concepts</a>
+        <span class="sep">/</span>
+        <span>Maximum Likelihood Estimation & Bernoulli Log-Likelihood</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
+      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Statistical Inference • 16</div>
+      <h1>Maximum Likelihood Estimation & Bernoulli Log-Likelihood</h1>
+      <p class="concept-lead">The principled statistical framework for fitting parametric models by finding parameter weights that maximize the joint probability of observing the empirical training data.</p>
+    </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">Maximum Likelihood Optimization Pipeline: From Samples to Global Maximum</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Empirical Data</span>
+            <h4>i.i.d. Samples</h4>
+            <p>Observations & labels.</p>
+            <span class="tensor-shape">${(mathbf{x}_i, y_i)}_{i=1}^n$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green-2);">Joint Likelihood</span>
+            <h4>Bernoulli Product</h4>
+            <p>Joint sample probability.</p>
+            <span class="tensor-shape">$prod p_i^{y_i} (1-p_i)^{1-y_i}$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Log Transformation</span>
+            <h4>Log-Likelihood &ell;(w)</h4>
+            <p>Numerically stable sum.</p>
+            <span class="tensor-shape">$sum [y_i ln p_i + (1-y_i)ln(1-p_i)]$</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan-2);">Convex Solver</span>
+            <h4>Newton / L-BFGS</h4>
+            <p>Score $mathbf{X}^T(mathbf{y}-mathbf{p}) = mathbf{0}$.</p>
+            <span class="tensor-shape">$hat{mathbf{w}}_{	ext{MLE}} = argmax ell(mathbf{w})$</span>
+          </div>
+        </div>
+      </div>
+    
+
+    
+    
+    
+    
+    
+    
+    <div id="lab-mle-bernoulli"></div>
+    
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 1. The Principle of Maximum Likelihood
+      </h2>
+      <div class="concept-body">
+        
+          <p>Given an observed dataset $\mathcal{D} = \{(\mathbf{x}_1, y_1), \dots, (\mathbf{x}_n, y_n)\}$ drawn independently and identically distributed ($i.i.d.$) from a data generation process parameterized by unknown weights $\mathbf{w}$, the <strong>Likelihood function</strong> $L(\mathbf{w})$ quantifies the probability of observing this exact sample:</p>
+          <div class="math-card">
+            $L(\mathbf{w}) = P(\mathcal{D}; \mathbf{w}) = \prod_{i=1}^n P(y_i \mid \mathbf{x}_i; \mathbf{w})$
+          </div>
+          <p>The Maximum Likelihood principle seeks optimal weights $\hat{\mathbf{w}}_{\text{MLE}}$ that make the empirical data most plausible:</p>
+          <div class="math-card">
+            $\hat{\mathbf{w}}_{\text{MLE}} = \arg\max_{\mathbf{w}} L(\mathbf{w})$
+          </div>
+          <div class="callout cyan">
+            <span class="callout-title">Why the Log-Likelihood Transformation is Mandatory</span>
+            <p>Multiplying thousands of probabilities $p_i \in (0, 1)$ precipitates severe numerical arithmetic underflow ($p_1 \times p_2 \dots < 10^{-308} \to 0$). Since the natural logarithm is strictly monotonically increasing, $\arg\max L(\mathbf{w}) \equiv \arg\max \ln L(\mathbf{w})$. Taking the logarithm converts product chains into numerically stable summations:</p>
+            <div class="math-card">
+              $\ell(\mathbf{w}) = \ln L(\mathbf{w}) = \sum_{i=1}^n \ln P(y_i \mid \mathbf{x}_i; \mathbf{w})$
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 2. Derivation of Bernoulli Log-Likelihood & Binary Cross-Entropy
+      </h2>
+      <div class="concept-body">
+        
+          <p>In binary classification with labels $y_i \in \{0, 1\}$, each observation is a Bernoulli trial with success probability $p_i = \sigma(\mathbf{w}^T \mathbf{x}_i)$. The unified Probability Mass Function (PMF) is:</p>
+          <div class="math-card">
+            $P(Y = y_i \mid \mathbf{x}_i) = p_i^{y_i} (1 - p_i)^{1 - y_i}$
+          </div>
+          <p>Under the $i.i.d.$ assumption, the joint likelihood is:</p>
+          <div class="math-card">
+            $L(\mathbf{w}) = \prod_{i=1}^n p_i^{y_i} (1 - p_i)^{1 - y_i}$
+          </div>
+          <p>Taking the natural logarithm yields the <strong>Bernoulli Log-Likelihood</strong>:</p>
+          <div class="math-card">
+            $\ell(\mathbf{w}) = \sum_{i=1}^n \left[ y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right]$
+          </div>
+          <div class="callout green" style="margin-top:14px;">
+            <span class="callout-title">The Exact Identity with Binary Cross-Entropy (BCE)</span>
+            <p>In machine learning, algorithms minimize loss rather than maximizing likelihood. Multiplying by $-\frac{1}{n}$ defines the empirical cost function:</p>
+            <div class="math-card">
+              $J(\mathbf{w}) = -\frac{1}{n}\ell(\mathbf{w}) = -\frac{1}{n}\sum_{i=1}^n \left[ y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right] = \mathcal{L}_{\text{BCE}}(\mathbf{w})$
+            </div>
+            <p>Maximizing Bernoulli log-likelihood is mathematically and computationally equivalent to minimizing Binary Cross-Entropy loss.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 3. Score Function, Hessian Matrix & Strict Concavity
+      </h2>
+      <div class="concept-body">
+        
+          <p>Applying the chain rule $\frac{\partial \ell}{\partial w_j} = \sum_{i=1}^n \frac{\partial \ell}{\partial p_i} \frac{\partial p_i}{\partial z_i} \frac{\partial z_i}{\partial w_j}$ yields the <strong>Score Vector (Gradient)</strong>:</p>
+          <div class="math-card">
+            $\nabla_{\mathbf{w}} \ell(\mathbf{w}) = \sum_{i=1}^n (y_i - p_i) \mathbf{x}_i = \mathbf{X}^T (\mathbf{y} - \mathbf{p})$
+          </div>
+          <p>Notice the exact structural parallel to Ordinary Least Squares (OLS) normal equations $\mathbf{X}^T (\mathbf{y} - \hat{\mathbf{y}})$!</p>
+          <p>Differentiating a second time yields the <strong>Hessian Matrix</strong>:</p>
+          <div class="math-card">
+            $\mathbf{H} = \nabla_{\mathbf{w}}^2 \ell(\mathbf{w}) = -\sum_{i=1}^n p_i(1 - p_i) \mathbf{x}_i \mathbf{x}_i^T = -\mathbf{X}^T \mathbf{W} \mathbf{X}$
+          </div>
+          <p>where $\mathbf{W} = \text{diag}(p_i(1 - p_i))$ is a diagonal weighting matrix with strictly positive diagonal elements $p_i(1 - p_i) > 0$.</p>
+          <div class="callout violet" style="margin-top:14px;">
+            <span class="callout-title">Guarantee of Unique Global Optimum</span>
+            <p>For any non-zero vector $\mathbf{v} \in \mathbb{R}^p$, $\mathbf{v}^T \mathbf{H} \mathbf{v} = -(\mathbf{X} \mathbf{v})^T \mathbf{W} (\mathbf{X} \mathbf{v}) \le 0$. Hence, $\mathbf{H}$ is <strong>negative semi-definite everywhere</strong>. The Bernoulli log-likelihood surface is strictly concave with <strong>zero local minima or saddle points</strong>: every stationary point $\nabla \ell = \mathbf{0}$ is the unique global maximum!</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ordinary Least Squares (OLS)
+    </a>
+  
+    <a href="../../models/gaussian_naive_bayes/index.html" class="model-badge classification">
+      <span class="dot"></span> Gaussian Naive Bayes
+    </a>
+  
+    <a href="../../models/linear_discriminant_analysis/index.html" class="model-badge classification">
+      <span class="dot"></span> Linear Discriminant Analysis
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
+      <a href="../../index.html#learn">Back to Learn Hub</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('maximum-likelihood-estimation' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('maximum-likelihood-estimation' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('maximum-likelihood-estimation' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('maximum-likelihood-estimation' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+        if ('maximum-likelihood-estimation' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
+        if ('maximum-likelihood-estimation' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
+        if ('maximum-likelihood-estimation' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
+        if ('maximum-likelihood-estimation' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
+      }
+    });
+  </script>
+</body>
+</html>
