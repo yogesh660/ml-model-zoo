@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loss Function vs. Cost Function vs. Error Function · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>Loss Function vs. Cost Function vs. Error Function</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Optimization & Loss Theory · 13</div>
+      <h1>Loss Function vs. Cost Function vs. Error Function</h1>
+      <p class="concept-lead">Demystifying the precise mathematical taxonomy between instance loss, aggregate cost, and evaluation error in machine learning.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. Side-by-Side Mathematical Comparison
+      </h2>
+      <div class="concept-body">
+        
+          <div class="table-wrap">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Concept</th>
+                  <th>Mathematical Scope</th>
+                  <th>Optimization Role</th>
+                  <th>Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">Loss Function $\mathcal{L}(y, \hat{y})$</td>
+                  <td>Single sample $(x_i, y_i)$</td>
+                  <td>Differentiable target evaluated per instance</td>
+                  <td class="code-val">\frac{1}{2}(y_i - \hat{y}_i)^2 \quad \text{or} \quad -y_i \log(p_i)</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Cost Function $J(\theta)$</td>
+                  <td>Full dataset or mini-batch</td>
+                  <td>Direct mathematical objective being optimized by solver</td>
+                  <td class="code-val">\frac{1}{n} \sum \mathcal{L} + \lambda \|w\|^2</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Error Function / Metric</td>
+                  <td>Evaluation benchmark</td>
+                  <td>Interpretable score for humans (often non-differentiable)</td>
+                  <td class="code-val">\text{Accuracy}, \text{ROC-AUC}, \text{F1-Score}, \text{RMSE}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ordinary Least Squares
+    </a>
+  
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/support_vector_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Support Vector Classifier
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>

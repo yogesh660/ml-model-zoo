@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loss Functions & Optimization Landscapes · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>Loss Functions & Optimization Landscapes</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Foundational Theory · 01</div>
+      <h1>Loss Functions & Optimization Landscapes</h1>
+      <p class="concept-lead">A rigorous mathematical exploration of loss, cost, and objective functions spanning continuous regression, discrete classification, and margin-based algorithms.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. Loss Function vs. Cost Function vs. Objective Function
+      </h2>
+      <div class="concept-body">
+        
+          <p>While often used interchangeably in casual discussion, mathematical optimization enforces strict distinctions between these core formulations:</p>
+          <div class="card-grid-3">
+            <div class="feature-card">
+              <span class="card-num">01 / Instance Loss</span>
+              <h3>Loss Function $\mathcal{L}(\hat{y}^{(i)}, y^{(i)})$</h3>
+              <p>Measures the prediction error on a <strong>single training instance</strong>. It quantifies the penalty incurred when the model predicts $\hat{y}^{(i)}$ instead of true ground truth $y^{(i)}$.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">02 / Aggregate Cost</span>
+              <h3>Cost Function $J(\theta)$</h3>
+              <p>The aggregate empirical expectation computed over the <strong>entire training dataset</strong> (or mini-batch), frequently augmented with a regularization penalty $\Omega(\theta)$:</p>
+              <code>J(\theta) = \frac{1}{n} \sum_{i=1}^n \mathcal{L}(\hat{y}^{(i)}, y^{(i)}) + \lambda \Omega(\theta)</code>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">03 / Optimization Goal</span>
+              <h3>Objective Function</h3>
+              <p>The most general mathematical formulation being minimized (loss) or maximized (reward, likelihood). In ML, our objective is to find $\hat{\theta} = \arg\min_\theta J(\theta)$.</p>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Canonical Regression Loss Functions
+      </h2>
+      <div class="concept-body">
+        
+          <p>The choice of loss function directly shapes the model's sensitivity to anomalies and the geometric properties of the optimization surface.</p>
+          <div class="table-wrap">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Loss Function</th>
+                  <th>Mathematical Formulation</th>
+                  <th>Gradient $\frac{\partial \mathcal{L}}{\partial \hat{y}}$</th>
+                  <th>Robustness to Outliers</th>
+                  <th>Primary Use Cases</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">Mean Squared Error (MSE / L2)</td>
+                  <td class="code-val">\frac{1}{2}(y - \hat{y})^2</td>
+                  <td class="code-val">-(y - \hat{y})</td>
+                  <td>Low (errors grow quadratically)</td>
+                  <td>OLS, Ridge, Polynomial Regression, Gaussian Process</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Mean Absolute Error (MAE / L1)</td>
+                  <td class="code-val">|y - \hat{y}|</td>
+                  <td class="code-val">-\text{sgn}(y - \hat{y})</td>
+                  <td>High (linear penalty on residuals)</td>
+                  <td>Median regression, financial datasets with heavy tails</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Huber Loss (Smooth L1)</td>
+                  <td class="code-val">\begin{cases} \frac{1}{2}e^2 & |e| \le \delta \\ \delta(|e| - \frac{1}{2}\delta) & \text{otherwise} \end{cases}</td>
+                  <td class="code-val">\begin{cases} -e & |e| \le \delta \\ -\delta\text{sgn}(e) & \text{otherwise} \end{cases}</td>
+                  <td>Optimal (quadratic for small errors, linear for anomalies)</td>
+                  <td>Robust Regression, Gradient Boosting, Object Detection</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Epsilon-Insensitive Loss</td>
+                  <td class="code-val">\max(0, |y - \hat{y}| - \epsilon)</td>
+                  <td class="code-val">0 \text{ if } |e| \le \epsilon, \text{ else } -\text{sgn}(e)</td>
+                  <td>High (ignores errors within margin tube $\epsilon$)</td>
+                  <td>Support Vector Regression (SVR)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. Canonical Classification Loss Functions
+      </h2>
+      <div class="concept-body">
+        
+          <p>Classification models map continuous logits $z = w^T x + b$ to discrete probabilities or margin boundaries:</p>
+          <div class="callout violet">
+            <span class="callout-title">Binary Cross-Entropy (Log Loss)</span>
+            <p>Derived directly from the negative log-likelihood of a Bernoulli distribution under maximum likelihood estimation (MLE):</p>
+            <div class="math-card">
+              $$\mathcal{L}_{\text{BCE}}(y, p) = - \left[ y \log(p) + (1 - y) \log(1 - p) \right], \quad p = \sigma(z) = \frac{1}{1 + e^{-z}}$$
+            </div>
+            <p>When the true label is $y=1$ and predicted probability $p \to 0$, $\mathcal{L} \to \infty$, heavily penalizing overconfident incorrect predictions.</p>
+          </div>
+          <div class="callout cyan" style="margin-top: 14px;">
+            <span class="callout-title">Hinge Loss (Support Vector Machines)</span>
+            <p>Enforces maximum-margin separation by penalizing points that violate or breach the margin boundary:</p>
+            <div class="math-card">
+              $$\mathcal{L}_{\text{Hinge}}(y, f(x)) = \max(0, 1 - y \cdot f(x)), \quad y \in \{-1, +1\}$$
+            </div>
+            <p>If $y \cdot f(x) \ge 1$, the instance is correctly classified beyond the margin boundary and incurs <strong>zero loss</strong>.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ordinary Least Squares
+    </a>
+  
+    <a href="../../models/ridge_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ridge Regression
+    </a>
+  
+    <a href="../../models/lasso_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Lasso Regression
+    </a>
+  
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/support_vector_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Support Vector Classifier
+    </a>
+  
+    <a href="../../models/support_vector_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Support Vector Regression
+    </a>
+  
+    <a href="../../models/mlp_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> MLP Classifier
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confusion Matrix & Diagnostic Error Analysis · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>Confusion Matrix & Diagnostic Error Analysis</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Evaluation & Diagnostics · 02</div>
+      <h1>Confusion Matrix & Diagnostic Error Analysis</h1>
+      <p class="concept-lead">The fundamental diagnostic grid for discrete classification, mapping ground truth against model hypotheses to isolate Type I and Type II errors.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. Anatomy of the 2×2 Confusion Matrix
+      </h2>
+      <div class="concept-body">
+        
+          <p>For any binary classification problem predicting class Positive ($1$) versus Negative ($0$), four mutually exclusive diagnostic outcomes arise:</p>
+          <div class="matrix-grid">
+            <div class="matrix-header">Actual \ Predicted</div>
+            <div class="matrix-header">Predicted Positive (1)</div>
+            <div class="matrix-header">Predicted Negative (0)</div>
+
+            <div class="matrix-header">Actual Positive (1)</div>
+            <div class="matrix-cell tp">
+              <span class="cell-title">True Positive (TP)</span>
+              <span class="cell-desc">Ground truth is Positive; model correctly classified it as Positive. Hit.</span>
+            </div>
+            <div class="matrix-cell fn">
+              <span class="cell-title">False Negative (FN)</span>
+              <span class="cell-desc">Ground truth is Positive; model mistakenly classified it as Negative. <strong>Type II Error (Miss)</strong>.</span>
+            </div>
+
+            <div class="matrix-header">Actual Negative (0)</div>
+            <div class="matrix-cell fp">
+              <span class="cell-title">False Positive (FP)</span>
+              <span class="cell-desc">Ground truth is Negative; model mistakenly classified it as Positive. <strong>Type I Error (False Alarm)</strong>.</span>
+            </div>
+            <div class="matrix-cell tn">
+              <span class="cell-title">True Negative (TN)</span>
+              <span class="cell-desc">Ground truth is Negative; model correctly classified it as Negative. Correct Rejection.</span>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Derived Diagnostic Metrics
+      </h2>
+      <div class="concept-body">
+        
+          <p>Every standard classification metric is derived as a ratio of elements from the confusion matrix:</p>
+          <div class="table-wrap">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Diagnostic Metric</th>
+                  <th>Formula</th>
+                  <th>Conceptual Question Answered</th>
+                  <th>Critical Domain Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">Accuracy</td>
+                  <td class="code-val">\frac{TP + TN}{TP + TN + FP + FN}</td>
+                  <td>What fraction of all predictions were correct?</td>
+                  <td>Misleading on imbalanced datasets (e.g. 99% accuracy on 1% rare fraud).</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Precision (Positive Predictive Value)</td>
+                  <td class="code-val">\frac{TP}{TP + FP}</td>
+                  <td>When the model claims Positive, how often is it right?</td>
+                  <td>Critical when False Positives are expensive (spam filters, hiring candidate shortlisting).</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Recall (Sensitivity / True Positive Rate)</td>
+                  <td class="code-val">\frac{TP}{TP + FN}</td>
+                  <td>What percentage of actual Positives did the model catch?</td>
+                  <td>Crucial when False Negatives are catastrophic (cancer screening, defect detection, fraud).</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Specificity (True Negative Rate)</td>
+                  <td class="code-val">\frac{TN}{TN + FP}</td>
+                  <td>What percentage of actual Negatives were correctly identified?</td>
+                  <td>Evaluates the model's resistance to false alarms.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">F1-Score</td>
+                  <td class="code-val">2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}</td>
+                  <td>Harmonic mean balancing Precision and Recall.</td>
+                  <td>Primary benchmark metric for skewed class distributions.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. The Accuracy Paradox
+      </h2>
+      <div class="concept-body">
+        
+          <div class="callout violet">
+            <span class="callout-title">Why Accuracy Fails in Production</span>
+            <p>Consider a credit card fraud detection dataset with 10,000 transactions, where only 20 transactions ($0.2\%$) are fraudulent. A naive "dummy" model that blindly predicts <strong>Negative (No Fraud)</strong> for every single transaction achieves an impressive <strong>99.8% Accuracy</strong>.</p>
+            <p>However, its Recall is <strong>0.0%</strong>: it catches zero fraud cases, rendering it useless in practice. The Confusion Matrix immediately exposes this catastrophic failure by displaying $TP=0$ and $FN=20$.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/support_vector_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Support Vector Classifier
+    </a>
+  
+    <a href="../../models/random_forest_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Random Forest Classifier
+    </a>
+  
+    <a href="../../models/gaussian_naive_bayes/index.html" class="model-badge classification">
+      <span class="dot"></span> Gaussian Naive Bayes
+    </a>
+  
+    <a href="../../models/decision_tree_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Decision Tree Classifier
+    </a>
+  
+    <a href="../../models/adaboost_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> AdaBoost Classifier
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>

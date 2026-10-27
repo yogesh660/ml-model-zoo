@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Bias-Variance Decomposition & Generalization · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>The Bias-Variance Decomposition & Generalization</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Foundational ML Theory · 08</div>
+      <h1>The Bias-Variance Decomposition & Generalization</h1>
+      <p class="concept-lead">The fundamental theoretical constraint governing predictive modeling: decomposing expected test error into underfitting, sensitivity, and irreducible noise.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. Mathematical Derivation of the Decomposition
+      </h2>
+      <div class="concept-body">
+        
+          <p>For true data generation process $y = f(x) + \epsilon$ with noise $\epsilon \sim \mathcal{N}(0, \sigma^2)$, the expected prediction error of estimator $\hat{f}(x)$ at point $x$ decomposes cleanly into three components:</p>
+          <div class="math-card">
+            $$\mathbb{E}\left[(y - \hat{f}(x))^2\right] = \underbrace{\left(f(x) - \mathbb{E}[\hat{f}(x)]\right)^2}_{\text{Bias}^2} + \underbrace{\mathbb{E}\left[(\hat{f}(x) - \mathbb{E}[\hat{f}(x)])^2\right]}_{\text{Variance}} + \underbrace{\sigma^2}_{\text{Irreducible Error}}$$
+          </div>
+          <div class="card-grid-2">
+            <div class="feature-card">
+              <span class="card-num">High Bias (Underfitting)</span>
+              <h3>Erroneous Assumptions</h3>
+              <p>The model is overly rigid and fails to capture genuine nonlinear relationships (e.g. fitting OLS to quadratic data). High training error, high test error.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">High Variance (Overfitting)</span>
+              <h3>Extreme Sensitivity to Noise</h3>
+              <p>The model fits random fluctuations and noise in the training sample (e.g. unpruned Decision Tree). Near-zero training error, large test error.</p>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> OLS Regression
+    </a>
+  
+    <a href="../../models/ridge_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ridge Regression
+    </a>
+  
+    <a href="../../models/decision_tree_regressor/index.html" class="model-badge regression">
+      <span class="dot"></span> Decision Tree Regressor
+    </a>
+  
+    <a href="../../models/random_forest_regressor/index.html" class="model-badge regression">
+      <span class="dot"></span> Random Forest Regressor
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>

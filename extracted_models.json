@@ -1,0 +1,895 @@
+[
+  {
+    "href": "models/ols_linear_regression/index.html",
+    "cat": "regression",
+    "searchName": "ordinary least squares (ols) regression linear & regularized fits an optimal hyperplane by minimizing the sum of squared euclidean residuals without penalty constraints.",
+    "dataset": "California Housing",
+    "subfamily": "Linear & Regularized",
+    "title": "Ordinary Least Squares (OLS) Regression",
+    "desc": "Fits an optimal hyperplane by minimizing the sum of squared Euclidean residuals without penalty constraints.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.7455"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.5332"
+      }
+    ]
+  },
+  {
+    "href": "models/ridge_regression/index.html",
+    "cat": "regression",
+    "searchName": "ridge regression (l2 regularization) linear & regularized adds an l2 squared norm penalty to shrink coefficients, stabilizing ill-conditioned matrices in the presence of multicollinearity.",
+    "dataset": "California Housing",
+    "subfamily": "Linear & Regularized",
+    "title": "Ridge Regression (L2 Regularization)",
+    "desc": "Adds an L2 squared norm penalty to shrink coefficients, stabilizing ill-conditioned matrices in the presence of multicollinearity.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.7455"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.5331"
+      }
+    ]
+  },
+  {
+    "href": "models/lasso_regression/index.html",
+    "cat": "regression",
+    "searchName": "lasso regression (l1 regularization) linear & regularized applies an l1 absolute penalty to force negligible feature coefficients to absolute zero, conducting embedded feature selection.",
+    "dataset": "California Housing",
+    "subfamily": "Linear & Regularized",
+    "title": "Lasso Regression (L1 Regularization)",
+    "desc": "Applies an L1 absolute penalty to force negligible feature coefficients to absolute zero, conducting embedded feature selection.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.7482"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.5348"
+      }
+    ]
+  },
+  {
+    "href": "models/elastic_net/index.html",
+    "cat": "regression",
+    "searchName": "elastic net regression linear & regularized convex combination of l1 and l2 penalties, overcoming lasso limitations when features are correlated in grouped clusters.",
+    "dataset": "California Housing",
+    "subfamily": "Linear & Regularized",
+    "title": "Elastic Net Regression",
+    "desc": "Convex combination of L1 and L2 penalties, overcoming Lasso limitations when features are correlated in grouped clusters.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.7460"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.5335"
+      }
+    ]
+  },
+  {
+    "href": "models/polynomial_regression/index.html",
+    "cat": "regression",
+    "searchName": "polynomial regression linear & regularized projects feature vectors into higher-order polynomial feature spaces to model complex nonlinear interactions via linear models.",
+    "dataset": "California Housing",
+    "subfamily": "Linear & Regularized",
+    "title": "Polynomial Regression",
+    "desc": "Projects feature vectors into higher-order polynomial feature spaces to model complex nonlinear interactions via linear models.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.6821"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.4812"
+      }
+    ]
+  },
+  {
+    "href": "models/robust_regression/index.html",
+    "cat": "regression",
+    "searchName": "robust regression (huber / ransac / theil-sen) linear & regularized mitigates heavy-tailed anomalies and high leverage points using piecewise huber loss or consensus iterative sampling (ransac).",
+    "dataset": "California Housing",
+    "subfamily": "Linear & Regularized",
+    "title": "Robust Regression (Huber / RANSAC / Theil-Sen)",
+    "desc": "Mitigates heavy-tailed anomalies and high leverage points using piecewise Huber loss or consensus iterative sampling (RANSAC).",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.7490"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.5180"
+      }
+    ]
+  },
+  {
+    "href": "models/support_vector_regression/index.html",
+    "cat": "regression",
+    "searchName": "support vector regression (svr) distance & kernel constructs an epsilon-insensitive tube around continuous predictions, penalizing only errors exceeding margin boundary epsilon.",
+    "dataset": "California Housing",
+    "subfamily": "Distance & Kernel",
+    "title": "Support Vector Regression (SVR)",
+    "desc": "Constructs an epsilon-insensitive tube around continuous predictions, penalizing only errors exceeding margin boundary epsilon.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.5712"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3845"
+      }
+    ]
+  },
+  {
+    "href": "models/knn_regressor/index.html",
+    "cat": "regression",
+    "searchName": "k-nearest neighbors regressor (knn) distance & kernel non-parametric regression estimating the target value by distance-weighted averaging across the k nearest metric neighbors.",
+    "dataset": "California Housing",
+    "subfamily": "Distance & Kernel",
+    "title": "K-Nearest Neighbors Regressor (KNN)",
+    "desc": "Non-parametric regression estimating the target value by distance-weighted averaging across the k nearest metric neighbors.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.6214"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.4210"
+      }
+    ]
+  },
+  {
+    "href": "models/decision_tree_regressor/index.html",
+    "cat": "regression",
+    "searchName": "decision tree regressor (cart) tree-based & ensemble partitions feature space recursively into localized orthogonal hyperplanes by minimizing node mean squared error reduction.",
+    "dataset": "California Housing",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Decision Tree Regressor (CART)",
+    "desc": "Partitions feature space recursively into localized orthogonal hyperplanes by minimizing node mean squared error reduction.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.6910"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.4680"
+      }
+    ]
+  },
+  {
+    "href": "models/random_forest_regressor/index.html",
+    "cat": "regression",
+    "searchName": "random forest regressor tree-based & ensemble bagging ensemble averaging predictions across hundreds of decorrelated trees, substantially decreasing variance without increasing bias.",
+    "dataset": "California Housing",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Random Forest Regressor",
+    "desc": "Bagging ensemble averaging predictions across hundreds of decorrelated trees, substantially decreasing variance without increasing bias.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.5012"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3340"
+      }
+    ]
+  },
+  {
+    "href": "models/gradient_boosting_regressor/index.html",
+    "cat": "regression",
+    "searchName": "gradient boosting regressor (gbm) tree-based & ensemble sequentially optimizes trees to match the negative gradient (pseudo-residuals) of the loss function in stage-wise functional space.",
+    "dataset": "California Housing",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Gradient Boosting Regressor (GBM)",
+    "desc": "Sequentially optimizes trees to match the negative gradient (pseudo-residuals) of the loss function in stage-wise functional space.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.4890"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3280"
+      }
+    ]
+  },
+  {
+    "href": "models/xgboost_regressor/index.html",
+    "cat": "regression",
+    "searchName": "xgboost regressor tree-based & ensemble extreme gradient boosting utilizing second-order taylor expansion gradients, exact/approximate histogram split search, and tree complexity regularization.",
+    "dataset": "California Housing",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "XGBoost Regressor",
+    "desc": "Extreme Gradient Boosting utilizing second-order Taylor expansion gradients, exact/approximate histogram split search, and tree complexity regularization.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.4680"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3120"
+      }
+    ]
+  },
+  {
+    "href": "models/lightgbm_regressor/index.html",
+    "cat": "regression",
+    "searchName": "lightgbm regressor tree-based & ensemble fast histogram-based gradient boosting implementing gradient-based one-side sampling (goss) and exclusive feature bundling (efb) with leaf-wise growth.",
+    "dataset": "California Housing",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "LightGBM Regressor",
+    "desc": "Fast histogram-based gradient boosting implementing Gradient-based One-Side Sampling (GOSS) and Exclusive Feature Bundling (EFB) with leaf-wise growth.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.4650"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3090"
+      }
+    ]
+  },
+  {
+    "href": "models/catboost_regressor/index.html",
+    "cat": "regression",
+    "searchName": "catboost regressor tree-based & ensemble gradient boosting on symmetric (oblivious) decision trees addressing target leakage via ordered boosting and on-the-fly target encoding.",
+    "dataset": "California Housing",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "CatBoost Regressor",
+    "desc": "Gradient boosting on symmetric (oblivious) decision trees addressing target leakage via ordered boosting and on-the-fly target encoding.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.4630"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3070"
+      }
+    ]
+  },
+  {
+    "href": "models/bayesian_linear_regression/index.html",
+    "cat": "regression",
+    "searchName": "bayesian linear regression probabilistic & neural formulates linear regression within a bayesian paradigm, outputting full posterior probability distributions over parameter weights and predictive variance.",
+    "dataset": "California Housing",
+    "subfamily": "Probabilistic & Neural",
+    "title": "Bayesian Linear Regression",
+    "desc": "Formulates linear regression within a Bayesian paradigm, outputting full posterior probability distributions over parameter weights and predictive variance.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.7456"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.5332"
+      }
+    ]
+  },
+  {
+    "href": "models/gaussian_process_regressor/index.html",
+    "cat": "regression",
+    "searchName": "gaussian process regression (gpr) probabilistic & neural non-parametric bayesian kernel method defining distributions over continuous functions with exact closed-form predictive confidence intervals.",
+    "dataset": "California Housing",
+    "subfamily": "Probabilistic & Neural",
+    "title": "Gaussian Process Regression (GPR)",
+    "desc": "Non-parametric Bayesian kernel method defining distributions over continuous functions with exact closed-form predictive confidence intervals.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.5520"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3680"
+      }
+    ]
+  },
+  {
+    "href": "models/mlp_regressor/index.html",
+    "cat": "regression",
+    "searchName": "multi-layer perceptron (mlp) regressor probabilistic & neural deep feedforward artificial neural network trained via backpropagation and adam optimizer to approximate arbitrary continuous nonlinear manifolds.",
+    "dataset": "California Housing",
+    "subfamily": "Probabilistic & Neural",
+    "title": "Multi-Layer Perceptron (MLP) Regressor",
+    "desc": "Deep feedforward artificial neural network trained via backpropagation and Adam optimizer to approximate arbitrary continuous nonlinear manifolds.",
+    "metrics": [
+      {
+        "label": "RMSE:",
+        "val": "0.5210"
+      },
+      {
+        "label": "MAE:",
+        "val": "0.3540"
+      }
+    ]
+  },
+  {
+    "href": "models/logistic_regression/index.html",
+    "cat": "classification",
+    "searchName": "logistic regression linear & discriminant models class posterior log-odds via sigmoid link function, maximizing bernoulli log-likelihood using quasi-newton optimization (l-bfgs).",
+    "dataset": "Titanic Survival",
+    "subfamily": "Linear & Discriminant",
+    "title": "Logistic Regression",
+    "desc": "Models class posterior log-odds via sigmoid link function, maximizing Bernoulli log-likelihood using quasi-Newton optimization (L-BFGS).",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "79.82%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7420"
+      }
+    ]
+  },
+  {
+    "href": "models/linear_discriminant_analysis/index.html",
+    "cat": "classification",
+    "searchName": "linear discriminant analysis (lda) linear & discriminant finds a linear projection maximizing between-class variance relative to within-class variance under a homoscedastic gaussian assumption.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Linear & Discriminant",
+    "title": "Linear Discriminant Analysis (LDA)",
+    "desc": "Finds a linear projection maximizing between-class variance relative to within-class variance under a homoscedastic Gaussian assumption.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "79.37%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7380"
+      }
+    ]
+  },
+  {
+    "href": "models/quadratic_discriminant_analysis/index.html",
+    "cat": "classification",
+    "searchName": "quadratic discriminant analysis (qda) linear & discriminant generalizes lda by allowing class-specific covariance matrices sigma_k, producing quadratic decision boundaries across non-spherical class distributions.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Linear & Discriminant",
+    "title": "Quadratic Discriminant Analysis (QDA)",
+    "desc": "Generalizes LDA by allowing class-specific covariance matrices Sigma_k, producing quadratic decision boundaries across non-spherical class distributions.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "78.48%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7250"
+      }
+    ]
+  },
+  {
+    "href": "models/perceptron/index.html",
+    "cat": "classification",
+    "searchName": "perceptron classifier linear & discriminant fundamental online binary classifier updating weights upon misclassification using heaviside step activation functions.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Linear & Discriminant",
+    "title": "Perceptron Classifier",
+    "desc": "Fundamental online binary classifier updating weights upon misclassification using Heaviside step activation functions.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "73.54%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.6810"
+      }
+    ]
+  },
+  {
+    "href": "models/gaussian_naive_bayes/index.html",
+    "cat": "classification",
+    "searchName": "gaussian naive bayes probabilistic & bayesian applies bayes theorem assuming continuous features are conditionally independent and normally distributed within each target class.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Probabilistic & Bayesian",
+    "title": "Gaussian Naive Bayes",
+    "desc": "Applies Bayes theorem assuming continuous features are conditionally independent and normally distributed within each target class.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "77.58%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7210"
+      }
+    ]
+  },
+  {
+    "href": "models/multinomial_bernoulli_nb/index.html",
+    "cat": "classification",
+    "searchName": "multinomial & bernoulli naive bayes probabilistic & bayesian bayesian likelihood modeling designed for discrete token frequencies or multivariate binary indicators with laplace smoothing.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Probabilistic & Bayesian",
+    "title": "Multinomial & Bernoulli Naive Bayes",
+    "desc": "Bayesian likelihood modeling designed for discrete token frequencies or multivariate binary indicators with Laplace smoothing.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "76.23%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.6940"
+      }
+    ]
+  },
+  {
+    "href": "models/support_vector_classifier/index.html",
+    "cat": "classification",
+    "searchName": "support vector classifier (svc) distance & margin-based finds the maximum-margin hyperplane separating classes in transformed hilbert space using kernel functions (rbf, polynomial).",
+    "dataset": "Titanic Survival",
+    "subfamily": "Distance & Margin-Based",
+    "title": "Support Vector Classifier (SVC)",
+    "desc": "Finds the maximum-margin hyperplane separating classes in transformed Hilbert space using kernel functions (RBF, Polynomial).",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "81.61%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7680"
+      }
+    ]
+  },
+  {
+    "href": "models/knn_classifier/index.html",
+    "cat": "classification",
+    "searchName": "k-nearest neighbors classifier (knn) distance & margin-based instance-based non-parametric classifier labeling queries by plurality majority vote among its k nearest euclidean neighbors.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Distance & Margin-Based",
+    "title": "K-Nearest Neighbors Classifier (KNN)",
+    "desc": "Instance-based non-parametric classifier labeling queries by plurality majority vote among its k nearest Euclidean neighbors.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "78.92%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7320"
+      }
+    ]
+  },
+  {
+    "href": "models/decision_tree_classifier/index.html",
+    "cat": "classification",
+    "searchName": "decision tree classifier (cart / c4.5) tree-based & ensemble recursively partitions training instances to maximize information gain or minimize gini impurity at each decision threshold.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Decision Tree Classifier (CART / C4.5)",
+    "desc": "Recursively partitions training instances to maximize Information Gain or minimize Gini impurity at each decision threshold.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "79.37%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7410"
+      }
+    ]
+  },
+  {
+    "href": "models/random_forest_classifier/index.html",
+    "cat": "classification",
+    "searchName": "random forest classifier tree-based & ensemble bootstrap aggregation of randomized decision trees, mitigating variance and providing out-of-bag error estimation.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Random Forest Classifier",
+    "desc": "Bootstrap aggregation of randomized decision trees, mitigating variance and providing out-of-bag error estimation.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "82.51%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7848"
+      }
+    ]
+  },
+  {
+    "href": "models/adaboost_classifier/index.html",
+    "cat": "classification",
+    "searchName": "adaboost classifier tree-based & ensemble adaptive boosting that fits shallow decision stumps sequentially, increasing sample weights for previously misclassified observations.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "AdaBoost Classifier",
+    "desc": "Adaptive boosting that fits shallow decision stumps sequentially, increasing sample weights for previously misclassified observations.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "80.72%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7610"
+      }
+    ]
+  },
+  {
+    "href": "models/gradient_boosted_classifiers/index.html",
+    "cat": "classification",
+    "searchName": "gradient boosted classifiers (xgboost / lightgbm / catboost) tree-based & ensemble high-throughput tree boosting optimizing bernoulli cross-entropy loss via second-order hessian calculations and histogram binning.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Gradient Boosted Classifiers (XGBoost / LightGBM / CatBoost)",
+    "desc": "High-throughput tree boosting optimizing Bernoulli cross-entropy loss via second-order Hessian calculations and histogram binning.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "83.85%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.8010"
+      }
+    ]
+  },
+  {
+    "href": "models/stacking_voting_classifiers/index.html",
+    "cat": "classification",
+    "searchName": "stacking & voting classifiers tree-based & ensemble meta-modeling ensemble training a meta-classifier on cross-validated probabilistic predictions of heterogeneous base models.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Tree-Based & Ensemble",
+    "title": "Stacking & Voting Classifiers",
+    "desc": "Meta-modeling ensemble training a meta-classifier on cross-validated probabilistic predictions of heterogeneous base models.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "83.41%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7950"
+      }
+    ]
+  },
+  {
+    "href": "models/mlp_classifier/index.html",
+    "cat": "classification",
+    "searchName": "multi-layer perceptron (mlp) classifier neural & deep feedforward neural architecture applying non-linear hidden activations (relu) and a softmax output layer with categorical cross-entropy.",
+    "dataset": "Titanic Survival",
+    "subfamily": "Neural & Deep",
+    "title": "Multi-Layer Perceptron (MLP) Classifier",
+    "desc": "Feedforward neural architecture applying non-linear hidden activations (ReLU) and a Softmax output layer with categorical cross-entropy.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "81.16%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.7650"
+      }
+    ]
+  },
+  {
+    "href": "models/convolutional_neural_networks/index.html",
+    "cat": "classification",
+    "searchName": "convolutional neural networks (cnns) neural & deep exploits spatial translation equivariance and locality using convolutional kernels, pooling layers, and hierarchical feature abstraction.",
+    "dataset": "Image / Spatial Classification",
+    "subfamily": "Neural & Deep",
+    "title": "Convolutional Neural Networks (CNNs)",
+    "desc": "Exploits spatial translation equivariance and locality using convolutional kernels, pooling layers, and hierarchical feature abstraction.",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "94.20%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.9410"
+      }
+    ]
+  },
+  {
+    "href": "models/transformers_rnn_classifier/index.html",
+    "cat": "classification",
+    "searchName": "transformers & recurrent networks (rnn / lstm) neural & deep captures long-range sequential context using self-attention mechanisms or gated recurrent cells (lstm/gru).",
+    "dataset": "Sequential Text / Sentiment",
+    "subfamily": "Neural & Deep",
+    "title": "Transformers & Recurrent Networks (RNN / LSTM)",
+    "desc": "Captures long-range sequential context using self-attention mechanisms or gated recurrent cells (LSTM/GRU).",
+    "metrics": [
+      {
+        "label": "Accuracy:",
+        "val": "92.80%"
+      },
+      {
+        "label": "F1-Score:",
+        "val": "0.9250"
+      }
+    ]
+  },
+  {
+    "href": "models/kmeans_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "k-means clustering centroid & partitioning partitions data into k non-overlapping spherical voronoi cells by iteratively reassigning points to the nearest mean centroid.",
+    "dataset": "Mall Customers",
+    "subfamily": "Centroid & Partitioning",
+    "title": "K-Means Clustering",
+    "desc": "Partitions data into K non-overlapping spherical Voronoi cells by iteratively reassigning points to the nearest mean centroid.",
+    "metrics": [
+      {
+        "label": "Optimal K:",
+        "val": "5"
+      },
+      {
+        "label": "Silhouette:",
+        "val": "0.5540"
+      }
+    ]
+  },
+  {
+    "href": "models/kmeans_plus_plus/index.html",
+    "cat": "clustering",
+    "searchName": "k-means++ clustering centroid & partitioning optimizes centroid seeding by sampling initial centers with probability proportional to their squared euclidean distance from existing centroids.",
+    "dataset": "Mall Customers",
+    "subfamily": "Centroid & Partitioning",
+    "title": "K-Means++ Clustering",
+    "desc": "Optimizes centroid seeding by sampling initial centers with probability proportional to their squared Euclidean distance from existing centroids.",
+    "metrics": [
+      {
+        "label": "Optimal K:",
+        "val": "5"
+      },
+      {
+        "label": "Silhouette:",
+        "val": "0.5540"
+      }
+    ]
+  },
+  {
+    "href": "models/kmedoids_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "k-medoids (pam) centroid & partitioning uses actual exemplar data points as cluster centers (medoids), minimizing arbitrary distance metrics with high outlier robustness.",
+    "dataset": "Mall Customers",
+    "subfamily": "Centroid & Partitioning",
+    "title": "K-Medoids (PAM)",
+    "desc": "Uses actual exemplar data points as cluster centers (medoids), minimizing arbitrary distance metrics with high outlier robustness.",
+    "metrics": [
+      {
+        "label": "Optimal K:",
+        "val": "5"
+      },
+      {
+        "label": "Silhouette:",
+        "val": "0.5280"
+      }
+    ]
+  },
+  {
+    "href": "models/fuzzy_c_means/index.html",
+    "cat": "clustering",
+    "searchName": "fuzzy c-means (soft clustering) centroid & partitioning soft clustering algorithm where each sample retains a continuous membership degree across multiple clusters summing to unity.",
+    "dataset": "Mall Customers",
+    "subfamily": "Centroid & Partitioning",
+    "title": "Fuzzy C-Means (Soft Clustering)",
+    "desc": "Soft clustering algorithm where each sample retains a continuous membership degree across multiple clusters summing to unity.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Fuzziness m:",
+        "val": "2.0"
+      }
+    ]
+  },
+  {
+    "href": "models/agglomerative_hierarchical/index.html",
+    "cat": "clustering",
+    "searchName": "agglomerative hierarchical clustering hierarchical bottom-up clustering building a dendrogram tree by iteratively merging clusters using ward variance minimization or linkage metrics.",
+    "dataset": "Mall Customers",
+    "subfamily": "Hierarchical",
+    "title": "Agglomerative Hierarchical Clustering",
+    "desc": "Bottom-up clustering building a dendrogram tree by iteratively merging clusters using Ward variance minimization or linkage metrics.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Linkage:",
+        "val": "Ward"
+      }
+    ]
+  },
+  {
+    "href": "models/divisive_hierarchical/index.html",
+    "cat": "clustering",
+    "searchName": "divisive hierarchical clustering (diana) hierarchical top-down hierarchical partitioning starting with all samples in a single global cluster and recursively splintering clusters with maximum diameter.",
+    "dataset": "Mall Customers",
+    "subfamily": "Hierarchical",
+    "title": "Divisive Hierarchical Clustering (DIANA)",
+    "desc": "Top-down hierarchical partitioning starting with all samples in a single global cluster and recursively splintering clusters with maximum diameter.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Approach:",
+        "val": "Top-Down Splinter"
+      }
+    ]
+  },
+  {
+    "href": "models/dbscan_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "dbscan (density-based spatial clustering) density-based connects core points residing in dense euclidean neighborhoods (epsilon, minpts), discovering arbitrary shapes while isolating noise.",
+    "dataset": "Mall Customers",
+    "subfamily": "Density-Based",
+    "title": "DBSCAN (Density-Based Spatial Clustering)",
+    "desc": "Connects core points residing in dense Euclidean neighborhoods (epsilon, MinPts), discovering arbitrary shapes while isolating noise.",
+    "metrics": [
+      {
+        "label": "Estimated Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Noise Fraction:",
+        "val": "4.2%"
+      }
+    ]
+  },
+  {
+    "href": "models/hdbscan_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "hdbscan density-based hierarchical dbscan converting density connectivity across all epsilon scales into a condensed tree, extracting persistent clusters without a global epsilon.",
+    "dataset": "Mall Customers",
+    "subfamily": "Density-Based",
+    "title": "HDBSCAN",
+    "desc": "Hierarchical DBSCAN converting density connectivity across all epsilon scales into a condensed tree, extracting persistent clusters without a global epsilon.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Excess Mass:",
+        "val": "Optimal"
+      }
+    ]
+  },
+  {
+    "href": "models/optics_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "optics (ordering points to identify cluster structure) density-based produces an augmented reachability-distance plot showing cluster density hierarchies across continuously varying densities.",
+    "dataset": "Mall Customers",
+    "subfamily": "Density-Based",
+    "title": "OPTICS (Ordering Points To Identify Cluster Structure)",
+    "desc": "Produces an augmented reachability-distance plot showing cluster density hierarchies across continuously varying densities.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "Variable"
+      },
+      {
+        "label": "Xi Threshold:",
+        "val": "0.05"
+      }
+    ]
+  },
+  {
+    "href": "models/mean_shift_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "mean shift clustering density-based sliding-window kernel density gradient ascent algorithm iteratively shifting candidate centers towards the local modes of the distribution.",
+    "dataset": "Mall Customers",
+    "subfamily": "Density-Based",
+    "title": "Mean Shift Clustering",
+    "desc": "Sliding-window kernel density gradient ascent algorithm iteratively shifting candidate centers towards the local modes of the distribution.",
+    "metrics": [
+      {
+        "label": "Estimated Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Bandwidth:",
+        "val": "0.85"
+      }
+    ]
+  },
+  {
+    "href": "models/gaussian_mixture_models/index.html",
+    "cat": "clustering",
+    "searchName": "gaussian mixture models (gmm) distribution & model-based parametric density estimation modeling data as a superposition of k multivariate gaussians optimized via expectation-maximization (em).",
+    "dataset": "Mall Customers",
+    "subfamily": "Distribution & Model-Based",
+    "title": "Gaussian Mixture Models (GMM)",
+    "desc": "Parametric density estimation modeling data as a superposition of K multivariate Gaussians optimized via Expectation-Maximization (EM).",
+    "metrics": [
+      {
+        "label": "Components K:",
+        "val": "5"
+      },
+      {
+        "label": "BIC:",
+        "val": "1284.5"
+      }
+    ]
+  },
+  {
+    "href": "models/spectral_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "spectral clustering graph, grid & scalable constructs an affinity similarity graph and projects data using the bottom eigenvectors of the normalized graph laplacian before clustering.",
+    "dataset": "Mall Customers",
+    "subfamily": "Graph, Grid & Scalable",
+    "title": "Spectral Clustering",
+    "desc": "Constructs an affinity similarity graph and projects data using the bottom eigenvectors of the normalized graph Laplacian before clustering.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Affinity:",
+        "val": "RBF / Nearest Neighbors"
+      }
+    ]
+  },
+  {
+    "href": "models/affinity_propagation/index.html",
+    "cat": "clustering",
+    "searchName": "affinity propagation graph, grid & scalable identifies exemplars by transmitting real-valued responsibility and availability messages iteratively between data points.",
+    "dataset": "Mall Customers",
+    "subfamily": "Graph, Grid & Scalable",
+    "title": "Affinity Propagation",
+    "desc": "Identifies exemplars by transmitting real-valued responsibility and availability messages iteratively between data points.",
+    "metrics": [
+      {
+        "label": "Estimated Exemplars:",
+        "val": "7"
+      },
+      {
+        "label": "Damping:",
+        "val": "0.80"
+      }
+    ]
+  },
+  {
+    "href": "models/birch_clustering/index.html",
+    "cat": "clustering",
+    "searchName": "birch clustering graph, grid & scalable incrementally builds a balanced clustering feature (cf) tree to compress large-scale datasets into dense subclusters for fast clustering.",
+    "dataset": "Mall Customers",
+    "subfamily": "Graph, Grid & Scalable",
+    "title": "BIRCH Clustering",
+    "desc": "Incrementally builds a balanced Clustering Feature (CF) tree to compress large-scale datasets into dense subclusters for fast clustering.",
+    "metrics": [
+      {
+        "label": "Clusters:",
+        "val": "5"
+      },
+      {
+        "label": "Branching Factor:",
+        "val": "50"
+      }
+    ]
+  }
+]

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regression Evaluation Metrics & Residual Diagnostics · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>Regression Evaluation Metrics & Residual Diagnostics</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Evaluation & Diagnostics · 06</div>
+      <h1>Regression Evaluation Metrics & Residual Diagnostics</h1>
+      <p class="concept-lead">Comprehensive evaluation framework for continuous prediction: MSE, RMSE, MAE, R², Adjusted R², and Gauss-Markov residual diagnostics.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. Continuous Error Metrics Compared
+      </h2>
+      <div class="concept-body">
+        
+          <div class="table-wrap">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Formula</th>
+                  <th>Units</th>
+                  <th>Sensitivity to Outliers</th>
+                  <th>Key Strength</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">MSE</td>
+                  <td class="code-val">\frac{1}{n} \sum (y_i - \hat{y}_i)^2</td>
+                  <td>$\text{Unit}^2$</td>
+                  <td>Extremely High</td>
+                  <td>Differentiable; standard optimization loss.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">RMSE</td>
+                  <td class="code-val">\sqrt{\frac{1}{n} \sum (y_i - \hat{y}_i)^2}</td>
+                  <td>$\text{Unit}$</td>
+                  <td>High</td>
+                  <td>Directly interpretable in target's natural units.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">MAE</td>
+                  <td class="code-val">\frac{1}{n} \sum |y_i - \hat{y}_i|</td>
+                  <td>$\text{Unit}$</td>
+                  <td>Low / Robust</td>
+                  <td>Represents expected absolute dollar/unit deviation.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">R² (Determination)</td>
+                  <td class="code-val">1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}</td>
+                  <td>Unitless ($(-\infty, 1]$)</td>
+                  <td>Moderate</td>
+                  <td>Proportion of variance explained by model.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Adjusted R²</td>
+                  <td class="code-val">1 - \left( \frac{1 - R^2}{n - p - 1} \right)(n - 1)</td>
+                  <td>Unitless</td>
+                  <td>Moderate</td>
+                  <td>Penalizes introduction of irrelevant features.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Residual Diagnostics & Gauss-Markov Assumptions
+      </h2>
+      <div class="concept-body">
+        
+          <p>A low RMSE is insufficient for model validation; reliable inference requires verifying residual assumptions:</p>
+          <div class="callout violet">
+            <span class="callout-title">The Four Classical Residual Checks</span>
+            <ul style="margin:0; padding-left:18px; font-size:14px; color:var(--soft);">
+              <li><strong>1. Zero Mean</strong>: $\mathbb{E}[e_i] = 0$. Residuals must center around zero without systematic bias.</li>
+              <li><strong>2. Homoscedasticity</strong>: Constant error variance $\text{Var}(e_i|X) = \sigma^2$. Funnel-shaped residual plots indicate heteroscedasticity.</li>
+              <li><strong>3. Independence</strong>: $\text{Cov}(e_i, e_j) = 0$ for $i \ne j$. Checked via Durbin-Watson statistic for autocorrelation.</li>
+              <li><strong>4. Normality</strong>: Residuals follow a Gaussian distribution $e \sim \mathcal{N}(0, \sigma^2)$, validated using Q-Q plots.</li>
+            </ul>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ordinary Least Squares
+    </a>
+  
+    <a href="../../models/ridge_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ridge Regression
+    </a>
+  
+    <a href="../../models/polynomial_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Polynomial Regression
+    </a>
+  
+    <a href="../../models/gradient_boosting_regressor/index.html" class="model-badge regression">
+      <span class="dot"></span> Gradient Boosting Regressor
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>

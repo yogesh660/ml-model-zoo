@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Precision, Recall, Specificity & F1-Score · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>Precision, Recall, Specificity & F1-Score</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Evaluation & Diagnostics · 04</div>
+      <h1>Precision, Recall, Specificity & F1-Score</h1>
+      <p class="concept-lead">The fundamental tradeoff dynamics between positive predictive value, sensitivity, and their harmonic balance across classification models.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. The Inherent Precision vs. Recall Tension
+      </h2>
+      <div class="concept-body">
+        
+          <p>Every probabilistic classifier generates a continuous score $p = P(y=1|x) \in [0, 1]$. Class assignment requires choosing a decision threshold $\tau$:</p>
+          <div class="math-card">
+            $$\hat{y} = \begin{cases} 1 & \text{if } p \ge \tau \\ 0 & \text{if } p < \tau \end{cases}$$
+          </div>
+          <div class="card-grid-2">
+            <div class="feature-card">
+              <span class="card-num">High Threshold (e.g. $\tau = 0.85$)</span>
+              <h3>High Precision, Lower Recall</h3>
+              <p>The model only predicts Positive when exceptionally confident. Reduces False Positives to near zero, but misses borderline true positive cases.</p>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Low Threshold (e.g. $\tau = 0.15$)</span>
+              <h3>High Recall, Lower Precision</h3>
+              <p>The model casts a wide diagnostic net. Captures almost every true positive instance, but incurs higher false alarms (False Positives).</p>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Mathematical Derivations: F1-Score & Harmonic Mean
+      </h2>
+      <div class="concept-body">
+        
+          <p>Why do we use the <strong>harmonic mean</strong> instead of a simple arithmetic average $(\text{Precision} + \text{Recall})/2$?</p>
+          <div class="callout violet">
+            <span class="callout-title">The Harmonic Mean Proof</span>
+            <p>The arithmetic mean is dominated by large values. If Precision = 1.0 and Recall = 0.0, the arithmetic mean is $0.50$ (suggesting decent performance), despite the model failing completely on recall.</p>
+            <p>The harmonic mean takes the reciprocal of values, heavily penalizing extreme disparities:</p>
+            <div class="math-card">
+              $$F_1 = \frac{2}{\frac{1}{\text{Precision}} + \frac{1}{\text{Recall}}} = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$$
+            </div>
+            <p>If either Precision or Recall drops to zero, $F_1 \to 0$.</p>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
+      <span class="dot"></span> Logistic Regression
+    </a>
+  
+    <a href="../../models/random_forest_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Random Forest Classifier
+    </a>
+  
+    <a href="../../models/support_vector_classifier/index.html" class="model-badge classification">
+      <span class="dot"></span> Support Vector Classifier
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>

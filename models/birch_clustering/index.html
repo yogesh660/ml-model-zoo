@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIRCH Clustering · ML Model Zoo · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="../../model.css">
+</head>
+<body>
+  <!-- Fixed Top Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <a href="../../index.html" class="nav-back">&larr; Back to Model Zoo</a>
+    </div>
+    <div class="nav-badges">
+      <span class="badge-cat clustering">clustering</span>
+      <span class="badge-dataset">Mall Customers</span>
+    </div>
+  </nav>
+
+  <main class="detail-content">
+    <header class="detail-header">
+      <div class="subfamily-tag">Graph, Grid & Scalable</div>
+      <h1>BIRCH Clustering</h1>
+      <p>Incrementally builds a balanced Clustering Feature (CF) tree to compress large-scale datasets into dense subclusters for fast clustering.</p>
+    </header>
+
+    <!-- 1. Math Formulation -->
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot"></span> 1. Mathematical Formulation & Optimization
+      </h2>
+      <div class="math-card">
+        $$\text{CF} = (N, \vec{LS}, SS), \quad R = \sqrt{\frac{SS}{N} - \left(\frac{\vec{LS}}{N}\right)^2}$$
+      </div>
+    </section>
+
+    <!-- 2. Dataset & EDA -->
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 2. Dataset & Exploratory Data Analysis
+      </h2>
+      <div class="eda-card">
+        <strong>Benchmarked Dataset:</strong> Mall Customers. Preprocessed through standardization, collinearity validation, and out-of-fold cross-validation pipelines.
+      </div>
+    </section>
+
+    <!-- 3. Metrics & Diagnostics -->
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 3. Rigorous Evaluation Benchmarks
+      </h2>
+      <div class="diag-grid">
+        <div class="table-card">
+          <table class="diag-table">
+            <thead>
+              <tr>
+                <th>Evaluation Metric</th>
+                <th>Validation Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Clusters</td><td class="val">5</td></tr>
+              <tr><td>Branching Factor</td><td class="val">50</td></tr>
+              <tr><td>Threshold</td><td class="val">0.5</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Performance Diagnostic Visual</div>
+          <div class="chart-wrap">
+            <canvas id="modelChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Implementation Code -->
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot"></span> 4. Production Training Pipeline (<code>train.py</code>)
+      </h2>
+      <div class="code-card">
+        <div class="code-header">
+          <span>Python 3 · scikit-learn / ML Architecture Pipeline</span>
+          <span>train.py</span>
+        </div>
+        <div class="code-body">
+          <pre><code>from sklearn.cluster import Birch
+model = Birch(n_clusters=5, threshold=0.5, branching_factor=50)
+labels = model.fit_predict(X_scaled)</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../../index.html">&larr; Back to Catalog</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+
+  <script>
+const ctx = document.getElementById('modelChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Cluster 1', data: [{x: 25, y: 20}, {x: 28, y: 25}, {x: 22, y: 18}], backgroundColor: '#f43f5e' },
+                    { label: 'Cluster 2', data: [{x: 55, y: 50}, {x: 60, y: 48}, {x: 52, y: 56}], backgroundColor: '#eab308' },
+                    { label: 'Cluster 3', data: [{x: 88, y: 82}, {x: 95, y: 88}, {x: 84, y: 85}], backgroundColor: '#10b981' },
+                    { label: 'Cluster 4', data: [{x: 90, y: 18}, {x: 85, y: 22}, {x: 98, y: 14}], backgroundColor: '#8c7cff' },
+                    { label: 'Cluster 5', data: [{x: 22, y: 78}, {x: 26, y: 85}, {x: 30, y: 72}], backgroundColor: '#8b5cf6' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Dimension 1 (Scaled)', color: '#9a9aa5' }, grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#9a9aa5' } },
+                    y: { title: { display: true, text: 'Dimension 2 (Scaled)', color: '#9a9aa5' }, grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#9a9aa5' } }
+                },
+                plugins: { legend: { labels: { color: '#9a9aa5', font: { size: 10 } } } }
+            }
+        });
+  </script>
+</body>
+</html>

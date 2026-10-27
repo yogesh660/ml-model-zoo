@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feature Selection & Dimensionality Reduction · ML Concepts Hub · Yogesh Awate</title>
+  <meta name="theme-color" content="#070709">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet" href="../../concept.css">
+</head>
+<body>
+  <!-- Fixed Navigation -->
+  <nav id="nav">
+    <div class="nav-left">
+      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+      <div class="nav-breadcrumbs">
+        <a href="../../index.html">Zoo</a>
+        <span class="sep">/</span>
+        <a href="../index.html">Concepts</a>
+        <span class="sep">/</span>
+        <span>Feature Selection & Dimensionality Reduction</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="nav-pill">All 13 Concepts</a>
+      <a href="../../index.html" class="nav-pill">&larr; Model Zoo</a>
+    </div>
+  </nav>
+
+  <main class="concept-content">
+    <header class="concept-header">
+      <div class="concept-kicker">Preprocessing & Feature Engineering · 03</div>
+      <h1>Feature Selection & Dimensionality Reduction</h1>
+      <p class="concept-lead">Filter, wrapper, and embedded techniques to isolate informative signals, eliminate multicollinearity, and prevent the curse of dimensionality.</p>
+    </header>
+
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot violet"></span> 1. Taxonomy of Feature Selection Methods
+      </h2>
+      <div class="concept-body">
+        
+          <p>Selecting an optimal subset of features improves model interpretability, accelerates training, mitigates overfitting, and removes noisy collinear predictors.</p>
+          <div class="card-grid-3">
+            <div class="feature-card">
+              <span class="card-num">Type 1 / Independent</span>
+              <h3>Filter Methods</h3>
+              <p>Evaluate feature relevance using statistical scores independent of model training. Extremely fast and computationally scalable.</p>
+              <ul style="padding-left:18px; margin:0; font-size:13px; color:var(--muted);">
+                <li>Pearson & Spearman Correlation</li>
+                <li>Mutual Information Gain</li>
+                <li>ANOVA F-statistic (Classification)</li>
+                <li>Variance Thresholding</li>
+              </ul>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Type 2 / Iterative</span>
+              <h3>Wrapper Methods</h3>
+              <p>Treat model training as a black-box evaluation metric, iteratively adding or pruning features to maximize cross-validation performance.</p>
+              <ul style="padding-left:18px; margin:0; font-size:13px; color:var(--muted);">
+                <li>Recursive Feature Elimination (RFE)</li>
+                <li>Sequential Forward Selection (SFS)</li>
+                <li>Sequential Backward Elimination</li>
+                <li>Genetic Algorithm Search</li>
+              </ul>
+            </div>
+            <div class="feature-card">
+              <span class="card-num">Type 3 / Built-In</span>
+              <h3>Embedded Methods</h3>
+              <p>Feature selection is naturally embedded into the model objective function during loss optimization.</p>
+              <ul style="padding-left:18px; margin:0; font-size:13px; color:var(--muted);">
+                <li>L1 Lasso Regularization Shrinkage</li>
+                <li>Elastic Net Group Sparsity</li>
+                <li>Tree Feature Importance (Gini / Gain)</li>
+                <li>Gradient Boosted Feature Importances</li>
+              </ul>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 2. Diagnosing Multicollinearity: Variance Inflation Factor (VIF)
+      </h2>
+      <div class="concept-body">
+        
+          <p>In linear models ($OLS$, Ridge, Logistic Regression), high collinearity between predictors inflates standard errors of coefficients, making parameter estimates wildly erratic and unstable.</p>
+          <div class="callout violet">
+            <span class="callout-title">The VIF Formulation</span>
+            <p>The Variance Inflation Factor for predictor $X_j$ measures how much of its variance is explained by all other predictors in the dataset:</p>
+            <div class="math-card">
+              $$\text{VIF}_j = \frac{1}{1 - R_j^2}$$
+            </div>
+            <p>Where $R_j^2$ is the coefficient of determination obtained from regressing feature $X_j$ against all other remaining features.</p>
+            <ul style="margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--soft);">
+              <li><strong>$\text{VIF} = 1$</strong>: Complete orthogonality (no correlation with other features).</li>
+              <li><strong>$\text{VIF} > 5$</strong>: Moderate multicollinearity; requires monitoring.</li>
+              <li><strong>$\text{VIF} > 10$</strong>: Severe multicollinearity; inversion $(X^T X)^{-1}$ becomes ill-conditioned. Feature pruning or L2 Ridge shrinkage is required.</li>
+            </ul>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <section class="concept-section">
+      <h2 class="section-title">
+        <span class="section-dot green"></span> 3. Decision Framework: Which Technique to Choose?
+      </h2>
+      <div class="concept-body">
+        
+          <div class="table-wrap">
+            <table class="concept-table">
+              <thead>
+                <tr>
+                  <th>Data & Architecture Scenario</th>
+                  <th>Recommended Feature Selection Technique</th>
+                  <th>Core Engineering Justification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="highlight">Linear Models (OLS, Ridge, Logistic)</td>
+                  <td class="code-val">VIF Filtering + Pearson Correlation + Lasso (L1)</td>
+                  <td>Linear models are vulnerable to matrix singularity when features are collinear. VIF eliminates linear dependencies.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">High-Dimensional Data ($p \gg n$)</td>
+                  <td class="code-val">Mutual Information + L1 Lasso Shrinkage</td>
+                  <td>Filters zero-information noise quickly, then Lasso forces uninformative weights strictly to zero.</td>
+                </tr>
+                <tr>
+                  <td class="highlight">Tree Ensembles (Random Forest, XGBoost)</td>
+                  <td class="code-val">Permutation Importance / SHAP Values</td>
+                  <td>Captures non-linear dependencies and feature interactions without assuming monotonic relationships.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        
+      </div>
+    </section>
+  
+
+    <!-- Related Model Implementations in Zoo -->
+    <section class="linked-models-wrap">
+      <h3>Architectures Using This Concept in the Zoo</h3>
+      <div class="model-badges">
+        
+    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Ordinary Least Squares
+    </a>
+  
+    <a href="../../models/lasso_regression/index.html" class="model-badge regression">
+      <span class="dot"></span> Lasso Regression
+    </a>
+  
+    <a href="../../models/elastic_net/index.html" class="model-badge regression">
+      <span class="dot"></span> Elastic Net
+    </a>
+  
+    <a href="../../models/random_forest_regressor/index.html" class="model-badge regression">
+      <span class="dot"></span> Random Forest Regressor
+    </a>
+  
+    <a href="../../models/xgboost_regressor/index.html" class="model-badge regression">
+      <span class="dot"></span> XGBoost Regressor
+    </a>
+  
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+    <div>
+      <a href="../index.html">All Concepts Hub</a> &bull;
+      <a href="../../index.html">Model Zoo (47 Architectures)</a>
+    </div>
+    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
+  </footer>
+</body>
+</html>
