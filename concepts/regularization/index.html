@@ -28,6 +28,7 @@
     document.addEventListener("DOMContentLoaded", renderKatex);
     window.addEventListener("load", renderKatex);
   </script>
+  <link rel="stylesheet" href="../../visual-components.css">
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -55,6 +56,46 @@
       <h1>Regularization Techniques: L1, L2 & Elastic Net</h1>
       <p class="concept-lead">Constrained parameter shrinkage dynamics: geometry of L1 diamond sparsity versus L2 spherical weight decay.</p>
     </header>
+
+    
+    <div class="pipeline-box">
+      <span class="canvas-tag">Conceptual Architecture & Operational Lifecycle</span>
+      <div class="pipeline-diagram">
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Phase 01</span>
+          <h4>Mathematical Definition</h4>
+          <p>Analytical formulation & core theory.</p>
+          <span class="tensor-shape">Foundational Axioms</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node" style="border-color:var(--cyan);">
+          <span class="pipeline-badge" style="color:var(--cyan);">Phase 02</span>
+          <h4>Geometric Intuition</h4>
+          <p>Loss surfaces, hyperplanes & metrics.</p>
+          <span class="tensor-shape">Euclidean Manifolds</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node" style="border-color:var(--violet);">
+          <span class="pipeline-badge" style="color:var(--violet-2);">Phase 03</span>
+          <h4>Algorithmic Execution</h4>
+          <p>Optimization, thresholding & diagnostics.</p>
+          <span class="tensor-shape">Empirical Convergence</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Phase 04</span>
+          <h4>Production Diagnostics</h4>
+          <p>Validation metrics & failure prevention.</p>
+          <span class="tensor-shape">Generalization Audit</span>
+        </div>
+      </div>
+    </div>
+  
+
+    
+    
+    
+    
 
 
     <section class="concept-section">
@@ -134,5 +175,17 @@
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('regularization' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('regularization' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('regularization' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('regularization' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+      }
+    });
+  </script>
 </body>
 </html>

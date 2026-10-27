@@ -1,3 +1,5 @@
+@import './visual-components.css';
+
 /* ==========================================================================
    Model Architecture Deep Dive - Theme & Design System
    Matches Yogesh Awate Portfolio (https://yogesh660.github.io/)
@@ -382,30 +384,40 @@ main.detail-content {
 .dataset-switcher-bar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 22px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  gap: 14px;
+  padding: 16px 20px;
+  background: #09090e;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 24px;
 }
 .switcher-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
-.switcher-label {
-  font: 500 12px var(--mono);
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--violet-2);
+.switcher-title-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+.switcher-label {
+  font: 600 11.5px var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.switcher-label svg,
+.switcher-label .i {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
 .switcher-helper {
   font: 400 12px var(--mono);
-  color: var(--dim);
+  color: var(--muted);
 }
 
 .dataset-tabs {

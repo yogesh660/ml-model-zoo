@@ -827,6 +827,210 @@ const concepts = [
   }
 ];
 
+// Helper to build conceptual architecture block diagrams
+function getConceptDiagram(id) {
+  if (id === 'confusion-matrix') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Diagnostic Decision Pipeline: From Probabilities to Error Quadrants</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Input</span>
+            <h4>Continuous Logits z</h4>
+            <p>Raw model output score.</p>
+            <span class="tensor-shape">z = w^T x + b</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Probability</span>
+            <h4>Sigmoid Link &sigma;(z)</h4>
+            <p>Mapped to unit interval [0, 1].</p>
+            <span class="tensor-shape">p \\in [0, 1]</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber);">Decision Boundary</span>
+            <h4>Cutoff Threshold &tau;</h4>
+            <p>Separates positive vs negative.</p>
+            <span class="tensor-shape">&tau; = 0.50</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Diagnostic Grid</span>
+            <h4>Confusion Matrix</h4>
+            <p>Maps True Labels vs Preds.</p>
+            <span class="tensor-shape">2 &times; 2 Grid</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Derived Rates</span>
+            <h4>Metric Calculus</h4>
+            <p>Precision, Recall, F1-Score.</p>
+            <span class="tensor-shape">F1 = 2PR / (P + R)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (id === 'loss-functions') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Loss Function Taxonomy & Optimization Dynamics</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Residual</span>
+            <h4>Prediction Error e</h4>
+            <p>Distance between hypothesis & truth.</p>
+            <span class="tensor-shape">e_i = y_i - \\hat{y}_i</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan);">Continuous</span>
+            <h4>Regression Losses</h4>
+            <p>MSE (L2), MAE (L1), Huber (&delta;).</p>
+            <span class="tensor-shape">\\mathcal{L}_{MSE} = \\frac{1}{2} e^2</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Discrete</span>
+            <h4>Classification Losses</h4>
+            <p>Binary Log-loss, Hinge, Softmax.</p>
+            <span class="tensor-shape">\\mathcal{L}_{BCE} = -y \\ln p</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Aggregate</span>
+            <h4>Cost Function J(&theta;)</h4>
+            <p>Empirical risk + Regularizer.</p>
+            <span class="tensor-shape">J = \\frac{1}{n}\\sum \\mathcal{L} + \\lambda \\Omega</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Optimization</span>
+            <h4>Gradient Descent</h4>
+            <p>Backpropagation parameter update.</p>
+            <span class="tensor-shape">&theta; \\leftarrow &theta; - \\eta \\nabla J</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (id === 'feature-selection') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">Feature Selection Taxonomy: Filter vs. Wrapper vs. Embedded</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Input</span>
+            <h4>Raw Features X</h4>
+            <p>High-dimensional candidate predictors.</p>
+            <span class="tensor-shape">p features</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan);">1. Filter Methods</span>
+            <h4>Statistical Scoring</h4>
+            <p>VIF, Pearson r, Mutual Information.</p>
+            <span class="tensor-shape">Independent of model</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber);">2. Wrapper Methods</span>
+            <h4>Iterative Search</h4>
+            <p>Recursive Feature Elimination (RFE).</p>
+            <span class="tensor-shape">Greedy subset search</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">3. Embedded</span>
+            <h4>Intrinsic Selection</h4>
+            <p>Lasso L1 Sparsity, Tree Gain.</p>
+            <span class="tensor-shape">Trained during fit</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Output</span>
+            <h4>Optimal Subset k</h4>
+            <p>Minimal collinearity, max signal.</p>
+            <span class="tensor-shape">k \\ll p (VIF < 5.0)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (id === 'bias-variance-tradeoff') {
+    return `
+      <div class="pipeline-box">
+        <span class="canvas-tag">The Bias-Variance Continuum & Error Decomposition</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan);">Underfitting</span>
+            <h4>High Bias (d = 1)</h4>
+            <p>Oversimplified linear hypothesis.</p>
+            <span class="tensor-shape">High Train & Test Error</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green);">Optimal Balance</span>
+            <h4>Sweet Spot (d = 3)</h4>
+            <p>Captures true latent data manifold.</p>
+            <span class="tensor-shape">Minimal Expected Risk</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--red);">
+            <span class="pipeline-badge" style="color:var(--red);">Overfitting</span>
+            <h4>High Variance (d \\ge 9)</h4>
+            <p>Memorizes noise & spurious variance.</p>
+            <span class="tensor-shape">Low Train, Explosive Test</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Remediation</span>
+            <h4>Regularization & CV</h4>
+            <p>L2/L1 penalties, Cross-Validation.</p>
+            <span class="tensor-shape">Shrinks parameter norm</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  // Universal Architecture Block Diagram
+  return `
+    <div class="pipeline-box">
+      <span class="canvas-tag">Conceptual Architecture & Operational Lifecycle</span>
+      <div class="pipeline-diagram">
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Phase 01</span>
+          <h4>Mathematical Definition</h4>
+          <p>Analytical formulation & core theory.</p>
+          <span class="tensor-shape">Foundational Axioms</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node" style="border-color:var(--cyan);">
+          <span class="pipeline-badge" style="color:var(--cyan);">Phase 02</span>
+          <h4>Geometric Intuition</h4>
+          <p>Loss surfaces, hyperplanes & metrics.</p>
+          <span class="tensor-shape">Euclidean Manifolds</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node" style="border-color:var(--violet);">
+          <span class="pipeline-badge" style="color:var(--violet-2);">Phase 03</span>
+          <h4>Algorithmic Execution</h4>
+          <p>Optimization, thresholding & diagnostics.</p>
+          <span class="tensor-shape">Empirical Convergence</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Phase 04</span>
+          <h4>Production Diagnostics</h4>
+          <p>Validation metrics & failure prevention.</p>
+          <span class="tensor-shape">Generalization Audit</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // 1. Generate each concept page
 for (const c of concepts) {
   const dirPath = path.join(conceptsDir, c.id);
@@ -881,6 +1085,7 @@ for (const c of concepts) {
     document.addEventListener("DOMContentLoaded", renderKatex);
     window.addEventListener("load", renderKatex);
   </script>
+  <link rel="stylesheet" href="../../visual-components.css">
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -909,6 +1114,13 @@ for (const c of concepts) {
       <p class="concept-lead">${c.lead}</p>
     </header>
 
+    ${getConceptDiagram(c.id)}
+
+    ${c.id === 'confusion-matrix' ? '<div id="lab-confusion-matrix"></div>' : ''}
+    ${c.id === 'loss-functions' ? '<div id="lab-loss-functions"></div>' : ''}
+    ${c.id === 'bias-variance-tradeoff' ? '<div id="lab-bias-variance"></div>' : ''}
+    ${c.id === 'feature-selection' ? '<div id="lab-feature-selection"></div>' : ''}
+
 ${sectionsHtml}
 
     <!-- Related Model Implementations in Zoo -->
@@ -928,6 +1140,18 @@ ${sectionsHtml}
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('${c.id}' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('${c.id}' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('${c.id}' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('${c.id}' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+      }
+    });
+  </script>
 </body>
 </html>
 `;

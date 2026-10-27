@@ -7,30 +7,38 @@
   'use strict';
 
   // 1. Dataset Tab Switcher
-  const tabs = document.querySelectorAll('.dataset-tab');
-  const panels = document.querySelectorAll('.dataset-panel');
+  function initDatasetSwitcher() {
+    const tabs = document.querySelectorAll('.dataset-tab');
+    const panels = document.querySelectorAll('.dataset-panel');
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const targetId = tab.dataset.target;
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.dataset.target;
 
-      // Update active tabs
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+        // Update active tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
 
-      // Update active panels
-      panels.forEach(p => {
-        if (p.id === targetId) {
-          p.classList.add('active');
-        } else {
-          p.classList.remove('active');
-        }
+        // Update active panels
+        panels.forEach(p => {
+          if (p.id === targetId) {
+            p.classList.add('active');
+          } else {
+            p.classList.remove('active');
+          }
+        });
+
+        // Trigger resize for any Chart.js canvases inside the newly active panel
+        window.dispatchEvent(new Event('resize'));
       });
-
-      // Trigger resize for any Chart.js canvases inside the newly active panel
-      window.dispatchEvent(new Event('resize'));
     });
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDatasetSwitcher);
+  } else {
+    initDatasetSwitcher();
+  }
 
   // 2. Global chart builder helper
   window.createParityChart = function (canvasId, dataPoints, xLabel, yLabel) {

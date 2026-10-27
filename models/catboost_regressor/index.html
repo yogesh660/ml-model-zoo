@@ -29,6 +29,7 @@
     window.addEventListener("load", renderKatex);
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="../../visual-components.css">
   <link rel="stylesheet" href="../../model.css">
 </head>
 <body>
@@ -70,7 +71,7 @@
     
     </header>
 
-    <!-- 1. Intuition & Mental Model -->
+    <!-- 1. Intuition & Mental Model + Computational Pipeline -->
     
     <section class="detail-section">
       <h2 class="section-title">
@@ -84,23 +85,106 @@
         </div>
         <div class="info-card">
           <h3>Core Theoretical Assumptions</h3>
-          <ul style="margin:0; padding-left:18px; font-size:14px; color:var(--muted); line-height:1.7;">
-            <li><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</li>
-            <li><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via <a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">EDA and Preprocessing</a>.</li>
-            <li><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a> surface.</li>
+          <ul class="assumptions-checklist">
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via <a class="concept-link" href="../../concepts/exploratory-data-analysis/index.html">EDA and Preprocessing</a>.</div></li>
+            <li><span class="assump-icon">&#10003;</span> <div><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous <a class="concept-link" href="../../concepts/loss-functions/index.html">Loss Function</a> surface.</div></li>
           </ul>
         </div>
       </div>
+
+      
+    <div class="pipeline-box">
+      <span class="canvas-tag">End-to-End System Architecture & Computational Dataflow</span>
+      <div class="pipeline-diagram">
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Input Space</span>
+          <h4>Feature Matrix X</h4>
+          <p>Continuous & discrete covariates.</p>
+          <span class="tensor-shape">Shape: ℝ^{n × p}</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Preprocessing</span>
+          <h4>EDA & Scaling</h4>
+          <p>StandardScaler / Robust clipping.</p>
+          <span class="tensor-shape">μ = 0, σ² = 1</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Feature Selection</span>
+          <h4>Dimensionality</h4>
+          <p>VIF pruning / Mutual Information.</p>
+          <span class="tensor-shape">k ll p Features</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node" style="border-color:var(--violet);">
+          <span class="pipeline-badge" style="color:var(--cyan);">Model Engine</span>
+          <h4>CatBoost Regressor</h4>
+          <p>Hypothesis transformation.</p>
+          <span class="tensor-shape">f(X; θ)</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Optimization</span>
+          <h4>Loss Function J</h4>
+          <p>MSE / Regularized L2 Loss</p>
+          <span class="tensor-shape">min_θ J(θ)</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">
+          <span class="pipeline-badge">Inference</span>
+          <h4>Prediction Target</h4>
+          <p>Continuous prediction ŷ ∈ ℝ</p>
+          <span class="tensor-shape">ŷ = f(x)</span>
+        </div>
+      </div>
+    </div>
+  
     </section>
   
 
-    <!-- 2. Mathematical Derivation -->
+    <!-- 2. Interactive Simulation Laboratory -->
     
     <section class="detail-section">
       <h2 class="section-title">
-        <span class="section-dot cyan"></span> 2. Step-by-Step Mathematical Derivation
+        <span class="section-dot violet"></span> 2. Interactive Simulation Laboratory
       </h2>
-      <div class="derivation-container">
+      <div id="model-sim-lab"></div>
+    </section>
+  
+
+    <!-- 3. Mathematical Derivation & Blueprint -->
+    
+    <section class="detail-section">
+      <h2 class="section-title">
+        <span class="section-dot cyan"></span> 3. Step-by-Step Mathematical Derivation & Blueprint
+      </h2>
+
+      <div class="math-dissection-grid">
+        <div class="dissect-card">
+          <span class="dissect-symbol">X \in \mathbb{R}^{n \times p}</span>
+          <span class="dissect-role">Design Feature Matrix</span>
+          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized predictors.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">\beta / w \in \mathbb{R}^p</span>
+          <span class="dissect-role">Learnable Parameter Vector</span>
+          <span class="dissect-desc">Model coefficients learned via closed-form inversion or gradient descent.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">\mathcal{L}(\theta) / J(\theta)</span>
+          <span class="dissect-role">Objective Cost Functional</span>
+          <span class="dissect-desc">Empirical risk penalty measuring discrepancy between ground truth and predictions.</span>
+        </div>
+        <div class="dissect-card">
+          <span class="dissect-symbol">\lambda / C / \eta</span>
+          <span class="dissect-role">Hyperparameter Envelope</span>
+          <span class="dissect-desc">Controls regularization capacity, margin violation penalty, or learning step size.</span>
+        </div>
+      </div>
+
+      <div class="derivation-container" style="margin-top:20px;">
         <div class="derivation-step">
           <div class="step-header">
             <span class="step-num">Step 01</span>
@@ -126,36 +210,36 @@
     </section>
   
 
-    <!-- 3. Modular Multi-Dataset Benchmarks -->
+    <!-- 4. Modular Multi-Dataset Benchmarks -->
     <section class="detail-section">
       <h2 class="section-title">
-        <span class="section-dot green"></span> 3. Modular Multi-Dataset Laboratory (EDA & Feature Selection)
+        <span class="section-dot green"></span> 4. Modular Multi-Dataset Laboratory (EDA & Feature Selection)
       </h2>
       <p style="color:var(--muted); font-size:14.5px; margin-top:-8px;">
-        Explore how this architecture adapts across different datasets. Review the exploratory data analysis, feature selection techniques tested, and the exact rationale for the chosen preprocessing pipeline.
+        Explore how this architecture adapts across different datasets. Review the raw data schema, exploratory data analysis, feature selection techniques tested, and the exact rationale for the chosen preprocessing pipeline.
       </p>
 
       
       <div class="dataset-switcher-bar">
         <div class="switcher-header">
-          <span class="switcher-label">
-            <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-            Interactive Modular Dataset Benchmarks:
-          </span>
-          <span class="switcher-helper">Switch datasets to explore how EDA and Feature Selection adapt</span>
+          <div class="switcher-title-wrap">
+            <span class="pulse-dot"></span>
+            <span class="switcher-label">Active Benchmark Dataset:</span>
+          </div>
+          <span class="switcher-helper">Switch datasets to explore how Raw Data, EDA, Feature Selection, and Metrics adapt</span>
         </div>
         <div class="dataset-tabs">
           <button class="dataset-tab active" data-target="ds-california">
             <span>California Housing</span>
-            <span class="tab-badge">Geographic Census · 500 rows</span>
+            <span class="tab-badge">Census &bull; 500 rows</span>
           </button>
           <button class="dataset-tab" data-target="ds-diabetes">
             <span>Diabetes Clinical</span>
-            <span class="tab-badge">Physiological Serum · 442 rows</span>
+            <span class="tab-badge">Serum &bull; 442 rows</span>
           </button>
           <button class="dataset-tab" data-target="ds-collinear">
             <span>Collinear Real-Estate</span>
-            <span class="tab-badge">High Multicollinearity · 500 rows</span>
+            <span class="tab-badge">Multicollinearity &bull; 500 rows</span>
           </button>
         </div>
       </div>
@@ -182,6 +266,97 @@
             </table>
           </div>
         </div>
+
+        
+    <div class="data-preview-card">
+      <div class="data-preview-header">
+        <div class="data-preview-title-wrap">
+          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
+          <h4>Feature Matrix &amp; Ground Truth Preview (california_housing.csv)</h4>
+          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
+        </div>
+        <div class="data-preview-meta">
+          <span class="meta-pill"><strong>9</strong> Features</span>
+          <span class="meta-pill"><strong>500</strong> Records</span>
+          <span class="meta-pill target">Target: <code>MedHouseVal</code></span>
+        </div>
+      </div>
+
+      <div class="dataset-scroll-wrap">
+        <table class="raw-data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="">MedInc </th><th class="">HouseAge </th><th class="">AveRooms </th><th class="">AveBedrms </th><th class="">Population </th><th class="">AveOccup </th><th class="">Latitude </th><th class="">Longitude </th><th class="target-col">MedHouseVal <span class="target-tag">Target</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td class="row-idx">1</td>
+                <td class="">4.31</td><td class="">21</td><td class="">6.48</td><td class="">0.83</td><td class="">2530</td><td class="">4.26</td><td class="">36.45</td><td class="">-116.46</td><td class="target-col-cell">1.56</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">2</td>
+                <td class="">8.63</td><td class="">13</td><td class="">3.07</td><td class="">1.06</td><td class="">1988</td><td class="">3.85</td><td class="">39.34</td><td class="">-120.11</td><td class="target-col-cell">3.22</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">3</td>
+                <td class="">6.99</td><td class="">37</td><td class="">6.65</td><td class="">1.26</td><td class="">787</td><td class="">2.48</td><td class="">36.03</td><td class="">-119.30</td><td class="target-col-cell">3.05</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">4</td>
+                <td class="">5.99</td><td class="">24</td><td class="">3.98</td><td class="">1.67</td><td class="">2150</td><td class="">3.53</td><td class="">40.76</td><td class="">-116.45</td><td class="target-col-cell">2.11</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">5</td>
+                <td class="">2.67</td><td class="">17</td><td class="">8.29</td><td class="">1.53</td><td class="">1145</td><td class="">3.09</td><td class="">39.44</td><td class="">-118.31</td><td class="target-col-cell">0.52</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">6</td>
+                <td class="">2.67</td><td class="">32</td><td class="">3.82</td><td class="">1.54</td><td class="">2471</td><td class="">3.44</td><td class="">38.65</td><td class="">-122.29</td><td class="target-col-cell">1.13</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">7</td>
+                <td class="">1.94</td><td class="">33</td><td class="">5.28</td><td class="">1.23</td><td class="">3332</td><td class="">3.85</td><td class="">40.06</td><td class="">-118.40</td><td class="target-col-cell">0.50</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">8</td>
+                <td class="">8.00</td><td class="">17</td><td class="">3.47</td><td class="">1.15</td><td class="">3137</td><td class="">4.02</td><td class="">39.66</td><td class="">-120.22</td><td class="target-col-cell">2.94</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">9</td>
+                <td class="">6.01</td><td class="">50</td><td class="">8.48</td><td class="">1.17</td><td class="">2761</td><td class="">4.11</td><td class="">32.84</td><td class="">-119.60</td><td class="target-col-cell">2.17</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">10</td>
+                <td class="">6.81</td><td class="">39</td><td class="">5.76</td><td class="">1.79</td><td class="">2303</td><td class="">2.63</td><td class="">36.25</td><td class="">-124.02</td><td class="target-col-cell">3.32</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">11</td>
+                <td class="">1.65</td><td class="">10</td><td class="">6.27</td><td class="">0.84</td><td class="">2048</td><td class="">2.08</td><td class="">41.34</td><td class="">-122.20</td><td class="target-col-cell">0.50</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">12</td>
+                <td class="">8.77</td><td class="">22</td><td class="">3.37</td><td class="">1.67</td><td class="">985</td><td class="">3.85</td><td class="">33.69</td><td class="">-121.49</td><td class="target-col-cell">2.85</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+    </div>
+  
 
         <!-- EDA & Feature Selection for California Housing -->
         <div class="card-grid-2">
@@ -268,6 +443,97 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
           </div>
         </div>
 
+        
+    <div class="data-preview-card">
+      <div class="data-preview-header">
+        <div class="data-preview-title-wrap">
+          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
+          <h4>Feature Matrix &amp; Ground Truth Preview (diabetes.csv)</h4>
+          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
+        </div>
+        <div class="data-preview-meta">
+          <span class="meta-pill"><strong>11</strong> Features</span>
+          <span class="meta-pill"><strong>442</strong> Records</span>
+          <span class="meta-pill target">Target: <code>Target</code></span>
+        </div>
+      </div>
+
+      <div class="dataset-scroll-wrap">
+        <table class="raw-data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="">Age </th><th class="">Sex </th><th class="">BMI </th><th class="">BP </th><th class="">S1 </th><th class="">S2 </th><th class="">S3 </th><th class="">S4 </th><th class="">S5 </th><th class="">S6 </th><th class="target-col">Target <span class="target-tag">Target</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td class="row-idx">1</td>
+                <td class="">20.90</td><td class="">1</td><td class="">20.60</td><td class="">86.10</td><td class="">136.60</td><td class="">98.20</td><td class="">33.60</td><td class="">3.90</td><td class="">4.45</td><td class="">75</td><td class="target-col-cell">239</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">2</td>
+                <td class="">24</td><td class="">2</td><td class="">23.70</td><td class="">81.50</td><td class="">145.50</td><td class="">109.90</td><td class="">32</td><td class="">4.51</td><td class="">5.45</td><td class="">71.60</td><td class="target-col-cell">263</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">3</td>
+                <td class="">22</td><td class="">1</td><td class="">22.60</td><td class="">84.60</td><td class="">138</td><td class="">107.70</td><td class="">39.70</td><td class="">3.23</td><td class="">6.46</td><td class="">75.50</td><td class="target-col-cell">279</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">4</td>
+                <td class="">25.90</td><td class="">2</td><td class="">25.80</td><td class="">83.50</td><td class="">134.20</td><td class="">101.70</td><td class="">40.60</td><td class="">3.41</td><td class="">4.81</td><td class="">74.10</td><td class="target-col-cell">252</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">5</td>
+                <td class="">27.80</td><td class="">1</td><td class="">23.80</td><td class="">89.70</td><td class="">139.10</td><td class="">105.10</td><td class="">37.40</td><td class="">3.55</td><td class="">5.95</td><td class="">76.10</td><td class="target-col-cell">266</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">6</td>
+                <td class="">29.60</td><td class="">2</td><td class="">24.70</td><td class="">85.90</td><td class="">145.80</td><td class="">108.60</td><td class="">38</td><td class="">3.94</td><td class="">4.16</td><td class="">81.10</td><td class="target-col-cell">239</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">7</td>
+                <td class="">27.70</td><td class="">1</td><td class="">26.10</td><td class="">93.90</td><td class="">153.90</td><td class="">111.50</td><td class="">36.40</td><td class="">4.17</td><td class="">5.15</td><td class="">78.80</td><td class="target-col-cell">271</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">8</td>
+                <td class="">30.70</td><td class="">2</td><td class="">26.80</td><td class="">95.40</td><td class="">151.20</td><td class="">119.30</td><td class="">39.70</td><td class="">3.83</td><td class="">6.28</td><td class="">86.40</td><td class="target-col-cell">291</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">9</td>
+                <td class="">30</td><td class="">1</td><td class="">28.10</td><td class="">97</td><td class="">138.10</td><td class="">109.20</td><td class="">43.10</td><td class="">3.14</td><td class="">4.64</td><td class="">85.10</td><td class="target-col-cell">267</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">10</td>
+                <td class="">31.70</td><td class="">2</td><td class="">31.30</td><td class="">92.30</td><td class="">143.60</td><td class="">108.70</td><td class="">41.30</td><td class="">3.47</td><td class="">5.72</td><td class="">84.30</td><td class="target-col-cell">298</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">11</td>
+                <td class="">31.90</td><td class="">1</td><td class="">31.30</td><td class="">90.90</td><td class="">141.20</td><td class="">107.40</td><td class="">40.80</td><td class="">3.44</td><td class="">4.34</td><td class="">89.30</td><td class="target-col-cell">269</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">12</td>
+                <td class="">32.30</td><td class="">2</td><td class="">31.90</td><td class="">98.20</td><td class="">153.70</td><td class="">108</td><td class="">43.80</td><td class="">3.51</td><td class="">5.37</td><td class="">86.60</td><td class="target-col-cell">298</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+    </div>
+  
+
         <div class="card-grid-2">
           <div class="info-card">
             <h3>Exploratory Data Analysis (EDA) Findings</h3>
@@ -311,6 +577,97 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
           <p><strong>Goal:</strong> Specifically benchmark how the architecture behaves when predictors share near-perfect collinearity.</p>
         </div>
 
+        
+    <div class="data-preview-card">
+      <div class="data-preview-header">
+        <div class="data-preview-title-wrap">
+          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
+          <h4>Feature Matrix &amp; Ground Truth Preview (collinear_housing.csv)</h4>
+          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
+        </div>
+        <div class="data-preview-meta">
+          <span class="meta-pill"><strong>8</strong> Features</span>
+          <span class="meta-pill"><strong>500</strong> Records</span>
+          <span class="meta-pill target">Target: <code>Price</code></span>
+        </div>
+      </div>
+
+      <div class="dataset-scroll-wrap">
+        <table class="raw-data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="">SqFt </th><th class="">Bedrooms </th><th class="">Bathrooms </th><th class="">LotSize </th><th class="">EnergyRating </th><th class="">Age </th><th class="">TaxRate </th><th class="target-col">Price <span class="target-tag">Target</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td class="row-idx">1</td>
+                <td class="">922</td><td class="">2</td><td class="">1.80</td><td class="">2625</td><td class="">54</td><td class="">3</td><td class="">1.16</td><td class="target-col-cell">340</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">2</td>
+                <td class="">900</td><td class="">1</td><td class="">1</td><td class="">2560</td><td class="">48</td><td class="">4</td><td class="">0.95</td><td class="target-col-cell">353</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">3</td>
+                <td class="">912</td><td class="">2</td><td class="">1.60</td><td class="">2548</td><td class="">48</td><td class="">7</td><td class="">1.08</td><td class="target-col-cell">342</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">4</td>
+                <td class="">918</td><td class="">2</td><td class="">1.50</td><td class="">2719</td><td class="">55</td><td class="">9</td><td class="">1.12</td><td class="target-col-cell">349</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">5</td>
+                <td class="">914</td><td class="">2</td><td class="">1.60</td><td class="">2618</td><td class="">49</td><td class="">10</td><td class="">1.14</td><td class="target-col-cell">336</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">6</td>
+                <td class="">923</td><td class="">2</td><td class="">1.70</td><td class="">2545</td><td class="">59</td><td class="">11</td><td class="">1.14</td><td class="target-col-cell">339</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">7</td>
+                <td class="">945</td><td class="">2</td><td class="">1.60</td><td class="">2616</td><td class="">59</td><td class="">9</td><td class="">1.02</td><td class="target-col-cell">348</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">8</td>
+                <td class="">972</td><td class="">2</td><td class="">1.70</td><td class="">2862</td><td class="">55</td><td class="">10</td><td class="">1</td><td class="target-col-cell">345</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">9</td>
+                <td class="">978</td><td class="">2</td><td class="">1.50</td><td class="">2855</td><td class="">59</td><td class="">14</td><td class="">0.98</td><td class="target-col-cell">341</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">10</td>
+                <td class="">939</td><td class="">2</td><td class="">1.80</td><td class="">2753</td><td class="">59</td><td class="">11</td><td class="">1.01</td><td class="target-col-cell">344</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">11</td>
+                <td class="">1000</td><td class="">2</td><td class="">1.70</td><td class="">2720</td><td class="">60</td><td class="">16</td><td class="">1.06</td><td class="target-col-cell">364</td>
+              </tr>
+            
+              <tr>
+                <td class="row-idx">12</td>
+                <td class="">1004</td><td class="">2</td><td class="">1.80</td><td class="">2775</td><td class="">59</td><td class="">14</td><td class="">1.08</td><td class="target-col-cell">347</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+    </div>
+  
+
         <div class="card-grid-2">
           <div class="info-card">
             <h3>Exploratory Data Analysis (EDA) Findings</h3>
@@ -332,8 +689,8 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
             <table class="diag-table">
               <thead><tr><th>Evaluation Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
               <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">18.42k</td><td>Stable residual error following collinear pruning.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">R² Score</a></td><td class="val">0.8420</td><td>84.2% variance explained with zero matrix conditioning alerts.</td></tr>
+                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">18.45</td><td>Price prediction deviation on collinear benchmark.</td></tr>
+                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">Condition Number</a></td><td class="val">3.4e4</td><td>Severe matrix condition degradation without feature selection.</td></tr>
               </tbody>
             </table>
           </div>
@@ -348,11 +705,11 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
     
     </section>
 
-    <!-- 4. Architectural Trade-offs -->
+    <!-- 5. Architectural Trade-offs & Failure Modes Playbook -->
     
     <section class="detail-section">
       <h2 class="section-title">
-        <span class="section-dot amber"></span> 4. Architectural Trade-offs & Practitioner Guide
+        <span class="section-dot amber"></span> 5. Architectural Trade-offs & Failure Modes Playbook
       </h2>
       <div class="card-grid-2">
         <div class="callout green">
@@ -372,6 +729,31 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
           </ul>
         </div>
       </div>
+
+      <div class="card-grid-2" style="margin-top:20px;">
+        <div class="callout amber">
+          <span class="callout-title">Production Failure Mode: High Variance & Overfitting</span>
+          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
+            Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
+          </p>
+          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
+            <li>Apply $L_2$ Ridge shrinkage ($lambda > 0$) or prune tree depth.</li>
+            <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
+            <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
+          </ul>
+        </div>
+        <div class="callout red">
+          <span class="callout-title">Production Failure Mode: Leverage Outliers & Shift</span>
+          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
+            High-leverage anomalies drag the optimization surface away from the true data generating manifold.
+          </p>
+          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
+            <li>Use robust losses like Huber Loss ($delta = 1.0$) or Soft-Margin Slack ($C$).</li>
+            <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
+            <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
+          </ul>
+        </div>
+      </div>
     </section>
   
   </main>
@@ -385,6 +767,7 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
 
+  <script src="../../visual-simulators.js"></script>
   <script src="../../model-interactive.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -410,6 +793,11 @@ print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test
       }));
       window.createParityChart('chartCollinear', dataCol, 'Actual Price ($k)', 'Predicted Price ($k)');
     
+      if (window.MLVisualLabs) {
+        
+          window.MLVisualLabs.initRegressionLab('model-sim-lab', { regularized: false });
+        
+      }
     });
   </script>
 </body>

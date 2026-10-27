@@ -28,6 +28,7 @@
     document.addEventListener("DOMContentLoaded", renderKatex);
     window.addEventListener("load", renderKatex);
   </script>
+  <link rel="stylesheet" href="../../visual-components.css">
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -55,6 +56,46 @@
       <h1>The Bias-Variance Decomposition & Generalization</h1>
       <p class="concept-lead">The fundamental theoretical constraint governing predictive modeling: decomposing expected test error into underfitting, sensitivity, and irreducible noise.</p>
     </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">The Bias-Variance Continuum & Error Decomposition</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan);">Underfitting</span>
+            <h4>High Bias (d = 1)</h4>
+            <p>Oversimplified linear hypothesis.</p>
+            <span class="tensor-shape">High Train & Test Error</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--green);">
+            <span class="pipeline-badge" style="color:var(--green);">Optimal Balance</span>
+            <h4>Sweet Spot (d = 3)</h4>
+            <p>Captures true latent data manifold.</p>
+            <span class="tensor-shape">Minimal Expected Risk</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--red);">
+            <span class="pipeline-badge" style="color:var(--red);">Overfitting</span>
+            <h4>High Variance (d \ge 9)</h4>
+            <p>Memorizes noise & spurious variance.</p>
+            <span class="tensor-shape">Low Train, Explosive Test</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Remediation</span>
+            <h4>Regularization & CV</h4>
+            <p>L2/L1 penalties, Cross-Validation.</p>
+            <span class="tensor-shape">Shrinks parameter norm</span>
+          </div>
+        </div>
+      </div>
+    
+
+    
+    
+    <div id="lab-bias-variance"></div>
+    
 
 
     <section class="concept-section">
@@ -117,5 +158,17 @@
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('bias-variance-tradeoff' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('bias-variance-tradeoff' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('bias-variance-tradeoff' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('bias-variance-tradeoff' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+      }
+    });
+  </script>
 </body>
 </html>

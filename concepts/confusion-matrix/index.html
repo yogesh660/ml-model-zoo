@@ -28,6 +28,7 @@
     document.addEventListener("DOMContentLoaded", renderKatex);
     window.addEventListener("load", renderKatex);
   </script>
+  <link rel="stylesheet" href="../../visual-components.css">
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -55,6 +56,53 @@
       <h1>Confusion Matrix & Diagnostic Error Analysis</h1>
       <p class="concept-lead">The fundamental diagnostic grid for discrete classification, mapping ground truth against model hypotheses to isolate Type I and Type II errors.</p>
     </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">Diagnostic Decision Pipeline: From Probabilities to Error Quadrants</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Input</span>
+            <h4>Continuous Logits z</h4>
+            <p>Raw model output score.</p>
+            <span class="tensor-shape">z = w^T x + b</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Probability</span>
+            <h4>Sigmoid Link &sigma;(z)</h4>
+            <p>Mapped to unit interval [0, 1].</p>
+            <span class="tensor-shape">p \in [0, 1]</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber);">Decision Boundary</span>
+            <h4>Cutoff Threshold &tau;</h4>
+            <p>Separates positive vs negative.</p>
+            <span class="tensor-shape">&tau; = 0.50</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">Diagnostic Grid</span>
+            <h4>Confusion Matrix</h4>
+            <p>Maps True Labels vs Preds.</p>
+            <span class="tensor-shape">2 &times; 2 Grid</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Derived Rates</span>
+            <h4>Metric Calculus</h4>
+            <p>Precision, Recall, F1-Score.</p>
+            <span class="tensor-shape">F1 = 2PR / (P + R)</span>
+          </div>
+        </div>
+      </div>
+    
+
+    <div id="lab-confusion-matrix"></div>
+    
+    
+    
 
 
     <section class="concept-section">
@@ -207,5 +255,17 @@
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('confusion-matrix' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('confusion-matrix' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('confusion-matrix' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('confusion-matrix' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+      }
+    });
+  </script>
 </body>
 </html>

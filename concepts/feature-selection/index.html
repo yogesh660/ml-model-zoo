@@ -28,6 +28,7 @@
     document.addEventListener("DOMContentLoaded", renderKatex);
     window.addEventListener("load", renderKatex);
   </script>
+  <link rel="stylesheet" href="../../visual-components.css">
   <link rel="stylesheet" href="../../concept.css">
 </head>
 <body>
@@ -55,6 +56,53 @@
       <h1>Feature Selection & Dimensionality Reduction</h1>
       <p class="concept-lead">Filter, wrapper, and embedded techniques to isolate informative signals, eliminate multicollinearity, and prevent the curse of dimensionality.</p>
     </header>
+
+    
+      <div class="pipeline-box">
+        <span class="canvas-tag">Feature Selection Taxonomy: Filter vs. Wrapper vs. Embedded</span>
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Input</span>
+            <h4>Raw Features X</h4>
+            <p>High-dimensional candidate predictors.</p>
+            <span class="tensor-shape">p features</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--cyan);">
+            <span class="pipeline-badge" style="color:var(--cyan);">1. Filter Methods</span>
+            <h4>Statistical Scoring</h4>
+            <p>VIF, Pearson r, Mutual Information.</p>
+            <span class="tensor-shape">Independent of model</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--amber);">
+            <span class="pipeline-badge" style="color:var(--amber);">2. Wrapper Methods</span>
+            <h4>Iterative Search</h4>
+            <p>Recursive Feature Elimination (RFE).</p>
+            <span class="tensor-shape">Greedy subset search</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node" style="border-color:var(--violet);">
+            <span class="pipeline-badge" style="color:var(--violet-2);">3. Embedded</span>
+            <h4>Intrinsic Selection</h4>
+            <p>Lasso L1 Sparsity, Tree Gain.</p>
+            <span class="tensor-shape">Trained during fit</span>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-node">
+            <span class="pipeline-badge">Output</span>
+            <h4>Optimal Subset k</h4>
+            <p>Minimal collinearity, max signal.</p>
+            <span class="tensor-shape">k \ll p (VIF < 5.0)</span>
+          </div>
+        </div>
+      </div>
+    
+
+    
+    
+    
+    <div id="lab-feature-selection"></div>
 
 
     <section class="concept-section">
@@ -205,5 +253,17 @@
     </div>
     <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
   </footer>
+
+  <script src="../../visual-simulators.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.MLVisualLabs) {
+        if ('feature-selection' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
+        if ('feature-selection' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
+        if ('feature-selection' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
+        if ('feature-selection' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
+      }
+    });
+  </script>
 </body>
 </html>
