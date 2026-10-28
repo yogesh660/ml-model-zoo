@@ -59,19 +59,36 @@ const level = l => `<span class="lvl" data-l="${l}"><i><b></b></i>${LEVELS[l]}</
 
 // ------------------------------------------------------------------ index the curriculum
 const byId = Object.fromEntries(LESSONS.map(l => [l.id, l]));
-const ORDER = [];
+const ORDER = [];      // live lessons, in learning order
+const PLANNED = [];    // planned lessons: a "coming soon" page each
 const seen = new Set();
+const slug = t => t.normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/['\u2019]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 PATHS.forEach(p => {
-  p.count = 0; p.minutes = 0;
-  p.modules.forEach(m => m.lessons.forEach((id, i) => {
-    if (!byId[id]) throw new Error(`curriculum lists unknown lesson "${id}"`);
-    if (seen.has(id)) throw new Error(`lesson "${id}" appears twice in the curriculum`);
-    seen.add(id);
-    const l = byId[id];
-    Object.assign(l, { path: p, module: m.title, kind: l.task === 'concepts' ? 'concepts' : 'models', pathIndex: p.count + 1 });
-    p.count++; p.minutes += l.minutes;
-    ORDER.push(l);
-  }));
+  p.count = 0; p.live = 0; p.planned = 0; p.minutes = 0; p.items = [];
+  p.modules.forEach(m => {
+    m.items = m.lessons.map(entry => {
+      p.count++;
+      let l;
+      if (Array.isArray(entry)) {
+        const title = entry[0].replace(/ \u2699$/, ''), id = slug(title);
+        if (byId[id] || seen.has(id)) throw new Error(`planned lesson "${title}" clashes with id "${id}"`);
+        seen.add(id);
+        l = { id, title, short: title, planned: true, tier: entry[1], lab: / \u2699$/.test(entry[0]), kind: 'concepts', level: 0, minutes: 0, task: p.track, summary: 'Planned lesson' };
+        p.planned++; PLANNED.push(l);
+      } else {
+        if (!byId[entry]) throw new Error(`curriculum lists unknown lesson "${entry}"`);
+        if (seen.has(entry)) throw new Error(`lesson "${entry}" appears twice in the curriculum`);
+        seen.add(entry);
+        l = byId[entry];
+        l.kind = l.task === 'concepts' ? 'concepts' : 'models';
+        p.live++; p.minutes += l.minutes;
+        ORDER.push(l);
+      }
+      Object.assign(l, { path: p, module: m.title, pathIndex: p.count });
+      p.items.push(l);
+      return l;
+    });
+  });
 });
 LESSONS.forEach(l => { if (!seen.has(l.id)) throw new Error(`lesson "${l.id}" is not placed in any path`); });
 const hrefFromRoot = l => `${l.kind}/${l.id}/`;
@@ -206,48 +223,52 @@ DATASETS.forEach(d => {
 });
 
 // ------------------------------------------------------------------ hub
+const TRACKS = [['stats', 'Statistics'], ['ml', 'Machine learning'], ['ds', 'Data science'], ['dl', 'Deep learning'], ['cv', 'Vision'], ['nlp', 'Language'], ['ai', 'AI']];
+const countText = p => p.planned ? `${p.live ? `${p.live} live · ` : ''}${p.planned} planned` : `${p.live} lessons`;
 function hub() {
   const rootRel = '';
   const first = ORDER[0];
   const marquee = ORDER.filter((_, i) => i % 2 === 0).map(l => `<span>${esc(l.short)}</span><i></i>`).join('');
   const lessonRow = (l, i) => `
-            <li class="lesson-row" data-id="${l.id}" data-task="${l.task}" data-level="${l.level}">
+            <li class="lesson-row${l.planned ? ' planned-row' : ''}" data-id="${l.id}" data-task="${l.path.track}" data-level="${l.level}">
               <span class="idx">${String(l.pathIndex).padStart(2, '0')}</span>
-              <span class="ttl"><b><a href="${hrefFromRoot(l)}">${esc(l.short)}</a></b><em>${esc(plain(l.summary))}</em></span>
-              <span class="meta"><span class="done">${icon('check')}</span>${level(l.level)}<span>${l.minutes} min</span></span>
+              <span class="ttl"><b><a href="${hrefFromRoot(l)}">${esc(l.short)}</a></b><em>${l.planned ? `Planned · ${l.tier}${l.lab ? ' · live lab' : ''}` : esc(plain(l.summary))}</em></span>
+              <span class="meta"><span class="done">${icon('check')}</span>${l.planned ? '<span class="soon">Planned</span>' : level(l.level)}<span>${l.planned ? '' : `${l.minutes} min`}</span></span>
             </li>`;
   const syllabus = PATHS.map(p => `
-      <section class="syl-path reveal" id="path-${p.id}" data-tasks="${p.tasks.join(' ')}">
+      <section class="syl-path reveal" id="path-${p.id}" data-tasks="${p.track}">
         <header>
           <span class="num">Path ${p.num} · ${esc(p.kicker)}</span>
           <h3>${esc(p.title)}</h3>
           <p>${esc(p.blurb)}</p>
-          <div data-path-progress="${p.id}"><div class="meter-label"><span data-progress-text>${p.count} lessons</span><span>≈ ${Math.round(p.minutes / 60 * 2) / 2} h</span></div><div class="meter"><i></i></div></div>
-          <a class="text-link" href="${hrefFromRoot(byId[p.modules[0].lessons[0]])}">Start path ${icon('arrow')}</a>
+          <div data-path-progress="${p.id}"><div class="meter-label"><span data-progress-text>${countText(p)}</span><span>${p.live ? `≈ ${Math.round(p.minutes / 60 * 2) / 2} h` : 'Coming soon'}</span></div><div class="meter"><i></i></div></div>
+          <a class="text-link" href="${hrefFromRoot(p.items.find(l => !l.planned) || p.items[0])}">${p.live ? 'Start path' : 'See the plan'} ${icon('arrow')}</a>
         </header>
         <div class="modules">${p.modules.map(m => `
           <details class="module" open>
-            <summary><span><small>Module</small><b>${esc(m.title)}</b></span><span class="path-meta"><span>${m.lessons.length} ${m.lessons.length === 1 ? 'lesson' : 'lessons'}</span>${icon('chev').replace('class="i"', 'class="i chev"')}</span></summary>
-            <ol class="lessons">${m.lessons.map(id => lessonRow(byId[id])).join('')}
+            <summary><span><small>Module</small><b>${esc(m.title)}</b></span><span class="path-meta"><span>${m.items.length} ${m.items.length === 1 ? 'lesson' : 'lessons'}</span>${icon('chev').replace('class="i"', 'class="i chev"')}</span></summary>
+            <ol class="lessons">${m.items.map(lessonRow).join('')}
             </ol>
           </details>`).join('')}
         </div>
       </section>`).join('');
 
   const pathCards = PATHS.map(p => {
-    const ids = p.modules.flatMap(m => m.lessons);
+    const live = p.items.filter(l => !l.planned);
+    const shown = (live.length ? live : p.items).slice(0, 4);
+    const range = live.length ? ` · ${LEVELS[Math.min(...live.map(l => l.level))]} → ${LEVELS[Math.max(...live.map(l => l.level))]}` : '';
     return `
-      <article class="case-card path-card spot reveal" id="paths-${p.id}">
+      <article class="case-card path-card spot reveal${p.live ? '' : ' path-soon'}" id="paths-${p.id}">
         <div class="row"><small>Path ${p.num} · ${esc(p.kicker)}</small><span class="num">${p.count} lessons</span></div>
         <h3>${esc(p.title)}</h3>
         <p>${esc(p.blurb)}</p>
-        <ol>${ids.slice(0, 4).map((id, i) => `<li><span>${String(i + 1).padStart(2, '0')}</span>${esc(byId[id].short)}</li>`).join('')}${ids.length > 4 ? `<li class="more-li">+ ${ids.length - 4} more</li>` : ''}</ol>
-        <div data-path-progress="${p.id}" style="margin-top:auto"><div class="meter-label"><span data-progress-text>${p.count} lessons</span><span>≈ ${Math.round(p.minutes / 60 * 2) / 2} h · ${LEVELS[Math.min(...ids.map(id => byId[id].level))]} → ${LEVELS[Math.max(...ids.map(id => byId[id].level))]}</span></div><div class="meter"><i></i></div></div>
-        <a class="more" data-start href="${hrefFromRoot(byId[ids[0]])}"><span data-start-label>Start path</span> ${icon('arrow')}</a>
+        <ol>${shown.map((l, i) => `<li><span>${String(i + 1).padStart(2, '0')}</span>${esc(l.short)}</li>`).join('')}${p.count > shown.length ? `<li class="more-li">+ ${p.count - shown.length} more</li>` : ''}</ol>
+        <div data-path-progress="${p.id}" style="margin-top:auto"><div class="meter-label"><span data-progress-text>${countText(p)}</span><span>${p.live ? `≈ ${Math.round(p.minutes / 60 * 2) / 2} h${range}` : 'Coming soon'}</span></div><div class="meter"><i></i></div></div>
+        <a class="more" data-start href="${hrefFromRoot(live[0] || p.items[0])}"><span data-start-label>${p.live ? 'Start path' : 'See the plan'}</span> ${icon('arrow')}</a>
       </article>`;
   }).join('');
 
-  const tasks = [['all', 'All', ORDER.length], ['concepts', 'Foundations', N_CONCEPTS], ['regression', 'Regression', ORDER.filter(l => l.task === 'regression').length], ['classification', 'Classification', ORDER.filter(l => l.task === 'classification').length], ['clustering', 'Clustering', ORDER.filter(l => l.task === 'clustering').length]];
+  const tasks = [['all', 'All', ORDER.length + PLANNED.length], ...TRACKS.map(([k, t]) => [k, t, PATHS.filter(p => p.track === k).reduce((n, p) => n + p.count, 0)])];
 
   const inside = [
     ['01', 'Intuition first', 'Every lesson opens with the idea in plain words and an everyday analogy, before a single symbol appears.'],
@@ -258,16 +279,9 @@ function hub() {
     ['06', 'Check yourself', 'Short questions with explanations, and progress that is remembered in your browser.'],
   ];
 
-  const roadmap = [
-    ['Dimensionality reduction', 'PCA, kernel PCA, t-SNE and UMAP, with labs that let you watch structure appear in two dimensions.'],
-    ['Time series and forecasting', 'Baselines, exponential smoothing, ARIMA, gradient-boosted forecasters and how to backtest honestly.'],
-    ['Language models and RAG', 'Tokenisation, embeddings, fine-tuning and retrieval-augmented generation, with evaluation built in.'],
-    ['Agents and evaluation', 'Tool use, planning loops and the harnesses that measure whether an agent actually works.'],
-  ];
-
   const data = {
-    lessons: ORDER.map(l => ({ id: l.id, href: hrefFromRoot(l), title: plain(l.title), short: l.short, summary: plain(l.summary), path: l.path.id, pathTitle: l.path.title, module: l.module, level: l.level, minutes: l.minutes, task: l.task, keywords: l.keywords || '' })),
-    paths: PATHS.map(p => ({ id: p.id, lessons: p.modules.flatMap(m => m.lessons) })),
+    lessons: [...ORDER, ...PLANNED].map(l => ({ id: l.id, href: hrefFromRoot(l), title: plain(l.title), short: l.short, summary: plain(l.summary), path: l.path.id, pathTitle: l.path.title, module: l.module, level: l.level, minutes: l.minutes, task: l.path.track, keywords: l.keywords || '', ...(l.planned ? { planned: true, tier: l.tier } : {}) })),
+    paths: PATHS.map(p => ({ id: p.id, lessons: p.items.filter(l => !l.planned).map(l => l.id), planned: p.planned })),
   };
 
   const main = `
@@ -275,10 +289,10 @@ function hub() {
   <div class="hero-stage" aria-hidden="true"><i></i><i></i><i></i></div>
 
   <div class="hero-card hero-intro">
-    <p class="availability rise" style="--d:1"><i></i>${ORDER.length} lessons · ${ORDER.length} live labs · free</p>
+    <p class="availability rise" style="--d:1"><i></i>${ORDER.length} live lessons · ${PLANNED.length} planned · free</p>
     <p class="kicker rise" style="--d:2">Machine learning, from first principles</p>
     <h1><span class="line"><span class="rise" style="--d:3">Learn ML</span></span><span class="line"><span class="rise dim" style="--d:4">by doing.</span></span></h1>
-    <p class="focus rise" style="--d:5">Every algorithm explained in plain words, derived properly, and running live in your browser. Five paths, from the first idea of a loss function to attention.</p>
+    <p class="focus rise" style="--d:5">Every algorithm explained in plain words, derived properly, and running live in your browser. ${PATHS.length} paths across statistics, machine learning, data science, deep learning, vision, language and AI, with new lessons landing in batches.</p>
     <div class="actions rise" style="--d:6">
       <a class="button light" href="${hrefFromRoot(first)}">Start learning ${icon('arrow')}</a>
       <a class="button ghost" href="#curriculum">Browse lessons</a>
@@ -301,7 +315,7 @@ function hub() {
     </div>
     <a class="side-cta" id="continue" href="${hrefFromRoot(first)}">${icon('play')} <span data-label>Start lesson 1: ${esc(first.short)}</span> ${icon('arrow')}</a>
     <div class="quick-links">
-      ${PATHS.slice(1, 4).map(p => `<a href="#path-${p.id}">${esc(p.title)} ${icon('arrow')}</a>`).join('\n      ')}
+      ${PATHS.filter(p => p.live).slice(1, 4).map(p => `<a href="#path-${p.id}">${esc(p.title)} ${icon('arrow')}</a>`).join('\n      ')}
     </div>
     <span class="where" id="done-count">Open source · progress stays in your browser</span>
   </aside>
@@ -338,10 +352,10 @@ function hub() {
 <section class="section" id="curriculum">
   <div class="head reveal">
     <div><span class="tag">03 / Curriculum</span><h2>The full syllabus.</h2></div>
-    <p>Every lesson in learning order. Filter by task or level, or search by name, idea or keyword.</p>
+    <p>Every lesson in learning order, live and planned. Filter by subject or level, or search by name, idea or keyword.</p>
   </div>
   <div class="toolbar reveal">
-    <div class="filters" role="group" aria-label="Filter by task">
+    <div class="filters" role="group" aria-label="Filter by subject">
       ${tasks.map(([k, t, n], i) => `<button class="filter${i ? '' : ' on'}" type="button" data-task="${k}">${t} <b>${n}</b></button>`).join('\n      ')}
     </div>
     <label class="search"><span class="sr-only" hidden>Search lessons</span>${icon('search')}<input id="q" type="search" placeholder="Search lessons, e.g. kernel, overfitting, trees" autocomplete="off" aria-label="Search lessons"><kbd>/</kbd></label>
@@ -393,10 +407,10 @@ function hub() {
   <div class="inner">
     <div class="head reveal">
       <div><span class="tag">06 / Roadmap</span><h2>Coming next.</h2></div>
-      <p>New paths are added one at a time, each with the same six-step lessons and live labs.</p>
+      <p>The full syllabus is mapped out: ${PLANNED.length} more lessons are planned, and each gets a page now so you can see where it fits. They are written in batches, Core lessons first, each with the same six steps and a live lab.</p>
     </div>
-    <div class="planned">${roadmap.map(([t, d]) => `
-      <article class="project reveal"><div class="row"><span class="status"><i></i>Planned</span></div><h3>${t}</h3><p>${d}</p></article>`).join('')}
+    <div class="planned">${TRACKS.map(([k, t]) => { const ps = PATHS.filter(p => p.track === k); const live = ps.reduce((n, p) => n + p.live, 0), pl = ps.reduce((n, p) => n + p.planned, 0); return `
+      <article class="project reveal"><div class="row"><span class="status"><i></i>${pl ? 'Planned' : 'Complete'}</span></div><h3>${t}</h3><p>${live} live · ${pl} planned across ${ps.map(p => esc(p.title)).join(', ')}.</p><a class="text-link" href="#path-${ps[0].id}">See ${ps.length === 1 ? 'the path' : 'the paths'} ${icon('arrow')}</a></article>`; }).join('')}
     </div>
   </div>
 </section>
@@ -571,11 +585,54 @@ function lessonPage(l) {
   });
 }
 
+function plannedPage(s) {
+  const rootRel = '../../';
+  const p = s.path, i = p.items.indexOf(s), prev = p.items[i - 1], next = p.items[i + 1];
+  const href = t => `${rootRel}${hrefFromRoot(t)}`;
+  const mates = p.items.filter(t => t.module === s.module);
+  const tierNote = { Core: 'Core: written in the first pass.', Extended: 'Extended: written after the Core lessons.', Capstone: 'Capstone: ties the module together.' }[s.tier];
+  const main = `
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="${rootRel}#curriculum">${icon('back')} All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="${rootRel}#path-${p.id}">Path ${p.num} · ${esc(p.title)}</a> / ${esc(s.module)} / Lesson ${s.pathIndex} of ${p.count}</span>
+    <h1 class="case-title">${esc(s.title)}</h1>
+    <p class="lede rise" style="--d:3">This lesson is planned but not written yet. When it lands it will follow the same steps as the others: the idea in plain words, ${s.lab ? 'a live lab, ' : ''}the maths, the trade-offs, code and a short quiz.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline">Planned</span><span class="tagline">${s.tier}</span>${s.lab ? '<span class="tagline lab">Live lab planned</span>' : ''}
+    </div>
+  </header>
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+        <dt>Status</dt><dd>Planned</dd>
+        <dt>Path</dt><dd>${esc(p.title)} · ${esc(s.module)}</dd>
+        <dt>Tier</dt><dd>${tierNote}</dd>
+      </dl>
+    </aside>
+    <div class="story">
+      <section class="reveal" id="module">
+        <h2 class="h3"><span>01</span> In this module</h2>
+        <ol class="soon-list">${mates.map(t => `<li${t === s ? ' class="here"' : ''}><a href="${href(t)}">${esc(t.short)}</a><em>${t.planned ? 'Planned' : 'Live'}</em></li>`).join('')}</ol>
+      </section>
+    </div>
+  </div>
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    ${prev ? `<a href="${href(prev)}"><small>${icon('back')} Previous · ${esc(p.title)}</small><b>${esc(prev.short)}</b></a>` : `<a href="${rootRel}#path-${p.id}"><small>${icon('back')} Back</small><b>${esc(p.title)}</b></a>`}
+    ${next ? `<a class="pager-next" href="${href(next)}"><small>Next · ${esc(p.title)} ${icon('next')}</small><b>${esc(next.short)}</b></a>` : `<a class="pager-next" href="${rootRel}#paths"><small>End of path ${icon('next')}</small><b>All learning paths</b></a>`}
+  </div>
+</article>`;
+  return shell({ rootRel, bodyClass: 'page-lesson', title: `${s.title} (planned) · Learn · Yogesh Awate`, description: `${s.title}: a planned lesson in the ${p.title} path.`, main });
+}
+
 // ------------------------------------------------------------------ write everything
 write('index.html', hub());
 ORDER.forEach(l => write(`${l.kind}/${l.id}/index.html`, lessonPage(l)));
+PLANNED.forEach(l => write(`${l.kind}/${l.id}/index.html`, plannedPage(l)));
 // the combined sequences lesson was split in four; send old links to the first of them
 write('models/transformers_rnn_classifier/index.html', `<!doctype html><meta charset="utf-8"><title>Sequences · Learn</title><meta http-equiv="refresh" content="0; url=../recurrent_neural_networks/"><link rel="canonical" href="../recurrent_neural_networks/"><a href="../recurrent_neural_networks/">Recurrent neural networks</a>`);
 // the concepts folder had its own index page; keep the URL working
 write('concepts/index.html', `<!doctype html><meta charset="utf-8"><title>Foundations · Learn</title><meta http-equiv="refresh" content="0; url=../#path-foundations"><link rel="canonical" href="../#path-foundations"><a href="../#path-foundations">Foundations</a>`);
-console.log(`built index.html + ${ORDER.length} lessons (${N_MODELS} models, ${N_CONCEPTS} concepts), ${Math.round(totalMinutes / 60)} h of material`);
+console.log(`built index.html + ${PLANNED.length} planned pages + ${ORDER.length} lessons (${N_MODELS} models, ${N_CONCEPTS} concepts), ${Math.round(totalMinutes / 60)} h of material`);

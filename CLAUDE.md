@@ -24,6 +24,12 @@ Live: https://yogesh660.github.io/ml-model-zoo/
 | Architecture diagrams | `assets/labs/architecture.js` (spec objects + `root.Labs.architectures`) |
 | Training scripts | `models/<id>/train.py` → `metrics.json` (shown as "On real data") |
 
+## Planned lessons
+- `content/curriculum.js` modules mix live ids (strings) with planned lessons (`['Title', 'Core'|'Extended'|'Capstone']`; a trailing ` ⚙` means a live lab is planned). Helpers `C()`, `X()`, `K()` build those arrays.
+- Each planned lesson gets a stub page at `concepts/<slug(title)>/` (`plannedPage` in `scripts/build.js`); it is in the hub syllabus and search but not in progress counts.
+- To write one: add the lesson to `content/*.js` with `id` = that slug, then replace the array with the id in the curriculum. Stubs for algorithm-style lessons live under `concepts/`, so add a redirect if the real lesson is a `models/` page.
+- Paths carry a `track` (stats, ml, ds, dl, cv, nlp, ai) that drives the hub filter buttons.
+
 ## Lesson object (content/*.js)
 - All prose uses `r\`…\`` (String.raw); `$…$` / `$$…$$` is KaTeX; `[[lesson-id]]` or `[[lesson-id|text]]` links (build fails on unknown ids).
 - Common: `id, short, title, task ('concepts' or regression/classification/clustering), level 1–3, minutes, summary, lead, intuition[], analogy, steps[], math[{h, tex, p}], code, pitfalls[], quiz[{q, o[4], a, why}], related[], prereq[], labIntro, tryThis[], keywords`.

@@ -349,7 +349,7 @@
   .data-card { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 12px; }
   .data-card dl { margin: 0; }
   .planned { grid-auto-rows: auto; }
-  .planned > .project { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 12px; }
+  .planned > .project { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 12px; }
 }
 @media (max-width: 760px) {
   .lesson-row .meta { grid-template-columns: 16px auto auto; justify-content: start; }
@@ -442,3 +442,16 @@
 .tok-flow { margin-top: 10px; font: 400 12.5px/2 var(--mono); color: var(--soft); word-break: break-word; }
 .tok-flow span { padding: 2px 1px; margin-right: 1px; border-radius: 4px; white-space: pre-wrap; }
 .bpe > .note, .bpe-merges .note, .bpe-corpus summary { font: 400 12.5px/1.6 var(--sans); color: var(--muted); letter-spacing: 0; }
+
+/* planned lessons: listed and linked, but visibly not written yet */
+.lesson-row.planned-row .ttl b a { color: var(--muted); }
+.lesson-row.planned-row .ttl em { color: var(--dim); font: 400 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.lesson-row .meta .soon { grid-column: span 1; color: var(--dim); }
+.path-soon .meter i { opacity: .25; }
+.soon-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.soon-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.soon-list li.here { border-color: #8c7cff66; }
+.soon-list a { color: var(--ink); }
+.soon-list em { font: 400 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-style: normal; white-space: nowrap; }
+.planned { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.planned .project .text-link { margin-top: 6px; }

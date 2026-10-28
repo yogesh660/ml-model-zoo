@@ -6,13 +6,23 @@ It is meant to sit at `yogesh660.github.io/ml-model-zoo/` and uses the same desi
 
 ## Learning paths
 
-| Path | Lessons | What it covers |
-|---|---|---|
-| 01 Foundations | 17 | EDA, feature selection, loss functions, gradient descent, MLE, Newton/BFGS, bias–variance, regularisation, cross-validation, log-odds, link functions, metrics |
-| 02 Regression | 17 | OLS to polynomial, ridge, lasso, elastic net, robust and Bayesian regression, k-NN, SVR, Gaussian processes, trees, random forests, GBM, XGBoost, LightGBM, CatBoost, MLP |
-| 03 Classification | 12 | Logistic regression, LDA, QDA, naive Bayes, SVM, k-NN, trees, random forests, AdaBoost, gradient boosting, stacking |
-| 04 Clustering | 14 | k-means, k-means++, k-medoids, fuzzy c-means, agglomerative, divisive, BIRCH, DBSCAN, HDBSCAN, OPTICS, mean shift, GMM, spectral, affinity propagation |
-| 05 Neural networks | 9 | Perceptron, MLP, CNNs, RNNs, GRUs, LSTMs, tokenization (BPE), embeddings and positional encoding, Transformers |
+Eleven paths: 69 lessons are live and 328 more are planned. A planned lesson already has a "coming soon" page, so the whole syllabus is browsable and searchable.
+
+| Path | Live | Planned | What it covers |
+|---|---|---|---|
+| 01 Foundations | 17 | 0 | EDA, feature selection, loss functions, gradient descent, MLE, Newton/BFGS, bias–variance, regularisation, cross-validation, log-odds, link functions, metrics |
+| 02 Statistics | 0 | 51 | Probability, estimation, hypothesis tests, information theory and divergences, regression inference, experiments and causality, Bayesian methods, time series |
+| 03 Regression | 17 | 6 | OLS to polynomial, ridge, lasso, elastic net, robust and Bayesian regression, k-NN, SVR, Gaussian processes, trees, boosting, MLP |
+| 04 Classification | 12 | 7 | Logistic regression, LDA, QDA, naive Bayes, SVM, k-NN, trees, random forests, AdaBoost, gradient boosting, stacking |
+| 05 Clustering | 14 | 3 | k-means family, hierarchical, density-based, GMM, spectral, affinity propagation |
+| 06 Machine learning toolbox | 0 | 50 | Dimensionality reduction, anomaly detection, optimisation, tuning, interpretability, learning theory, recommenders |
+| 07 Data science | 0 | 47 | Wrangling, feature engineering, validation, forecasting at scale, drift, product analytics, MLOps |
+| 08 Deep learning | 6 | 36 | Perceptron, MLP, CNN, RNN, GRU, LSTM, then training, architectures, representation learning, efficiency |
+| 09 Computer vision | 0 | 37 | Filters and features, geometry, detection, segmentation, vision transformers, applications |
+| 10 Natural language processing | 3 | 49 | Tokenization (BPE), embeddings and the Transformer, plus words, syntax, meaning, language models, tasks |
+| 11 AI | 0 | 42 | Search, reinforcement learning, LLM foundations, RAG, agents, serving, safety |
+
+The planned lessons are defined in `content/curriculum.js` as `[title, tier]` entries (Core, Extended or Capstone).
 
 Each lesson follows the same structure: the idea, how it works, an interactive architecture diagram and an animated walkthrough (for linear regression, CNNs, the sequence models, tokenization, embeddings and Transformers), a live lab, the maths, hyperparameters (or key takeaways), when to use it, code with common pitfalls, results on a dataset (models), a short quiz and related lessons.
 

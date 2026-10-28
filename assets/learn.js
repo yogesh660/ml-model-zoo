@@ -36,10 +36,11 @@
 
     // path progress + continue link
     document.querySelectorAll('[data-path-progress]').forEach(el => {
-      const ids = DATA.paths.find(p => p.id === el.dataset.pathProgress).lessons;
+      const path = DATA.paths.find(p => p.id === el.dataset.pathProgress), ids = path.lessons;
       const n = ids.filter(id => done.has(id)).length;
-      el.querySelector('.meter i').style.setProperty('--p', `${(n / ids.length) * 100}%`);
-      el.querySelector('[data-progress-text]').textContent = n ? `${n} of ${ids.length} done` : `${ids.length} lessons`;
+      el.querySelector('.meter i').style.setProperty('--p', `${ids.length ? (n / ids.length) * 100 : 0}%`);
+      const total = ids.length + path.planned;
+      el.querySelector('[data-progress-text]').textContent = n ? `${n} of ${ids.length} done${path.planned ? ` · ${path.planned} planned` : ''}` : (path.planned ? `${ids.length ? `${ids.length} live · ` : ''}${path.planned} planned` : `${total} lessons`);
       const next = ids.find(id => !done.has(id));
       const start = el.closest('.path-card') && el.closest('.path-card').querySelector('[data-start]');
       if (start && n && next) { start.href = byId[next].href; start.querySelector('[data-start-label]').textContent = 'Continue path'; }
@@ -77,7 +78,7 @@
         <div class="row"><small>${esc(l.pathTitle)} · ${esc(l.module)}</small></div>
         <h3>${esc(l.title)}</h3>
         <p>${esc(l.summary)}</p>
-        <div class="path-meta" style="margin-top:auto"><span>${['', 'Beginner', 'Intermediate', 'Advanced'][l.level]}</span><span>${l.minutes} min</span>${done.has(l.id) ? '<span style="color:var(--green)">Done</span>' : ''}</div>
+        <div class="path-meta" style="margin-top:auto">${l.planned ? `<span>Planned</span><span>${esc(l.tier)}</span>` : `<span>${['', 'Beginner', 'Intermediate', 'Advanced'][l.level]}</span><span>${l.minutes} min</span>`}${done.has(l.id) ? '<span style="color:var(--green)">Done</span>' : ''}</div>
       </a>`;
 
     const apply = () => {
