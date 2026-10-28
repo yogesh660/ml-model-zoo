@@ -78,9 +78,9 @@ module.exports = [
     tasks: ['ml'],
     modules: [
       { title: 'Dimensionality reduction', lessons: ['pca', 't-sne', 'umap', ...X('SVD and truncated SVD', 'Kernel PCA', 'Independent component analysis', 'Non-negative matrix factorisation', 'MDS and Isomap', 'Random projections and Johnson–Lindenstrauss')] },
-      { title: 'Anomaly detection', lessons: ['isolation-forest', ...C('Local Outlier Factor'), ...X('One-class SVM', 'Mahalanobis distance and robust covariance')] },
-      { title: 'Probabilistic models', lessons: [...C('EM algorithm'), ...X('Bayesian networks', 'Markov random fields', 'Gaussian process classifier')] },
-      { title: 'Optimisation', lessons: [...C('Convex optimisation and duality', 'Lagrange multipliers and KKT conditions'), ...X('Coordinate descent', 'Newton\'s method', 'Proximal gradient methods')] },
+      { title: 'Anomaly detection', lessons: ['isolation-forest', 'local-outlier-factor', ...X('One-class SVM', 'Mahalanobis distance and robust covariance')] },
+      { title: 'Probabilistic models', lessons: ['em-algorithm', ...X('Bayesian networks', 'Markov random fields', 'Gaussian process classifier')] },
+      { title: 'Optimisation', lessons: ['convex-optimisation-and-duality', 'lagrange-multipliers-and-kkt-conditions', ...X('Coordinate descent', 'Newton\'s method', 'Proximal gradient methods')] },
       { title: 'Model selection', lessons: [...C('Hyperparameter search: grid, random, successive halving', 'Bayesian optimisation and Optuna', 'Learning curves and diagnosing fit', 'Nested cross-validation'), ...X('Ensemble theory: bagging, boosting, stacking compared', 'Conformal prediction')] },
       { title: 'Interpretability and fairness', lessons: [...C('Permutation and impurity feature importance', 'SHAP', 'PDP, ICE and ALE plots'), ...X('LIME', 'Counterfactual explanations', 'Fairness metrics and mitigation')] },
       { title: 'Learning theory', lessons: [...C('Kernel trick and Mercer\'s condition'), ...X('SVM dual formulation', 'VC dimension and PAC learning', 'No free lunch and inductive bias')] },

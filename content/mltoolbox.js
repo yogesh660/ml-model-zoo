@@ -1429,4 +1429,539 @@ for pt, label in zip(test_pts, ['Normal inlier', 'Extreme outlier']):
     related: ['bagging-and-extra-trees', 'random_forest_classifier'],
     keywords: 'isolation forest anomaly detection outlier detection itree path length recursive partitioning unsupervised learning',
   },
+  {
+    id: 'local-outlier-factor',
+    short: 'Local Outlier Factor',
+    title: 'Local Outlier Factor',
+    task: 'concepts',
+    module: 'Anomaly detection',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Density-based anomaly detection that quantifies how isolated a point is relative to the varying local densities of its surrounding $k$-nearest neighbours.`,
+    lead: r`Global anomaly detection algorithms assume that anomalies always sit far away from all other data points according to a single distance threshold. In datasets containing multiple clusters of wildly differing densities, this global assumption collapses: points on the fringe of a sparse cluster look like anomalies, while outliers near a dense cluster remain undetected. Local Outlier Factor (LOF) solves this by computing a ratio of local reachability densities, evaluating each point's degree of isolation purely relative to its immediate neighbourhood.`,
+    intuition: [
+      r`Imagine comparing population densities in two different regions: central Tokyo and rural Scotland. In central Tokyo, houses sit centimetres apart; if a new house were built 50 metres from its closest neighbour, that house would be an extraordinary anomaly. In the Scottish Highlands, houses routinely sit two kilometres apart; a home separated by 50 metres from its neighbour is not an anomaly at all, but rather part of a tightly clustered village. A global distance threshold would either brand every home in Scotland an anomaly, or miss the isolated house in Tokyo completely.`,
+      r`Local Outlier Factor resolves this by measuring relative density rather than absolute distance. For any candidate point $p$, LOF first finds its $k$-nearest neighbours and calculates its local reachability density ($\\operatorname{lrd}$)—the reciprocal of the average distance required to reach $p$ from its neighbours. If $p$ is located in the middle of a dense cluster, its reachability density is high. If $p$ sits in a sparse cloud, its density is low.`,
+      r`The critical breakthrough is the LOF score itself, which divides the average local reachability density of $p$'s neighbours by $p$'s own local density. If $p$ has roughly the same density as its neighbours, this ratio is approximately 1, identifying $p$ as an inlier regardless of whether the cluster is dense or sparse. If $p$ is isolated—meaning its neighbours enjoy high density while $p$ sits out in the cold—the ratio jumps significantly above 1 (typically 1.5 or higher). This relative formulation makes LOF uniquely adept at uncovering local anomalies across complex, multi-density manifolds.`,
+    ],
+    analogy: r`Judging whether an ambient sound is unusually loud not by measuring absolute decibels on an open highway, but by comparing the volume to the quiet whisper of the immediate library room you are sitting in.`,
+    steps: [
+      r`For every point $p$ in the dataset, determine its $k$-distance $d_k(p)$ (the distance to its $k$-th nearest neighbour) and identify its neighbourhood set $N_k(p)$.`,
+      r`For each neighbour $o \in N_k(p)$, compute the reachability distance of $p$ from $o$: $\\text{reach-dist}_k(p, o) = \\max\\{d_k(o), d(p, o)\}$, which stabilises density estimates within dense clusters.`,
+      r`Calculate the local reachability density $\\operatorname{lrd}_k(p)$ as the inverse of the average reachability distance from $p$ to all points in $N_k(p)$.`,
+      r`Compute the Local Outlier Factor $\\operatorname{LOF}_k(p)$ by taking the average ratio between the neighbours' local reachability densities $\\operatorname{lrd}_k(o)$ and $p$'s own density $\\operatorname{lrd}_k(p)$.`,
+      r`Flag observations with $\\operatorname{LOF}_k(p) \\gg 1$ as anomalies; points with $\\operatorname{LOF}_k(p) \\approx 1$ are confirmed inliers.`,
+    ],
+    math: [
+      {
+        h: 'k-distance and reachability distance',
+        tex: r`$$\\text{reach-dist}_k(p, o) = \\max\\big\\{d_k(o), \, d(p, o)\\big}$$`,
+        p: r`where $d(p, o)$ is Euclidean distance and $d_k(o)$ is the distance from neighbour $o$ to its $k$-th nearest neighbour. If $p$ is very close to $o$, the reachability distance is floored at $d_k(o)$, preventing tiny denominator fluctuations from destabilising density estimates.`,
+      },
+      {
+        h: 'Local reachability density',
+        tex: r`$$\\operatorname{lrd}_k(p) = \\frac{|N_k(p)|}{\\sum_{o \in N_k(p)} \\text{reach-dist}_k(p, o)}$$`,
+        p: r`$\\operatorname{lrd}_k(p)$ quantifies the number of neighbours per unit reachability distance. Dense regions produce small reachability distances and large $\\operatorname{lrd}$, while sparse regions produce small $\\operatorname{lrd}$.`,
+      },
+      {
+        h: 'Local Outlier Factor score',
+        tex: r`$$\\operatorname{LOF}_k(p) = \\frac{1}{|N_k(p)|} \\sum_{o \in N_k(p)} \\frac{\\operatorname{lrd}_k(o)}{\\operatorname{lrd}_k(p)}$$`,
+        p: r`When $p$ is deep inside a cluster, its density matches its neighbours' ($\\operatorname{lrd}_k(o) \\approx \\operatorname{lrd}_k(p)$), yielding $\\operatorname{LOF} \\approx 1$. When $p$ is an outlier, its density is much lower than its neighbours' ($\\operatorname{lrd}_k(p) \\ll \\operatorname{lrd}_k(o)$), driving $\\operatorname{LOF} \\gg 1$.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic clusters with different densities plus one outlier
+rng = np.random.default_rng(42)
+c1 = rng.normal(0, 0.5, (30, 2))
+c2 = rng.normal(5, 1.5, (30, 2))
+outlier = np.array([[1.5, 1.5]])
+X = np.vstack([c1, c2, outlier])
+n, k = len(X), 5
+
+# Pairwise distances and k-nearest neighbours
+dist = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=-1)
+sorted_idx = np.argsort(dist, axis=1)
+nbr_idx = sorted_idx[:, 1:k+1]
+k_dist = dist[np.arange(n), sorted_idx[:, k]]
+
+# Reachability distance and local reachability density (lrd)
+reach_dist = np.maximum(dist, k_dist[None, :])
+lrd = k / np.sum([reach_dist[i, nbr_idx[i]] for i in range(n)], axis=1)
+
+# Local Outlier Factor (LOF) score
+lof = np.array([np.mean(lrd[nbr_idx[i]] / lrd[i]) for i in range(n)])
+
+print(f"Dense cluster inlier LOF: {lof[0]:.3f}")
+print(f"Sparse cluster inlier LOF: {lof[30]:.3f}")
+print(f"Outlier LOF: {lof[-1]:.3f}")`,
+    pitfalls: [
+      r`Quadratic computational scaling: Finding exact $k$-nearest neighbours across all pairs requires $O(n^2)$ distance calculations, which becomes computationally prohibitive on millions of rows without spatial tree indexing (like $k$-d trees).`,
+      r`Selection of $k$: If $k$ is chosen smaller than the size of an outlier cluster, the outliers form a mutual neighbourhood and mask each other. If $k$ is too large, it dilutes micro-density contrasts.`,
+      r`High-dimensional distance concentration: In spaces with hundreds of dimensions, Euclidean distances concentrate and become equidistant, eroding the contrast between local and distant densities.`,
+      r`Lack of an absolute score threshold: Unlike a calibrated probability, there is no universal cutoff for LOF; a score of 1.3 might be an extreme outlier in one dataset and a normal border point in another.`,
+    ],
+    keyPoints: [
+      r`Detects anomalies based on relative local density rather than global Euclidean distance cutoffs.`,
+      r`Successfully identifies outliers in datasets containing multiple clusters of vastly different densities.`,
+      r`Reachability distance $\\max\\{d_k(o), d(p, o)\\}$ stabilises calculations within dense clusters.`,
+      r`Points with $\\operatorname{LOF} \\approx 1$ are normal inliers; scores substantially greater than 1 indicate local outliers.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does Local Outlier Factor use relative local density rather than absolute distance to the nearest cluster centre?`,
+        o: [
+          r`Because computing cluster centres requires supervised class labels`,
+          r`To avoid falsely labelling normal points in sparse clusters as anomalies while missing true outliers near dense clusters`,
+          r`Because absolute distances cannot be computed using Euclidean metrics`,
+          r`To guarantee that all inlier scores are identically zero`,
+        ],
+        a: 1,
+        why: r`In datasets with heterogeneous densities, points in a legitimate sparse cluster have large pairwise distances. Global metrics mistake them for outliers, whereas LOF's relative density ratio normalises for local cluster spread.`,
+      },
+      {
+        q: r`What is the expected Local Outlier Factor ($\\operatorname{LOF}$) score for a data point nestled securely deep inside a cluster?`,
+        o: [
+          r`Exactly 0.0`,
+          r`Negative infinity`,
+          r`Approximately 1.0`,
+          r`Greater than 5.0`,
+        ],
+        a: 2,
+        why: r`Deep inside a cluster, a point and all of its neighbours have virtually identical local reachability densities ($\\operatorname{lrd}(o) \\approx \\operatorname{lrd}(p)$), so the ratio averages to approximately 1.0.`,
+      },
+      {
+        q: r`What role does the reachability distance $\\text{reach-dist}_k(p, o) = \\max\\{d_k(o), d(p, o)\\}$ play in LOF?`,
+        o: [
+          r`It forces all distances to follow a normal distribution`,
+          r`It eliminates the need to specify the neighbourhood size $k$`,
+          r`It projects points into a lower-dimensional subspace`,
+          r`It establishes a minimum distance floor based on neighbour density, preventing statistical instability from near-zero distances`,
+        ],
+        a: 3,
+        why: r`By replacing tiny distances between identical or near-duplicate points with $d_k(o)$, reachability distance prevents near-zero divisions and stabilises local density estimates.`,
+      },
+      {
+        q: r`What is a primary limitation of standard Local Outlier Factor when scaling to high-dimensional datasets?`,
+        o: [
+          r`Distance concentration diminishes the contrast between nearest and furthest neighbours, blurring local density differences`,
+          r`LOF can only be evaluated on single-dimensional scalar values`,
+          r`LOF requires training thousands of deep neural network weights`,
+          r`LOF assumes that all features follow independent Bernoulli distributions`,
+        ],
+        a: 0,
+        why: r`As dimensionality increases, Euclidean distances concentrate around a common mean (the curse of dimensionality), causing relative density ratios to flatten toward 1 and degrading outlier discrimination.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['isolation-forest', 'dbscan_clustering'],
+    related: ['isolation-forest', 'dbscan_clustering', 'kmedoids_clustering'],
+    keywords: 'local outlier factor lof anomaly detection density reachability distance outlier detection k nearest neighbours unsupervised',
+  },
+  {
+    id: 'em-algorithm',
+    short: 'EM algorithm',
+    title: 'Expectation-Maximisation Algorithm',
+    task: 'concepts',
+    module: 'Probabilistic models',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`General iterative framework for finding maximum likelihood parameter estimates in probabilistic models with hidden latent variables or incomplete observations.`,
+    lead: r`In many machine learning problems, the observed data depends on unobserved latent variables, such as unknown cluster memberships, hidden states, or missing sensor values. Directly maximising the marginal log-likelihood is intractable because the sum over latent variables appears inside the logarithm. The Expectation-Maximisation (EM) algorithm circumvents this by alternating between estimating the posterior distribution over latent states (E-step) and maximising the expected complete-data log-likelihood (M-step), guaranteeing non-decreasing likelihood at every iteration.`,
+    intuition: [
+      r`Suppose you run a survey measuring heights, but the survey accidentally omits whether each participant is male or female. The pooled data forms a bimodal curve—a mixture of two separate normal distributions. If you knew everyone's sex, computing the average height and variance for each group would be trivial (standard maximum likelihood). Conversely, if you already knew the true male and female averages, you could easily calculate the probability that any given participant is male or female. The dilemma is that you know neither.`,
+      r`The EM algorithm resolves this chicken-and-egg deadlock through clever alternation. First, make an educated guess for the parameters (the group means and variances). In the Expectation step (E-step), use these guessed parameters to assign each participant a soft probabilistic responsibility—such as 85% chance female and 15% chance male for someone who is 162 cm tall.`,
+      r`Next, in the Maximisation step (M-step), use these soft weights to re-estimate the group parameters. Instead of a hard binary assignment, each data point contributes fractionally to updating the means and variances of both groups. These updated parameters yield a better model, which in turn produces more accurate responsibilities in the next E-step. Mathematically, the E-step constructs a tight lower bound (the Evidence Lower Bound, or ELBO) on the log-likelihood function, and the M-step climbs to the peak of that bound. Repeating this cycle guarantees steady progress until reaching a local maximum.`,
+    ],
+    analogy: r`Alternately sharpening the focus on a twin-lens microscope: adjusting lens A sharpens the contrast of the image, which reveals the exact alignment needed to sharpen lens B, repeating until the entire specimen comes into crystal-clear resolution.`,
+    steps: [
+      r`Initialise the model parameters $\\theta^{(0)}$ randomly or using a fast heuristic (such as $k$-means for mixture model centroids).`,
+      r`Perform the Expectation step (E-step): compute the posterior probability distribution over latent variables given current parameters: $q^{(t)}(Z) = p(Z \\mid X, \\theta^{(t)})$.`,
+      r`Formulate the expected complete-data log-likelihood (the $Q$-function): $Q(\\theta \\mid \\theta^{(t)}) = \\mathbb{E}_{Z \\mid X, \\theta^{(t)}} [\\ln p(X, Z \\mid \\theta)]$.`,
+      r`Perform the Maximisation step (M-step): update parameters by maximising the $Q$-function: $\\theta^{(t+1)} = \\arg\\max_\\theta Q(\\theta \\mid \\theta^{(t)})$.`,
+      r`Evaluate the marginal log-likelihood $\\ln p(X \\mid \\theta^{(t+1)})$ or check parameter convergence $\\|\\theta^{(t+1)} - \\theta^{(t)}\\| < \\epsilon$.`,
+      r`Repeat the E-step and M-step until the improvement in log-likelihood drops below the convergence tolerance.`,
+    ],
+    math: [
+      {
+        h: 'Marginal log-likelihood decomposition and ELBO',
+        tex: r`$$\\ln p(X \\mid \\theta) = \\sum_{Z} q(Z) \\ln \\frac{p(X, Z \\mid \\theta)}{q(Z)} + \\sum_{Z} q(Z) \\ln \\frac{q(Z)}{p(Z \\mid X, \\theta)} = \\operatorname{ELBO}(q, \\theta) + \\operatorname{KL}\\big(q(Z) \\parallel p(Z \\mid X, \\theta)\\big)$$`,
+        p: r`By Jensen's inequality, the Kullback–Leibler divergence $\\operatorname{KL} \\ge 0$, establishing that $\\operatorname{ELBO}(q, \\theta) \\le \\ln p(X \\mid \\theta)$ is a rigorous lower bound. In the E-step, setting $q(Z) = p(Z \\mid X, \\theta^{(t)})$ makes $\\operatorname{KL} = 0$, causing the lower bound to touch the true log-likelihood exactly at $\\theta^{(t)}$.`,
+      },
+      {
+        h: 'The Q-function in the E-step',
+        tex: r`$$Q\\big(\\theta \\mid \\theta^{(t)}\\big) = \\sum_{Z} p\\big(Z \\mid X, \\theta^{(t)}\\big) \\ln p(X, Z \\mid \\theta)$$`,
+        p: r`Evaluating the complete-data log-likelihood $\\ln p(X, Z \\mid \\theta)$ moves the summation outside the logarithm. For Gaussian Mixture Models, this simplifies to computing soft responsibilities $\\gamma_{ik} = \\frac{\\pi_k \\mathcal{N}(x_i \\mid \\mu_k, \\Sigma_k)}{\\sum_j \\pi_j \\mathcal{N}(x_i \\mid \\mu_j, \\Sigma_j)}$.`,
+      },
+      {
+        h: 'Parameter update in the M-step',
+        tex: r`$$\\theta^{(t+1)} = \\arg\\max_{\\theta} Q\\big(\\theta \\mid \\theta^{(t)}\\big)$$`,
+        p: r`Differentiating $Q$ with respect to $\\theta$ and setting to zero yields closed-form analytical updates for exponential family distributions: $\\mu_k = \\frac{\\sum_i \\gamma_{ik} x_i}{\\sum_i \\gamma_{ik}}$ and $\\Sigma_k = \\frac{\\sum_i \\gamma_{ik}(x_i - \\mu_k)(x_i - \\mu_k)^T}{\\sum_i \\gamma_{ik}}$.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# 1D two-component Gaussian mixture data
+rng = np.random.default_rng(42)
+X = np.concatenate([rng.normal(-2.0, 0.8, 100), rng.normal(3.0, 1.2, 100)])
+
+# Initial guesses for weights, means, and variances
+pi = np.array([0.5, 0.5])
+mu = np.array([-0.5, 0.5])
+var = np.array([1.0, 1.0])
+
+for _ in range(50):
+    # E-step: calculate responsibilities (posterior over latent cluster)
+    pdf = np.exp(-0.5 * (X[:, None] - mu) ** 2 / var) / np.sqrt(2 * np.pi * var)
+    gamma = (pdf * pi) / np.sum(pdf * pi, axis=1, keepdims=True)
+    
+    # M-step: update parameters via weighted maximum likelihood
+    N_k = np.sum(gamma, axis=0)
+    pi = N_k / len(X)
+    mu = np.sum(gamma * X[:, None], axis=0) / N_k
+    var = np.sum(gamma * (X[:, None] - mu) ** 2, axis=0) / N_k
+
+ll = np.sum(np.log(np.sum(pi * np.exp(-0.5 * (X[:, None] - mu) ** 2 / var) / np.sqrt(2 * np.pi * var), axis=1)))
+print(f"Estimated weights: {pi.round(3)}")
+print(f"Estimated means: {mu.round(3)}")
+print(f"Estimated stds: {np.sqrt(var).round(3)}")
+print(f"Final log-likelihood: {ll:.2f}")`,
+    pitfalls: [
+      r`Convergence to local optima: The marginal log-likelihood surface is non-convex. EM is guaranteed to monotonically increase likelihood, but it can converge to suboptimal local maxima depending on initialisation. Multiple random restarts or $k$-means seeding are essential.`,
+      r`Singularities and variance collapse: In Gaussian mixture models, if a single component's mean collapses onto a single data point, its variance approaches zero and its likelihood explodes to infinity. Regularising the covariance diagonal with a small ridge ($\\sigma^2 + \\epsilon$) prevents numerical explosion.`,
+      r`Slow convergence near saddle points: EM has a first-order convergence rate, meaning progress can crawl when components overlap heavily or eigenvalues of the Fisher information matrix are near-zero.`,
+      r`Intractable E-step for complex priors: In deep probabilistic models or non-conjugate Bayesian networks, calculating exact posterior responsibilities $p(Z \\mid X, \\theta)$ is intractable, necessitating Variational EM or Monte Carlo approximations.`,
+    ],
+    keyPoints: [
+      r`Solves maximum likelihood estimation in models with unobserved latent variables or incomplete observations.`,
+      r`Guarantees monotonic non-decrease of the marginal log-likelihood at every iteration ($\\ln p(X \\mid \\theta^{(t+1)}) \\ge \\ln p(X \\mid \\theta^{(t)})$).`,
+      r`Tightens the Evidence Lower Bound (ELBO) in the E-step and climbs to its peak in the M-step.`,
+      r`Forms the mathematical foundation for Gaussian Mixture Models, Hidden Markov Models, and topic models.`,
+    ],
+    quiz: [
+      {
+        q: r`What mathematical property guarantees that the EM algorithm's log-likelihood never decreases from one iteration to the next?`,
+        o: [
+          r`The Central Limit Theorem`,
+          r`Mercer's condition on kernel functions`,
+          r`Jensen's inequality and the non-negativity of Kullback–Leibler divergence ($\\operatorname{KL} \\ge 0$)`,
+          r`The Gauss-Markov theorem`,
+        ],
+        a: 2,
+        why: r`Jensen's inequality guarantees that the Evidence Lower Bound (ELBO) is a valid lower bound on the marginal log-likelihood. In the E-step, setting $q(Z) = p(Z \\mid X, \\theta)$ drives $\\operatorname{KL} = 0$, and the M-step maximises the ELBO, ensuring the log-likelihood monotonically increases or stays constant.`,
+      },
+      {
+        q: r`What occurs during the Expectation step (E-step) of the EM algorithm?`,
+        o: [
+          r`Model parameters $\\theta$ are updated via stochastic gradient descent`,
+          r`All missing data points are permanently deleted from the dataset`,
+          r`The covariance matrix is inverted using Singular Value Decomposition`,
+          r`The posterior probability distribution over latent variables $p(Z \\mid X, \\theta^{(t)})$ is computed using current parameter estimates`,
+        ],
+        a: 3,
+        why: r`The E-step calculates the conditional distribution of the hidden latent variables given the observed data and current parameters, computing the expected values (responsibilities) needed for the M-step.`,
+      },
+      {
+        q: r`Why is directly maximising the marginal log-likelihood $\\ln p(X \\mid \\theta) = \\sum_i \\ln \\big(\\sum_z p(x_i, z \\mid \\theta)\\big)$ analytically difficult without EM?`,
+        o: [
+          r`The summation over latent states $z$ appears inside the logarithm, preventing clean differentiation and closed-form solutions`,
+          r`The marginal log-likelihood is always equal to zero`,
+          r`The log-likelihood function has no gradient at any point`,
+          r`Exponential distributions cannot be evaluated inside logarithms`,
+        ],
+        a: 0,
+        why: r`When a sum appears inside a logarithm, expanding the derivative yields coupled equations where parameters cannot be isolated into independent closed-form maximum likelihood solutions.`,
+      },
+      {
+        q: r`What is a well-known failure mode when fitting Gaussian Mixture Models with EM without covariance regularisation?`,
+        o: [
+          r`The algorithm always diverges to negative infinity in the first step`,
+          r`A Gaussian component can collapse onto a single data point, driving its variance to zero and causing the likelihood to explode to infinity`,
+          r`The mixture weights are forced to be negative`,
+          r`The number of clusters $k$ automatically doubles at every iteration`,
+        ],
+        a: 1,
+        why: r`If a Gaussian component centres exactly on an isolated sample and captures only that point, its sample variance shrinks toward 0. The normal density $\\frac{1}{\\sqrt{2\\pi\\sigma^2}} \\to \\infty$, creating a numerical singularity.`,
+      },
+    ],
+    usedBy: ['gaussian_mixture_models'],
+    prereq: ['maximum-likelihood-estimation', 'gaussian_mixture_models'],
+    related: ['gaussian_mixture_models', 'maximum-likelihood-estimation', 'kmeans_clustering'],
+    keywords: 'em expectation maximisation algorithm latent variables gmm gaussian mixture elbo posterior responsibilities maximum likelihood',
+  },
+  {
+    id: 'convex-optimisation-and-duality',
+    short: 'Convex Optimisation & Duality',
+    title: 'Convex Optimisation and Duality',
+    task: 'concepts',
+    module: 'Optimisation',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Fundamental theory of convex optimisation where local minima are global, paired with Lagrange duality providing certified lower bounds and dual problem formulations.`,
+    lead: r`In general mathematical optimisation, finding the true global minimum is notoriously difficult because objectives are riddled with deceptive local valleys, plateaus, and saddle points. Convex optimisation defines the boundary of tractable mathematics: when both the objective function and constraint sets are convex, any local minimum is guaranteed to be a global minimum. Lagrange duality transforms difficult constrained primal problems into convex dual problems, providing certificates of optimality and foundational insights for algorithms like Support Vector Machines and LASSO.`,
+    intuition: [
+      r`Imagine walking through a hilly landscape shrouded in thick fog. If you are standing in a general non-convex terrain (like a mountain range full of craters and ravines), walking downhill until the slope is zero only lands you at the bottom of whichever small ditch you happened to step into—you have no idea if a much deeper valley lies just over the next ridge. But if the terrain is a giant smooth bowl (a convex function), gravity guarantees that descending in any downhill direction leads inexorably to the single lowest point in the entire landscape.`,
+      r`Real-world machine learning models must satisfy constraints—such as capping budget, enforcing non-negative weights, or bounding classification margins. A constrained problem asks: "What is the lowest point inside a fenced-off boundary?" Directly navigating the boundary fence in the primal space can be cumbersome.`,
+      r`Duality approaches the problem from the outside in. Imagine wanting to prove that a manufacturing cost cannot possibly fall below £500, no matter which choices you make. Instead of testing millions of designs, you construct a lower bound function (the Lagrange dual function) by adding penalty multipliers for each constraint. By maximising this lower bound across all possible multipliers (the dual problem), you push the floor upward until it meets the primal ceiling. Under standard conditions (such as Slater's condition), the dual maximum equals the primal minimum exactly—a phenomenon called strong duality ($p^* = d^*$). The difference between primal and dual objectives, the duality gap, acts as a real-time certificate proving how close any candidate solution is to true optimality.`,
+    ],
+    analogy: r`Verifying the exact floor of a subterranean cave by measuring how high you can raise a flat hydraulic jack from below until it firmly touches the bedrock ceiling above.`,
+    steps: [
+      r`Verify convexity: ensure the objective function $f_0(x)$ is convex (its Hessian $\\nabla^2 f_0(x) \\succeq 0$ is positive semidefinite) and the constraint set is convex (convex inequalities $f_i(x) \\le 0$ and affine equalities $Ax = b$).`,
+      r`Formulate the primal Lagrangian function by attaching Lagrange multipliers: $L(x, \\lambda, \\nu) = f_0(x) + \\sum_{i=1}^m \\lambda_i f_i(x) + \\sum_{j=1}^p \\nu_j (a_j^T x - b_j)$ with dual feasibility $\\lambda_i \\ge 0$.`,
+      r`Derive the Lagrange dual function $g(\\lambda, \\nu) = \\inf_x L(x, \\lambda, \\nu)$ by finding the unconstrained infimum over $x$.`,
+      r`Formulate the dual optimisation problem: $\\max_{\\lambda, \\nu} g(\\lambda, \\nu)$ subject to $\\lambda \\ge 0$. Note that $g(\\lambda, \\nu)$ is always concave, making the dual problem convex even if the primal is non-convex.`,
+      r`Check constraint qualifications (e.g. Slater's condition: existence of a strictly feasible point where $f_i(\\tilde{x}) < 0$) to confirm strong duality ($p^* = d^*$).`,
+      r`Solve the dual problem using dual ascent, interior-point methods, or coordinate descent, monitoring the duality gap $|f_0(x) - g(\\lambda, \\nu)| \\to 0$ as a stopping criterion.`,
+    ],
+    math: [
+      {
+        h: 'Convex set and convex function definition',
+        tex: r`$$f_0\\big(\\alpha x + (1 - \\alpha) y\\big) \\le \\alpha f_0(x) + (1 - \\alpha) f_0(y) \\quad \\forall \\, \\alpha \\in [0, 1]$$`,
+        p: r`A function is convex if the chord connecting any two points on its graph lies above or on the function. For twice-differentiable functions, convexity is equivalent to the Hessian matrix being positive semidefinite: $\\nabla^2 f_0(x) \\succeq 0$.`,
+      },
+      {
+        h: 'The Lagrangian and Lagrange dual function',
+        tex: r`$$L(x, \\lambda, \\nu) = f_0(x) + \\sum_{i=1}^m \\lambda_i f_i(x) + \\sum_{j=1}^p \\nu_j h_j(x), \qquad g(\\lambda, \\nu) = \\inf_{x} L(x, \\lambda, \\nu)$$`,
+        p: r`where $\\lambda_i \\ge 0$. For any feasible primal $x$ and any dual feasible $(\\lambda, \\nu)$, $\\sum \\lambda_i f_i(x) \\le 0$ and $\\sum \\nu_j h_j(x) = 0$, guaranteeing that $g(\\lambda, \\nu) \\le f_0(x)$. Taking the infimum over $x$ establishes weak duality: $d^* \\le p^*$.`,
+      },
+      {
+        h: 'Strong duality and Slater\'s condition',
+        tex: r`$$p^* - d^* = 0 \\quad (\\text{zero duality gap})$$`,
+        p: r`Strong duality holds for convex optimisation problems if Slater's condition is satisfied: there exists at least one point $\\tilde{x}$ in the relative interior of the domain such that $f_i(\\tilde{x}) < 0$ for all strictly convex inequality constraints and $A\\tilde{x} = b$.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Quadratic program: min 0.5 * x^T Q x - c^T x  subject to A x <= b
+Q = np.array([[4.0, 1.0], [1.0, 2.0]])
+c = np.array([3.0, 2.0])
+A = np.array([1.0, 1.0])
+b = 1.0
+Q_inv = np.linalg.inv(Q)
+
+# Solve via dual ascent on multiplier lambda >= 0
+lam = 0.0
+lr = 0.1
+for _ in range(120):
+    x_opt = Q_inv @ (c - lam * A)
+    lam = max(0.0, lam + lr * (A @ x_opt - b))
+
+# Reconstruct primal solution and evaluate duality gap
+x_star = Q_inv @ (c - lam * A)
+primal_obj = 0.5 * x_star @ Q @ x_star - c @ x_star
+dual_obj = -0.5 * (c - lam * A) @ Q_inv @ (c - lam * A) - lam * b
+gap = abs(primal_obj - dual_obj)
+
+print(f"Primal optimal x*: {x_star.round(4)}")
+print(f"Optimal dual multiplier lambda*: {lam:.4f}")
+print(f"Constraint value A x - b: {(A @ x_star - b):.6f}")
+print(f"Primal objective: {primal_obj:.4f}")
+print(f"Dual objective: {dual_obj:.4f}")
+print(f"Duality gap: {gap:.6f}")`,
+    pitfalls: [
+      r`Assuming all machine learning problems are convex: Deep neural networks, matrix factorisation with missing values, and clustering are highly non-convex, meaning duality gaps may remain non-zero and gradient descent can stall in local minima.`,
+      r`Failure of strong duality: Without constraint qualifications like Slater's condition, the dual bound can strictly underestimate the primal optimum ($d^* < p^*$), leaving a stubborn duality gap.`,
+      r`Unbounded dual functions: If the primal Lagrangian has no lower bound with respect to $x$ for certain multiplier values, the dual function evaluates to $-\\infty$. Enforcing dual domain constraints is essential when deriving analytical duals.`,
+      r`Non-unique dual solutions: Even when the primal problem has a unique strictly convex minimiser, the dual problem can have multiple equivalent multiplier configurations if constraints are linearly dependent.`,
+    ],
+    keyPoints: [
+      r`In convex optimisation, any local minimum is guaranteed to be a global minimum.`,
+      r`The Lagrange dual function $g(\\lambda, \\nu)$ is always concave, making the dual problem convex regardless of primal convexity.`,
+      r`Weak duality ($d^* \\le p^*$) always holds; strong duality ($d^* = p^*$) holds when Slater's condition is satisfied.`,
+      r`The duality gap $f_0(x) - g(\\lambda, \\nu)$ provides a computable, certified bound on how close an iterate is to the global optimum.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the most important operational advantage of a strictly convex optimisation problem over a non-convex one?`,
+        o: [
+          r`Convex problems do not require derivative calculations`,
+          r`Convex problems can only be solved using linear programming`,
+          r`The optimal solution is always located at the origin ($x=0$)`,
+          r`Any local minimum is guaranteed to be the global minimum, eliminating entrapment in suboptimal local valleys`,
+        ],
+        a: 3,
+        why: r`In a convex function, all sub-level sets are convex. If a point satisfies the zero-gradient condition $\\nabla f(x) = 0$, the geometry guarantees that no other point in the domain can achieve a strictly lower objective value.`,
+      },
+      {
+        q: r`What is always true about the Lagrange dual function $g(\\lambda, \\nu) = \\inf_x L(x, \\lambda, \\nu)$?`,
+        o: [
+          r`It is concave with respect to the dual variables $(\\lambda, \\nu)$, even if the original primal problem is non-convex`,
+          r`It is strictly convex with respect to $x$`,
+          r`It always equals zero at the optimal point`,
+          r`It is non-differentiable at all interior points`,
+        ],
+        a: 0,
+        why: r`The dual function is the pointwise infimum of a family of affine functions of $(\\lambda, \\nu)$. Because affine functions are concave and the pointwise infimum of concave functions is always concave, $g(\\lambda, \\nu)$ is concave.`,
+      },
+      {
+        q: r`What does Slater's condition require in order to guarantee strong duality ($p^* = d^*$) for a convex optimisation problem?`,
+        o: [
+          r`The objective function must be linear`,
+          r`There must exist at least one strictly feasible point satisfying all inequality constraints with strict inequality ($f_i(x) < 0$)`,
+          r`All Lagrange multipliers must be strictly equal to 1.0`,
+          r`The sample size must exceed the number of features by a factor of ten`,
+        ],
+        a: 1,
+        why: r`Slater's condition is a standard constraint qualification. For convex problems, the existence of a strictly feasible point in the interior of the constraint set guarantees that strong duality holds with a zero duality gap.`,
+      },
+      {
+        q: r`What is the duality gap in an optimisation algorithm, and how is it used in practice?`,
+        o: [
+          r`The difference between training and test loss used for early stopping`,
+          r`The difference between the eigenvalues of the Hessian matrix`,
+          r`The difference between the primal objective $f_0(x)$ and the dual objective $g(\\lambda, \\nu)$, providing a verified stopping criterion`,
+          r`The distance between the initial guess and the final iterate`,
+        ],
+        a: 2,
+        why: r`Because weak duality guarantees $g(\\lambda, \\nu) \\le p^* \\le f_0(x)$, the gap $f_0(x) - g(\\lambda, \\nu)$ bounds the maximum possible error of the current primal solution from true optimality, providing a rigorous stopping criterion.`,
+      },
+    ],
+    usedBy: ['support_vector_classifier', 'ridge_regression', 'lasso_regression'],
+    prereq: ['gradient-descent', 'quasi-newton-and-lbfgs'],
+    related: ['lagrange-multipliers-and-kkt-conditions', 'support_vector_classifier', 'gradient-descent'],
+    keywords: 'convex optimisation duality lagrangian dual function slaters condition duality gap primal dual strong duality',
+  },
+  {
+    id: 'lagrange-multipliers-and-kkt-conditions',
+    short: 'Lagrange & KKT conditions',
+    title: 'Lagrange Multipliers and KKT Conditions',
+    task: 'concepts',
+    module: 'Optimisation',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Mathematical conditions for constrained optimisation, extending Lagrange multipliers to inequality constraints via the Karush–Kuhn–Tucker conditions.`,
+    lead: r`Constrained optimisation problems govern much of machine learning, from Support Vector Machines maximising geometric margins to LASSO shrinking coefficients within an $\\ell_1$ budget. Lagrange multipliers provide the analytical machinery to handle equality constraints by balancing objective gradients against constraint normals. The Karush–Kuhn–Tucker (KKT) conditions extend this principle to inequality constraints, providing necessary (and often sufficient) conditions that identify active constraints and optimal solutions.`,
+    intuition: [
+      r`Imagine rolling a marble down a smooth, bowl-shaped wooden track. If the track has no barriers, the marble rolls straight down to the bottom where the surface is flat (gradient equals zero). Now place a stiff circular fence on the slope. The marble rolls downhill until it collides with the fence and comes to a dead stop. At that resting point, gravity is still pulling the marble downward, but the fence pushes back with an equal and opposite force perpendicular to the barrier.`,
+      r`This physical balance illustrates the Lagrange multiplier. The gradient of the objective function $\\nabla f_0(x)$ represents the downhill pull of gravity. The gradient of the constraint boundary $\\nabla h(x)$ represents the normal force exerted by the fence. At the constrained optimum, these two vectors must align in opposite directions: $\\nabla f_0(x^*) + \\nu^* \\nabla h(x^*) = 0$. The scalar multiplier $\\nu^*$ measures the exact intensity of force the constraint fence exerts to keep the marble in place.`,
+      r`When constraints are inequalities ($f_i(x) \\le 0$), a new question arises: does the marble hit the fence, or does it settle naturally in the interior before reaching it? This is governed by complementary slackness: $\\lambda_i^* f_i(x^*) = 0$. If the unconstrained minimum lies inside the fenced area ($f_i(x^*) < 0$), the fence is inactive and exerts zero force ($\\lambda_i^* = 0$). If the marble is pressed against the fence ($f_i(x^*) = 0$), the fence is active and exerts positive resistance ($\\lambda_i^* > 0$). In Support Vector Machines, this simple condition determines which data points become support vectors.`,
+    ],
+    analogy: r`A dog resting on a lead: if the dog sits inside the yard, the lead is slack and exerts zero tension; if the dog tries to run past the gate, the lead pulls taut with positive tension exactly counteracting the dog's forward momentum.`,
+    steps: [
+      r`Formulate the constrained problem: minimise objective $f_0(x)$ subject to inequality constraints $f_i(x) \\le 0$ ($i=1,\\dots,m$) and equality constraints $h_j(x) = 0$ ($j=1,\\dots,p$).`,
+      r`Construct the Lagrangian: $L(x, \\lambda, \\nu) = f_0(x) + \\sum_{i=1}^m \\lambda_i f_i(x) + \\sum_{j=1}^p \\nu_j h_j(x)$.`,
+      r`Check Stationarity: set the gradient with respect to $x$ to zero: $\\nabla_x L(x^*, \\lambda^*, \\nu^*) = \\nabla f_0(x^*) + \\sum \\lambda_i^* \\nabla f_i(x^*) + \\sum \\nu_j^* \\nabla h_j(x^*) = 0$.`,
+      r`Enforce Primal Feasibility: verify all constraints are satisfied: $f_i(x^*) \\le 0$ and $h_j(x^*) = 0$.`,
+      r`Enforce Dual Feasibility: ensure inequality multipliers are non-negative: $\\lambda_i^* \\ge 0$.`,
+      r`Enforce Complementary Slackness: verify $\\lambda_i^* f_i(x^*) = 0$ for each inequality constraint, separating active constraints ($\\lambda_i^* > 0, f_i(x^*) = 0$) from inactive ones ($\\lambda_i^* = 0, f_i(x^*) < 0$).`,
+    ],
+    math: [
+      {
+        h: 'The four Karush–Kuhn–Tucker (KKT) conditions',
+        tex: r`$$\\begin{aligned}
+\\text{1. Stationarity:} & \\quad \\nabla f_0(x^*) + \\sum_{i=1}^m \\lambda_i^* \\nabla f_i(x^*) + \\sum_{j=1}^p \\nu_j^* \\nabla h_j(x^*) = 0 \\\\
+\\text{2. Primal Feasibility:} & \\quad f_i(x^*) \\le 0 \\quad (\\forall i), \qquad h_j(x^*) = 0 \\quad (\\forall j) \\\\
+\\text{3. Dual Feasibility:} & \\quad \\lambda_i^* \\ge 0 \\quad (\\forall i) \\\\
+\\text{4. Complementary Slackness:} & \\quad \\lambda_i^* f_i(x^*) = 0 \\quad (\\forall i)
+\\end{aligned}$$`,
+        p: r`For any optimisation problem with zero duality gap, any pair of primal and dual optimal points $(x^*, \\lambda^*, \\nu^*)$ must satisfy these four conditions. If the primal problem is convex, the KKT conditions are both necessary and sufficient for global optimality.`,
+      },
+      {
+        h: 'Geometric interpretation of stationarity',
+        tex: r`$$-\\nabla f_0(x^*) = \\sum_{i \in \\mathcal{A}} \\lambda_i^* \\nabla f_i(x^*) + \\sum_{j=1}^p \\nu_j^* \\nabla h_j(x^*)$$`,
+        p: r`where $\\mathcal{A} = \\{i : f_i(x^*) = 0\\}$ is the active constraint set. The negative gradient of the objective (the direction of steepest descent) lies inside the cone spanned by the outward normal vectors of the active constraints.`,
+      },
+      {
+        h: 'Complementary slackness in Support Vector Machines',
+        tex: r`$$\\alpha_i^* \\big(y_i(w^T x_i + b) - 1\\big) = 0$$`,
+        p: r`If a training point lies strictly outside the margin ($y_i(w^T x_i + b) > 1$), its multiplier $\\alpha_i^* = 0$, meaning the point exerts no influence on the decision boundary. Only points lying directly on the margin boundary have $\\alpha_i^* > 0$, forming the sparse set of support vectors.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Problem: min 0.5 * ||x - x0||^2 subject to a^T x <= b (halfspace projection)
+x0 = np.array([3.0, 4.0])
+a = np.array([1.0, 2.0])
+b = 5.0
+
+# Check unconstrained violation: a^T x0 - b
+viol = a @ x0 - b  # 3*1 + 4*2 - 5 = 6 > 0 (infeasible)
+if viol <= 0:
+    x_star = x0
+    lam_star = 0.0
+else:
+    # Active constraint: lam = (a^T x0 - b) / ||a||^2
+    lam_star = viol / np.sum(a ** 2)
+    x_star = x0 - lam_star * a
+
+# Verify the 4 KKT conditions
+grad_L = (x_star - x0) + lam_star * a       # 1. Stationarity (~ 0)
+primal_feas = a @ x_star - b <= 1e-9        # 2. Primal feasibility
+dual_feas = lam_star >= 0.0                 # 3. Dual feasibility
+comp_slack = lam_star * (a @ x_star - b)    # 4. Complementary slackness (~ 0)
+
+print(f"Unconstrained point: {x0}")
+print(f"Optimal constrained point x*: {x_star.round(4)}")
+print(f"Lagrange multiplier lambda*: {lam_star:.4f}")
+print(f"1. Stationarity norm: {np.linalg.norm(grad_L):.6f}")
+print(f"2. Primal feasible: {primal_feas}")
+print(f"3. Dual feasible: {dual_feas}")
+print(f"4. Complementary slackness: {comp_slack:.6f}")`,
+    pitfalls: [
+      r`Neglecting dual feasibility sign ($\\lambda_i \\ge 0$): For inequality constraints $f_i(x) \\le 0$, $\\lambda_i$ must be non-negative. A negative $\\lambda_i$ means the constraint is pulling the solution into the forbidden region rather than repelling it.`,
+      r`Assuming KKT is sufficient for non-convex problems: In non-convex optimisation, points satisfying the KKT conditions can be saddle points, local maxima, or suboptimal local minima. Sufficiency requires convexity of the objective and constraint functions.`,
+      r`Ignoring constraint qualification failure: When gradients of active constraints are linearly dependent at the optimum (such as touching tangent constraints), the standard KKT conditions may fail to hold even at the true global minimum.`,
+      r`Misinterpreting inactive constraints: An inactive constraint ($f_i(x^*) < 0$) has $\\lambda_i^* = 0$, meaning removing that constraint entirely leaves the optimal solution unchanged.`,
+    ],
+    keyPoints: [
+      r`Stationarity balances objective gradients against the linear combination of active constraint gradients.`,
+      r`Complementary slackness ($\\lambda_i^* f_i(x^*) = 0$) guarantees that non-binding constraints exert zero force on the optimal solution.`,
+      r`For convex optimisation problems satisfying Slater's condition, the KKT conditions are both necessary and sufficient for global optimality.`,
+      r`Forms the core mathematical justification for support vectors in SVMs, lasso sparsity, and barrier/interior-point algorithms.`,
+    ],
+    quiz: [
+      {
+        q: r`What does the complementary slackness condition $\\lambda_i^* f_i(x^*) = 0$ signify about an inequality constraint $f_i(x) \\le 0$?`,
+        o: [
+          r`The objective function must evaluate to zero at the optimal point`,
+          r`Either the constraint is active ($f_i(x^*) = 0$) with a non-negative multiplier, or the constraint is strictly inactive ($f_i(x^*) < 0$) and its multiplier is zero`,
+          r`All data points must be equidistant from the decision boundary`,
+          r`The Lagrange multiplier must equal the value of the objective function`,
+        ],
+        a: 1,
+        why: r`Complementary slackness dictates that if a point lies in the strict interior of the feasible region ($f_i(x^*) < 0$), the constraint imposes no restriction and $\\lambda_i^* = 0$. If $\\lambda_i^* > 0$, the point must lie precisely on the boundary fence ($f_i(x^*) = 0$).`,
+      },
+      {
+        q: r`Why are the KKT conditions both necessary AND sufficient for global optimality in convex problems, but only necessary in general problems?`,
+        o: [
+          r`Because non-convex problems do not have gradient vectors`,
+          r`Because non-convex problems cannot have equality constraints`,
+          r`In convex problems, any stationary point of the Lagrangian is guaranteed to be a global minimum with no deceptive local valleys`,
+          r`Because convexity guarantees that all Lagrange multipliers are equal to 1.0`,
+        ],
+        a: 2,
+        why: r`For convex functions, zero gradient implies a global minimum. When paired with constraint qualifications, any point satisfying the KKT conditions is certified to be the global optimum. In non-convex problems, KKT points can be local minima, local maxima, or saddle points.`,
+      },
+      {
+        q: r`In a Support Vector Machine, how does complementary slackness explain why only a small subset of training points become support vectors?`,
+        o: [
+          r`Points correctly classified beyond the margin satisfy $y_i(w^T x_i + b) > 1$, forcing their dual multiplier $\\alpha_i = 0$ so they do not affect the hyperplane`,
+          r`Points beyond the margin are deleted during data pre-processing`,
+          r`SVMs only compute gradients for the first ten training instances`,
+          r`The kernel trick converts all non-margin points into imaginary numbers`,
+        ],
+        a: 0,
+        why: r`The margin constraint is $1 - y_i(w^T x_i + b) \\le 0$. For any point strictly beyond the margin, $1 - y_i(w^T x_i + b) < 0$. By complementary slackness $\\alpha_i (1 - y_i(w^T x_i + b)) = 0$, the multiplier $\\alpha_i$ must be zero, leaving only boundary points with $\\alpha_i > 0$ as support vectors.`,
+      },
+      {
+        q: r`What does the magnitude of a Lagrange multiplier $\\lambda_i^*$ represent from an economic or sensitivity perspective?`,
+        o: [
+          r`The percentage of training iterations required for convergence`,
+          r`The probability that the constraint will be violated in test data`,
+          r`The curvature of the objective function along the principal axis`,
+          r`The shadow price: the rate of change in the optimal objective value with respect to relaxing the constraint boundary ($\\partial p^* / \\partial b_i = -\\lambda_i^*$)`,
+        ],
+        a: 3,
+        why: r`In sensitivity analysis, $\\lambda_i^*$ measures how much the optimal objective value improves if the $i$-th constraint is relaxed by an infinitesimal amount: $\\frac{\\partial p^*}{\\partial b_i} = -\\lambda_i^*$. It represents the marginal cost of the constraint.`,
+      },
+    ],
+    usedBy: ['support_vector_classifier'],
+    prereq: ['convex-optimisation-and-duality', 'gradient-descent'],
+    related: ['convex-optimisation-and-duality', 'support_vector_classifier', 'quasi-newton-and-lbfgs'],
+    keywords: 'lagrange multipliers kkt conditions karush kuhn tucker complementary slackness stationarity constrained optimisation support vectors',
+  },
 ];
