@@ -1847,4 +1847,858 @@ print(f"  F1 Score:        {metrics['f1'] * 100:.1f}%")
     related: ['part-of-speech-tagging', 'dependency-parsing', 'word-and-sentence-tokenization'],
     keywords: 'named entity recognition ner iob bio iob2 bioes sequence labelling information extraction conll span f1 bilstm crf token classification',
   },
+
+// ------------------------------------------------------------------ 1. Distributional semantics
+  {
+    id: 'distributional-semantics',
+    short: 'Distributional Semantics',
+    title: 'Distributional semantics',
+    task: 'concepts',
+    module: '3 · Meaning',
+    level: 2,
+    minutes: 15,
+    noLab: true,
+    summary: r`Distributional semantics is the theoretical and computational foundation of modern lexical representation. Rooted in J.R. Firth's famous 1957 maxim—"You shall know a word by the company it keeps"—the distributional hypothesis posits that words occurring in similar linguistic contexts possess similar semantic meanings. By counting word co-occurrences in sliding symmetric windows, applying statistical association metrics like Positive Pointwise Mutual Information (PPMI), and evaluating geometric distance via cosine similarity, distributional models transform discrete linguistic tokens into continuous vector spaces.`,
+    lead: r`If you encounter an invented English word like "roozle" in the sentences "She poured a chilled glass of fresh roozle", "He sliced the ripe roozle into quarters", and "The tart citrus scent of roozle filled the kitchen", you immediately deduce what it is: a citrus fruit. You did not look it up in a dictionary; you inferred its semantic meaning purely from the surrounding context words ("glass", "poured", "sliced", "ripe", "citrus"). Distributional semantics formalises this human intuition into computational linear algebra.`,
+    intuition: [
+      r`The Distributional Hypothesis and contextual substitutability: Formalised by Zellig Harris and J.R. Firth in the 1950s, the distributional hypothesis states that the degree of semantic similarity between two words is an empirical function of the similarity of their contextual distributions. Words with high contextual overlap (such as "doctor" and "physician", or "cat" and "kitten") can frequently be substituted into the same sentence frames without violating grammatical or semantic validity.`,
+      r`From raw co-occurrence counts to statistical information: Counting raw co-occurrences in a text corpus introduces massive frequency distortion. High-frequency function words like "the", "of", and "is" appear adjacent to almost every word, dominating raw counts without conveying specific semantic information. Pointwise Mutual Information (PMI) resolves this by measuring the ratio between the observed joint probability of two words and their independent probability under random chance.`,
+      r`Geometric spaces and cosine similarity: When words are projected as vectors in a high-dimensional vocabulary space, semantic relatedness corresponds to spatial proximity. Rather than measuring Euclidean distance—which is heavily biased by absolute word frequency—distributional models measure the cosine of the angle between vectors. Normalising by Euclidean length ensures that frequent words and rare synonyms align in identical directional rays.`,
+    ],
+    analogy: r`Think of profiling people based on their social circles. If you want to know who someone is, you do not need to interrogate their inner psyche; you simply observe who they spend time with. If Alice spends her weekends rock-climbing with mountaineers, talking about carabiners and ropes, and Bob spends his weekends at the exact same climbing gym with the exact same people discussing harnesses and chalk, you can confidently conclude that Alice and Bob share a passion for rock climbing, even if Alice and Bob have never personally met. Distributional semantics profiles words by their textual companions: words that hang out with the same linguistic friends share the same underlying meaning.`,
+    steps: [
+      {
+        title: r`Define sliding symmetric context windows`,
+        desc: r`Establish a target token and collect adjacent context words within radius w.`,
+        detail: r`Scan the corpus sentence by sentence. For each target word w_i, extract all context words c within a symmetric window of radius w (e.g. w = 4 tokens to the left and right).`,
+      },
+      {
+        title: r`Construct sparse co-occurrence matrix`,
+        desc: r`Count occurrences of target-context word pairs across the entire text collection.`,
+        detail: r`Build a matrix C of size |V| x |V|, where C_{i, j} records how many times target word w_i appeared within the context window of context word c_j. Apply distance-weighted discounting (e.g. 1/d where d is distance) to give closer neighbours higher weight.`,
+      },
+      {
+        title: r`Calculate Pointwise Mutual Information (PMI)`,
+        desc: r`Quantify statistical association above chance expectation for each co-occurrence pair.`,
+        detail: r`Compute marginal probabilities P(w) and P(c) alongside joint probability P(w, c). Calculate PMI(w, c) = log2(P(w, c) / (P(w) * P(c))). Highly correlated pairs receive large positive scores; independent pairs score near zero.`,
+      },
+      {
+        title: r`Apply Positive PMI (PPMI) thresholding`,
+        desc: r`Truncate negative PMI values to zero to prevent uninformative sampling noise.`,
+        detail: r`Negative PMI values correspond to word pairs that co-occur less often than random chance, which is notoriously unreliable on finite text corpora. Truncate with PPMI(w, c) = max(0, PMI(w, c)) to retain only positive semantic associations.`,
+      },
+      {
+        title: r`Compute vector similarity across vocabulary terms`,
+        desc: r`Measure semantic relatedness using length-normalised cosine similarity.`,
+        detail: r`Represent each word as its PPMI row vector. For any query word, compute cosine similarity against all other vocabulary vectors to retrieve the nearest semantic neighbours.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Pointwise Mutual Information (PMI)`,
+        tex: r`\operatorname{PMI}(w, c) = \log_2 \frac{P(w, c)}{P(w) P(c)} = \log_2 \frac{C(w, c) \cdot N}{\sum_{c'} C(w, c') \cdot \sum_{w'} C(w', c)}`,
+        p: r`Here $C(w, c)$ is the co-occurrence count of target $w$ and context $c$, and $N = \sum_{w, c} C(w, c)$ is the total sum of all co-occurrences in the corpus. If $w$ and $c$ are completely independent, $P(w, c) = P(w)P(c)$ and $\operatorname{PMI} = 0$.`,
+      },
+      {
+        h: r`Positive Pointwise Mutual Information (PPMI)`,
+        tex: r`\operatorname{PPMI}(w, c) = \max \left( 0, \, \operatorname{PMI}(w, c) \right)`,
+        p: r`Because negative PMI values are dominated by statistical noise on rare words with insufficient observation counts, PPMI clamps all negative values to zero, producing a non-negative sparse representation.`,
+      },
+      {
+        h: r`Directional cosine similarity in vector space`,
+        tex: r`\cos(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^d u_i v_i}{\sqrt{\sum_{i=1}^d u_i^2} \sqrt{\sum_{i=1}^d v_i^2}}`,
+        p: r`Cosine similarity measures the angular alignment between two word vectors on the unit hypersphere, decoupling semantic orientation from raw term frequency magnitude.`,
+      },
+    ],
+    keyPoints: [
+      r`The distributional hypothesis asserts that words occurring in similar textual contexts possess similar semantic meanings.`,
+      r`Raw co-occurrence counts are heavily distorted by ubiquitous function words; Pointwise Mutual Information (PMI) normalises against random expectation.`,
+      r`Positive PMI (PPMI) clips uninformative negative associations to zero, yielding robust non-negative semantic vectors.`,
+      r`Cosine similarity measures semantic proximity as angular alignment, preventing document length or word frequency from skewing comparisons.`,
+      r`While PPMI matrices capture rich lexical meaning, their extreme sparsity and high dimensionality (|V| x |V|) motivate dense dimensionality reduction techniques.`,
+    ],
+    pitfalls: [
+      r`Rare-word bias in raw PMI: Very rare words that happen to co-occur once receive artificially gigantic PMI scores because P(w) and P(c) in the denominator are minuscule. Mitigate using smoothed context marginal distributions: P_alpha(c) proportional to P(c)^0.75.`,
+      r`Selecting inappropriate context window sizes: Small context windows (w = 1 to 2) capture tight syntactic relations (adjective-noun, verb-object); large context windows (w = 8 to 15) capture broad topical/domain associations. Choose window size deliberately based on task.`,
+      r`Conflating antonyms with non-synonyms: Because antonyms like "hot" and "cold" or "large" and "small" share almost identical contexts, distributional models score them with high cosine similarity. Distributional similarity reflects relatedness, not necessarily identical polarity.`,
+      r`Extreme memory consumption on raw matrices: A vocabulary of 100,000 words produces a 100,000 x 100,000 matrix with 10 billion cells. Always store co-occurrence counts using sparse matrix formats (such as CSR).`,
+    ],
+    code: r`import math
+import re
+from collections import defaultdict, Counter
+
+class DistributionalSemantics:
+    """
+    Co-occurrence matrix builder and PPMI calculator
+    for distributional word vectors and cosine similarity.
+    """
+    def __init__(self, window_size=2):
+        self.window_size = window_size
+        self.vocab = set()
+        self.cooccur = defaultdict(Counter)
+        self.word_counts = Counter()
+        self.total_pairs = 0
+        self.ppmi_vectors = defaultdict(dict)
+
+    def _tokenize(self, text):
+        return [w.lower() for w in re.findall(r'\b[a-zA-Z]+\b', text)]
+
+    def fit(self, corpus):
+        # Count co-occurrences in sliding symmetric window
+        for sentence in corpus:
+            tokens = self._tokenize(sentence)
+            for i, target in enumerate(tokens):
+                self.vocab.add(target)
+                self.word_counts[target] += 1
+                
+                start = max(0, i - self.window_size)
+                end = min(len(tokens), i + self.window_size + 1)
+                
+                for j in range(start, end):
+                    if i != j:
+                        ctx = tokens[j]
+                        self.cooccur[target][ctx] += 1
+                        self.total_pairs += 1
+                        
+        self._compute_ppmi()
+
+    def _compute_ppmi(self):
+        # Marginal context sums
+        context_totals = Counter()
+        for target, contexts in self.cooccur.items():
+            for ctx, count in contexts.items():
+                context_totals[ctx] += count
+
+        N = self.total_pairs
+        for target, contexts in self.cooccur.items():
+            target_total = sum(contexts.values())
+            for ctx, count in contexts.items():
+                # Joint and independent probabilities
+                p_wc = count / N
+                p_w = target_total / N
+                p_c = context_totals[ctx] / N
+                
+                pmi = math.log2(p_wc / (p_w * p_c))
+                ppmi = max(0.0, pmi)
+                if ppmi > 0.0:
+                    self.ppmi_vectors[target][ctx] = ppmi
+
+    def cosine_similarity(self, word1, word2):
+        v1 = self.ppmi_vectors.get(word1.lower(), {})
+        v2 = self.ppmi_vectors.get(word2.lower(), {})
+        
+        if not v1 or not v2:
+            return 0.0
+            
+        # Sparse dot product
+        common_keys = set(v1.keys()) & set(v2.keys())
+        dot = sum(v1[k] * v2[k] for k in common_keys)
+        
+        norm1 = math.sqrt(sum(val ** 2 for val in v1.values()))
+        norm2 = math.sqrt(sum(val ** 2 for val in v2.values()))
+        
+        if norm1 == 0.0 or norm2 == 0.0:
+            return 0.0
+            
+        return dot / (norm1 * norm2)
+
+# Training corpus with distinct semantic domains (drinks vs animals)
+corpus = [
+    "She poured a chilled glass of fresh orange juice into the cup",
+    "He drank a hot mug of black tea and sweet coffee in the morning",
+    "Cold juice and warm tea are delicious refreshing drinks",
+    "The domestic cat chased the small brown mouse across the garden",
+    "A hungry dog barked at the swift cat near the wooden fence",
+    "The lively puppy played with the clever dog in the backyard"
+]
+
+model = DistributionalSemantics(window_size=2)
+model.fit(corpus)
+
+print(f"Vocabulary size: {len(model.vocab)} words")
+print(f"Total co-occurrence events: {model.total_pairs}")
+
+pairs = [
+    ("juice", "tea"),     # High semantic similarity (drinks)
+    ("cat", "dog"),       # High semantic similarity (pets)
+    ("juice", "dog"),     # Unrelated (drink vs pet)
+    ("coffee", "tea")     # High semantic similarity (beverages)
+]
+
+print("\nDistributional Cosine Similarities (PPMI):")
+for w1, w2 in pairs:
+    sim = model.cosine_similarity(w1, w2)
+    print(f"  Similarity('{w1}', '{w2}'): {sim:.4f}")
+`,
+    quiz: [
+      {
+        q: r`What is the foundational premise of the Distributional Hypothesis formulated by J.R. Firth and Zellig Harris?`,
+        o: [
+          r`Words that occur in similar linguistic contexts possess similar semantic meanings`,
+          r`Every word in a language can be mapped to an integer ASCII code`,
+          r`Grammar rules must be manually hand-crafted by lexicographers`,
+          r`Word meaning is entirely independent of neighbouring tokens`,
+        ],
+        a: 0,
+        why: r`Firth's principle—"You shall know a word by the company it keeps"—establishes that contextual co-occurrence distributions reflect underlying lexical meaning, allowing models to learn semantic representations from raw text.`,
+      },
+      {
+        q: r`Why is Positive Pointwise Mutual Information (PPMI) preferred over raw Pointwise Mutual Information (PMI)?`,
+        o: [
+          r`Because negative PMI values are dominated by statistical sampling noise on rare words that co-occur less than random chance on finite text corpora`,
+          r`Because computers cannot compute negative numbers`,
+          r`Because PPMI doubles the vocabulary size`,
+          r`Because raw PMI requires quadratic memory while PPMI requires linear memory`,
+        ],
+        a: 0,
+        why: r`Negative PMI arises when two words co-occur less frequently than expected under independence. On finite corpora, this often reflects lack of data rather than genuine semantic repulsion. Truncating negative values to zero produces a clean, stable representation.`,
+      },
+      {
+        q: r`Why does cosine similarity measure semantic relatedness more reliably than Euclidean distance between raw frequency vectors?`,
+        o: [
+          r`Cosine similarity normalises by vector length, ensuring that frequent words and rare synonyms pointing in the same direction are judged as highly similar despite disparate frequency magnitudes`,
+          r`Cosine similarity converts all negative vectors into positive scalars`,
+          r`Cosine similarity works only on square matrices`,
+          r`Euclidean distance can only be computed in two dimensions`,
+        ],
+        a: 0,
+        why: r`A frequent word like "car" might appear 10,000 times while its synonym "automobile" appears 50 times. Their Euclidean distance is huge due to frequency scale differences. Cosine similarity evaluates the angle between vectors, measuring contextual distribution shape rather than absolute volume.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bag-of-words-and-tf-idf', 'stop-words-and-n-grams'],
+    related: ['bag-of-words-and-tf-idf', 'stop-words-and-n-grams', 'word-and-sentence-tokenization'],
+    keywords: 'distributional semantics firth harris ppmi pmi pointwise mutual information co-occurrence matrix cosine similarity vector space model embeddings',
+  },
+
+  // ------------------------------------------------------------------ 2. LSA and SVD for text
+  {
+    id: 'lsa-and-svd-for-text',
+    short: 'LSA & SVD for Text',
+    title: 'LSA and SVD for text',
+    task: 'concepts',
+    module: '3 · Meaning',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Latent Semantic Analysis (LSA), also known as Latent Semantic Indexing (LSI) in information retrieval, applies Truncated Singular Value Decomposition (SVD) to high-dimensional term-document or term-term matrices. By decomposing a sparse matrix into orthonormal singular vectors and singular values, LSA projects words and documents into a low-dimensional continuous latent semantic space. This rank reduction discovers hidden semantic topics, resolves synonymy by mapping distinct surface words to common latent dimensions, and mitigates the curse of dimensionality.`,
+    lead: r`Search for "physician" in a traditional keyword search engine, and you will miss every document that exclusively uses the word "doctor". Lexical matching fails because human language is plagued by synonymy (different words describing the exact same concept) and polysemy (one word possessing multiple meanings). Latent Semantic Analysis solves this by decomposing term-document matrices: it discovers the latent conceptual axes connecting vocabulary words, enabling documents to match search queries even when they share zero exact keywords.`,
+    intuition: [
+      r`The curse of sparse lexical matrices: In standard Bag of Words and TF-IDF representations, each word corresponds to an orthogonal basis axis. If a vocabulary contains 50,000 words, every document is a 50,000-dimensional vector. Because orthogonal vectors have zero dot product, "canine" and "dog" are mathematically as unrelated as "canine" and "refrigerator". We need a mathematical lens that compresses orthogonal lexical dimensions into dense semantic concepts.`,
+      r`Singular Value Decomposition as latent concept discovery: SVD factorises any rectangular matrix X into three constituent matrices: X = U * Sigma * V^T. The left singular vectors U define term loadings across latent concepts; the diagonal singular values Sigma rank the semantic importance and variance of each concept; and the right singular vectors V represent document coordinates along those same conceptual axes.`,
+      r`Low-rank truncation and noise filtering: The Eckart-Young-Mirsky theorem proves that keeping only the top k largest singular values produces the best possible rank-k approximation of the original matrix under Frobenius and spectral norms. Truncating to k dimensions (typically k = 100 to 300) discards idiosyncrasies and lexical noise, preserving global semantic correlations and merging synonymous words into shared topic coordinates.`,
+    ],
+    analogy: r`Imagine you are an astronomer mapping a distant star cluster. You have raw observations tracking the positions of 100,000 individual twinkling stars. When you plot them directly, the data is an overwhelming, noisy cloud of coordinates. SVD is like discovering the primary gravitational axes of rotation for the entire galaxy: instead of tracking 100,000 independent stars, you discover that 95% of their motion is governed by just three primary elliptical gravitational planes. By describing each star by its position along these three core planes (low-rank latent space), you filter out astronomical telescope jitter and immediately see the underlying spiral structure of the galaxy.`,
+    steps: [
+      {
+        title: r`Construct term-document matrix with TF-IDF weighting`,
+        desc: r`Build vocabulary matrix X of dimensions |V| x D and apply TF-IDF scaling.`,
+        detail: r`Tokenise all D documents and construct matrix X of shape |V| x D. Weight cells using TF-IDF or PPMI rather than raw frequencies to prevent ubiquitous terms from dominating variance.`,
+      },
+      {
+        title: r`Compute Singular Value Decomposition (SVD)`,
+        desc: r`Factorise the term-document matrix into left singular vectors, singular values, and right singular vectors.`,
+        detail: r`Decompose matrix X into U * Sigma * V^T, where U (|V| x |V|) and V (D x D) have orthonormal columns, and Sigma is a diagonal matrix of non-negative singular values sorted in descending order.`,
+      },
+      {
+        title: r`Truncate decomposition to top k latent dimensions`,
+        desc: r`Discard small singular values to produce optimal rank-k low-dimensional approximation.`,
+        detail: r`Select truncation rank k (typically k in [100, 300]). Retain the top k columns of U (U_k of shape |V| x k), the top k x k block of Sigma (Sigma_k), and the top k columns of V (V_k of shape D x k).`,
+      },
+      {
+        title: r`Derive dense term and document embeddings`,
+        desc: r`Scale singular vectors by singular values to produce dense vector representations.`,
+        detail: r`Term embeddings in latent semantic space are given by U_k * Sigma_k (or simply U_k). Document embeddings are given by V_k * Sigma_k. Dense vectors compress sparse word dimensions into continuous semantic coordinates.`,
+      },
+      {
+        title: r`Project novel queries into latent space for semantic retrieval`,
+        desc: r`Fold unseen query vectors into the k-dimensional latent coordinate frame.`,
+        detail: r`For a new query vector q of length |V|, project it into latent space via q_k = Sigma_k^{-1} * U_k^T * q. Rank documents by calculating cosine similarity between q_k and document vectors in V_k.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Singular Value Decomposition (SVD) matrix factorisation`,
+        tex: r`X = U \Sigma V^T`,
+        p: r`Here $X \in \mathbb{R}^{m \times n}$ is the term-document matrix ($m = |V|, n = D$), $U \in \mathbb{R}^{m \times m}$ contains orthonormal eigenvectors of $X X^T$, $V \in \mathbb{R}^{n \times n}$ contains orthonormal eigenvectors of $X^T X$, and $\Sigma \in \mathbb{R}^{m \times n}$ contains square roots of non-zero eigenvalues (singular values $\sigma_1 \ge \sigma_2 \ge \dots \ge 0$).`,
+      },
+      {
+        h: r`Optimal low-rank approximation (Eckart-Young-Mirsky Theorem)`,
+        tex: r`X_k = U_k \Sigma_k V_k^T = \arg\min_{\operatorname{rank}(A) \le k} \|X - A\|_F`,
+        p: r`Keeping the top $k$ singular values minimises the reconstruction error under the Frobenius norm $\|X - X_k\|_F = \sqrt{\sum_{i=k+1}^{\min(m, n)} \sigma_i^2}$, retaining maximal variance while discarding noise.`,
+      },
+      {
+        h: r`Query folding into latent semantic space`,
+        tex: r`\mathbf{q}_k = \Sigma_k^{-1} U_k^T \mathbf{q}`,
+        p: r`A new sparse query vector $\mathbf{q} \in \mathbb{R}^{|V|}$ is projected into the $k$-dimensional latent space by multiplying by $U_k^T$ and scaling by inverse singular values $\Sigma_k^{-1}$, allowing direct cosine comparison against precomputed document rows in $V_k$.`,
+      },
+    ],
+    keyPoints: [
+      r`Latent Semantic Analysis applies truncated SVD to compress sparse term-document matrices into low-dimensional semantic representations.`,
+      r`The Eckart-Young-Mirsky theorem guarantees that truncated SVD provides the mathematically optimal rank-k approximation under Frobenius and spectral norms.`,
+      r`LSA resolves synonymy: words with similar co-occurrence patterns map to shared coordinates along latent semantic axes.`,
+      r`Unseen queries are projected into the latent space via the fold-in equation q_k = Sigma_k^{-1} * U_k^T * q.`,
+      r`A core limitation of LSA is polysemy: each word receives a single linear vector that conflates disparate meanings (e.g. "bank" financial vs riverbank).`,
+    ],
+    pitfalls: [
+      r`Applying SVD to raw unweighted term counts: Raw word counts cause high-frequency stop words to dominate the primary singular vectors. Always weight matrices with TF-IDF or PPMI prior to SVD.`,
+      r`Full SVD computation on large vocabularies: Computing complete SVD takes O(min(m^2 n, m n^2)) time, which fails on millions of documents. Use randomized truncated SVD or iterative Krylov methods (such as Lanczos).`,
+      r`Choosing truncation rank k incorrectly: Setting k too small (e.g. k = 5) discards vital distinguishing topics; setting k too large (e.g. k = 5,000) retains noisy, ungeneralisable lexical variations. Optimal k typically falls between 100 and 300.`,
+      r`Interpretability challenges: Unlike non-negative matrix factorisation (NMF) or LDA where topics are strictly positive word probability distributions, SVD produces signed real numbers with arbitrary polarities that can be hard to interpret.`,
+    ],
+    code: r`import numpy as np
+import re
+from collections import Counter
+
+class LatentSemanticAnalysis:
+    """
+    Self-contained Latent Semantic Analysis (LSA) implementation
+    using TF-IDF term-document weighting and truncated SVD.
+    """
+    def __init__(self, k_components=2):
+        self.k = k_components
+        self.vocab = []
+        self.word2idx = {}
+        self.U_k = None
+        self.Sigma_k = None
+        self.V_k = None
+        self.doc_embeddings = None
+
+    def _tokenize(self, text):
+        return [w.lower() for w in re.findall(r'\b[a-zA-Z]+\b', text)]
+
+    def fit(self, corpus):
+        # 1. Build vocabulary
+        doc_tokens = [self._tokenize(doc) for doc in corpus]
+        all_words = sorted(list(set(w for tokens in doc_tokens for w in tokens)))
+        self.vocab = all_words
+        self.word2idx = {w: i for i, w in enumerate(self.vocab)}
+        
+        V = len(self.vocab)
+        D = len(corpus)
+        
+        # 2. Build TF-IDF Term-Document Matrix (V x D)
+        X = np.zeros((V, D), dtype=float)
+        
+        # Compute Document Frequencies
+        df = Counter()
+        for tokens in doc_tokens:
+            unique_in_doc = set(tokens)
+            for w in unique_in_doc:
+                df[w] += 1
+                
+        # Fill TF-IDF values
+        for d, tokens in enumerate(doc_tokens):
+            tf = Counter(tokens)
+            for w, count in tf.items():
+                row = self.word2idx[w]
+                # Log-normalized TF * Smooth IDF
+                tf_val = 1.0 + np.log(count)
+                idf_val = np.log((D + 1.0) / (df[w] + 1.0)) + 1.0
+                X[row, d] = tf_val * idf_val
+                
+        # 3. Truncated SVD via full SVD
+        # X = U * Sigma * V^T
+        U, s, Vt = np.linalg.svd(X, full_matrices=False)
+        
+        # Keep top k components
+        self.U_k = U[:, :self.k]             # (V x k)
+        self.Sigma_k = np.diag(s[:self.k])   # (k x k)
+        self.V_k = Vt[:self.k, :].T          # (D x k)
+        
+        # Latent document coordinates
+        self.doc_embeddings = self.V_k * s[:self.k]
+        
+    def transform_query(self, query):
+        """Fold new query into k-dimensional latent space."""
+        tokens = self._tokenize(query)
+        q_vec = np.zeros(len(self.vocab), dtype=float)
+        for w in tokens:
+            if w in self.word2idx:
+                q_vec[self.word2idx[w]] += 1.0
+                
+        # q_k = Sigma_k^{-1} * U_k^T * q
+        inv_sigma = np.linalg.inv(self.Sigma_k)
+        q_k = inv_sigma @ (self.U_k.T @ q_vec)
+        return q_k
+
+    def rank_documents(self, query):
+        q_k = self.transform_query(query)
+        q_norm = np.linalg.norm(q_k)
+        if q_norm == 0.0:
+            return [(d, 0.0) for d in range(len(self.doc_embeddings))]
+            
+        scores = []
+        for d_idx, d_vec in enumerate(self.doc_embeddings):
+            d_norm = np.linalg.norm(d_vec)
+            cos_sim = np.dot(q_k, d_vec) / (q_norm * d_norm) if d_norm > 0 else 0.0
+            scores.append((d_idx, float(cos_sim)))
+            
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores
+
+# Sample corpus: Machine learning vs Planetary astronomy
+documents = [
+    "Machine learning neural networks optimize loss functions with gradient descent.",
+    "Deep learning models recognize computer vision patterns and speech sequences.",
+    "Supervised learning algorithms predict continuous targets from labeled training sets.",
+    "Jupiter is a giant gas planet orbited by dozens of icy moons.",
+    "Mars has a thin atmosphere and robotic rovers exploring planetary craters.",
+    "Saturn possesses prominent planetary rings composed of water ice and cosmic dust."
+]
+
+lsa = LatentSemanticAnalysis(k_components=2)
+lsa.fit(documents)
+
+print(f"Matrix shape: {len(lsa.vocab)} terms x {len(documents)} documents")
+print(f"Truncated rank k: {lsa.k} latent dimensions")
+print(f"Top 2 singular values: {np.diag(lsa.Sigma_k)}")
+
+test_query = "planetary astronomy spacecraft"
+print(f"\nQuery: '{test_query}' (notice: words 'astronomy' and 'spacecraft' are out of vocabulary!)")
+rankings = lsa.rank_documents(test_query)
+for rank, (doc_idx, score) in enumerate(rankings[:3], 1):
+    print(f"  {rank}. [Similarity: {score:+.4f}] Doc {doc_idx}: '{documents[doc_idx]}'")
+`,
+    quiz: [
+      {
+        q: r`According to the Eckart-Young-Mirsky theorem, what property does truncated SVD guarantee for a matrix X?`,
+        o: [
+          r`It provides the mathematically optimal low-rank approximation of rank k under both Frobenius and spectral matrix norms`,
+          r`It guarantees that all negative matrix entries are converted into positive numbers`,
+          r`It guarantees that the resulting matrix is strictly upper triangular`,
+          r`It eliminates all non-zero singular values`,
+        ],
+        a: 0,
+        why: r`The Eckart-Young-Mirsky theorem proves that the rank-k matrix reconstructed by keeping the top k singular values achieves the minimum possible reconstruction error ||X - X_k|| under both Frobenius and operator norms.`,
+      },
+      {
+        q: r`How does Latent Semantic Analysis address the problem of synonymy in information retrieval?`,
+        o: [
+          r`By projecting words with similar contextual co-occurrence patterns into overlapping coordinates along dense latent semantic axes`,
+          r`By replacing every word with its literal dictionary definition`,
+          r`By forcing all words with the same prefix to have identical spellings`,
+          r`By clustering documents using Euclidean k-means`,
+        ],
+        a: 0,
+        why: r`Synonyms like "physician" and "doctor" co-occur with similar context words ("hospital", "patient", "cure"). SVD combines these co-occurrence correlations into shared latent singular vectors, giving synonyms similar continuous representations.`,
+      },
+      {
+        q: r`What is a major limitation of LSA when representing polysemous words (words with multiple distinct meanings)?`,
+        o: [
+          r`It assigns each surface word a single linear vector that averages across all its distinct senses, conflating disparate meanings into a single blended coordinate`,
+          r`It cannot process words that appear more than ten times`,
+          r`It requires all sentences to have identical character lengths`,
+          r`It causes the singular values to become complex imaginary numbers`,
+        ],
+        a: 0,
+        why: r`Because LSA assigns one static vector per vocabulary word, a word like "bank" has its financial sense and riverbank sense conflated into a single compromised vector positioned between financial and geographical concept clusters.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['distributional-semantics', 'bag-of-words-and-tf-idf'],
+    related: ['distributional-semantics', 'bag-of-words-and-tf-idf', 'pca'],
+    keywords: 'lsa latent semantic analysis lsi svd singular value decomposition eckart young mirsky truncated svd tf idf dimensional reduction synonymy polysemy',
+  },
+
+  // ------------------------------------------------------------------ 3. GloVe and FastText
+  {
+    id: 'glove-and-fasttext',
+    short: 'GloVe & FastText',
+    title: 'GloVe and FastText',
+    task: 'concepts',
+    module: '3 · Meaning',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`GloVe (Global Vectors for Word Representation) and FastText are the two dominant pre-neural and subword static embedding architectures in NLP. GloVe bridges the divide between global matrix factorisation (LSA) and local context window models (Word2Vec) by fitting log-bilinear word vectors directly to global co-occurrence probability ratios. FastText enriches word representations with character n-gram subwords, enabling robust handling of morphologically rich languages, rare vocabulary inflections, and out-of-vocabulary (OOV) tokens.`,
+    lead: r`Word2Vec revolutionized NLP by training shallow neural networks on sliding windows, but it suffered from two key limitations: it discarded global corpus statistics by processing individual context windows greedily, and it treated words as atomic, indivisible symbols. If a test document contained a slight spelling variation or rare morphological compound like "unquestionably", Word2Vec threw up its hands and returned an unknown token. GloVe solved the global statistical aggregation problem; FastText solved the subword morphology and out-of-vocabulary dilemma.`,
+    intuition: [
+      r`Ratios of co-occurrence probabilities encode relational meaning: Pennington, Socher, and Manning observed that semantic meaning is best captured not by raw co-occurrence counts, but by ratios of co-occurrence probabilities. Consider the target words "ice" and "steam" probed against context word k: for k = "solid", P(solid | ice) / P(solid | steam) is large; for k = "gas", the ratio is tiny; for k = "water" or k = "fashion", the ratio is near 1. Vector differences (w_ice - w_steam) dot-producted with w_k naturally model this log-probability ratio.`,
+      r`Weighted least squares and the dampening function: In a massive text corpus, co-occurrence counts range from 1 to millions. If all co-occurrences were weighted equally, frequent stop words ("the", "of") would dominate the loss function, while rare pairs would drown in noise. GloVe introduces a soft weighting function f(X_ij) = min(1, (X_ij / x_max)^0.75) that prevents stop words from dominating while avoiding over-weighting rare occurrences.`,
+      r`FastText and the power of subword morphology: In languages like German ("Donaudampfschiffahrtsgesellschaftskapitän"), Turkish, or Russian, words are built from rich agglutinative morphemes. FastText represents each word as the sum of its character n-grams bounded by special boundary symbols "<" and ">" (e.g. for "where" with n = 3: "<wh", "whe", "her", "ere", "re>"). When an unknown word is encountered at inference time, FastText simply sums the representations of its constituent subwords, yielding an accurate semantic embedding out of the box.`,
+    ],
+    analogy: r`Think of learning vocabulary like cooking. Word2Vec and GloVe treat every dish as an indivisible monolithic mystery: "beef stew" is a completely distinct entity from "lamb stew" or "stewed carrots". If someone orders "elk stew", the restaurant says "I have never heard of that dish; I cannot cook it" (out of vocabulary). FastText looks inside the recipe at the elemental ingredients: it knows what "elk" means as meat, and it knows the cooking technique of "stew". By assembling the subword ingredients, it can prepare and understand "elk stew" flawlessly even if it has never appeared on the menu before.`,
+    steps: [
+      {
+        title: r`Aggregate global co-occurrence statistics`,
+        desc: r`Construct the full vocabulary co-occurrence matrix X_ij from the entire corpus.`,
+        detail: r`Scan the text corpus with a symmetric context window (typically radius 10 with harmonic 1/d decay). Accumulate counts in a global sparse co-occurrence matrix X, where X_ij is the total co-occurrence count of word i and context j.`,
+      },
+      {
+        title: r`Apply GloVe weighted least squares optimisation`,
+        desc: r`Train word vectors w_i and context vectors w_j to predict log co-occurrences.`,
+        detail: r`Minimise the objective J = sum_{i, j} f(X_ij) * (w_i^T * w_j + b_i + b_j - ln(X_ij))^2 using AdaGrad. The weighting function f(X_ij) dampens frequent pairs using exponent alpha = 0.75 with ceiling x_max = 100.`,
+      },
+      {
+        title: r`Sum word and context vectors for GloVe embeddings`,
+        desc: r`Combine target and context representations to produce balanced final vectors.`,
+        detail: r`Because the co-occurrence matrix is symmetric (X_ij = X_ji), w and w_tilde are identical in expectation. Summing w_i + w_tilde_i yields the final d-dimensional GloVe word embedding with reduced variance.`,
+      },
+      {
+        title: r`Extract character n-grams for FastText representations`,
+        desc: r`Decompose each vocabulary word into boundary-bracketed character n-grams.`,
+        detail: r`Pad words with angle brackets '<' and '>'. Extract all character n-grams of length n in [3, 6] alongside the special whole-word token. Map n-grams to embedding rows using Fowler-Noll-Vo hash functions.`,
+      },
+      {
+        title: r`Compose word embeddings via subword summation`,
+        desc: r`Compute representations for known and out-of-vocabulary words by summing subword vectors.`,
+        detail: r`Represent any input word w as the vector sum v_w = sum_{g in G_w} z_g over all its constituent character n-grams. For unseen tokens, decompose into subwords and sum existing hash embeddings to achieve zero OOV rate.`,
+      },
+    ],
+    math: [
+      {
+        h: r`GloVe log-bilinear objective function`,
+        tex: r`J = \sum_{i=1}^V \sum_{j=1}^V f(X_{i, j}) \left( \mathbf{w}_i^T \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \ln X_{i, j} \right)^2`,
+        p: r`Here $\mathbf{w}_i, \tilde{\mathbf{w}}_j \in \mathbb{R}^d$ are word and context vectors, $b_i, \tilde{b}_j$ are scalar biases, and $X_{i, j}$ is the co-occurrence count between word $i$ and word $j$. The model fits inner products directly to the logarithm of co-occurrence probabilities.`,
+      },
+      {
+        h: r`GloVe co-occurrence weighting function`,
+        tex: r`f(x) = \begin{cases} \left( \frac{x}{x_{\max}} \right)^\alpha & \text{if } x < x_{\max} \\ 1 & \text{otherwise} \end{cases}`,
+        p: r`Hyperparameters are typically set to $\alpha = 0.75$ and $x_{\max} = 100$. The fractional power dampens high-frequency co-occurrences while ensuring non-zero gradients on rare co-occurrences.`,
+      },
+      {
+        h: r`FastText subword vector composition`,
+        tex: r`\mathbf{v}_w = \sum_{g \in \mathcal{G}_w} \mathbf{z}_g`,
+        p: r`Here $\mathcal{G}_w$ is the set of character $n$-grams present in word $w$ (including the whole word symbol $\langle w \rangle$), and $\mathbf{z}_g \in \mathbb{R}^d$ is the learned embedding for subword $g$. This additive formulation naturally produces embeddings for novel out-of-vocabulary words.`,
+      },
+    ],
+    keyPoints: [
+      r`GloVe fits a log-bilinear model to global co-occurrence probability ratios, uniting global matrix factorisation with local window methods.`,
+      r`GloVe uses a sublinear weighting function f(X_ij) = (X_ij / x_max)^0.75 to prevent ubiquitous stop words from dominating parameter updates.`,
+      r`Final GloVe embeddings are formed by averaging or summing the target vectors w and context vectors w_tilde.`,
+      r`FastText enriches token representations by decomposing words into character n-grams bounded by '<' and '>'.`,
+      r`FastText achieves zero Out-of-Vocabulary (OOV) rates by composing unseen words from their known constituent subword embeddings.`,
+    ],
+    pitfalls: [
+      r`Using GloVe without sufficient corpus scale: GloVe relies on dense, stable global co-occurrence statistics; training on small corpora (< 100 million tokens) produces noisy, unaligned embeddings. Use pretrained 6B, 42B, or 840B GloVe weights for small datasets.`,
+      r`Hash collisions in FastText subword tables: FastText maps millions of possible character n-grams into a fixed-size embedding table (typically 2 million buckets) via hashing. On very small tables, high collision rates degrade rare word representations.`,
+      r`Character n-gram range selection: Using n-grams that are too short (n = 2) captures noisy character pairs; using n-grams that are too long (n > 6) fails to generalise across morphological stems. Standard practice uses n in [3, 6].`,
+      r`Discarding whole-word tokens in FastText: FastText explicitly retains the full padded token '<word>' alongside its subwords. Discarding the full-word token prevents the model from capturing idiosyncratic non-compositional idioms.`,
+    ],
+    code: r`import math
+from collections import defaultdict, Counter
+
+class FastTextToy:
+    """
+    Subword character n-gram extraction and out-of-vocabulary
+    embedding composition demonstration.
+    """
+    def __init__(self, min_n=3, max_n=5, dim=8):
+        self.min_n = min_n
+        self.max_n = max_n
+        self.dim = dim
+        self.subword_embeddings = {}
+        
+    def _get_ngrams(self, word):
+        """Extract character n-grams bounded by < and >."""
+        padded = f"<{word}>"
+        ngrams = [padded]  # Include whole word
+        L = len(padded)
+        for n in range(self.min_n, min(self.max_n + 1, L)):
+            for i in range(L - n + 1):
+                ngrams.append(padded[i:i+n])
+        return ngrams
+
+    def train_mock(self, word_vector_dict):
+        """Simulate learned subword embeddings from known vocabulary."""
+        for word, target_vec in word_vector_dict.items():
+            ngrams = self._get_ngrams(word)
+            # Distribute mock vector across subwords
+            for g in ngrams:
+                if g not in self.subword_embeddings:
+                    # Deterministic hash-based mock initialization
+                    h = hash(g) % 1000
+                    self.subword_embeddings[g] = [
+                        math.sin(h + i) * 0.1 for i in range(self.dim)
+                    ]
+
+    def get_embedding(self, word):
+        """Compose embedding by summing constituent subword vectors."""
+        ngrams = self._get_ngrams(word)
+        vec = [0.0] * self.dim
+        found = 0
+        for g in ngrams:
+            if g in self.subword_embeddings:
+                for i in range(self.dim):
+                    vec[i] += self.subword_embeddings[g][i]
+                found += 1
+                
+        # Average subwords if found
+        if found > 0:
+            vec = [v / found for v in vec]
+        return vec
+
+def cosine_sim(v1, v2):
+    dot = sum(a * b for a, b in zip(v1, v2))
+    norm1 = math.sqrt(sum(a * a for a in v1))
+    norm2 = math.sqrt(sum(b * b for b in v2))
+    return dot / (norm1 * norm2) if norm1 > 0 and norm2 > 0 else 0.0
+
+# Initialize FastText toy model
+ft = FastTextToy(min_n=3, max_n=4, dim=8)
+
+# Known training vocabulary
+known_words = {
+    "play": [1.0] * 8,
+    "player": [1.0] * 8,
+    "playing": [1.0] * 8,
+    "playful": [1.0] * 8,
+    "work": [-1.0] * 8,
+    "worker": [-1.0] * 8,
+    "working": [-1.0] * 8
+}
+ft.train_mock(known_words)
+
+# Out-of-vocabulary word (never seen during training)
+oov_word = "playfully"
+known_subword_count = len([g for g in ft._get_ngrams(oov_word) if g in ft.subword_embeddings])
+
+print(f"Known training words: {list(known_words.keys())}")
+print(f"Testing OOV word: '{oov_word}'")
+print(f"Subwords in '{oov_word}': {ft._get_ngrams(oov_word)}")
+print(f"Matched known subwords: {known_subword_count} / {len(ft._get_ngrams(oov_word))}")
+
+v_oov = ft.get_embedding(oov_word)
+v_play = ft.get_embedding("playful")
+v_work = ft.get_embedding("worker")
+
+print(f"\nCosine similarity between OOV '{oov_word}' and 'playful': {cosine_sim(v_oov, v_play):+.4f}")
+print(f"Cosine similarity between OOV '{oov_word}' and 'worker':  {cosine_sim(v_oov, v_work):+.4f}")
+`,
+    quiz: [
+      {
+        q: r`What core mathematical insight motivated the design of the GloVe objective function?`,
+        o: [
+          r`Ratios of co-occurrence probabilities encode linear relational meaning and can be modelled as vector differences dot-producted with context vectors`,
+          r`Word vectors must always have strictly positive integer coefficients`,
+          r`Co-occurrence matrices should never be scaled logarithmically`,
+          r`The dot product of two words should equal the number of vowels they share`,
+        ],
+        a: 0,
+        why: r`Pennington et al. showed that the ratio P(k|w_i) / P(k|w_j) captures subtle semantic distinctions between words i and j. In log-space, this ratio corresponds to the difference between dot products (w_i - w_j)^T w_k, leading directly to the GloVe objective.`,
+      },
+      {
+        q: r`Why does FastText outperform standard Word2Vec and GloVe on morphologically rich languages like German, Turkish, and Finnish?`,
+        o: [
+          r`Because FastText decomposes words into character n-grams, enabling it to represent rare grammatical inflections and out-of-vocabulary compounds from shared subword roots`,
+          r`Because FastText eliminates the need for gradient descent`,
+          r`Because FastText trains exclusively on Wikipedia headlines`,
+          r`Because FastText uses 16-bit floating point precision on CPUs`,
+        ],
+        a: 0,
+        why: r`Word2Vec and GloVe assign one monolithic vector per word token. In agglutinative languages with millions of inflected verb and compound noun forms, words appear rarely in text. FastText shares embeddings across character n-grams, allowing morphological variants to share parameters.`,
+      },
+      {
+        q: r`What is the purpose of the weighting function f(X_ij) = (X_ij / x_max)^alpha in GloVe?`,
+        o: [
+          r`To prevent high-frequency stop words from dominating the squared error loss while still providing informative non-zero gradients on rare co-occurrences`,
+          r`To convert the loss into cross-entropy`,
+          r`To force all singular values to lie between 0 and 1`,
+          r`To ensure that sentences are read in reverse order`,
+        ],
+        a: 0,
+        why: r`Without weighting, extremely common pairs like ("the", "of") would account for the majority of the total squared error, causing the model to optimise solely for stop words. The sublinear curve (alpha = 0.75, capped at x_max) balances frequent and infrequent pairs.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['distributional-semantics', 'lsa-and-svd-for-text'],
+    related: ['distributional-semantics', 'lsa-and-svd-for-text', 'word-and-sentence-tokenization'],
+    keywords: 'glove fasttext word representation subword ngrams character ngrams pennington bojanowski out of vocabulary oov embeddings',
+  },
+
+  // ------------------------------------------------------------------ 4. Sentence embeddings and SBERT
+  {
+    id: 'sentence-embeddings-and-sbert',
+    short: 'Sentence Embeddings & SBERT',
+    title: 'Sentence embeddings and SBERT',
+    task: 'concepts',
+    module: '3 · Meaning',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Sentence-BERT (SBERT) uses a Siamese neural network architecture to produce semantically meaningful, fixed-size sentence embeddings from pretrained Transformer models. While raw BERT token representations suffer from severe representation collapse and anisotropy (where sentence embeddings cluster in a narrow cone with high average cosine similarity), SBERT fine-tunes BERT using pooling strategies and metric learning objectives over sentence pairs. This enables massive semantic similarity search, clustering, and retrieval in milliseconds rather than hours.`,
+    lead: r`Suppose you need to find the most similar sentence pair across a database of 10,000 documents. With a standard BERT cross-encoder—where two sentences are concatenated as "[CLS] A [SEP] B [SEP]"—you must evaluate 10,000 * 9,999 / 2 = 49,995,000 forward passes through a 12-layer Transformer. On a modern GPU, that takes roughly 65 hours. Sentence-BERT reduces this search time to 5 milliseconds: it maps each sentence independently to a dense vector, turning a combinatorial cross-attention problem into an instant vector index lookup.`,
+    intuition: [
+      r`The flaw of naive token pooling and representation collapse: If you pass a sentence through pretrained BERT and simply average all token hidden states (mean pooling), the resulting vector performs terribly on semantic textual similarity (often worse than GloVe!). Pretrained BERT embeddings suffer from anisotropy: token embeddings occupy a narrow cone in the vector space, causing unrelated sentences to have artificially high cosine similarities (e.g. 0.85). Fine-tuning with metric contrastive objectives is required to spread representations across the full hypersphere.`,
+      r`The Siamese network paradigm: SBERT passes sentence A and sentence B through two weight-sharing Transformer encoders. A pooling layer (typically mean pooling over non-padded tokens) condenses the variable-length token sequence into fixed-size sentence embeddings u and v. During training, u, v, and their absolute element-wise difference |u - v| are concatenated and fed to a 3-way softmax classifier (entailment, neutral, contradiction) on natural language inference datasets (SNLI, MultiNLI).`,
+      r`Cross-encoders vs Bi-encoders trade-off: A cross-encoder performs full cross-attention between every token in sentence A and every token in sentence B, achieving the highest possible accuracy at the cost of catastrophic O(N^2) evaluation latency. A bi-encoder (SBERT) encodes sentences independently, sacrificing token-level cross-attention for astronomical speedups: vectors can be precomputed, stored in vector databases (HNSW, FAISS), and queried with sub-millisecond cosine dot products.`,
+    ],
+    analogy: r`Imagine you run a fingerprint registry with 10 million records. A suspect's fingerprint arrives. A cross-encoder is like hiring a team of forensic scientists to sit down with a magnifying glass and compare the suspect's print ridge-by-ridge against every single one of the 10 million archive cards—one by one. It is extraordinarily accurate, but takes three weeks to answer. SBERT is like an automated digital scanner that converts every fingerprint into a unique 768-dimensional numerical barcode upon arrival. Comparing the suspect's barcode against 10 million precomputed barcodes takes 2 milliseconds on a server.`,
+    steps: [
+      {
+        title: r`Tokenise and encode sentence pairs through shared Transformer`,
+        desc: r`Pass sentence tokens through a Siamese pretrained Transformer (BERT or RoBERTa).`,
+        detail: r`Tokenise input sentences A and B with subword tokenisers. Pass them independently through the encoder to extract contextual token hidden representations H_A and H_B of shape (seq_len, hidden_dim).`,
+      },
+      {
+        title: r`Apply masked mean pooling over token embeddings`,
+        desc: r`Aggregate variable-length token vectors into fixed-size sentence vectors.`,
+        detail: r`Compute the mean of token embeddings while applying the attention mask: sum token vectors where mask = 1 and divide by total non-padded token count. This yields fixed-size vectors u, v in R^d.`,
+      },
+      {
+        title: r`Construct composite classification representation`,
+        desc: r`Concatenate sentence vectors with their absolute element-wise difference.`,
+        detail: r`Construct feature vector [u; v; |u - v|] of dimension 3d. The absolute difference |u - v| explicitly measures distance between corresponding semantic dimensions, giving the linear classifier powerful inductive signal.`,
+      },
+      {
+        title: r`Fine-tune on Natural Language Inference (NLI) pairs`,
+        desc: r`Train model parameters using cross-entropy loss over entailment, neutral, and contradiction.`,
+        detail: r`Project the 3d composite vector through a classification head: softmax(W * [u; v; |u - v|]). Optimise weights with AdamW over SNLI and MultiNLI sentence pairs to teach the latent space semantic entailment geometry.`,
+      },
+      {
+        title: r`Export sentence embeddings for fast vector retrieval`,
+        desc: r`Discard classification head and index single-sentence embeddings for cosine search.`,
+        detail: r`At inference time, remove the classification head. Encode corpus documents individually into vector representations and index them in a vector database. Queries are embedded and matched using cosine similarity in milliseconds.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Attention-masked mean pooling`,
+        tex: r`\mathbf{u} = \frac{\sum_{i=1}^L m_i \mathbf{h}_i}{\sum_{i=1}^L m_i}`,
+        p: r`Here $\mathbf{h}_i \in \mathbb{R}^d$ is the contextual output embedding for token $i$, $m_i \in \{0, 1\}$ is the attention mask indicator ($0$ for padding tokens, $1$ for real tokens), and $L$ is sequence length. Masked mean pooling aggregates tokens while ignoring padding.`,
+      },
+      {
+        h: r`SBERT NLI classification objective`,
+        tex: r`\mathbf{o} = \operatorname{softmax}\left( W \left[ \mathbf{u} \,;\, \mathbf{v} \,;\, |\mathbf{u} - \mathbf{v}| \right] + \mathbf{b} \right)`,
+        p: r`Here $\mathbf{u}, \mathbf{v} \in \mathbb{R}^d$ are pooled sentence embeddings, $|\mathbf{u} - \mathbf{v}|$ is the element-wise absolute difference vector, and $W \in \mathbb{R}^{3 \times 3d}$ projects the $3d$ concatenated vector to 3 NLI classes (contradiction, entailment, neutral).`,
+      },
+      {
+        h: r`Triplet margin loss for fine-tuning`,
+        tex: r`\mathcal{L}_{\text{triplet}} = \max\left( 0, \, \|\mathbf{s}_a - \mathbf{s}_p\|_2 - \|\mathbf{s}_a - \mathbf{s}_n\|_2 + \epsilon \right)`,
+        p: r`Given anchor sentence $\mathbf{s}_a$, positive sentence $\mathbf{s}_p$, and negative sentence $\mathbf{s}_n$, the triplet loss forces the anchor-positive distance to be smaller than the anchor-negative distance by at least margin $\epsilon > 0$.`,
+      },
+    ],
+    keyPoints: [
+      r`Sentence-BERT (SBERT) produces fixed-size sentence embeddings that can be compared using cosine similarity in sub-millisecond time.`,
+      r`Averaging raw un-fine-tuned BERT token embeddings performs poorly due to anisotropy, where vectors collapse into a narrow directional cone.`,
+      r`SBERT uses a Siamese network with attention-masked mean pooling, trained on NLI sentence pairs via the composite vector [u; v; |u - v|].`,
+      r`Cross-encoders provide superior accuracy but suffer from O(N^2) evaluation scaling; bi-encoders (SBERT) enable massive precomputed vector search.`,
+      r`Modern dense retrieval pipelines combine SBERT bi-encoders for initial candidate retrieval with cross-encoders for final reranking.`,
+    ],
+    pitfalls: [
+      r`Using the [CLS] token embedding without fine-tuning: In raw pretrained BERT, the [CLS] token is trained on Next Sentence Prediction (NSP), not sentence similarity; using it directly yields poor semantic embeddings compared to mean pooling.`,
+      r`Neglecting the attention mask during pooling: Naively averaging token vectors across a padded sequence includes zero-padding vectors, dragging the sentence embedding towards origin coordinates. Always mask padding tokens before averaging.`,
+      r`Relying on bi-encoders for complex logical reasoning: Bi-encoders cannot perform deep cross-attention between words in different sentences. For tasks requiring nuanced comparative reasoning (such as legal contract contradiction), use cross-encoder rerankers.`,
+      r`Ignoring sequence length truncation: Transformer encoders typically truncate inputs at 512 tokens. Passing multi-page documents directly to SBERT discards trailing sections; chunk long texts into smaller passages before embedding.`,
+    ],
+    code: r`import numpy as np
+
+class SBERTSimulator:
+    """
+    Simulation of SBERT masked mean pooling, composite feature construction,
+    and cosine similarity semantic search.
+    """
+    def __init__(self, hidden_dim=8):
+        self.hidden_dim = hidden_dim
+
+    def mean_pooling(self, token_embeddings, attention_mask):
+        """
+        Compute attention-masked mean pooling over token embeddings.
+        token_embeddings: (batch_size, seq_len, hidden_dim)
+        attention_mask: (batch_size, seq_len)
+        """
+        # Expand mask to match embedding dimension: (batch, seq_len, hidden_dim)
+        mask_expanded = np.expand_dims(attention_mask, axis=-1)
+        
+        # Zero out padding tokens
+        sum_embeddings = np.sum(token_embeddings * mask_expanded, axis=1)
+        sum_mask = np.clip(np.sum(mask_expanded, axis=1), a_min=1e-9, a_max=None)
+        
+        # Mean pooled sentence vector
+        return sum_embeddings / sum_mask
+
+    def construct_nli_features(self, u, v):
+        """
+        Construct SBERT classification vector: [u; v; |u - v|]
+        u, v: (batch_size, hidden_dim)
+        """
+        diff = np.abs(u - v)
+        return np.concatenate([u, v, diff], axis=-1)
+
+    def cosine_similarity(self, a, b):
+        dot = np.dot(a, b)
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        return dot / (norm_a * norm_b) if norm_a > 0 and norm_b > 0 else 0.0
+
+# Demonstrate Masked Mean Pooling
+sim = SBERTSimulator(hidden_dim=4)
+
+# 2 sentences: Sentence 1 has 3 tokens; Sentence 2 has 2 tokens (1 padding token)
+mock_token_embeddings = np.array([
+    [[1.0, 2.0, 3.0, 4.0], [2.0, 0.0, 1.0, 1.0], [0.0, 1.0, 2.0, 1.0]],   # Sent 1 (len 3)
+    [[3.0, 1.0, 0.0, 2.0], [1.0, 1.0, 2.0, 0.0], [0.0, 0.0, 0.0, 0.0]]    # Sent 2 (len 2 + pad)
+])
+
+mock_attention_mask = np.array([
+    [1, 1, 1],  # 3 real tokens
+    [1, 1, 0]   # 2 real tokens, 1 pad token
+])
+
+pooled_sentences = sim.mean_pooling(mock_token_embeddings, mock_attention_mask)
+
+print("Pooled Sentence Vectors (shape: batch x hidden_dim):")
+print(f"Sentence 1 pooled: {pooled_sentences[0]}")
+print(f"Sentence 2 pooled: {pooled_sentences[1]}")
+
+# Demonstrate Composite [u; v; |u - v|] feature
+composite_feat = sim.construct_nli_features(pooled_sentences[0:1], pooled_sentences[1:2])
+print(f"\nComposite NLI Feature shape: {composite_feat.shape} (dimension: 3 * {sim.hidden_dim} = 12)")
+print(f"Features [u; v; |u - v|]:\n{composite_feat[0]}")
+
+# Semantic Search Simulation across Document Database
+database_embeddings = {
+    "Doc 0: Deep learning models train on GPU clusters": np.array([0.9, 0.8, 0.1, 0.0]),
+    "Doc 1: Neural networks optimize parameters via gradient descent": np.array([0.85, 0.82, 0.15, 0.05]),
+    "Doc 2: The bakery bakes sourdough bread every dawn": np.array([0.05, 0.1, 0.9, 0.85])
+}
+
+query_embedding = np.array([0.88, 0.79, 0.12, 0.02])
+print("\nQuery: 'Machine learning training on hardware accelerators'")
+print("Cosine Similarity Search Results:")
+for title, emb in database_embeddings.items():
+    sim_score = sim.cosine_similarity(query_embedding, emb)
+    print(f"  {title:<65} -> Sim: {sim_score:.4f}")
+`,
+    quiz: [
+      {
+        q: r`Why does averaging raw, un-fine-tuned token embeddings from standard pretrained BERT perform poorly on Semantic Textual Similarity tasks?`,
+        o: [
+          r`Because raw BERT token representations suffer from anisotropy, collapsing into a narrow cone where unrelated sentences exhibit artificially high cosine similarity`,
+          r`Because raw BERT vectors only contain positive prime numbers`,
+          r`Because BERT can only process single words and cannot process full sentences`,
+          r`Because attention masks delete all nouns from the sentence`,
+        ],
+        a: 0,
+        why: r`Pretrained BERT token embeddings suffer from severe representation collapse and anisotropy: word representations occupy a narrow cone in the vector space, causing even completely unrelated sentences to have cosine similarities exceeding 0.80. Fine-tuning with contrastive metric learning spreads vectors across the hypersphere.`,
+      },
+      {
+        q: r`What was the primary computational advantage of Sentence-BERT (SBERT) over the standard BERT cross-encoder architecture?`,
+        o: [
+          r`SBERT maps sentences into independent fixed-size vectors, reducing pairwise search across N documents from O(N^2) combinatorial Transformer passes to sub-millisecond vector cosine comparisons`,
+          r`SBERT compresses neural network weights onto an 8-bit floppy disk`,
+          r`SBERT eliminates the need for tokenisation`,
+          r`SBERT trains in zero iterations using gradient-free regression`,
+        ],
+        a: 0,
+        why: r`Finding the most similar sentence pair among 10,000 sentences using a cross-encoder requires ~50 million forward passes (~65 hours of GPU compute). SBERT encodes each sentence once into an embedding, allowing 50 million comparisons in milliseconds via vector dot products.`,
+      },
+      {
+        q: r`In the SBERT NLI classification architecture, why are vectors concatenated as [u; v; |u - v|] instead of simply [u; v]?`,
+        o: [
+          r`The absolute difference |u - v| explicitly encodes element-wise distance across semantic dimensions, providing a strong inductive signal that highlights feature discrepancies to the classification head`,
+          r`Because neural networks can only process vectors whose length is a multiple of three`,
+          r`Because |u - v| removes all punctuation marks from the embeddings`,
+          r`Because PyTorch throws a runtime error if vectors are not subtracted`,
+        ],
+        a: 0,
+        why: r`Reimers & Gurevych demonstrated empirically that including the element-wise absolute difference |u - v| significantly improves NLI fine-tuning performance. It acts as an explicit metric comparison feature across all latent dimensions.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['distributional-semantics', 'glove-and-fasttext'],
+    related: ['distributional-semantics', 'glove-and-fasttext', 'bm25-and-search-ranking'],
+    keywords: 'sbert sentence bert sentence embeddings siamese network bi-encoder cross-encoder mean pooling natural language inference semantic search',
+  },
 ];
