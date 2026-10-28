@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsgardy">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsgardy">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -144,6 +144,46 @@ posterior = (sensitivity * prior_disease) / p_positive
             <div class="opts"><button class="opt" type="button"><b>A</b><span>To ensure the posterior probabilities across all hypotheses sum to 1</span></button><button class="opt" type="button"><b>B</b><span>To remove the effect of the prior</span></button><button class="opt" type="button"><b>C</b><span>To maximise the likelihood function</span></button><button class="opt" type="button"><b>D</b><span>To penalise overly complex models</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The denominator is the marginal probability of the evidence across the full partition, acting as the normalising constant so the posteriors form a valid probability distribution.</div>
           </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>If $P(A) = 0.4$, $P(B) = 0.5$, and $P(A \cap B) = 0.1$, what is the union probability $P(A \cup B)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.9</span></button><button class="opt" type="button"><b>B</b><span>0.8</span></button><button class="opt" type="button"><b>C</b><span>0.2</span></button><button class="opt" type="button"><b>D</b><span>0.7</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The addition rule gives $P(A \cup B) = P(A) + P(B) - P(A \cap B) = 0.4 + 0.5 - 0.1 = 0.8$. Simply adding $0.4 + 0.5$ would double-count the intersection.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q6</span>Can two events $A$ and $B$ with strictly positive probabilities ($P(A) &gt; 0, P(B) &gt; 0$) be simultaneously mutually exclusive and statistically independent?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Yes, provided $P(A) + P(B) = 1$</span></button><button class="opt" type="button"><b>B</b><span>Yes, whenever they share no outcomes in the sample space</span></button><button class="opt" type="button"><b>C</b><span>No, because mutual exclusivity requires $P(A \cap B) = 0$, whereas independence requires $P(A \cap B) = P(A)P(B) &gt; 0$</span></button><button class="opt" type="button"><b>D</b><span>No, because independent events must always be subsets of each other</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Mutual exclusivity requires $P(A \cap B) = 0$. Statistical independence requires $P(A \cap B) = P(A)P(B)$. Because both probabilities are strictly positive, their product is positive, so both conditions cannot hold at once.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>A factory uses two assembly lines. Line 1 produces 60% of all parts with a defect rate of 2%, while Line 2 produces 40% with a defect rate of 5%. What is the overall probability that a randomly chosen part is defective?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>3.5%</span></button><button class="opt" type="button"><b>B</b><span>3.2%</span></button><button class="opt" type="button"><b>C</b><span>2.8%</span></button><button class="opt" type="button"><b>D</b><span>7.0%</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By the law of total probability, $P(D) = P(D \mid L_1)P(L_1) + P(D \mid L_2)P(L_2) = (0.02 \times 0.60) + (0.05 \times 0.40) = 0.012 + 0.020 = 0.032$ (or 3.2%). Averaging 2% and 5% ignores line volume.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>A diagnostic test runs in code with <code>prior = 0.20</code>, <code>likelihood = 0.80</code>, and marginal evidence <code>p_evidence = 0.40</code>. Evaluating <code>(likelihood * prior) / p_evidence</code> produces:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.16</span></button><button class="opt" type="button"><b>B</b><span>0.25</span></button><button class="opt" type="button"><b>C</b><span>0.40</span></button><button class="opt" type="button"><b>D</b><span>0.50</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Applying Bayes' theorem directly: $(0.80 \times 0.20) / 0.40 = 0.16 / 0.40 = 0.40$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>In a medical screening scenario with a very rare disease (prevalence 0.1%), why does cutting the false-positive rate from 8% to 1% increase posterior disease probability far more than raising sensitivity from 90% to 99%?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because sensitivity has no effect on Bayes' theorem</span></button><button class="opt" type="button"><b>B</b><span>Because false alarms arise from the healthy majority, which vastly outnumbers the small sick cohort</span></button><button class="opt" type="button"><b>C</b><span>Because false-positive rates are mathematically bounded by sensitivity</span></button><button class="opt" type="button"><b>D</b><span>Because the law of total probability applies only to uninfected individuals</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When 99.9% of people are healthy, even a modest false-positive rate generates dozens of false alarms that swamp the few genuine positive cases. Reducing false alarms directly cuts the dominant term in the denominator.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>On the factory lines (Line 1: 60% volume, 2% defects; Line 2: 40% volume, 5% defects; overall defect rate 3.2%), an inspected part turns out to be defective. What is the posterior probability that it came from Line 2?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>40.0%</span></button><button class="opt" type="button"><b>B</b><span>50.0%</span></button><button class="opt" type="button"><b>C</b><span>62.5%</span></button><button class="opt" type="button"><b>D</b><span>71.4%</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Bayes' inversion gives $P(L_2 \mid D) = P(D \mid L_2)P(L_2) / P(D) = (0.05 \times 0.40) / 0.032 = 0.020 / 0.032 = 20/32 = 0.625$ (62.5%). Even with lower output volume, Line 2's higher defect rate produces the majority of defects.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>A patient tests positive on a test with 10% disease prior, 80% sensitivity, and 10% false-positive rate. A second, independent test from an external laboratory with identical characteristics also returns positive. What is the posterior probability after both positive tests?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>47.1%</span></button><button class="opt" type="button"><b>B</b><span>72.0%</span></button><button class="opt" type="button"><b>C</b><span>87.7%</span></button><button class="opt" type="button"><b>D</b><span>98.2%</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> After one test, the posterior is $(0.8 \times 0.1) / (0.8 \times 0.1 + 0.1 \times 0.9) = 0.08 / 0.17 = 8/17 \approx 47.1\%$. With independent errors, the joint likelihoods are $0.8^2 \times 0.10 = 0.064$ for disease and $0.1^2 \times 0.90 = 0.009$ for healthy, giving $0.064 / (0.064 + 0.009) = 64/73 \approx 87.7\%$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>Confusing the probability of evidence given an innocence hypothesis, $P(E \mid I)$, with the probability of innocence given that evidence, $P(I \mid E)$, is an error known as:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The prosecutor's fallacy</span></button><button class="opt" type="button"><b>B</b><span>The ecological fallacy</span></button><button class="opt" type="button"><b>C</b><span>Simpson's paradox</span></button><button class="opt" type="button"><b>D</b><span>Berkson's bias</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The prosecutor's fallacy equates the probability of innocent evidence $P(E \mid I)$ with the posterior $P(I \mid E)$ by neglecting the prior probability of guilt or innocence.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -179,12 +219,12 @@ posterior = (sensitivity * prior_disease) / p_positive
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsgardy" defer></script>
+<script src="../../assets/labs/core.js?v=mvsgardy" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsgardy" defer></script>
+<script src="../../assets/labs/models.js?v=mvsgardy" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvsgardy" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvsgardy" defer></script>
+<script src="../../assets/learn.js?v=mvsgardy" defer></script>
 </body>
 </html>
