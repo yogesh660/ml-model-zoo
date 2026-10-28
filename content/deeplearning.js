@@ -514,4 +514,520 @@ print('AdamW loss after 50 steps:          ', round(0.5 * pos_adamw[0]**2 + 12.5
     related: ['activation-functions', 'weight-initialisation-xavier-and-he', 'quasi-newton-and-lbfgs'],
     keywords: 'optimisers sgd momentum rmsprop adam adamw weight decay adaptive learning rate gradient descent loss landscape',
   },
+
+// ------------------------------------------------------------------ Lesson 1
+  {
+    id: 'learning-rate-schedules-and-warm-up',
+    short: 'LR schedules and warm-up',
+    title: 'Learning-Rate Schedules and Warm-Up',
+    task: 'concepts',
+    module: 'Training fundamentals',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`A fixed learning rate is either too aggressive early in training or too coarse near the end. Schedules start gently with warm-up, scale to peak velocity, and anneal downward to settle into sharp, high-generalisation minima.`,
+    lead: r`The learning rate is widely regarded as the most critical hyperparameter in deep learning. Modern training recipes rarely keep it constant: linear warm-up stabilises the network when momentum buffers and running statistics are empty, followed by cosine annealing or 1cycle decay to explore broadly and converge cleanly.`,
+    intuition: [
+      r`At the start of training ($t=1$), network weights are random, running moments in adaptive optimisers such as [[optimisers-sgd-momentum-rmsprop-adam-adamw|AdamW]] ($m_0=0, v_0=0$) are uninitialised, and intermediate representations fluctuate violently. Taking large gradient steps in this chaotic phase thrusts parameters into distorted, ill-conditioned loss ravines from which recovery is slow or impossible. Linear warm-up ramps the learning rate smoothly from near zero to its target peak over the first 1% to 5% of training steps, allowing gradient statistics to form reliable second-moment estimates before high-velocity updates begin.`,
+      r`Once representations stabilise, maintaining a large learning rate allows the optimiser to cross saddle points and skip shallow, poor local basins. However, as the loss landscape transitions into a narrow valley containing desirable minima, a high step size causes parameters to oscillate back and forth between opposing walls without ever reaching the trough. Decaying the learning rate gradually contracts the step radius, enabling the parameter trajectory to settle smoothly into the lowest point of the basin.`,
+      r`Among decay patterns, step decay (cutting the rate by a factor of 10 every $N$ epochs) produces sharp, discontinuous drops that require manual schedule tuning. By contrast, cosine annealing smoothly interpolates the learning rate along a half-cosine curve from $\eta_{\text{max}}$ down to $\eta_{\text{min}}$, offering smooth deceleration with zero abrupt plateaus. This approach has become the standard default across modern vision architectures and large language models.`,
+    ],
+    analogy: r`Like landing a spacecraft on an asteroid: thrusters fire delicately at first to establish stable orientation (warm-up), cruise at maximum velocity across space (peak rate), and gradually throttle down to a feathering touch for touchdown without bouncing off (cosine decay).`,
+    steps: [
+      r`Determine peak learning rate $\eta_{\text{max}}$: run an LR range test (Leslie Smith test) or adopt proven architecture defaults ($3 \times 10^{-4}$ for AdamW on Transformers; $10^{-1}$ for SGD on ConvNets).`,
+      r`Configure the warm-up window: designate $T_{\text{warm}}$ (typically 1% to 5% of total iterations, or 1 to 5 epochs) to ramp the learning rate linearly from $\eta_{\text{min}}$ (or 0) to $\eta_{\text{max}}$.`,
+      r`Select decay trajectory: deploy cosine annealing for fixed total training budgets $T_{\text{total}}$, or linear decay for bounded fine-tuning tasks.`,
+      r`Synchronise with batch scale: when scaling effective batch size across multiple GPUs, scale $\eta_{\text{max}}$ proportionally (linear scaling $\eta \propto B$ or square-root scaling $\eta \propto \sqrt{B}$) and extend the warm-up window.`,
+      r`Monitor validation dynamics: verify that loss does not explode in the initial 200 steps and that late-stage annealing coincides with sustained improvements in validation metrics.`,
+    ],
+    math: [
+      {
+        h: 'Linear warm-up schedule',
+        tex: r`$$\eta_t = \eta_{\text{base}} + \frac{t}{T_{\text{warm}}}(\eta_{\text{max}} - \eta_{\text{base}}), \quad 1 \le t \le T_{\text{warm}}$$`,
+        p: r`$t$ is the current training iteration, $T_{\text{warm}}$ is the total number of warm-up iterations, $\eta_{\text{base}}$ is the initial floor rate (often $0$ or $10^{-7}$), and $\eta_{\text{max}}$ is the peak target rate. This linear progression shields uninitialised layers from destabilising gradient shocks during initial steps.`,
+      },
+      {
+        h: 'Cosine annealing decay',
+        tex: r`$$\eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warm}}}{T_{\text{total}} - T_{\text{warm}}}\pi\right)\right), \quad T_{\text{warm}} \le t \le T_{\text{total}}$$`,
+        p: r`$\eta_{\text{min}}$ is the asymptotic minimum learning rate (commonly $0.01 \cdot \eta_{\text{max}}$ or $0$), and $T_{\text{total}}$ is the planned step count. The argument to $\cos$ ranges smoothly from $0$ (where $\cos(0) = 1$) to $\pi$ (where $\cos(\pi) = -1$), providing continuous deceleration without discrete hyperparameter step thresholds.`,
+      },
+      {
+        h: 'Step decay comparison',
+        tex: r`$$\eta_k = \eta_0 \cdot \gamma^{\lfloor k / s \rfloor}$$`,
+        p: r`$k$ is the completed epoch index, $s$ is the step interval (e.g. drop every 30 epochs), and $\gamma$ is the multiplicative discount factor (typically $0.1$ or $0.2$). While simple, step decay introduces sudden drop discontinuities that make progress sensitive to the exact choice of step boundaries.`,
+      },
+    ],
+    keyPoints: [
+      r`Linear warm-up prevents early divergence caused by noisy gradients and uncalibrated second-moment statistics in adaptive optimisers.`,
+      r`Cosine annealing provides a smooth, schedule-long decay that eliminates the arbitrary epoch milestone tuning of step decay.`,
+      r`Cosine schedules are budget-dependent: they require knowing the total step count $T_{\text{total}}$ in advance; interrupting training at 50% budget leaves the learning rate far too high for optimal convergence.`,
+    ],
+    pitfalls: [
+      r`Omitting warm-up when training deep Transformers with AdamW, frequently resulting in immediate gradient explosion or loss divergence in the opening epochs.`,
+      r`Setting $T_{\text{total}}$ in a cosine schedule significantly higher than actual training duration, which truncates training before the learning rate can anneal into its low-variance basin.`,
+      r`Decaying the learning rate prematurely, trapping the optimiser in a mediocre local plateau before it has sufficiently traversed the parameter space.`,
+    ],
+    code: r`import numpy as np
+
+def schedule_lr(step, total_steps=100, warm_steps=20, lr_max=0.01, lr_min=0.0001):
+    # Linear warm-up phase
+    if step < warm_steps:
+        return lr_min + (lr_max - lr_min) * (step / warm_steps)
+    # Cosine annealing decay phase
+    progress = (step - warm_steps) / (total_steps - warm_steps)
+    return lr_min + 0.5 * (lr_max - lr_min) * (1.0 + np.cos(np.pi * progress))
+
+# Evaluate schedule at representative milestones
+milestones = [5, 20, 60, 100]
+print("Warm-up & Cosine Annealing Milestones (lr_max=0.01, warm=20, total=100):")
+for s in milestones:
+    rate = schedule_lr(s)
+    phase = "Warm-up" if s < 20 else ("Peak" if s == 20 else "Cosine decay")
+    print(f"Step {s:3d} ({phase:12s}): learning rate = {rate:.6f}")`,
+    quiz: [
+      {
+        q: r`Why is linear warm-up particularly essential when training Transformers with Adam or AdamW?`,
+        o: [
+          r`Because Transformers have no activation functions in their feed-forward blocks`,
+          r`Because early gradients are noisy and uninitialised second-moment variance buffers can produce destructively large initial parameter steps`,
+          r`Because warm-up guarantees that training loss drops to zero within the first epoch`,
+          r`Because AdamW cannot compute weight decay unless the learning rate is below 0.001`,
+        ],
+        a: 1,
+        why: r`In early iterations, the second-moment estimate $v_t$ in Adam is biased near zero. Even with bias corrections, initial steps can be volatile; ramping the learning rate protects parameters until gradient statistics stabilise.`,
+      },
+      {
+        q: r`What is the primary operational drawback of a cosine annealing schedule compared to adaptive learning rate methods?`,
+        o: [
+          r`It requires knowing the total step budget $T_{\text{total}}$ in advance to plan the decay curve`,
+          r`It cannot be implemented with Stochastic Gradient Descent`,
+          r`It increases the computational complexity of the backward pass from $O(N)$ to $O(N^2)$`,
+          r`It forces the learning rate to increase exponentially after reaching the midpoint`,
+        ],
+        a: 0,
+        why: r`Cosine annealing maps progress along $t / T_{\text{total}}$. If training is stopped early (or extended beyond $T_{\text{total}}$), the schedule does not align with the actual stopping point.`,
+      },
+      {
+        q: r`Suppose you train a model with total steps $T_{\text{total}}=100$, warm-up steps $T_{\text{warm}}=20$, peak rate $\eta_{\text{max}}=0.01$, and minimum rate $\eta_{\text{min}}=0.0001$. What is the learning rate at step 60 (halfway through the cosine decay phase)?`,
+        o: [
+          r`Approximately 0.000100`,
+          r`Approximately 0.005050`,
+          r`Approximately 0.009900`,
+          r`Approximately 0.002575`,
+        ],
+        a: 1,
+        why: r`At step 60, progress through decay is $(60-20)/(100-20) = 40/80 = 0.5$. With $\cos(0.5\pi) = 0$, the rate is $\eta_{\text{min}} + 0.5(\eta_{\text{max}} - \eta_{\text{min}}) = 0.0001 + 0.5(0.0099) = 0.005050$.`,
+      },
+      {
+        q: r`How does the 1cycle policy differ from standard monotonic cosine decay?`,
+        o: [
+          r`It keeps the learning rate permanently constant while varying batch size`,
+          r`It increases learning rate to a peak while decreasing momentum, then decreases learning rate while increasing momentum`,
+          r`It applies dropout only during the final 10% of training steps`,
+          r`It skips backpropagation during alternate training mini-batches`,
+        ],
+        a: 1,
+        why: r`Leslie Smith's 1cycle policy couples learning rate warm-up and decay with inverted momentum cycles (e.g. momentum drops from 0.95 to 0.85 during warm-up, then rises back to 0.95 during decay).`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['optimisers-sgd-momentum-rmsprop-adam-adamw', 'backpropagation-and-autodiff'],
+    related: ['weight-initialisation-xavier-and-he', 'vanishing-and-exploding-gradients-clipping', 'normalisation-batch-layer-rms'],
+    keywords: 'learning rate schedule warmup cosine annealing step decay 1cycle sgdr adamw learning rate scheduler step size',
+  },
+
+  // ------------------------------------------------------------------ Lesson 2
+  {
+    id: 'vanishing-and-exploding-gradients-clipping',
+    short: 'Vanishing/exploding gradients',
+    title: 'Vanishing and Exploding Gradients, Gradient Clipping',
+    task: 'concepts',
+    module: 'Training fundamentals',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`In deep architectures, backpropagation repeatedly chains Jacobian matrices across layers: if their singular values average less than 1, gradients decay to zero; if greater than 1, they blow up to NaN.`,
+    lead: r`Training networks with dozens or hundreds of layers requires gradients to propagate reliably from loss to input. Without architectural safeguards, repeated matrix products cause gradients to vanish exponentially into numerical insignificance or explode into non-finite NaNs. Modern deep learning addresses this through gradient norm clipping, non-saturating activations, normalisation, and residual skip connections.`,
+    intuition: [
+      r`Backpropagation computes the gradient of the loss with respect to early layer weights by chaining together partial derivatives across every intervening layer. In an $L$-layer network, the derivative at layer 1 is proportional to the product of $L-1$ weight matrices and activation Jacobian matrices. If the effective amplification factor at each layer is even slightly below one—say, $0.8$—then after 50 layers the gradient scales as $0.8^{50} \approx 1.4 \times 10^{-5}$. The earliest layers receive virtually no update signal and freeze in their random initialisation state.`,
+      r`Conversely, if the effective amplification factor exceeds one—for instance, $1.2$—the product over 50 layers compounds to $1.2^{50} \approx 9,100$. A single step with this inflated gradient sends parameters flying into regions of extreme loss, overflowing floating-point limits and producing ` + '`NaN`' + r` loss values. This exploding gradient phenomenon is especially acute in recurrent networks unrolled across long sequences and in deep networks encountering sharp, steep loss cliffs.`,
+      r`Gradient clipping is the primary algorithmic safeguard against exploding gradients. Rather than letting an unexpectedly large gradient take a disastrous leap, clipping caps the global vector norm at a predetermined threshold $c$ (typically $1.0$). By rescaling the entire gradient vector proportionally when its length exceeds $c$, the update preserves its exact descent direction while strictly bounding the maximum spatial displacement.`,
+    ],
+    analogy: r`Like whispering a message down a telephone line of 50 people: if each participant speaks at 80% volume, the message fades to complete silence (vanishing); if each shouts 20% louder than the last, the final output is a deafening, blown-out screech (exploding).`,
+    steps: [
+      r`Monitor layer-wise gradient norms: record $\lVert \nabla_{W_l} \mathcal{L} \rVert_2$ across depth during training to spot early decay or sudden magnitude spikes.`,
+      r`Deploy non-saturating activations: replace sigmoid ($\sigma'(z) \le 0.25$) and tanh ($\tanh'(z) \le 1.0$) with [[activation-functions|ReLU or GELU]] to prevent derivative saturation.`,
+      r`Enforce variance-preserving initialisation: apply [[weight-initialisation-xavier-and-he|He/Kaiming initialisation]] so weight tensors maintain signal variance across forward and backward sweeps.`,
+      r`Apply global gradient norm clipping: compute the concatenated Euclidean norm across all parameter gradients and rescale by $c / \lVert g \rVert_2$ whenever $\lVert g \rVert_2 > c$.`,
+      r`Incorporate residual pathways: insert skip connections ($x + f(x)$) to grant backpropagated gradients an unhindered linear highway directly to early layers.`,
+    ],
+    math: [
+      {
+        h: 'Backpropagated gradient product across layers',
+        tex: r`$$\frac{\partial \mathcal{L}}{\partial h_1} = \frac{\partial \mathcal{L}}{\partial h_L} \prod_{l=1}^{L-1} \left( W_{l+1}^T \operatorname{diag}\big(\sigma'(z_l)\big) \right)$$`,
+        p: r`$h_l$ is the hidden representation at layer $l$, $W_{l+1}$ is the weight matrix, and $\operatorname{diag}(\sigma'(z_l))$ is the diagonal Jacobian of the activation function. If the spectral radius of the transition matrix satisfies $\rho < 1$, the gradient norm shrinks as $O(\rho^L)$ (vanishing); if $\rho > 1$, it expands as $O(\rho^L)$ (exploding).`,
+      },
+      {
+        h: 'Global gradient norm clipping',
+        tex: r`$$g_{\text{clipped}} = \begin{cases} g & \text{if } \lVert g \rVert_2 \le c \\ c \frac{g}{\lVert g \rVert_2} & \text{if } \lVert g \rVert_2 > c \end{cases}, \qquad \lVert g \rVert_2 = \sqrt{\sum_{i=1}^P g_i^2}$$`,
+        p: r`$g$ is the unrolled vector of all $P$ model parameter gradients, $\lVert g \rVert_2$ is its global Euclidean length, and $c$ is the maximum permitted clipping threshold (commonly $0.5$ to $1.0$). Global norm clipping preserves the exact geometric angle and descent direction of $g$, scaling only its step length.`,
+      },
+      {
+        h: 'Value-based clipping comparison',
+        tex: r`$$g_i' = \operatorname{clip}(g_i, -c, c) = \min(\max(g_i, -c), c)$$`,
+        p: r`Element-wise clipping truncates each gradient scalar independently. While computationally trivial, clipping by value alters the orientation of the gradient vector in multi-dimensional space, skewing the optimiser away from the true steepest descent trajectory.`,
+      },
+    ],
+    keyPoints: [
+      r`Vanishing gradients freeze parameter updates in early layers, preventing the network from learning rich hierarchical representations.`,
+      r`Global norm clipping rescales the gradient vector without altering its directional angle, protecting against catastrophic steps near steep loss cliffs.`,
+      r`While clipping halts gradient explosions, vanishing gradients require structural remedies: non-saturating activations (ReLU/GELU), He initialisation, and residual skip connections.`,
+    ],
+    pitfalls: [
+      r`Clipping coordinate-wise by value instead of global norm, which distorts the search direction and degrades optimisation trajectories.`,
+      r`Setting the clipping threshold $c$ excessively small (e.g. $10^{-4}$), which effectively degenerates gradient descent into fixed-step sign navigation.`,
+      r`Assuming gradient clipping cures vanishing gradients: clipping only bounds maximum gradient magnitude and cannot resurrect derivatives that have collapsed to zero.`,
+    ],
+    code: r`import numpy as np
+
+# 1. Compare derivative decay across a 10-layer depth
+depth = 10
+sig_max_deriv = 0.25  # max derivative of standard sigmoid is 0.25
+relu_deriv = 1.0      # active ReLU derivative is exactly 1.0
+
+sig_decay = sig_max_deriv ** depth
+relu_decay = relu_deriv ** depth
+print(f"10-layer derivative product (sigmoid): {sig_decay:.2e}")
+print(f"10-layer derivative product (active ReLU): {relu_decay:.2f}")
+
+# 2. Global gradient norm clipping demonstration
+np.random.seed(42)
+grads = np.array([30.0, -25.0, 15.0, 10.0])
+norm = np.linalg.norm(grads)
+threshold = 1.0
+
+if norm > threshold:
+    clipped = grads * (threshold / norm)
+else:
+    clipped = grads
+
+clipped_norm = np.linalg.norm(clipped)
+cos_sim = np.dot(grads, clipped) / (norm * clipped_norm)
+
+print(f"Original gradient vector: {grads.tolist()}, norm = {norm:.2f}")
+print(f"Clipped gradient vector:  {np.round(clipped, 4).tolist()}, norm = {clipped_norm:.4f}")
+print(f"Cosine directional similarity: {cos_sim:.4f} (direction perfectly preserved)")`,
+    quiz: [
+      {
+        q: r`Why does global norm clipping preserve the search direction of gradient descent while element-wise value clipping does not?`,
+        o: [
+          r`Because global norm clipping applies the exact same scalar multiplier to every gradient coordinate`,
+          r`Because global norm clipping sets negative gradients to zero`,
+          r`Because element-wise clipping only operates on the final output layer`,
+          r`Because global norm clipping converts the gradient to a probability distribution`,
+        ],
+        a: 0,
+        why: r`Global norm clipping multiplies the entire gradient vector $g$ by the scalar $c / \lVert g \rVert_2$, scaling its magnitude without rotating its spatial angle in parameter space. Value clipping truncates individual components independently, shifting the vector direction.`,
+      },
+      {
+        q: r`Why did deep neural networks built with sigmoid activation functions suffer severely from vanishing gradients?`,
+        o: [
+          r`Because sigmoid functions cannot be computed on modern GPUs`,
+          r`Because the maximum value of the sigmoid derivative is only 0.25, guaranteeing exponential decay $(0.25)^L$ across depth`,
+          r`Because sigmoid activations produce negative variance in hidden layers`,
+          r`Because sigmoid derivatives are discontinuous at zero`,
+        ],
+        a: 1,
+        why: r`Since $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \le 0.25$, chaining $L$ sigmoid activations multiplies gradients by at most $0.25$ per layer, shrinking early layer gradients to near zero even with ideal weight scales.`,
+      },
+      {
+        q: r`Which of the following architectural innovations provides a direct structural solution to vanishing gradients in 100+ layer networks?`,
+        o: [
+          r`Residual skip connections ($x + f(x)$)`,
+          r`Element-wise gradient clipping by value`,
+          r`Replacing AdamW with vanilla SGD without momentum`,
+          r`Increasing the learning rate by a factor of 10 every epoch`,
+        ],
+        a: 0,
+        why: r`Residual connections introduce an additive identity pathway $h_{l+1} = h_l + f(h_l)$. During backpropagation, $\frac{\partial \mathcal{L}}{\partial h_l} = \frac{\partial \mathcal{L}}{\partial h_{l+1}}(I + \frac{\partial f}{\partial h_l})$, ensuring that gradients can pass back unattenuated through the identity matrix term.`,
+      },
+      {
+        q: r`If a model experiences exploding gradients causing loss values to display as NaN, what is the immediate recommended operational fix?`,
+        o: [
+          r`Increase the learning rate to bypass the unstable loss region`,
+          r`Add global gradient norm clipping (e.g. threshold = 1.0) and verify weight initialisation`,
+          r`Remove all normalisation layers from the network`,
+          r`Double the batch size while keeping weights unclipped`,
+        ],
+        a: 1,
+        why: r`Global gradient norm clipping immediately halts runaway update magnitudes near steep ravines, preventing parameters from jumping into invalid floating-point overflow regimes.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['backpropagation-and-autodiff', 'activation-functions', 'weight-initialisation-xavier-and-he'],
+    related: ['optimisers-sgd-momentum-rmsprop-adam-adamw', 'learning-rate-schedules-and-warm-up', 'normalisation-batch-layer-rms'],
+    keywords: 'vanishing gradients exploding gradients gradient clipping grad norm jacobian spectral radius nan loss explosion residual skip connection',
+  },
+
+  // ------------------------------------------------------------------ Lesson 3
+  {
+    id: 'normalisation-batch-layer-rms',
+    short: 'Normalisation: Batch, Layer, RMS',
+    title: 'Normalisation: Batch, Layer, and RMS Normalisation',
+    task: 'concepts',
+    module: 'Training fundamentals',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Intermediate activations shift and rescale during training as upstream weights update. Normalisation standardises activations across batch, channel, or feature dimensions to smooth the loss landscape and accelerate convergence.`,
+    lead: r`Deep neural networks are notoriously vulnerable to internal activation drift: small weight changes in early layers cause cascading shifts in the mean and scale of downstream inputs. Normalisation techniques—principally Batch Normalisation for vision, Layer Normalisation for sequences, and RMS Normalisation for modern language models—stabilise internal distributions, allowing higher learning rates and dramatically smoother optimisation landscapes.`,
+    intuition: [
+      r`Imagine training layer 30 in a deep network. At every step, layers 1 through 29 update their parameters. Even if each update is modest, their combined effect alters the mean, variance, and distribution of the inputs arriving at layer 30. Layer 30 is perpetually trying to learn a mapping on a moving target. Without calibration, activations can saturate nonlinearities or drift toward extreme magnitudes, slowing training to a crawl.`,
+      r`<strong>Batch Normalisation (BatchNorm)</strong> tackles this by computing the mean and variance across the batch dimension for each feature channel independently. By forcing the mini-batch activations to have zero mean and unit variance, it smooths the loss landscape and permits learning rates ten times larger. However, BatchNorm couples the representations of distinct examples within a batch, requires maintaining running statistics for inference, and deteriorates when mini-batch sizes are small ($B < 8$) or sequences vary in length.`,
+      r`<strong>Layer Normalisation (LayerNorm)</strong> eliminates batch dependencies by computing the mean and variance across the hidden feature dimension for each individual sample independently. Because it operates within a single example, LayerNorm behaves identically during training and evaluation, handles dynamic sequence lengths effortlessly, and serves as the structural foundation of Transformers. Building on this, <strong>RMS Normalisation (RMSNorm)</strong> observes that the primary stabilisation benefit stems from scaling invariance rather than mean-centring; by normalising activations strictly by their root-mean-square, RMSNorm achieves identical training stability while cutting normalisation compute overhead by 10% to 50% in architectures like Llama and Mistral.`,
+    ],
+    analogy: r`Like tuning instruments in an orchestra: BatchNorm adjusts each instrument section by averaging volume across the whole day's rehearsals (the batch), whereas LayerNorm and RMSNorm balance all instruments within each individual musician's performance independently.`,
+    steps: [
+      r`Match normalisation type to architecture: deploy BatchNorm for 2D/3D ConvNets with large stable batches ($B \ge 32$); deploy LayerNorm or RMSNorm for Transformers, sequence models, or small-batch regimes.`,
+      r`Compute reduction statistics: for LayerNorm, calculate sample mean $\mu_i$ and sample variance $\sigma_i^2$ across the hidden dimension $D$; for RMSNorm, calculate the root-mean-square $\operatorname{RMS}(x_i) = \sqrt{\frac{1}{D}\sum_j x_{i,j}^2 + \epsilon}$.`,
+      r`Standardise activations: centre and divide by scale for LayerNorm; divide raw activations directly by the root-mean-square for RMSNorm.`,
+      r`Apply learnable affine parameters: scale by learnable vector $\gamma$ and shift by $\beta$ ($y = \gamma \odot \hat{x} + \beta$), guaranteeing the network can recover any optimal activation distribution.`,
+      r`Select architectural placement: in Transformer blocks, place normalisation before attention and feed-forward sublayers (Pre-LN: $x + \operatorname{SubLayer}(\operatorname{Norm}(x))$) to guarantee stable gradient flow without brittle warm-up requirements.`,
+    ],
+    math: [
+      {
+        h: 'Batch Normalisation (per feature channel across batch)',
+        tex: r`$$\hat{x}_{i,k} = \frac{x_{i,k} - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}, \quad y_{i,k} = \gamma_k \hat{x}_{i,k} + \beta_k, \qquad \mu_B = \frac{1}{B}\sum_{i=1}^B x_{i,k}, \quad \sigma_B^2 = \frac{1}{B}\sum_{i=1}^B (x_{i,k} - \mu_B)^2$$`,
+        p: r`$B$ is batch size, $x_{i,k}$ is the activation of sample $i$ at channel $k$, $\epsilon$ is a small numerical floor (e.g. $10^{-5}$), and $\gamma_k, \beta_k$ are learnable affine parameters. In inference, $\mu_B$ and $\sigma_B^2$ are replaced by frozen running population averages $\mu_{\text{run}}$ and $\sigma^2_{\text{run}}$.`,
+      },
+      {
+        h: 'Layer Normalisation (per sample across hidden features)',
+        tex: r`$$\hat{x}_{i,j} = \frac{x_{i,j} - \mu_i}{\sqrt{\sigma_i^2 + \epsilon}}, \quad y_{i,j} = \gamma_j \hat{x}_{i,j} + \beta_j, \qquad \mu_i = \frac{1}{D}\sum_{j=1}^D x_{i,j}, \quad \sigma_i^2 = \frac{1}{D}\sum_{j=1}^D (x_{i,j} - \mu_i)^2$$`,
+        p: r`$D$ is the hidden representation dimension, and statistics are computed across features $j=1,\dots,D$ for each individual sample $i$ independently. Because no cross-sample averaging occurs, training and inference calculations are identical and completely invariant to batch size.`,
+      },
+      {
+        h: 'Root Mean Square Normalisation (RMSNorm)',
+        tex: r`$$\bar{x}_{i,j} = \frac{x_{i,j}}{\operatorname{RMS}(x_i)} \cdot \gamma_j, \qquad \operatorname{RMS}(x_i) = \sqrt{\frac{1}{D}\sum_{j=1}^D x_{i,j}^2 + \epsilon}$$`,
+        p: r`RMSNorm discards the mean-centring step ($\mu_i=0$) and scales activations solely by their quadratic root-mean-square norm. By removing two sequential memory passes (mean computation and mean subtraction), RMSNorm accelerates execution latency on modern GPU tensor cores while preserving regularised scaling stability.`,
+      },
+    ],
+    keyPoints: [
+      r`BatchNorm normalises across samples in a mini-batch; LayerNorm normalises across hidden features within a single sample.`,
+      r`RMSNorm removes mean subtraction from LayerNorm, matching its training stability while substantially reducing memory bandwidth and kernel overhead.`,
+      r`Learnable affine parameters ($\gamma, \beta$) preserve representational capacity by allowing the network to scale or shift standardised activations if an identity mapping is optimal.`,
+    ],
+    pitfalls: [
+      r`Using Batch Normalisation with small mini-batch sizes ($B \le 4$), where high sampling noise in batch statistics degrades convergence and final accuracy.`,
+      r`Failing to set the model to evaluation mode (` + '`model.eval()`' + r`) during inference, causing BatchNorm to compute statistics on test batches instead of using tracked population averages.`,
+      r`Using Post-LN (placing LayerNorm after the residual addition) without extensive learning rate warm-up, which causes sharp gradient instabilities in deep Transformer backbones.`,
+    ],
+    code: r`import numpy as np
+
+# Synthetic batch: 2 samples, 5 hidden features
+np.random.seed(42)
+X = np.random.randn(2, 5) * 3.0 + 2.0  # mean ~ 2, std ~ 3
+
+# 1. LayerNorm: zero mean and unit variance per sample across features
+mu_ln = np.mean(X, axis=1, keepdims=True)
+var_ln = np.var(X, axis=1, keepdims=True)
+X_ln = (X - mu_ln) / np.sqrt(var_ln + 1e-5)
+
+# 2. RMSNorm: unit root-mean-square per sample across features
+rms = np.sqrt(np.mean(X**2, axis=1, keepdims=True) + 1e-5)
+X_rms = X / rms
+
+print("Original Sample 0:      ", np.round(X[0], 2).tolist())
+print("Sample 0 mean and std:  ", round(float(np.mean(X[0])), 2), round(float(np.std(X[0])), 2))
+print("LayerNorm Sample 0:     ", np.round(X_ln[0], 2).tolist())
+print("LayerNorm mean and std: ", round(float(np.mean(X_ln[0])), 4), round(float(np.std(X_ln[0])), 4))
+print("RMSNorm Sample 0:       ", np.round(X_rms[0], 2).tolist())
+print("RMSNorm root-mean-square:", round(float(np.sqrt(np.mean(X_rms[0]**2))), 4))`,
+    quiz: [
+      {
+        q: r`Why is Layer Normalisation preferred over Batch Normalisation in Transformers and natural language processing?`,
+        o: [
+          r`Because LayerNorm can only be applied to convolutional layers`,
+          r`Because LayerNorm computes statistics across features within each token independently, handling variable sequence lengths and batch size 1 seamlessly`,
+          r`Because LayerNorm completely eliminates the need for backpropagation`,
+          r`Because BatchNorm requires labels to compute batch variance`,
+        ],
+        a: 1,
+        why: r`LayerNorm operates along the channel/feature dimension for each individual token and sample independently. It does not mix information across the batch dimension, allowing identical execution during training and single-token inference.`,
+      },
+      {
+        q: r`What key computational modification distinguishes RMSNorm from standard LayerNorm?`,
+        o: [
+          r`RMSNorm adds an exponential moving average across previous layers`,
+          r`RMSNorm omits the mean subtraction step and standardises purely by the root-mean-square of activations`,
+          r`RMSNorm replaces matrix multiplication with convolution`,
+          r`RMSNorm eliminates all learnable parameters $\gamma$`,
+        ],
+        a: 1,
+        why: r`RMSNorm posits that the scaling property of LayerNorm provides the primary training benefit. By omitting mean-centring ($\mu_i=0$), it reduces memory traffic and execution time while maintaining equivalent stability.`,
+      },
+      {
+        q: r`What role do the learnable parameters $\gamma$ (scale) and $\beta$ (shift) serve in normalisation layers?`,
+        o: [
+          r`They enforce that activations are strictly bounded between 0 and 1`,
+          r`They allow the network to learn any affine transformation of the standardised activations, including restoring original values if needed`,
+          r`They prevent the optimiser from updating weight matrices`,
+          r`They compute the test set accuracy at every forward pass`,
+        ],
+        a: 1,
+        why: r`Without $\gamma$ and $\beta$, normalisation strictly forces activations to zero mean and unit variance, which might limit the representational power of non-linear activations. Learnable affine parameters allow the model to adapt or even undo the normalisation if optimal.`,
+      },
+      {
+        q: r`What happens if you deploy a model containing Batch Normalisation in production but forget to switch it to evaluation mode?`,
+        o: [
+          r`The model refuses to process any inference requests and throws an immediate syntax error`,
+          r`The model calculates mean and variance from the incoming test mini-batch rather than using frozen population statistics, causing erratic predictions on small batches`,
+          r`All parameter weights are automatically reset to random Gaussian values`,
+          r`The output probabilities become identical for every class`,
+        ],
+        a: 1,
+        why: r`In training mode, BatchNorm computes statistics from the current batch. During inference on a single query ($B=1$), the batch variance is zero, producing undefined divisions or nonsensical outputs unless frozen running statistics are used.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['weight-initialisation-xavier-and-he', 'backpropagation-and-autodiff'],
+    related: ['vanishing-and-exploding-gradients-clipping', 'learning-rate-schedules-and-warm-up', 'regularisation-dropout-weight-decay-early-stopping'],
+    keywords: 'normalisation batchnorm layernorm rmsnorm internal covariate shift pre-ln post-ln affine scale shift standardisation transformer',
+  },
+
+  // ------------------------------------------------------------------ Lesson 4
+  {
+    id: 'regularisation-dropout-weight-decay-early-stopping',
+    short: 'Regularisation: dropout, decay',
+    title: 'Regularisation: Dropout, Weight Decay, and Early Stopping',
+    task: 'concepts',
+    module: 'Training fundamentals',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Overparameterised neural networks have enough capacity to memorise training noise verbatim. Regularisation bounds model complexity through stochastic feature dropout, weight shrinkage penalties, and validation-based early stopping.`,
+    lead: r`Modern deep neural networks often contain far more parameters than training observations, granting them the capacity to achieve zero training error even on completely randomised labels. To ensure high test-time generalisation, practitioners combine three complementary regularisation pillars: weight decay to shrink parameter norms, inverted dropout to break co-adaptations between neurons, and early stopping to halt optimisation before noise memorisation begins.`,
+    intuition: [
+      r`Consider a dense neural network where two neurons in layer 2 always activate together to compensate for each other's errors. This co-adaptation creates fragile internal representations: if test data exhibits a slightly different distribution, both neurons misfire. <strong>Dropout</strong> shatters co-adaptations by randomly deactivating a subset of neurons (with probability $p$, typically $0.1$ to $0.5$) during each training forward pass. Because no neuron can rely on the presence of any other specific neuron, each is forced to learn robust, self-sufficient features. Mathematically, dropout acts as an implicit ensemble over $2^N$ possible thinned subnetworks.`,
+      r`<strong>Weight Decay</strong> adds an $L_2$ penalty on parameter magnitudes, directly shrinking weights toward zero at every optimisation step. Keeping weights small ensures that small perturbations in input features cannot trigger massive, uncontrolled swings in downstream activations, effectively bounding the model's curvature. In adaptive optimisers such as [[optimisers-sgd-momentum-rmsprop-adam-adamw|AdamW]], this shrinkage must be decoupled from gradient scaling to prevent parameters with historically large gradients from escaping regularisation.`,
+      r`<strong>Early Stopping</strong> exploits the learning dynamics of gradient descent. When training deep networks, optimisers typically capture broad, low-frequency patterns first before memorising high-frequency sample quirks and labelling errors. By continuously evaluating loss on a separate validation split and stopping training when validation loss stops improving (after a patience window, such as 5 epochs), early stopping acts as a non-parametric complexity control, preserving the checkpoint with the highest true generalisation power.`,
+    ],
+    analogy: r`Like training a robust disaster response team: weight decay ensures no single specialist hoards all responsibility, dropout ensures team members can function when colleagues are absent, and early stopping ends drills when team peak performance is reached before exhaustion induces bad habits.`,
+    steps: [
+      r`Partition a validation holdout: reserve 10% to 20% of training data (or establish cross-validation splits) to monitor generalisation independently of the optimiser's loss.`,
+      r`Apply decoupled weight decay: set decay coefficient $\lambda$ (commonly $0.01$ to $0.1$ in AdamW) across 2D/3D weight matrices, while excluding 1D bias vectors and normalisation scales.`,
+      r`Insert inverted dropout layers: position dropout modules ($p \in [0.1, 0.5]$) after activations or attention projections, scaling active units by $1 / (1-p)$ during training.`,
+      r`Toggle evaluation mode: invoke ` + '`model.eval()`' + r` during inference to disable dropout, allowing all neurons to contribute deterministically without test-time scaling.`,
+      r`Configure early stopping monitor: track validation loss with a patience threshold $P$ (e.g. 5 epochs), automatically rolling back to the best checkpoint when patience is exhausted.`,
+    ],
+    math: [
+      {
+        h: 'Decoupled weight decay parameter update',
+        tex: r`$$w_t = (1 - \eta \lambda) w_{t-1} - \eta \Delta w_t$$`,
+        p: r`$w_t$ is the weight vector at iteration $t$, $\eta$ is the learning rate, $\lambda$ is the weight decay coefficient, and $\Delta w_t$ is the gradient update direction (either the standard gradient or Adam's preconditioned gradient). The factor $(1 - \eta \lambda)$ shrinks the parameter toward zero at every step independently of gradient magnitudes.`,
+      },
+      {
+        h: 'Inverted Dropout forward transform',
+        tex: r`$$\tilde{h}_i = \frac{m_i}{1 - p} \cdot h_i, \qquad m_i \sim \operatorname{Bernoulli}(1 - p)$$`,
+        p: r`$h_i$ is the original pre-dropout activation, $p$ is the dropout drop probability ($1-p$ is the survival probability), and $m_i \in \{0, 1\}$ is a random binary mask. Multiplying by the inverted scale factor $\frac{1}{1-p}$ ensures $\mathbb{E}[\tilde{h}_i] = h_i$, meaning expected activation magnitudes are preserved and test-time evaluation requires no post-scaling.`,
+      },
+      {
+        h: 'Early stopping decision criterion',
+        tex: r`$$\text{Halt if } t - \arg\min_{k \le t} \mathcal{L}_{\text{val}}(k) \ge P$$`,
+        p: r`$\mathcal{L}_{\text{val}}(k)$ denotes validation loss evaluated at epoch $k$, and $P$ is the patience window. Training terminates when the number of epochs elapsed since the historical minimum validation loss reaches or exceeds $P$, preventing late-stage overfitting on idiosyncratic training artifacts.`,
+      },
+    ],
+    keyPoints: [
+      r`Weight decay penalises large parameter norms, smoothing the model's decision boundaries and bounding sensitivity to input noise.`,
+      r`Inverted dropout trains an exponential ensemble of sub-architectures by randomly silencing units during forward passes, preventing co-adaptation.`,
+      r`Early stopping serves as a compute-efficient regulariser that halts training before the network expends capacity memorising sample-specific label noise.`,
+    ],
+    pitfalls: [
+      r`Leaving dropout active during inference, which introduces unwanted stochastic randomness and degraded deterministic test accuracy.`,
+      r`Applying weight decay to bias parameters and normalisation scales ($\gamma, \beta$), which underfits the model by unnecessarily constraining affine shifts.`,
+      r`Using $L_2$ regularisation inside Adam instead of decoupled weight decay (AdamW), where adaptive gradient denominators distort the intended shrinkage rate.`,
+    ],
+    code: r`import numpy as np
+
+# 1. Inverted Dropout: preserve expectation across 10,000 activations
+np.random.seed(42)
+h = np.ones(10000) * 4.0
+p_drop = 0.25
+mask = (np.random.rand(10000) >= p_drop).astype(float)
+h_drop = (h * mask) / (1.0 - p_drop)
+
+print("Original activation mean: ", round(float(np.mean(h)), 2))
+print("Inverted dropout mean:   ", round(float(np.mean(h_drop)), 2), "(expectation preserved)")
+
+# 2. Decoupled weight decay step
+w = 2.0
+lr, wd = 0.1, 0.05
+w_decayed = w * (1.0 - lr * wd)
+print(f"Weight after decay step (lr={lr}, wd={wd}): {w_decayed:.4f}")
+
+# 3. Early stopping loop with patience = 2
+val_losses = [1.20, 0.90, 0.70, 0.72, 0.75, 0.80]
+patience, best_loss, counter, stop_epoch = 2, float('inf'), 0, -1
+
+for epoch, loss in enumerate(val_losses):
+    if loss < best_loss:
+        best_loss = loss
+        counter = 0
+    else:
+        counter += 1
+        if counter >= patience:
+            stop_epoch = epoch
+            break
+
+print(f"Early stopping triggered at epoch {stop_epoch} (restoring best loss {best_loss:.2f})")`,
+    quiz: [
+      {
+        q: r`Why does inverted dropout multiply surviving activations by $1 / (1 - p)$ during training?`,
+        o: [
+          r`To ensure that the loss function is strictly non-negative`,
+          r`To maintain the same expected activation magnitude during training so that evaluation requires no modification`,
+          r`To completely eliminate the need for backpropagation through hidden layers`,
+          r`To convert negative activations into positive values`,
+        ],
+        a: 1,
+        why: r`Because each neuron has probability $1-p$ of surviving, the expected sum of activations drops by a factor of $1-p$. Pre-scaling by $1/(1-p)$ ensures $\mathbb{E}[\tilde{h}] = h$, meaning the model can be used directly at test time without any rescaling.`,
+      },
+      {
+        q: r`Why should weight decay typically be applied to weight matrices but excluded from bias vectors and normalisation scales?`,
+        o: [
+          r`Because bias vectors cannot be stored in 32-bit floating point format`,
+          r`Because biases and normalisation gains govern output shifting and scaling; shrinking them toward zero restricts expressivity without reducing variance`,
+          r`Because biases do not receive gradients during backpropagation`,
+          r`Because regularising biases causes the Adam optimiser to divide by zero`,
+        ],
+        a: 1,
+        why: r`Biases and normalisation parameters represent a tiny fraction of total model capacity. Penalising them forces the model's activations toward an arbitrary zero baseline, risking underfitting without improving overfitting protection.`,
+      },
+      {
+        q: r`What is the primary mechanism through which dropout prevents overfitting in deep neural networks?`,
+        o: [
+          r`It breaks co-adaptations between neurons by forcing each unit to extract useful features in the absence of random peers`,
+          r`It forces the learning rate to decay to zero after each mini-batch`,
+          r`It rounds weight values to the nearest integer`,
+          r`It discards 50% of the training labels at every epoch`,
+        ],
+        a: 0,
+        why: r`Dropout ensures that no neuron can rely on a specific partner neuron to fix its errors. Neurons must develop standalone, generalisable features, functioning like an implicit ensemble over vast sub-networks.`,
+      },
+      {
+        q: r`When implementing early stopping, what parameter state should be deployed to production?`,
+        o: [
+          r`The final weights from the very last training epoch`,
+          r`The checkpoint that achieved the lowest recorded validation loss before patience was exhausted`,
+          r`An average of all weights across all training epochs`,
+          r`The initial random weights before training began`,
+        ],
+        a: 1,
+        why: r`Early stopping continues past the optimum to confirm that validation loss has truly stopped improving. Once patience is exhausted, the training process must restore the checkpoint corresponding to the minimum validation loss.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['optimisers-sgd-momentum-rmsprop-adam-adamw', 'bias-variance-tradeoff', 'backpropagation-and-autodiff'],
+    related: ['normalisation-batch-layer-rms', 'learning-rate-schedules-and-warm-up', 'vanishing-and-exploding-gradients-clipping'],
+    keywords: 'regularisation dropout weight decay early stopping overparameterisation adamw inverted dropout l2 penalty patience co-adaptation validation loss',
+  },
 ];

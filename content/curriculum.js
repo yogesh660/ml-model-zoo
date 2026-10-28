@@ -110,7 +110,7 @@ module.exports = [
     tasks: ['dl'],
     modules: [
       { title: 'From neurons to networks', lessons: ['perceptron', 'mlp_classifier'] },
-      { title: 'Training fundamentals', lessons: ['backpropagation-and-autodiff', 'activation-functions', 'weight-initialisation-xavier-and-he', 'optimisers-sgd-momentum-rmsprop-adam-adamw', ...C('Learning-rate schedules and warm-up', 'Vanishing and exploding gradients, clipping', 'Normalisation: batch, layer, RMS', 'Regularisation: dropout, weight decay, early stopping'), ...X('Mixed precision and training stability')] },
+      { title: 'Training fundamentals', lessons: ['backpropagation-and-autodiff', 'activation-functions', 'weight-initialisation-xavier-and-he', 'optimisers-sgd-momentum-rmsprop-adam-adamw', 'learning-rate-schedules-and-warm-up', 'vanishing-and-exploding-gradients-clipping', 'normalisation-batch-layer-rms', 'regularisation-dropout-weight-decay-early-stopping', ...X('Mixed precision and training stability')] },
       { title: 'Practical deep learning', lessons: [...C('The PyTorch training loop', 'Reading loss curves and debugging training', 'Transfer learning and fine-tuning'), ...X('Data augmentation and mixup', 'Distributed training: DDP and FSDP')] },
       { title: 'Seeing: convolution', lessons: ['convolutional_neural_networks'] },
       { title: 'Sequences', lessons: ['recurrent_neural_networks', 'gru_networks', 'lstm_networks'] },
