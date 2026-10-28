@@ -1964,4 +1964,548 @@ print(f"4. Complementary slackness: {comp_slack:.6f}")`,
     related: ['convex-optimisation-and-duality', 'support_vector_classifier', 'quasi-newton-and-lbfgs'],
     keywords: 'lagrange multipliers kkt conditions karush kuhn tucker complementary slackness stationarity constrained optimisation support vectors',
   },
+  {
+    id: 'hyperparameter-search-grid-random-successive-halving',
+    short: 'Hyperparameter search',
+    title: 'Hyperparameter Search: Grid, Random, Successive Halving',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Strategies for navigating hyperparameter configurations, from brute-force grid search to distribution sampling and resource-adaptive successive halving.`,
+    lead: r`Machine learning models rely on external hyperparameters—such as regularisation strength, tree depth, and learning rates—that cannot be estimated directly through gradient descent. Exhaustive grid search scales exponentially with dimensionality and wastes trials exploring uninformative parameters. Random search and multi-fidelity successive halving dramatically accelerate discovery by sampling continuous spaces and aggressively terminating unpromising configurations early.`,
+    intuition: [
+      r`Imagine searching for the perfect recipe for baking sourdough bread. You have three knobs to adjust: baking temperature, proofing time, and oven rack height. If you set up an exhaustive grid testing 5 temperatures, 5 proofing times, and 4 rack heights, you must bake $5 \times 5 \times 4 = 100$ individual loaves. Worse, after tasting them all, you discover that oven rack height makes virtually zero difference to the bread's texture. Because you used a rigid grid, you baked the same 25 temperature-time combinations four times over, testing only 5 distinct temperatures.`,
+      r`Random search breaks this gridlock. Instead of locking hyperparameters to discrete intersections, it samples configurations randomly from continuous distributions. In 100 random loaves, you test roughly 100 distinct temperatures and 100 distinct proofing times. As Bergstra and Bengio (2012) proved mathematically, most machine learning problems have low effective dimensionality—only a fraction of hyperparameters drive performance. By scattering trials across the space, random search explores the critical dimensions far more granularly for the exact same computational budget.`,
+      r`But why bake every trial loaf for the full 45 minutes? If a loaf fails to rise after 10 minutes, you already know it will not win. Successive halving formalises this intuition as a multi-fidelity bandit problem. It begins by launching dozens of configurations on tiny budgets (e.g. 5 epochs or 10% of the training data). At regular checkpoints, it ranks all candidates, prunes the bottom half (or bottom two-thirds), and doubles the resource budget for the survivors. By focusing compute only on configurations that show early promise, successive halving identifies superior hyperparameters up to an order of magnitude faster.`,
+    ],
+    analogy: r`Running an audition for an orchestra: listening to a hundred musicians play a 30-second scale, inviting the top twenty to play a full piece, and giving the top three a full rehearsal to choose the winner.`,
+    steps: [
+      r`Define the search space: specify bounds, categorical choices, and prior probability distributions (e.g. log-uniform for learning rates and regularisation penalties).`,
+      r`Select an exploration strategy: choose random search over grid search whenever the hyperparameter dimensionality exceeds two or three variables.`,
+      r`Configure a multi-fidelity schedule: choose an allocation factor $\eta$ (typically 2 or 3), a minimum resource budget $r_{\min}$ (e.g. 1 epoch or 100 samples), and a maximum resource budget $R$.`,
+      r`Initialise candidates: sample $N = \eta^s$ configurations uniformly across the defined search space.`,
+      r`Run successive halving rounds: evaluate all active configurations on resource budget $r$, rank by validation loss, retain the top $1/\eta$ fraction, multiply budget $r \leftarrow r \cdot \eta$, and repeat until survivors reach $R$.`,
+      r`Refit the winning configuration on the full dataset using maximum compute to produce the final production model.`,
+    ],
+    math: [
+      {
+        h: 'Grid search complexity and the curse of dimensionality',
+        tex: r`$$N_{\text{grid}} = \prod_{i=1}^d k_i = k^d$$`,
+        p: r`Evaluating $k$ discrete values across $d$ hyperparameters requires exponential computational effort. If only $d_{\text{eff}} \ll d$ hyperparameters actually influence model performance, grid search wastes $k^d - k^{d_{\text{eff}}}$ model evaluations re-testing redundant configurations along uninformative axes.`,
+      },
+      {
+        h: 'Random search sample efficiency',
+        tex: r`$$P(\text{finding within top } \alpha \text{ percentile}) = 1 - (1 - \alpha)^n$$`,
+        p: r`To achieve a 95% probability of sampling at least one configuration within the top 5% of the parameter space ($\alpha = 0.05$), random search requires only $n = \frac{\ln(1 - 0.95)}{\ln(1 - 0.05)} \approx 59$ trials, completely independent of the number of hyperparameter dimensions $d$.`,
+      },
+      {
+        h: 'Successive halving resource allocation',
+        tex: r`$$N_k = \left\lfloor \frac{N_{k-1}}{\eta} \right\rfloor, \qquad R_k = R_{k-1} \cdot \eta, \qquad \sum_{k=0}^K N_k R_k \approx N_0 r_{\min} (K + 1)$$`,
+        p: r`where $\eta$ is the reduction factor and $K = \lfloor \log_\eta(R / r_{\min}) \rfloor$ is the number of halving rungs. By discarding the worst $(1 - 1/\eta)$ configurations at each rung, the total compute allocated across all configurations scales logarithmically with maximum resource depth.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic linear data with 5 features
+rng = np.random.default_rng(42)
+X_full = rng.normal(0, 1, (200, 5))
+y_full = X_full[:, 0] * 2.0 - X_full[:, 1] * 1.5 + rng.normal(0, 0.5, 200)
+
+# Sample 16 random hyperparameter candidates for Ridge (log-alpha in [-3, 3])
+alphas = np.exp(rng.uniform(-3, 3, 16))
+budgets = [25, 50, 100, 200]  # training subsample sizes
+
+current_alphas = alphas.copy()
+for b in budgets[:-1]:
+    X_sub, y_sub = X_full[:b], y_full[:b]
+    losses = []
+    for a in current_alphas:
+        w = np.linalg.solve(X_sub.T @ X_sub + a * np.eye(5), X_sub.T @ y_sub)
+        val_mse = np.mean((y_full[100:] - X_full[100:] @ w) ** 2)
+        losses.append(val_mse)
+    survivors = np.argsort(losses)[:len(current_alphas) // 2]
+    print(f"Budget n={b:3d} | Candidates: {len(current_alphas):2d} | Best MSE: {min(losses):.4f}")
+    current_alphas = current_alphas[survivors]
+
+# Final evaluation on full data
+w_best = np.linalg.solve(X_full.T @ X_full + current_alphas[0] * np.eye(5), X_full.T @ y_full)
+final_mse = np.mean((y_full - X_full @ w_best) ** 2)
+print(f"Best alpha: {current_alphas[0]:.4f} | Full data MSE: {final_mse:.4f}")`,
+    pitfalls: [
+      r`Early-stage ranking noise: If the initial resource budget $r_{\min}$ is set too low (e.g. only 1 epoch or 10 samples), learning rates with slow warmup or deep architectures may perform poorly early on and get discarded despite having superior asymptotic performance.`,
+      r`Uniform sampling on linear scale for scale-sensitive parameters: Sampling learning rates or regularisation parameters linearly between $10^{-5}$ and $1.0$ allocates 90% of trials to values above $0.1$. Multiplicative parameters must be sampled on a logarithmic scale (log-uniform).`,
+      r`Data leakage during subsample evaluation: Subsampling data for resource scaling must preserve class label distributions via stratified sampling; otherwise minority classes may be entirely absent from low-resource rungs.`,
+      r`Overfitting the validation set: Evaluating thousands of hyperparameter configurations against a single validation split inevitably selects for validation set noise (the winner's curse), requiring nested cross-validation or an untouched holdout test set.`,
+    ],
+    keyPoints: [
+      r`Random search consistently outperforms grid search on high-dimensional spaces because it evaluates far more unique values along critical dimensions.`,
+      r`Successive halving allocates compute dynamically by evaluating many candidates on cheap budgets and pruning unpromising configurations early.`,
+      r`Logarithmic prior distributions are mandatory for scale-invariant parameters like learning rate, L2 penalty, and kernel width.`,
+      r`Hyperband extends successive halving by looping over multiple trade-offs between initial candidate count and minimum resource budget.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does random search consistently outperform exhaustive grid search when tuning machine learning models with 5 or more hyperparameters?`,
+        o: [
+          r`Because random numbers eliminate gradient descent variance`,
+          r`Because most models have low effective dimensionality, and random search explores many distinct values along the few important axes rather than re-testing identical coordinates`,
+          r`Because grid search cannot be evaluated on GPU hardware`,
+          r`Because random search guarantees finding the global analytical minimum in finite steps`,
+        ],
+        a: 1,
+        why: r`In most machine learning models, only 1 or 2 hyperparameters strongly dictate performance (e.g. learning rate and regularisation). While grid search wastes compute repeatedly testing the same few values of the important parameter against unimportant variations, random search tests a unique value on every single trial.`,
+      },
+      {
+        q: r`How many random trials $n$ are required to have a 95% probability of sampling at least one configuration within the top 5% ($\alpha = 0.05$) of all possible hyperparameter settings?`,
+        o: [
+          r`Exactly 100 trials`,
+          r`Over 10,000 trials`,
+          r`Approximately 59 trials, regardless of the number of hyperparameter dimensions`,
+          r`The number of trials depends exponentially on the number of features $d$`,
+        ],
+        a: 2,
+        why: r`Setting $1 - (1 - 0.05)^n \ge 0.95$ yields $(0.95)^n \le 0.05$. Taking logarithms gives $n \ge \ln(0.05) / \ln(0.95) \approx -2.9957 / -0.05129 \approx 58.4$ (or 59 trials). Remarkably, this probability is completely independent of dimensionality.`,
+      },
+      {
+        q: r`What is the core mechanism of the Successive Halving algorithm?`,
+        o: [
+          r`It begins with many configurations evaluated on a small resource budget, progressively pruning the worst performers and multiplying resources for the survivors`,
+          r`It cuts the learning rate in half every 10 epochs`,
+          r`It divides the dataset into two halves and trains on both simultaneously`,
+          r`It computes second-order Hessian approximations to halve the parameter space`,
+        ],
+        a: 0,
+        why: r`Successive halving allocates compute efficiently by testing $N$ configurations on a small initial budget (e.g. subsamples or epochs), pruning the bottom fraction (e.g. 50%), and doubling the budget for the survivors over successive rungs.`,
+      },
+      {
+        q: r`Why should hyperparameters like regularisation weight $\lambda$ or learning rate $\eta$ be sampled from a log-uniform distribution rather than a uniform distribution?`,
+        o: [
+          r`Because logarithms force all sampled values to be negative numbers`,
+          r`Because uniform distributions cannot generate floating-point decimals`,
+          r`Because log-uniform sampling prevents models from underfitting`,
+          r`Because their effects scale multiplicatively; a linear uniform distribution would waste nearly all trials exploring the single largest order of magnitude`,
+        ],
+        a: 3,
+        why: r`A shift from $10^{-4}$ to $10^{-3}$ has a comparable structural impact to a shift from $10^{-1}$ to $1.0$. Sampling uniformly on $[10^{-4}, 1.0]$ would allocate 90% of samples to values between 0.1 and 1.0, virtually ignoring the smaller decades.`,
+      },
+    ],
+    usedBy: ['bayesian-optimisation-and-optuna'],
+    prereq: ['cross-validation', 'bias-variance-tradeoff'],
+    related: ['bayesian-optimisation-and-optuna', 'nested-cross-validation', 'cross-validation'],
+    keywords: 'hyperparameter search grid search random search successive halving hyperband tuning model selection cross-validation',
+  },
+  {
+    id: 'bayesian-optimisation-and-optuna',
+    short: 'Bayesian opt. & Optuna',
+    title: 'Bayesian Optimisation and Optuna',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Sequential model-based optimisation balancing exploration and exploitation via Gaussian process surrogates, Expected Improvement, and Optuna's TPE.`,
+    lead: r`Random search and grid search treat every trial independently, discarding valuable information about the objective landscape uncovered during previous runs. Bayesian optimisation models the objective function as an expensive black-box probabilistic distribution, balancing exploration of uncertain regions with exploitation of known high-performing areas using acquisition functions like Expected Improvement. Modern frameworks like Optuna replace Gaussian processes with Tree-structured Parzen Estimators (TPE) and automated pruning, enabling scalable tuning across complex mixed-type search spaces.`,
+    intuition: [
+      r`Imagine prospecting for oil across a vast desert by drilling exploratory test wells. Drilling a single well costs £100,000 and takes two weeks. You would never choose your drilling sites using a rigid grid or random lottery. After drilling your first few sites, you analyse the geological data to form a mental map of the subsurface: where oil is likely concentrated (high expected yield) and where the terrain remains completely unknown (high uncertainty).`,
+      r`If you only drill right next to your best existing well, you might squeeze out minor gains while missing a massive oil basin fifty miles away (over-exploitation). If you only drill in completely random unexplored corners, you waste millions confirming dry dust (over-exploration). The rational strategy balances both: drill where the probability of finding a larger deposit than your current best is highest.`,
+      r`Bayesian optimisation formalises this balance using two components: a probabilistic surrogate model (such as a Gaussian process) that predicts both the expected performance and its uncertainty at every unvisited coordinate, and an acquisition function (such as Expected Improvement) that scores each point's potential. Optuna brings this into modern production through the Tree-structured Parzen Estimator (TPE). Instead of modelling $p(y \mid \theta)$ via expensive matrix inversions, TPE models the parameter distributions of good trials $p(\theta \mid y < y^*)$ and bad trials $p(\theta \mid y \ge y^*)$ separately using kernel density estimates, selecting candidate points that maximise their ratio while aggressively pruning stalled trials mid-training.`,
+    ],
+    analogy: r`A grandmaster chess player evaluating candidate moves: calculating deep variants only for moves with high tactical promise while occasionally exploring unconventional lines that offer surprising upside.`,
+    steps: [
+      r`Initialise the search space: evaluate a small budget of seed points (typically 5 to 10 trials) using quasi-random Sobol or Latin hypercube sampling.`,
+      r`Fit the surrogate model: train a Gaussian Process or Tree-structured Parzen Estimator (TPE) on all evaluated configurations and their observed validation losses.`,
+      r`Formulate the acquisition function: calculate Expected Improvement (EI) or Upper Confidence Bound (UCB) across candidate hyperparameter configurations.`,
+      r`Optimise the acquisition function: identify the hyperparameter coordinate $\theta^*$ that maximises the acquisition score.`,
+      r`Evaluate the objective: train the machine learning model using $\theta^*$ on validation data to record its true objective value $f(\theta^*)$.`,
+      r`Enable automated pruning: abort trials early (via Optuna's MedianPruner or Hyperband) if intermediate training curves fall below median historical progress.`,
+      r`Update the surrogate dataset and iterate until the computational trial budget is exhausted.`,
+    ],
+    math: [
+      {
+        h: 'Gaussian Process surrogate posterior',
+        tex: r`$$f(\theta) \sim \mathcal{GP}\big(\mu(\theta), \, k(\theta, \theta')\big), \qquad \mu_n(\theta) = k_*^T (K + \sigma_n^2 I)^{-1} y, \quad \sigma_n^2(\theta) = k(\theta, \theta) - k_*^T (K + \sigma_n^2 I)^{-1} k_*$$`,
+        p: r`where $K$ is the kernel Gram matrix evaluated at observed trials and $k_*$ is the covariance vector between candidate $\theta$ and past observations. The posterior mean $\mu_n(\theta)$ models exploitation, while the posterior variance $\sigma_n^2(\theta)$ quantifies epistemic uncertainty for exploration.`,
+      },
+      {
+        h: 'Expected Improvement (EI) acquisition function',
+        tex: r`$$\operatorname{EI}(\theta) = \mathbb{E}\big[\max(0, y_{\text{best}} - f(\theta))\big] = (y_{\text{best}} - \mu_n(\theta)) \, \Phi(z) + \sigma_n(\theta) \, \phi(z), \quad z = \frac{y_{\text{best}} - \mu_n(\theta)}{\sigma_n(\theta)}$$`,
+        p: r`where $\Phi$ is the standard normal cumulative distribution function and $\phi$ is the standard normal density function. The first term prioritises exploitation (large improvement over current best $y_{\text{best}}$), while the second term rewards exploration (high uncertainty $\sigma_n(\theta)$).`,
+      },
+      {
+        h: 'Optuna\'s Tree-structured Parzen Estimator (TPE)',
+        tex: r`$$\frac{p(\theta \mid y < y^*)}{p(\theta \mid y \ge y^*)} = \frac{\ell(\theta)}{g(\theta)} \propto \operatorname{EI}(\theta)$$`,
+        p: r`By setting a quantile threshold $\gamma$ (typically 10% or 15%), TPE partitions historical trials into good performers $\ell(\theta)$ and bad performers $g(\theta)$. Maximising the likelihood ratio $\ell(\theta) / g(\theta)$ samples points that are highly probable under the good distribution and improbable under the bad distribution, eliminating $O(n^3)$ GP matrix inversion.`,
+      },
+    ],
+    code: r`import numpy as np
+from scipy.stats import norm
+
+# True black-box function with local minimum
+def f(x):
+    return np.sin(3 * x) + 0.5 * (x - 1) ** 2
+
+# Initial observations
+X_obs = np.array([0.2, 1.8, 2.8])
+y_obs = f(X_obs)
+
+# RBF kernel for Gaussian Process surrogate
+def rbf_cov(x1, x2, l=0.5, s=1.0):
+    return s**2 * np.exp(-0.5 * (x1[:, None] - x2[None, :])**2 / l**2)
+
+# Run 4 Bayesian Optimisation steps via Expected Improvement (EI)
+cands = np.linspace(0, 3, 100)
+for step in range(4):
+    K = rbf_cov(X_obs, X_obs) + 1e-6 * np.eye(len(X_obs))
+    K_s = rbf_cov(cands, X_obs)
+    mu = K_s @ np.linalg.solve(K, y_obs)
+    sigma = np.sqrt(np.maximum(1e-6, 1.0 - np.sum(K_s * np.linalg.solve(K, K_s.T).T, axis=1)))
+    
+    # Expected Improvement (minimisation: improvement over current best y_best)
+    y_best = np.min(y_obs)
+    z = (y_best - mu) / sigma
+    ei = (y_best - mu) * norm.cdf(z) + sigma * norm.pdf(z)
+    
+    next_x = cands[np.argmax(ei)]
+    X_obs = np.append(X_obs, next_x)
+    y_obs = np.append(y_obs, f(next_x))
+
+best_idx = np.argmin(y_obs)
+print(f"Evaluated points: {X_obs.round(3)}")
+print(f"Best observed x*: {X_obs[best_idx]:.3f} | Minimum value: {y_obs[best_idx]:.4f}")`,
+    pitfalls: [
+      r`Cubic scaling of Gaussian processes: Inverting the GP covariance matrix scales as $O(n^3)$ with the number of trials $n$. Standard GP Bayesian optimisation slows to a crawl beyond 150 to 200 trials (which is why Optuna uses TPE or Random Forests).`,
+      r`Inappropriate kernel length scales: If the GP kernel length-scale is too short, the surrogate assumes the objective is wildly jagged, treating nearby points as completely independent and collapsing into random search.`,
+      r`Cold-start vulnerability: If initial seed points all happen to fall in uninformative regions, the acquisition function can get trapped reinforcing local minima before exploring broader basins.`,
+      r`Ignoring trial execution overhead: In fast-training models (e.g. linear models or small decision trees), fitting a complex surrogate model can take longer than simply running 500 parallel random trials.`,
+    ],
+    keyPoints: [
+      r`Replaces uninformed sampling with sequential probabilistic modelling of the hyperparameter response surface.`,
+      r`Expected Improvement balances the trade-off between exploiting promising regions and exploring uncertain areas.`,
+      r`Optuna's Tree-structured Parzen Estimator (TPE) replaces Gaussian processes with non-parametric kernel density ratios, scaling to high trial counts and categorical spaces.`,
+      r`Automated pruning terminates unpromising trials midway through training epochs, saving up to 80% of total compute.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the primary role of the acquisition function in Bayesian optimisation?`,
+        o: [
+          r`To compute the gradient of the loss function with respect to model weights`,
+          r`To calculate the training accuracy of the neural network`,
+          r`To mathematically quantify the trade-off between exploiting areas of known high performance and exploring regions of high uncertainty`,
+          r`To perform Singular Value Decomposition on the feature matrix`,
+        ],
+        a: 2,
+        why: r`The acquisition function (such as Expected Improvement or Upper Confidence Bound) evaluates the surrogate model's posterior mean and uncertainty across unvisited points, guiding the search to coordinates with the highest potential return.`,
+      },
+      {
+        q: r`How does Optuna's Tree-structured Parzen Estimator (TPE) differ fundamentally from a standard Gaussian Process surrogate?`,
+        o: [
+          r`TPE models the input distribution of good trials $\ell(\theta)$ and poor trials $g(\theta)$ separately, choosing points that maximise the ratio $\ell(\theta)/g(\theta)$ without inverting covariance matrices`,
+          r`TPE only works on strictly convex linear regression problems`,
+          r`TPE requires computing the full Hessian matrix of the neural network weights`,
+          r`TPE uses exhaustive grid search across integer coordinates`,
+        ],
+        a: 0,
+        why: r`Instead of modelling $p(y \mid \theta)$ with a computationally heavy Gaussian Process ($O(n^3)$ complexity), TPE splits historical evaluations into top performers $\ell(\theta)$ and remaining performers $g(\theta)$ using a quantile cutoff $\gamma$, maximising $\ell(\theta)/g(\theta) \propto \operatorname{EI}(\theta)$.`,
+      },
+      {
+        q: r`In the Expected Improvement formula $\operatorname{EI}(\theta) = (y_{\text{best}} - \mu) \Phi(z) + \sigma \phi(z)$, what behaviour does the second term $\sigma \phi(z)$ represent?`,
+        o: [
+          r`Early stopping of divergent neural networks`,
+          r`L1 regularisation penalty`,
+          r`Exploitation of the current best observed hyperparameter`,
+          r`Exploration of regions where the surrogate model has high prediction uncertainty $\sigma$`,
+        ],
+        a: 3,
+        why: r`The term $\sigma \phi(z)$ is proportional to the posterior standard deviation $\sigma$. When evaluating an unexplored region of the search space, $\sigma$ is large, driving up Expected Improvement even if the predicted mean $\mu$ is unremarkable.`,
+      },
+      {
+        q: r`What is the purpose of Optuna's automated "pruning" mechanism (such as MedianPruner)?`,
+        o: [
+          r`To remove low-importance features from the training dataset`,
+          r`To abort unpromising training trials early if intermediate metrics fall below historical baselines, freeing compute for better candidates`,
+          r`To prune branches from decision tree models during inference`,
+          r`To zero out small neural network weights after backpropagation`,
+        ],
+        a: 1,
+        why: r`Pruning checks intermediate validation scores (e.g. after each epoch) against past completed trials. If a trial performs worse than the historical median at that epoch, Optuna halts the trial immediately, saving compute.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['hyperparameter-search-grid-random-successive-halving', 'cross-validation'],
+    related: ['hyperparameter-search-grid-random-successive-halving', 'nested-cross-validation', 'cross-validation'],
+    keywords: 'bayesian optimisation optuna gaussian process tpe expected improvement acquisition function surrogate model hyperparameter tuning',
+  },
+  {
+    id: 'learning-curves-and-diagnosing-fit',
+    short: 'Learning curves & fit',
+    title: 'Learning Curves and Diagnosing Fit',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Empirical diagnostic plotting training and validation error against sample size to distinguish high bias (underfitting) from high variance (overfitting).`,
+    lead: r`When a machine learning model underperforms, practitioners often make random architectural tweaks or reflexively gather more training data, often with zero improvement. Learning curves plot training error and validation error as a function of training dataset size $n$, offering an empirical diagnostic that exposes the true bottleneck: high bias, high variance, or data quality limits. Interpreting the gap and convergence asymptotes reveals precisely whether the solution requires more data, a more expressive model, or stronger regularisation.`,
+    intuition: [
+      r`Imagine a primary school pupil learning to read music versus a student memorising exam answers. If the pupil tries to sight-read complex Mozart symphonies using only a rudimentary knowledge of three notes, their reading error will be atrocious on day one and remain equally atrocious six months later, no matter how many sheet music books you buy them. The problem is not a shortage of books (data); the pupil's mental model is fundamentally too primitive to capture harmonic complexity (high bias / underfitting).`,
+      r`Now imagine a student cramming for a history test by memorising exact practice exam questions word for word. On the practice tests they have memorised, their score is 100% (near-zero training error). But on the final exam with slightly rephrased questions, they flounder with a 55% score (high validation error). However, if you give this student 500 diverse practice exams covering every possible variation, memorisation gradually forces them to learn the underlying historical themes, and their exam score steadily climbs toward their practice score (high variance / overfitting).`,
+      r`Learning curves plot this exact dynamic across sample sizes $n$. When $n$ is tiny, any flexible model can easily memorise the training instances (training error starts near zero), while validation error starts high. As $n$ increases, fitting every point perfectly becomes harder, so training error rises slightly while validation error falls. Where the two curves end up tells you the whole story: if both flatten early at an unacceptably high error plateau with virtually no gap, collecting more data is a total waste of money. If a large gap persists between low training error and high validation error, more data or regularisation is the exact cure.`,
+    ],
+    analogy: r`Reading the gauges on an engine diagnostics panel: knowing whether a sputtering car suffers from fuel starvation (underfitting) or spark plug misfires (overfitting) before spending thousands on the wrong replacement parts.`,
+    steps: [
+      r`Select training sample increments: define a progression of training subset sizes $n_1 < n_2 < \dots < n_m = n_{\text{total}}$ (e.g. 10%, 25%, 50%, 75%, 100%).`,
+      r`Perform cross-validation: for each sample size $n_i$, randomly sample $n_i$ instances from the training fold, fit the estimator, and record the training score and validation score across $K$ folds.`,
+      r`Compute mean and variance: calculate the mean training error $\bar{E}_{\text{train}}(n_i)$ and validation error $\bar{E}_{\text{val}}(n_i)$, along with confidence bands ($\pm 1 \text{ standard error}$).`,
+      r`Diagnose high bias: check if the validation curve plateaus at high error and the training curve converges upward to meet it with a negligible gap.`,
+      r`Diagnose high variance: check if the training error remains low while the validation error remains significantly higher, with the validation curve still descending as $n$ grows.`,
+      r`Execute corrective action: increase model capacity or reduce regularisation for high bias; add training samples, prune features, or increase regularisation for high variance.`,
+    ],
+    math: [
+      {
+        h: 'Generalisation error decomposition',
+        tex: r`$$\mathbb{E}\big[(y - \hat{f}(x))^2\big] = \operatorname{Bias}^2\big(\hat{f}(x)\big) + \operatorname{Var}\big(\hat{f}(x)\big) + \sigma_{\epsilon}^2$$`,
+        p: r`where $\sigma_{\epsilon}^2$ is the irreducible noise floor (Bayes error). The asymptotic gap between the convergence plateau of learning curves and zero reflects the sum of squared bias and irreducible noise.`,
+      },
+      {
+        h: 'High bias (underfitting) asymptotic regime',
+        tex: r`$$\lim_{n \to \infty} E_{\text{train}}(n) \approx \lim_{n \to \infty} E_{\text{val}}(n) \gg \sigma_{\epsilon}^2, \qquad \frac{\partial E_{\text{val}}}{\partial n} \approx 0$$`,
+        p: r`As sample size $n$ grows, training error increases and validation error decreases until both collide at a high error plateau. The vanishing derivative $\partial E_{\text{val}} / \partial n \approx 0$ indicates that additional training data yields zero marginal performance gain.`,
+      },
+      {
+        h: 'High variance (overfitting) asymptotic regime',
+        tex: r`$$E_{\text{val}}(n) - E_{\text{train}}(n) \gg 0, \qquad \frac{\partial E_{\text{val}}}{\partial n} < 0$$`,
+        p: r`A persistent, substantial gap separates training and validation performance. The negative derivative confirms that collecting more training observations will continue driving validation error downward toward the training error asymptote.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Non-linear ground truth: y = 0.5 * x^2 + noise
+rng = np.random.default_rng(42)
+X_all = rng.uniform(-3, 3, (300, 1))
+y_all = 0.5 * X_all[:, 0]**2 + rng.normal(0, 0.5, 300)
+
+X_test, y_test = X_all[200:], y_all[200:]
+train_sizes = [15, 30, 60, 120, 200]
+
+print("--- Linear Model (High Bias: Underfitting) ---")
+for n in train_sizes:
+    X_tr, y_tr = X_all[:n], y_all[:n]
+    A_tr = np.hstack([X_tr, np.ones((n, 1))])
+    w = np.linalg.lstsq(A_tr, y_tr, rcond=None)[0]
+    
+    tr_mse = np.mean((y_tr - A_tr @ w) ** 2)
+    A_te = np.hstack([X_test, np.ones((len(X_test), 1))])
+    te_mse = np.mean((y_test - A_te @ w) ** 2)
+    print(f"n={n:3d} | Train MSE: {tr_mse:.3f} | Val MSE: {te_mse:.3f} | Gap: {abs(te_mse - tr_mse):.3f}")`,
+    pitfalls: [
+      r`Conflating learning curves with training epoch loss curves: Loss plotted over training epochs tracks optimiser convergence (gradient descent progress), whereas learning curves plot final performance against sample size $n$ to diagnose statistical capacity.`,
+      r`Data leakage across training subsamples: When sampling subsets of size $n$, instances must be sampled strictly from the training folds; validation folds must remain constant and untouched.`,
+      r`Unstratified subsampling on imbalanced classes: Drawing small subsamples (e.g. $n=20$) from highly imbalanced datasets can omit minority classes entirely, causing massive artificial variance spikes in early curve points.`,
+      r`Misinterpreting the irreducible Bayes error floor: If both curves converge at 85% accuracy and no model can exceed 85% due to noisy labels or missing features, the model does not have high bias—it has hit the irreducible Bayes error rate.`,
+    ],
+    keyPoints: [
+      r`High bias displays high training and validation error with an early plateau and a negligible gap; adding data will not help.`,
+      r`High variance displays low training error, higher validation error, and a persistent gap that shrinks as training data increases.`,
+      r`The asymptote of the learning curve reveals whether the model is limited by statistical sample size or structural model capacity.`,
+      r`Saves immense engineering time and budget by proving whether gathering more data will improve performance before collecting it.`,
+    ],
+    quiz: [
+      {
+        q: r`If a model's learning curve shows that both training error and validation error plateau at a high error rate with a negligible gap between them, what is the correct diagnosis and remediation?`,
+        o: [
+          r`High bias (underfitting); increase model capacity, engineer non-linear features, or decrease regularisation (do not gather more data)`,
+          r`High variance (overfitting); collect more training data immediately`,
+          r`Data leakage; remove duplicate rows from the validation split`,
+          r`The model has reached 100% test accuracy`,
+        ],
+        a: 0,
+        why: r`When both training and validation errors are high and parallel with a near-zero gap, the model is underfitting (high bias). The model lacks the capacity to represent the underlying patterns, so adding more training examples will not improve performance.`,
+      },
+      {
+        q: r`What does a learning curve with very low training error and significantly higher validation error that is still trending downwards at the maximum available sample size indicate?`,
+        o: [
+          r`High bias, indicating the model should be simplified`,
+          r`The learning rate is set too high`,
+          r`The dataset contains no predictive signal`,
+          r`High variance (overfitting); gathering more training data or increasing regularisation will likely improve test performance`,
+        ],
+        a: 3,
+        why: r`A large gap between low training error and higher validation error defines high variance. If the validation error curve maintains a negative downward slope at the maximum sample size, collecting more data will continue driving test error down.`,
+      },
+      {
+        q: r`How do learning curves (performance vs dataset size $n$) differ fundamentally from loss curves in deep learning?`,
+        o: [
+          r`Learning curves can only be plotted for linear regression models`,
+          r`Loss curves track optimiser convergence over training epochs for a fixed dataset, whereas learning curves track final model performance as a function of training dataset size $n$`,
+          r`Learning curves are always strictly horizontal lines`,
+          r`Loss curves require cross-validation, while learning curves do not`,
+        ],
+        a: 1,
+        why: r`Training loss curves monitor whether gradient descent is converging across iterative epochs. Learning curves evaluate statistical generalisation by retraining models from scratch on subsets of varying sizes $n$.`,
+      },
+      {
+        q: r`Why does training error typically increase as the training sample size $n$ grows on a learning curve?`,
+        o: [
+          r`Because larger datasets automatically increase label noise`,
+          r`Because gradient descent fails on datasets with more than 100 samples`,
+          r`Because it is easy for a model to perfectly fit or memorise a small handful of points, but harder to fit a large, diverse dataset with the same parameter budget`,
+          r`Because regularisation is automatically disabled on small sample sizes`,
+        ],
+        a: 2,
+        why: r`On tiny datasets (e.g. $n=10$), an expressive model has enough degrees of freedom to interpolate every single point, yielding near-zero training error. As $n$ increases, constraints multiply and the model must compromise, pulling training error up toward the population error.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bias-variance-tradeoff', 'cross-validation'],
+    related: ['bias-variance-tradeoff', 'cross-validation', 'nested-cross-validation'],
+    keywords: 'learning curves diagnosing fit bias variance underfitting overfitting model selection sample size validation error',
+  },
+  {
+    id: 'nested-cross-validation',
+    short: 'Nested cross-validation',
+    title: 'Nested Cross-Validation',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Double cross-validation framework separating hyperparameter optimisation from performance estimation to eliminate optimistic selection bias.`,
+    lead: r`In standard cross-validation workflows, practitioners tune hyperparameters across validation folds and report the winning configuration's score as the model's expected future test performance. This common practice introduces optimistic selection bias—the winner's curse—because the reported score reflects the best of many random validation fluctuations. Nested cross-validation resolves this by enclosing hyperparameter tuning inside an outer performance-estimation loop, producing an honest, unbiased assessment of the entire model-building pipeline.`,
+    intuition: [
+      r`Imagine a financial fund manager testing 1,000 different automated trading strategies on historical stock market data from 2020 to 2023. By pure random chance, one strategy will emerge with an astonishing 95% annual return, even if all 1,000 strategies are based on random coin flips. If the manager advertises that 95% figure to investors as the fund's "expected return", investors will be sorely disappointed in 2024. The manager used the same historical data to pick the winning strategy and to evaluate how good the winning strategy was.`,
+      r`The exact same trap plagues standard machine learning workflows. When you evaluate 500 combinations of tree depth, learning rate, and regularisation penalties on your cross-validation folds, you pick the parameter set that achieved the lowest validation error. But part of that stellar score is inevitable overfitting to those specific validation splits. Reporting that winning validation score as your model's expected test accuracy guarantees that real-world deployment performance will fall short.`,
+      r`Nested cross-validation cures this by establishing two strictly separated loops: an inner loop and an outer loop. The outer loop splits the data into outer training and outer test sets. For each outer fold, the outer test set is locked away in a vault. The outer training data is handed to an inner cross-validation loop, which tunes and selects the best hyperparameters. Once chosen, that winning configuration is evaluated once on the untouched outer test set. By repeating this process across all outer folds, nested cross-validation provides an unpolluted, statistically rigorous estimate of how well the end-to-end modelling procedure generalises.`,
+    ],
+    analogy: r`Running a multi-round competitive tournament: inner qualification rounds select the team's best lineup, but the team's true skill is judged only by matches played against unencountered external opponents.`,
+    steps: [
+      r`Partition the full dataset into $K_{\text{outer}}$ folds (e.g. 5 folds) for the outer evaluation loop.`,
+      r`For each outer fold $k$, hold out fold $k$ as an untouched test set, and designate the remaining $K_{\text{outer}} - 1$ folds as the outer training set.`,
+      r`Partition the outer training set into $K_{\text{inner}}$ folds (e.g. 3 or 4 folds) for the inner tuning loop.`,
+      r`Within the inner loop, evaluate all candidate hyperparameter configurations across the inner folds and identify the configuration $\theta_k^*$ that minimises average inner validation error.`,
+      r`Fit a model on the entire outer training set using the selected hyperparameter $\theta_k^*$, and evaluate its performance on the held-out outer test set.`,
+      r`Compute the final generalisation estimate as the average test performance across all $K_{\text{outer}}$ outer test evaluations.`,
+      r`To ship a production model, run inner cross-validation across the entire dataset to select a final hyperparameter $\theta_{\text{final}}^*$ and fit on all available data.`,
+    ],
+    math: [
+      {
+        h: 'Selection bias in standard cross-validation',
+        tex: r`$$\hat{\theta} = \arg\min_{\theta \in \Theta} \operatorname{CV}(\theta), \qquad \mathbb{E}\big[\operatorname{CV}(\hat{\theta})\big] < \operatorname{Err}_{\text{true}}(\hat{\theta})$$`,
+        p: r`Because $\hat{\theta}$ is chosen as the minimum over many random empirical variables, Jensen's inequality and extreme value theory guarantee that $\min_\theta \operatorname{CV}(\theta)$ is a downward-biased estimator of true error $\operatorname{Err}_{\text{true}}$, especially when sample size $N$ is small and the search space $|\Theta|$ is large.`,
+      },
+      {
+        h: 'Nested cross-validation structure',
+        tex: r`$$\operatorname{CV}_{\text{nested}} = \frac{1}{K_{\text{out}}} \sum_{k=1}^{K_{\text{out}}} L\left(y_{\text{test}}^{(k)}, \, \hat{f}_{\hat{\theta}_k}\big(x_{\text{test}}^{(k)}\big)\right)$$`,
+        p: r`where each $\hat{\theta}_k = \arg\min_{\theta \in \Theta} \frac{1}{K_{\text{in}}} \sum_{j=1}^{K_{\text{in}}} L\big(y_{\text{val}}^{(k, j)}, \hat{f}_\theta(x_{\text{val}}^{(k, j)})\big)$. Because $x_{\text{test}}^{(k)}$ was never seen during the selection of $\hat{\theta}_k$, $\operatorname{CV}_{\text{nested}}$ is an unbiased estimator of expected generalisation error.`,
+      },
+      {
+        h: 'Computational complexity of nested cross-validation',
+        tex: r`$$\text{Cost} = K_{\text{outer}} \times \left( |\Theta| \cdot K_{\text{inner}} + 1 \right) \approx K_{\text{outer}} \cdot K_{\text{inner}} \cdot |\Theta|$$`,
+        p: r`A $5 \times 3$ nested cross-validation evaluating 100 hyperparameter configurations trains $5 \times (100 \times 3 + 1) = 1{,}505$ models, representing a $K_{\text{outer}}$-fold multiplier over standard non-nested cross-validation.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic noisy dataset: pure noise targets (true R^2 <= 0)
+rng = np.random.default_rng(42)
+n_samples, n_features = 80, 20
+X = rng.normal(0, 1, (n_samples, n_features))
+y = rng.normal(0, 1, n_samples)
+
+# Candidate Ridge regularisation penalties
+alphas = np.logspace(-3, 3, 20)
+k_outer, k_inner = 4, 3
+indices = np.arange(n_samples)
+outer_folds = np.array_split(indices, k_outer)
+
+nested_scores = []
+for i in range(k_outer):
+    test_idx = outer_folds[i]
+    train_idx = np.setdiff1d(indices, test_idx)
+    X_train, y_train = X[train_idx], y[train_idx]
+    X_test, y_test = X[test_idx], y[test_idx]
+    
+    # Inner CV loop for hyperparameter tuning
+    inner_folds = np.array_split(np.arange(len(train_idx)), k_inner)
+    inner_mses = []
+    for a in alphas:
+        fold_errs = []
+        for j in range(k_inner):
+            in_val = inner_folds[j]
+            in_tr = np.setdiff1d(np.arange(len(train_idx)), in_val)
+            w = np.linalg.solve(X_train[in_tr].T @ X_train[in_tr] + a * np.eye(n_features), X_train[in_tr].T @ y_train[in_tr])
+            fold_errs.append(np.mean((y_train[in_val] - X_train[in_val] @ w) ** 2))
+        inner_mses.append(np.mean(fold_errs))
+    
+    # Evaluate best inner hyperparameter on untouched outer test set
+    best_a = alphas[np.argmin(inner_mses)]
+    w_outer = np.linalg.solve(X_train.T @ X_train + best_a * np.eye(n_features), X_train.T @ y_train)
+    nested_scores.append(np.mean((y_test - X_test @ w_outer) ** 2))
+
+print(f"Outer fold test MSEs: {[round(float(s), 3) for s in nested_scores]}")
+print(f"Unbiased nested CV MSE: {np.mean(nested_scores):.4f}")`,
+    pitfalls: [
+      r`Believing nested CV outputs a single best model: Nested CV evaluates the performance of the model-building algorithm, not a single static model. Each outer fold may select slightly different optimal hyperparameters.`,
+      r`Computational expense on deep architectures: Multiplying hyperparameter trials by $K_{\text{outer}} \times K_{\text{inner}}$ is computationally prohibitive for deep neural networks taking days to train, where single validation splits are standard.`,
+      r`Preprocessing leakage outside the nested loops: Fitting feature scalers, encoders, or PCA on the full dataset before splitting into outer folds leaks test information and invalidates the unbiased estimate.`,
+      r`Reporting the final production model without refitting: The outer folds exist only to measure expected test error; the final production model must be trained on 100% of the dataset using the best hyperparameter selected from an overall inner loop.`,
+    ],
+    keyPoints: [
+      r`Completely eliminates optimistic selection bias (the winner's curse) in hyperparameter tuning.`,
+      r`Separates hyperparameter selection (inner loop) from model performance estimation (outer loop).`,
+      r`Essential for small to medium sample sizes ($n < 1{,}000$) where validation variance is high and selection bias is most severe.`,
+      r`Evaluates the generalisation capacity of the entire automated modelling pipeline rather than a single parameter configuration.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does standard (non-nested) cross-validation produce optimistically biased estimates of model error when tuning many hyperparameters?`,
+        o: [
+          r`Because cross-validation only works on classification problems`,
+          r`Because picking the minimum validation error across hundreds of configurations capitalises on random validation set noise (the winner's curse)`,
+          r`Because standard cross-validation evaluates test data before training`,
+          r`Because the number of folds must always equal the number of features`,
+        ],
+        a: 1,
+        why: r`When searching through many candidate configurations, some will achieve lower validation errors purely by chance. Reporting the winning score as expected future performance overestimates real-world accuracy due to selection bias.`,
+      },
+      {
+        q: r`In a $5 \times 3$ nested cross-validation, what is the role of the outer loop test sets?`,
+        o: [
+          r`They are used to tune the learning rate`,
+          r`They are used to perform recursive feature elimination`,
+          r`They serve as completely untouched test sets used solely to estimate the unbiased generalisation error of models tuned by the inner loop`,
+          r`They determine the optimal number of inner folds`,
+        ],
+        a: 2,
+        why: r`The outer loop's sole function is unbiased performance estimation. The outer test folds are completely isolated from the inner loop's hyperparameter search.`,
+      },
+      {
+        q: r`What does nested cross-validation actually produce as its final output?`,
+        o: [
+          r`An unbiased estimate of the generalisation error of the model-building procedure, after which a final model is refit on all data`,
+          r`A single neural network weight vector`,
+          r`A set of five different production models that must all be deployed simultaneously`,
+          r`A guaranteed 100% test accuracy score`,
+        ],
+        a: 0,
+        why: r`Nested CV is an evaluation protocol, not a training algorithm. It estimates how well the pipeline generalises. Once the evaluation is complete, the practitioner runs a single tuning loop on all data to produce the final deployable model.`,
+      },
+      {
+        q: r`If each outer fold in a 5-fold nested CV selects a slightly different optimal hyperparameter value (e.g. $\alpha \in \{0.1, 0.5, 0.1, 1.0, 0.5\}$), what does this indicate?`,
+        o: [
+          r`The nested cross-validation failed and must be restarted with different seeds`,
+          r`The dataset contains corrupted corrupted values`,
+          r`Ridge regression cannot be evaluated using nested cross-validation`,
+          r`This is normal behaviour reflecting sample variance across subsets; the objective landscape may be relatively flat across those values`,
+        ],
+        a: 3,
+        why: r`Optimal hyperparameters naturally vary across sample partitions, particularly when multiple configurations yield nearly equivalent validation error. This variation illustrates why nested CV evaluates the procedure rather than a single frozen setting.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['cross-validation', 'bias-variance-tradeoff'],
+    related: ['cross-validation', 'hyperparameter-search-grid-random-successive-halving', 'bayesian-optimisation-and-optuna'],
+    keywords: 'nested cross-validation double cv model selection selection bias hyperparameter tuning outer loop inner loop',
+  },
 ];
