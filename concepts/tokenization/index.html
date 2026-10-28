@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvskiwkq">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvskiwkq">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -171,6 +171,46 @@ tok.<span class="f">train</span>(files=[<span class="s">&quot;my_corpus.txt&quot
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Retrains on the new text</span></button><button class="opt" type="button"><b>B</b><span>Replays the learned merges in the order they were learned</span></button><button class="opt" type="button"><b>C</b><span>Picks merges at random</span></button><button class="opt" type="button"><b>D</b><span>Looks up whole sentences</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Merge order is the priority; that makes encoding deterministic.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>How does WordPiece (used in BERT) decide which subword pair $(a, b)$ to merge during training, compared with standard BPE?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>WordPiece selects the pair that maximises $\frac{\operatorname{count}(ab)}{\operatorname{count}(a)\operatorname{count}(b)}$ (relative likelihood improvement), whereas BPE simply picks the pair with the highest raw co-occurrence count</span></button><button class="opt" type="button"><b>B</b><span>WordPiece merges whole sentences directly using hidden Markov models</span></button><button class="opt" type="button"><b>C</b><span>WordPiece selects the least frequent character pair to keep vocabulary balanced</span></button><button class="opt" type="button"><b>D</b><span>WordPiece relies on a neural network trained with cross-entropy loss</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> While standard BPE greedily merges the pair with highest absolute count, WordPiece scores pairs by $\frac{\operatorname{count}(ab)}{\operatorname{count}(a)\operatorname{count}(b)}$. This penalises components that already appear frequently on their own, favouring pairs that co-occur far more often than expected by chance.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>In GPT-style tokenizers (such as tiktoken for GPT-2 / GPT-4), why do "apple" and " apple" (with a leading space) receive completely different token IDs?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Leading spaces are converted into random numerical noise</span></button><button class="opt" type="button"><b>B</b><span>Pre-tokenization attaches the space as a prefix character (e.g. Ġapple), preventing merges from crossing word boundaries and creating distinct vocabulary entries for word starts</span></button><button class="opt" type="button"><b>C</b><span>The tokenizer ignores spaces entirely and creates duplicates by mistake</span></button><button class="opt" type="button"><b>D</b><span>One-hot encoding requires odd-length strings to have different hashes</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> GPT tokenizers attach the leading space directly to the subsequent token (represented in GPT-2 vocab as Ġ). Because "apple" and " apple" are different byte sequences, they have separate IDs in the vocabulary table.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>Why do modern large language models use subword tokenization (such as BPE) rather than pure character-level or pure whole-word tokenization?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Subword tokenization eliminates the need for positional encodings</span></button><button class="opt" type="button"><b>B</b><span>Character-level tokenization cannot process punctuation marks</span></button><button class="opt" type="button"><b>C</b><span>Subwords balance sequence length and vocabulary size: common words stay whole while rare words are decomposed into known chunks, avoiding out-of-vocabulary [UNK] tokens without creating massive sequence lengths</span></button><button class="opt" type="button"><b>D</b><span>Subword tokenization guarantees linear $O(T)$ attention cost</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Whole-word tokenizers require enormous vocabularies and choke on unseen words ([UNK]). Character tokenizers produce tiny vocabularies but inflate sequence lengths by 4–5×, which is catastrophic for $O(T^2)$ Transformer attention. Subwords strike an optimal balance between the two extremes.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>A custom byte-level BPE tokenizer uses the standard 256 initial byte values. During training, it executes exactly 32,000 merge operations, and the developer adds 4 special tokens (<|pad|>, <|bos|>, <|eos|>, <|unk|>). What is the final total vocabulary size $|V|$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>32,000</span></button><button class="opt" type="button"><b>B</b><span>32,256</span></button><button class="opt" type="button"><b>C</b><span>32,260</span></button><button class="opt" type="button"><b>D</b><span>32,512</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The total vocabulary size is $|V| = |\text{base bytes}| + \#\text{merges} + \#\text{special tokens} = 256 + 32{,}000 + 4 = 32{,}260$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>Unlike BPE which builds up a vocabulary bottom-up through iterative merges, how does the Unigram Language Model tokenizer (used in SentencePiece and T5) construct its final vocabulary?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It starts from a massive initial candidate vocabulary and iteratively prunes subwords that minimise the decrease in corpus likelihood until reaching the desired vocabulary size</span></button><button class="opt" type="button"><b>B</b><span>It clusters word embeddings using $k$-means to select centroids as tokens</span></button><button class="opt" type="button"><b>C</b><span>It randomly removes 10% of characters from every sentence</span></button><button class="opt" type="button"><b>D</b><span>It merges words based strictly on alphabetical order</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Unigram LM works top-down: it initialises with a large candidate pool of subwords, estimates a unigram probability for each, and iteratively discards the subwords whose removal hurts the overall training corpus likelihood the least.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>A toy training corpus consists of three words with word frequencies: "cost" (frequency 4), "lost" (frequency 6), and "lose" (frequency 2). Before any merges take place, which adjacent character pair has the highest count and will be selected for the first BPE merge?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>('l', 'o') with count 8</span></button><button class="opt" type="button"><b>B</b><span>('s', 't') with count 10</span></button><button class="opt" type="button"><b>C</b><span>('o', 's') with count 12</span></button><button class="opt" type="button"><b>D</b><span>('c', 'o') with count 4</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Counting adjacent pairs across all occurrences: ('o', 's') appears in "cost" (4), "lost" (6), and "lose" (2), giving total count $4 + 6 + 2 = 12$. Meanwhile, ('s', 't') totals $4 + 6 = 10$, and ('l', 'o') totals $6 + 2 = 8$. Therefore, ('o', 's') wins the first merge.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>A standard Transformer's self-attention compute cost scales quadratically with sequence length $T$ ($O(T^2)$). A short text passage tokenizes into 200 tokens in English. Due to tokenizer representation bias, the identical text in an underrepresented language tokenizes into 600 tokens ($3\times$ as many). By what factor does the attention compute cost increase for the underrepresented language?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$3.0\times$</span></button><button class="opt" type="button"><b>B</b><span>$9.0\times$</span></button><button class="opt" type="button"><b>C</b><span>$6.0\times$</span></button><button class="opt" type="button"><b>D</b><span>$27.0\times$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Attention cost scales with the square of sequence length: $\left(\frac{T_B}{T_A}\right)^2 = \left(\frac{600}{200}\right)^2 = 3^2 = 9.0\times$. A $3\times$ increase in token count results in a $9\times$ surge in self-attention FLOPs and memory footprint, directly impacting latency and cost.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>Why do modern large language models often fail at simple character-level tasks, such as counting the number of occurrences of the letter "r" in the word "strawberry"?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model's embedding vectors are initialised with Gaussian noise</span></button><button class="opt" type="button"><b>B</b><span>The model never observes individual characters because the tokenizer collapses "strawberry" into multi-letter subword chunks (e.g. "straw" + "berry"), obscuring the underlying character sequence</span></button><button class="opt" type="button"><b>C</b><span>Self-attention heads are mathematically prohibited from inspecting consonant letters</span></button><button class="opt" type="button"><b>D</b><span>The softmax cross-entropy loss function is insensitive to character frequencies</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Models never see raw character strings; they only receive integer token IDs. Because "strawberry" is parsed as subword chunks, the network has no direct access to individual letters unless explicitly prompted to spell the word out character by character.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -206,14 +246,14 @@ tok.<span class="f">train</span>(files=[<span class="s">&quot;my_corpus.txt&quot
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/language.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/architecture.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/core.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/algos.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/models.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/language.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvskiwkq" defer></script>
+<script src="../../assets/labs/architecture.js?v=mvskiwkq" defer></script>
+<script src="../../assets/learn.js?v=mvskiwkq" defer></script>
 </body>
 </html>
