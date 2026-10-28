@@ -3470,4 +3470,398 @@ print("Notice how clipped precision prevents repeated 'the' from cheating!")
     related: ['bert-and-masked-language-models', 'gpt-and-decoder-only-models', 'transformer_networks'],
     keywords: 'machine translation nmt seq2seq encoder decoder cross-attention beam search bleu brevety penalty chrf bpe subwords',
   },
+
+{
+    id: 'semantic-search-and-dense-retrieval',
+    short: 'Semantic Search & Dense Retrieval',
+    title: 'Semantic search and dense retrieval',
+    task: 'concepts',
+    module: '5 · Tasks and evaluation',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Semantic search and dense retrieval transcend lexical keyword matching by projecting queries and documents into a shared continuous vector space. While traditional inverted indexes rely on exact token overlaps (failing on synonyms and paraphrases), dense retrieval uses dual-encoder neural networks to encode passages and queries into dense embeddings. Matched via inner products or cosine similarity and accelerated by Approximate Nearest Neighbour (ANN) indexing, dense retrieval retrieves conceptually relevant documents even when zero exact keywords match.`,
+    lead: r`If you search an enterprise knowledge base for "how to fix a flickering monitor", a classical BM25 keyword index returns nothing if the internal engineering documentation is titled "resolving display panel refresh instability". The vocabulary mismatch problem cripples lexical search because humans express the same concept in myriad linguistic forms. Semantic search solves this: by mapping queries and passages into dense continuous representations, "flickering monitor" and "display panel refresh instability" map to neighboring points in semantic space.`,
+    intuition: [
+      r`The dual-encoder (two-tower) architecture: Rather than evaluating queries and documents through a heavy cross-encoder, dense retrieval uses two independent encoder networks: a Query Tower E_Q(q) and a Passage Tower E_D(d). Because document representations are independent of the query, an entire multi-million document corpus can be encoded once offline and indexed into high-performance vector databases (such as FAISS or HNSW). Query evaluation reduces to a single forward pass through the query tower followed by an inner product search.`,
+      r`Contrastive learning and in-batch negative sampling: Training a dual-encoder requires teaching the model to pull relevant query-document pairs close together while pushing irrelevant pairs apart. Computing negative pairs across the whole corpus is computationally intractable. Dense retrieval models employ in-batch negative sampling: for a batch of B query-passage pairs, the other B-1 passages in the batch serve as negative distractors for each query, providing B^2 - B training pairs for the price of B forward passes.`,
+      r`Hard negative mining: If training only uses random in-batch negatives, the model quickly learns trivial heuristics (e.g. separating medical text from sports text) but fails to discriminate between closely related passages within the same domain. Hard negative mining deliberately exposes the model to deceptive distractors—such as passages retrieved by BM25 that share query keywords but fail to answer the question—forcing the encoder to learn deep semantic nuances.`,
+    ],
+    analogy: r`Think of locating a book in an enormous university library. Lexical search is like a strict catalog clerk who will only direct you to a book if your search query matches words printed verbatim on the book's cover title. If you ask for "curing canine fever" and the book is titled "Veterinary Canine Therapeutics", the clerk insists the library has no such book. Dense retrieval is like a knowledgeable professor who has read every book in the building: they understand the conceptual essence of your inquiry and immediately guide you to the exact shelf containing the relevant canine medical treatise, regardless of the words on the cover.`,
+    steps: [
+      {
+        title: r`Encode document collection into dense vector embeddings`,
+        desc: r`Pass passage chunks through the document tower and normalise vectors to unit length.`,
+        detail: r`Chunk long documents into 200 to 400 token passages. Pass passages through document encoder E_D (e.g. a pre-trained Transformer) and apply mean pooling and L2 normalisation to obtain dense vectors d_i in R^d.`,
+      },
+      {
+        title: r`Index embeddings into Approximate Nearest Neighbour (ANN) graph`,
+        desc: r`Build an HNSW or IVF-PQ index to enable logarithmic-time vector similarity search.`,
+        detail: r`Insert all document embeddings into an indexing structure (such as Hierarchical Navigable Small World, HNSW). This avoids brute-force linear scanning, enabling sub-millisecond retrieval across millions of vectors.`,
+      },
+      {
+        title: r`Encode user query in real time`,
+        desc: r`Process input search query through the query tower to generate query vector q.`,
+        detail: r`Pass user query text through query encoder E_Q. Normalise the resulting dense vector q to unit length, ensuring that inner product dot products equal cosine similarity.`,
+      },
+      {
+        title: r`Execute nearest neighbour retrieval over vector index`,
+        desc: r`Retrieve the top-k nearest document embeddings with maximum inner product scores.`,
+        detail: r`Perform approximate nearest neighbour search over the index to find the top k document vectors that maximise score(q, d) = q^T d. Return the corresponding passage texts and metadata.`,
+      },
+      {
+        title: r`Optionally rerank candidates using a cross-encoder`,
+        desc: r`Apply a multi-layer cross-attention reranker over the top candidates.`,
+        detail: r`In production two-stage search systems, feed the top 50 to 100 dense retrieval candidates into a high-capacity cross-encoder reranker for precision scoring before serving final results.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Dual-encoder similarity scoring function`,
+        tex: r`\operatorname{Score}(q, d) = \langle E_Q(q), \, E_D(d) \rangle = \frac{E_Q(q) \cdot E_D(d)}{\|E_Q(q)\|_2 \|E_D(d)\|_2}`,
+        p: r`Here $E_Q$ and $E_D$ are deep neural encoders mapping text strings to $d$-dimensional continuous vectors. When vectors are $L_2$-normalised, inner product search is mathematically identical to cosine similarity.`,
+      },
+      {
+        h: r`InfoNCE contrastive loss with in-batch negatives`,
+        tex: r`\mathcal{L}(q_i, d_i^+) = -\log \frac{\exp\left( \operatorname{Score}(q_i, d_i^+) / \tau \right)}{\exp\left( \operatorname{Score}(q_i, d_i^+) / \tau \right) + \sum_{j \ne i} \exp\left( \operatorname{Score}(q_i, d_j^+) / \tau \right)}`,
+        p: r`Here $d_i^+$ is the true relevant document for query $q_i$, $d_j^+$ (for $j \ne i$) are negative passages borrowed from other queries in the minibatch, and $\tau > 0$ is the softmax temperature hyperparameter.`,
+      },
+      {
+        h: r`Reciprocal Rank Fusion (RRF) for hybrid retrieval`,
+        tex: r`\operatorname{RRF}(d) = \sum_{m \in \{\text{dense}, \text{sparse}\}} \frac{1}{k + r_m(d)}`,
+        p: r`Hybrid search combines BM25 lexical rank $r_{\text{sparse}}(d)$ and dense retrieval rank $r_{\text{dense}}(d)$ using a smoothing constant $k \approx 60$, delivering robust performance across exact keywords and abstract semantics.`,
+      },
+    ],
+    keyPoints: [
+      r`Dense retrieval maps queries and documents into a shared continuous embedding space to resolve vocabulary mismatch.`,
+      r`The dual-encoder architecture allows offline pre-computation of document embeddings for sub-millisecond retrieval.`,
+      r`In-batch negative contrastive training provides quadratic negative pairs without additional forward-pass compute overhead.`,
+      r`Hard negative mining exposes the encoder to challenging lexical distractors, driving fine-grained semantic discrimination.`,
+      r`Hybrid retrieval combining BM25 and dense retrieval via Reciprocal Rank Fusion provides the industry standard for production search.`,
+    ],
+    pitfalls: [
+      r`Neglecting exact keyword search in dense-only setups: Pure dense retrieval models frequently fail on rare part numbers, acronyms, or proper names with little pre-training frequency. Always pair dense retrieval with sparse BM25 in hybrid configurations.`,
+      r`Unnormalised vector dot products: If query and document embeddings are not L2-normalised, vector magnitude dominates dot products, causing long or generic passages with large norms to dominate search results.`,
+      r`Document chunking boundary truncation: Splitting a document in the middle of a vital sentence separates questions from their answers. Use overlapping sliding chunks (e.g. 300 tokens with 50-token stride) to preserve context.`,
+      r`Evaluating on unrepresentative synthetic queries: Evaluating dense retrieval purely on questions identical to training text creates false confidence; validate on real user search logs containing typos, shorthand, and varied query lengths.`,
+    ],
+    code: r`import numpy as np
+
+class DenseRetrievalSimulator:
+    """
+    Simulation of two-tower dense semantic retrieval,
+    in-batch negative contrastive loss, and top-k search.
+    """
+    def __init__(self, dim=4, temperature=0.07):
+        self.dim = dim
+        self.tau = temperature
+        self.doc_index = []
+        self.doc_texts = []
+
+    def normalize(self, v):
+        norm = np.linalg.norm(v, axis=-1, keepdims=True)
+        return v / np.clip(norm, 1e-9, None)
+
+    def index_documents(self, documents, mock_vectors):
+        """Index precomputed normalized document vectors."""
+        self.doc_texts = list(documents)
+        self.doc_index = self.normalize(mock_vectors)
+
+    def contrastive_loss(self, query_embs, pos_doc_embs):
+        """
+        Compute InfoNCE loss with in-batch negatives.
+        query_embs: (B, dim)
+        pos_doc_embs: (B, dim)
+        """
+        q = self.normalize(query_embs)
+        d = self.normalize(pos_doc_embs)
+        
+        # Similarity matrix: (B x B)
+        sim_matrix = np.dot(q, d.T) / self.tau
+        
+        # Diagonal elements are true positives
+        B = q.shape[0]
+        labels = np.arange(B)
+        
+        # Softmax cross entropy
+        exp_sim = np.exp(sim_matrix - np.max(sim_matrix, axis=1, keepdims=True))
+        probs = exp_sim / np.sum(exp_sim, axis=1, keepdims=True)
+        
+        loss = -np.mean(np.log(np.clip([probs[i, labels[i]] for i in range(B)], 1e-9, None)))
+        return loss
+
+    def search(self, query_vector, top_k=2):
+        q = self.normalize(query_vector)
+        # Inner products equal cosine similarity for normalized vectors
+        scores = np.dot(self.doc_index, q)
+        ranked_indices = np.argsort(-scores)[:top_k]
+        return [(idx, self.doc_texts[idx], scores[idx]) for idx in ranked_indices]
+
+# Documents illustrating semantic matching without exact keyword overlap
+docs = [
+    "Troubleshooting computer display panel refresh instability and screen flickering.",
+    "Baking artisan sourdough bread using wild yeast fermentation cultures.",
+    "Cardiovascular endurance training through high intensity interval intervals."
+]
+
+# Simulated 4-dimensional normalized embeddings for documents
+doc_vectors = np.array([
+    [0.90, 0.40, 0.10, 0.05],  # Tech/Hardware
+    [0.05, 0.10, 0.95, 0.25],  # Culinary/Baking
+    [0.10, 0.85, 0.20, 0.45]   # Fitness/Cardio
+])
+
+searcher = DenseRetrievalSimulator(dim=4)
+searcher.index_documents(docs, doc_vectors)
+
+# Query: "how to fix a flickering computer monitor" (Shares semantic direction with Doc 0)
+query_vec = np.array([0.88, 0.35, 0.08, 0.02])
+
+print(f"Indexed {len(docs)} documents into dense index.")
+print("\nQuery: 'how to fix a flickering computer monitor'")
+print("Notice: Document 0 shares almost zero exact keywords, but matches semantically!")
+
+results = searcher.search(query_vec, top_k=3)
+for rank, (idx, text, score) in enumerate(results, 1):
+    print(f"\nRank {rank} [Cosine Similarity: {score:.4f}]:")
+    print(f"  Doc {idx}: '{text}'")
+
+# Compute sample In-Batch Negative Contrastive Loss
+loss = searcher.contrastive_loss(doc_vectors, doc_vectors)
+print(f"\nIn-Batch Negative Contrastive Loss for batch size {len(docs)}: {loss:.4f}")
+`,
+    quiz: [
+      {
+        q: r`Why does dense semantic retrieval resolve the vocabulary mismatch problem that limits classical keyword search engines?`,
+        o: [
+          r`It maps queries and passages into a continuous embedding space where semantically related concepts occupy proximate geometric coordinates even with zero exact word overlap`,
+          r`It automatically translates all queries into Latin before searching`,
+          r`It deletes all non-vowel characters from the corpus`,
+          r`It expands the index by adding all words from the Oxford English Dictionary`,
+        ],
+        a: 0,
+        why: r`Dense retrieval maps text to dense continuous vectors where proximity reflects semantic meaning. Synonyms and paraphrases (e.g. "flickering monitor" and "display panel refresh instability") map to adjacent vectors, overcoming lexical vocabulary gaps.`,
+      },
+      {
+        q: r`What is the primary architectural difference between a dual-encoder (bi-encoder) and a cross-encoder in search pipelines?`,
+        o: [
+          r`A dual-encoder encodes queries and documents independently allowing offline document pre-computation, whereas a cross-encoder evaluates queries and documents jointly with full cross-attention`,
+          r`A dual-encoder can only run on CPU while a cross-encoder runs on GPU`,
+          r`A dual-encoder requires supervised labels while a cross-encoder is strictly unsupervised`,
+          r`A dual-encoder requires identical text length for query and document`,
+        ],
+        a: 0,
+        why: r`Because dual-encoders encode documents independently of queries, millions of document vectors can be pre-computed, indexed, and searched in milliseconds. Cross-encoders require computing multi-head cross-attention over query-document pairs on the fly.`,
+      },
+      {
+        q: r`Why is hard negative mining crucial when training dual-encoders for dense retrieval?`,
+        o: [
+          r`It forces the model to discriminate between subtle semantic differences by training on challenging distractors (like passages sharing lexical keywords but lacking the answer)`,
+          r`It reduces the memory required for gradient backpropagation to zero`,
+          r`It ensures that all document vectors have integer values`,
+          r`It prevents the learning rate from decaying`,
+        ],
+        a: 0,
+        why: r`Random in-batch negatives are too easy to differentiate (e.g. distinguishing medicine from music). Hard negatives—such as high-scoring BM25 passages that do not answer the query—train the encoder to capture deep semantic relevance rather than superficial topical overlap.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['sentence-embeddings-and-sbert', 'bm25-and-search-ranking'],
+    related: ['sentence-embeddings-and-sbert', 'bm25-and-search-ranking', 'bag-of-words-and-tf-idf'],
+    keywords: 'semantic search dense retrieval dual-encoder two-tower infonce contrastive learning ann hnsw faiss rrf hybrid search',
+  },
+
+  // ------------------------------------------------------------------ 2. Evaluation: BLEU, ROUGE, BERTScore, LLM-as-judge (nlp)
+  {
+    id: 'evaluation-bleu-rouge-bertscore-llm-as-judge',
+    short: 'NLP Eval: BLEU to LLM Judges',
+    title: 'Evaluation: BLEU, ROUGE, BERTScore, LLM-as-judge',
+    task: 'concepts',
+    module: '5 · Tasks and evaluation',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Evaluating natural language generation (NLG) is notoriously challenging because a single prompt can have hundreds of distinct, equally valid human responses. Evaluation methodologies have evolved across four generations: precision-oriented n-gram matching (BLEU for translation), recall-oriented n-gram and sequence overlap (ROUGE for summarisation), semantic contextual embedding alignment (BERTScore), and model-based LLM-as-a-judge evaluators. Understanding their mathematical assumptions, biases, and trade-offs is crucial for rigorous benchmarking.`,
+    lead: r`Suppose a human reference summary reads "The central bank lowered interest rates to stimulate economic expansion", and an AI model generates "To boost financial growth, the monetary authority reduced borrowing costs". A traditional word-overlap metric like BLEU or ROUGE gives this generation a near-zero score because almost none of the exact words match. Yet semantically, the model's summary is flawless. Automated evaluation must reconcile superficial lexical divergence with deep semantic truth.`,
+    intuition: [
+      r`The one-to-many dilemma of natural language generation: Unlike classification where an image is either a cat or a dog, natural language generation has no single ground truth. Paraphrasing, varying sentence structure, active versus passive voice, and synonym choice mean that two humans writing about the same event will produce completely different word sequences. Evaluation metrics must balance exact factual alignment with syntactic flexibility.`,
+      r`BLEU vs ROUGE: Precision vs Recall: BLEU was designed for machine translation, where generating superfluous or hallucinated words is disastrous; it strictly measures modified n-gram precision penalised by a brevity penalty. ROUGE was designed for summarisation, where the primary risk is omitting key facts; it measures n-gram recall (ROUGE-1, ROUGE-2) and longest common subsequences (ROUGE-L) to reward coverage of reference ideas.`,
+      r`BERTScore and the shift to continuous semantic matching: BERTScore bypasses surface string matching altogether. It computes pairwise cosine similarities between contextual token embeddings of the candidate and reference from a pre-trained Transformer. Greedy bipartite matching pairs each candidate token with the most similar reference token, capturing synonyms, paraphrases, and morphological derivations seamlessly.`,
+      r`LLM-as-a-Judge and cognitive biases: Powerful LLMs (such as GPT-4) can evaluate complex open-ended attributes like coherence, helpfulness, and factual grounding using detailed rubrics. However, LLM judges exhibit systematic cognitive biases: position bias (favouring whichever candidate is presented first or second), verbosity bias (favouring longer, more elaborate responses regardless of factual depth), and self-enhancement bias (favouring outputs generated by their own model family). Debiasing via position swapping and chain-of-thought grading is essential.`,
+    ],
+    analogy: r`Think of grading an essay exam in an English literature class. A naive automated scanner (BLEU/ROUGE) compares the student's essay word-for-word against the teacher's model answer key; if the student writes "monarch" instead of "king", the scanner docks marks. An embedding-based grader (BERTScore) recognizes that "monarch" and "king" mean the same thing in this historical context, awarding credit. An expert human examiner (LLM-as-a-judge) reads the entire argument, appreciates the student's rhetoric, checks whether the thesis is logically supported by evidence, but must consciously guard against grading long-winded, verbose essays higher purely because they look authoritative.`,
+    steps: [
+      {
+        title: r`Select evaluation metric appropriate to generation task`,
+        desc: r`Choose BLEU for translation, ROUGE for summarisation, BERTScore for semantic similarity, or LLM judges for open generation.`,
+        detail: r`Determine whether the task requires exact lexical fidelity, factual recall, semantic paraphrase tolerance, or holistic conversational helpfulness.`,
+      },
+      {
+        title: r`Compute surface n-gram overlap metrics (BLEU and ROUGE)`,
+        desc: r`Calculate modified precision and recall against reference corpora.`,
+        detail: r`Tokenise candidate and reference texts. Compute clipped n-gram precisions and brevity penalty for BLEU; compute unigram/bigram recall and Longest Common Subsequence (LCS) for ROUGE-1, ROUGE-2, and ROUGE-L.`,
+      },
+      {
+        title: r`Calculate contextual embedding alignment via BERTScore`,
+        desc: r`Extract token embeddings and perform greedy maximum bipartite matching.`,
+        detail: r`Pass candidate and reference sentences through a Transformer encoder. Compute pairwise cosine similarity matrix. For each candidate token, find the maximum similarity with reference tokens to compute BERTScore Precision, Recall, and F1.`,
+      },
+      {
+        title: r`Formulate structured rubrics for LLM-as-a-Judge evaluation`,
+        desc: r`Design explicit grading criteria (1-5 Likert scale or pairwise preference) with chain-of-thought reasoning.`,
+        detail: r`Prompt an LLM evaluator with explicit criteria covering factual accuracy, relevance, fluency, and tone. Instruct the model to generate step-by-step reasoning before outputting final categorical scores.`,
+      },
+      {
+        title: r`Debias LLM judges via position swapping`,
+        desc: r`Evaluate candidate pairs in both orderings (A-B and B-A) to neutralise order bias.`,
+        detail: r`In pairwise comparisons, evaluate prompt with candidate A first, then repeat with candidate B first. If the judge reverses preference based purely on presentation order, mark the comparison as a tie or discard biased judgments.`,
+      },
+    ],
+    math: [
+      {
+        h: r`ROUGE-L Longest Common Subsequence (LCS) recall`,
+        tex: r`R_{\text{LCS}} = \frac{\operatorname{LCS}(\text{Ref}, \text{Cand})}{m}, \quad P_{\text{LCS}} = \frac{\operatorname{LCS}(\text{Ref}, \text{Cand})}{n}, \quad \operatorname{ROUGE-L} = \frac{(1 + \beta^2) R_{\text{LCS}} P_{\text{LCS}}}{R_{\text{LCS}} + \beta^2 P_{\text{LCS}}}`,
+        p: r`Here $m$ is reference length, $n$ is candidate length, and $\operatorname{LCS}$ is the length of the longest common subsequence of tokens. ROUGE-L captures sentence-level structural similarity without requiring consecutive n-gram matches.`,
+      },
+      {
+        h: r`BERTScore recall and precision via greedy matching`,
+        tex: r`R_{\text{BERT}} = \frac{1}{|x|} \sum_{i \in x} \max_{j \in \hat{x}} \mathbf{x}_i^\top \hat{\mathbf{x}}_j, \quad P_{\text{BERT}} = \frac{1}{|\hat{x}|} \sum_{j \in \hat{x}} \max_{i \in x} \mathbf{x}_i^\top \hat{\mathbf{x}}_j`,
+        p: r`Here $\mathbf{x}_i$ is the pre-trained contextual embedding for reference token $i$, and $\hat{\mathbf{x}}_j$ is the embedding for candidate token $j$ (both $L_2$-normalised). Greedy matching pairs each token with its highest-scoring semantic partner.`,
+      },
+      {
+        h: r`Spearman rank correlation with human judgment`,
+        tex: r`\rho = 1 - \frac{6 \sum_{i=1}^n d_i^2}{n(n^2 - 1)}`,
+        p: r`Here $d_i$ is the difference between the metric's rank and the human gold standard rank for item $i$, and $n$ is the total number of evaluated items. Higher rank correlation indicates greater alignment with human qualitative assessment.`,
+      },
+    ],
+    keyPoints: [
+      r`Automated evaluation of natural language generation must account for linguistic polysemy and multiple valid surface expressions.`,
+      r`BLEU measures precision for machine translation; ROUGE measures recall and subsequence overlap for summarisation.`,
+      r`BERTScore aligns contextual token embeddings using greedy bipartite matching, providing robustness against vocabulary mismatch.`,
+      r`LLM-as-a-judge provides holistic qualitative evaluations of reasoning and nuance, but requires debiasing against position and verbosity biases.`,
+      r`Metric efficacy is validated by measuring Spearman and Pearson rank correlations against human qualitative judgments.`,
+    ],
+    pitfalls: [
+      r`Relying on BLEU for open-ended creative generation: BLEU assumes overlap with a specific reference string; for creative writing or dialogue, valid responses have zero n-gram overlap, rendering BLEU meaningless.`,
+      r`Verbosity bias in LLM judges: Large language models systematically award higher marks to longer, verbose responses even if they are repetitive or contain hallucinated details. Normalise or explicitly instruct judges to penalise bloat.`,
+      r`Evaluating without position swap in pairwise judging: An LLM judge presented with option A followed by option B frequently picks option A 65% of the time purely due to positional primacy. Always run reciprocal evaluations.`,
+      r`Ignoring token normalisation in ROUGE: Failing to lowercase and stem tokens prior to computing ROUGE causes words like "running" and "runs" to be treated as complete mismatches, artificially depressing scores.`,
+    ],
+    code: r`import numpy as np
+
+def lcs_length(x, y):
+    """Compute Longest Common Subsequence (LCS) length via dynamic programming."""
+    m, n = len(x), len(y)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if x[i - 1] == y[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[m][n]
+
+def compute_rouge_l(candidate_tokens, reference_tokens, beta=1.2):
+    """Compute ROUGE-L Precision, Recall, and F-score."""
+    lcs = lcs_length(candidate_tokens, reference_tokens)
+    if len(candidate_tokens) == 0 or len(reference_tokens) == 0:
+        return 0.0, 0.0, 0.0
+        
+    prec = lcs / len(candidate_tokens)
+    rec = lcs / len(reference_tokens)
+    
+    if prec + rec == 0:
+        f_score = 0.0
+    else:
+        f_score = ((1 + beta**2) * prec * rec) / (rec + (beta**2) * prec)
+    return prec, rec, f_score
+
+def simulate_bertscore(candidate_embs, reference_embs):
+    """
+    Simulate BERTScore greedy maximum bipartite matching.
+    candidate_embs: (len_cand, dim) normalized
+    reference_embs: (len_ref, dim) normalized
+    """
+    # Pairwise cosine similarity matrix: (len_cand, len_ref)
+    sim_matrix = np.dot(candidate_embs, reference_embs.T)
+    
+    # Recall: For each reference token, find best matching candidate token
+    rec = np.mean(np.max(sim_matrix, axis=0))
+    # Precision: For each candidate token, find best matching reference token
+    prec = np.mean(np.max(sim_matrix, axis=1))
+    f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+    return prec, rec, f1
+
+# Example Reference and Candidate summaries
+reference_text = ["the", "bank", "lowered", "interest", "rates", "to", "stimulate", "economic", "growth"]
+candidate_lexical = ["the", "bank", "reduced", "interest", "rates", "to", "promote", "economic", "expansion"]
+
+print("Reference Summary: ", " ".join(reference_text))
+print("Candidate Summary: ", " ".join(candidate_lexical))
+
+# 1. Evaluate ROUGE-L
+p_lcs, r_lcs, f_lcs = compute_rouge_l(candidate_lexical, reference_text)
+print("\n1. ROUGE-L Evaluation:")
+print(f"  Precision: {p_lcs * 100:.1f}%")
+print(f"  Recall:    {r_lcs * 100:.1f}%")
+print(f"  F-measure: {f_lcs * 100:.1f}%")
+
+# 2. Simulate BERTScore on continuous embeddings
+np.random.seed(42)
+d = 4
+# Mock embeddings where synonyms have high similarity (>0.85)
+cand_embs = np.random.randn(len(candidate_lexical), d)
+cand_embs = cand_embs / np.linalg.norm(cand_embs, axis=1, keepdims=True)
+
+ref_embs = cand_embs + np.random.randn(len(candidate_lexical), d) * 0.15
+ref_embs = ref_embs / np.linalg.norm(ref_embs, axis=1, keepdims=True)
+
+bs_p, bs_r, bs_f1 = simulate_bertscore(cand_embs, ref_embs)
+print("\n2. BERTScore Evaluation (Contextual Semantic Alignment):")
+print(f"  Precision: {bs_p:.4f}")
+print(f"  Recall:    {bs_r:.4f}")
+print(f"  F1-Score:  {bs_f1:.4f}")
+`,
+    quiz: [
+      {
+        q: r`Why was ROUGE designed primarily as a recall-focused metric for text summarisation while BLEU was designed as a precision-focused metric for machine translation?`,
+        o: [
+          r`Because in summarisation the primary failure mode is omitting critical source facts (requiring recall), whereas in translation generating extraneous incorrect words destroys fidelity (requiring precision)`,
+          r`Because ROUGE can only count single letters while BLEU counts sentences`,
+          r`Because BLEU cannot be run on computers with less than 32GB RAM`,
+          r`Because ROUGE was invented before machine translation was developed`,
+        ],
+        a: 0,
+        why: r`In translation, every word matters: generating ungrounded extra words is catastrophic, so BLEU measures precision. In summarisation, compressing 1,000 words to 100 requires retaining essential ideas; ROUGE measures how much of the gold summary was covered (recall).`,
+      },
+      {
+        q: r`How does BERTScore overcome the vocabulary mismatch limitation of BLEU and ROUGE?`,
+        o: [
+          r`By computing cosine similarities between contextual embeddings of candidate and reference tokens and finding the maximum matching for each word regardless of surface spelling`,
+          r`By translating all candidate texts into German`,
+          r`By replacing all rare words with dictionary synonyms using WordNet`,
+          r`By assigning a score of 100% to all sentences longer than ten tokens`,
+        ],
+        a: 0,
+        why: r`BERTScore passes candidate and reference through a pre-trained Transformer. Contextual token embeddings for synonyms (like "lowered" and "reduced") are proximate in vector space. Greedy bipartite matching pairs them, awarding credit where surface string metrics fail.`,
+      },
+      {
+        q: r`What is position bias in LLM-as-a-judge evaluation frameworks, and how is it mitigated?`,
+        o: [
+          r`The systematic tendency of LLM judges to prefer whichever candidate model response is placed first (or second) in the prompt, mitigated by swapping response positions and verifying consistency`,
+          r`The error caused by running models on different operating systems`,
+          r`The preference of models to evaluate only nouns`,
+          r`The tendency of models to output predictions in reverse alphabetical order`,
+        ],
+        a: 0,
+        why: r`Empirical benchmarks show LLM judges often select candidate A over candidate B >60% of the time purely because option A appeared first. Position debiasing evaluates both (A, B) and (B, A) prompt orderings, declaring a tie if judgment flips.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['machine-translation', 'text-classification-and-sentiment', 'sentence-embeddings-and-sbert'],
+    related: ['machine-translation', 'text-classification-and-sentiment', 'sentence-embeddings-and-sbert'],
+    keywords: 'evaluation bleu rouge rouge-l bertscore llm-as-a-judge position bias verbosity bias nlg metrics spearman correlation',
+  },
+
+  // ------------------------------------------------------------------ 3. Intelligent agents and environments (ai)
 ];
