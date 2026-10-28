@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsk5j4h">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsk5j4h">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -140,6 +140,56 @@ model = <span class="f">make_pipeline</span>(<span class="f">StandardScaler</spa
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Converge quickly</span></button><button class="opt" type="button"><b>B</b><span>Never find a perfect boundary</span></button><button class="opt" type="button"><b>C</b><span>Overfit</span></button><button class="opt" type="button"><b>D</b><span>Output probabilities</span></button></div>
             <div class="why" hidden><strong>Why:</strong> XOR is not linearly separable, so no single line classifies it.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>Which geometric object defines the decision boundary of a perceptron in a 2D feature space?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A straight line where $w_1 x_1 + w_2 x_2 + b = 0$</span></button><button class="opt" type="button"><b>B</b><span>A parabolic curve that bends around the denser class</span></button><button class="opt" type="button"><b>C</b><span>A circular contour centred on the mean of the training points</span></button><button class="opt" type="button"><b>D</b><span>A collection of axis-aligned step functions</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The decision boundary is the affine hyperplane $w^\top x + b = 0$, which is a straight line in two dimensions.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>Why is a standard perceptron unable to output calibrated class probabilities like logistic regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses L1 regularisation instead of L2 regularisation</span></button><button class="opt" type="button"><b>B</b><span>It updates weights after every epoch rather than after each sample</span></button><button class="opt" type="button"><b>C</b><span>Its activation function is a hard step function $\operatorname{sign}(\cdot)$ with no probabilistic loss formulation</span></button><button class="opt" type="button"><b>D</b><span>It requires all feature values to be strictly non-negative</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The perceptron outputs hard binary decisions via the step function $\operatorname{sign}(w^\top x + b)$ and does not model posterior class probabilities $P(y=1 \mid x)$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q5</span>A perceptron has current weights $w = [1.0, -1.0]^\top$, bias $b = 0$, and learning rate $\eta = 1.0$. It encounters a training example $x = [2.0, 1.0]^\top$ with true label $y = -1$. What are the updated weights and bias?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$w = [3.0, 0.0]^\top, b = 1.0$</span></button><button class="opt" type="button"><b>B</b><span>$w = [1.0, -1.0]^\top, b = 0.0$ (no change because the point is classified correctly)</span></button><button class="opt" type="button"><b>C</b><span>$w = [-1.0, -2.0]^\top, b = -1.0$</span></button><button class="opt" type="button"><b>D</b><span>$w = [0.0, -3.0]^\top, b = -2.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The predicted score is $w^\top x + b = 1(2) - 1(1) + 0 = +1$, so $y(w^\top x + b) = -1(+1) = -1 \le 0$ (a mistake). The update rule gives $w \leftarrow w + \eta y x = [1, -1]^\top + (-1)[2, 1]^\top = [-1, -2]^\top$, and $b \leftarrow 0 + (-1) = -1$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>In a standard perceptron initialised at $w = 0, b = 0$, what happens if you change the learning rate $\eta$ from $1.0$ to $0.01$ (with identical sample ordering)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model learns a completely different non-linear decision boundary</span></button><button class="opt" type="button"><b>B</b><span>The sequence of misclassifications and the final decision boundary are identical, as weights and bias are merely scaled by a constant factor</span></button><button class="opt" type="button"><b>C</b><span>The model requires exactly 100 times more epochs to converge on linearly separable data</span></button><button class="opt" type="button"><b>D</b><span>The model avoids cycling on non-separable data</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Since both $w$ and $b$ start at 0, every update is linear in $\eta$. The score $w^\top x + b$ at every step is simply scaled by $\eta$, so the sign $\operatorname{sign}(w^\top x + b)$ and the sequence of mistakes are completely invariant to $\eta &gt; 0$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>If the training dataset contains two classes that overlap and cannot be separated by any straight line, how does the perceptron learning algorithm behave when run without an iteration limit?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It converges to the maximum-margin hyperplane</span></button><button class="opt" type="button"><b>B</b><span>It halts automatically when the training error reaches its minimum possible value</span></button><button class="opt" type="button"><b>C</b><span>It cycles indefinitely through different weight vectors without ever terminating</span></button><button class="opt" type="button"><b>D</b><span>The weights exponentially decay to zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The perceptron stops only when an entire epoch passes with zero mistakes. If no separating hyperplane exists, at least one point will always be misclassified in every epoch, causing the algorithm to loop endlessly.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>Both the perceptron and a hard-margin Linear Support Vector Classifier find a separating hyperplane on linearly separable data. What is the key difference in the boundary they select?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The perceptron always finds the boundary with the largest possible margin</span></button><button class="opt" type="button"><b>B</b><span>The perceptron stops at the first valid separating hyperplane it happens upon, whereas the hard-margin SVM finds the unique hyperplane that maximises the margin</span></button><button class="opt" type="button"><b>C</b><span>The perceptron uses quadratic programming, whereas the SVM uses stochastic gradient descent</span></button><button class="opt" type="button"><b>D</b><span>The perceptron can only separate data in one dimension</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The perceptron terminates as soon as all training points are correctly classified, meaning its final boundary depends heavily on initialisation and data ordering. A linear SVM explicitly maximises the geometric margin $\frac{2}{\|w\|}$, yielding a unique, robust boundary.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>The perceptron update rule can be viewed as stochastic gradient descent on which loss function for a single example $(x_i, y_i)$ with $y_i \in \{-1, +1\}$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Cross-entropy loss $L = -\log(1 + e^{-y_i f(x_i)})$</span></button><button class="opt" type="button"><b>B</b><span>Mean squared error $L = (y_i - f(x_i))^2$</span></button><button class="opt" type="button"><b>C</b><span>Perceptron loss $L = \max(0, -y_i(w^\top x_i + b))$</span></button><button class="opt" type="button"><b>D</b><span>0-1 step loss $L = \mathbb{I}[y_i f(x_i) \le 0]$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When $y_i(w^\top x_i + b) \le 0$, the loss is $-y_i(w^\top x_i + b)$, whose sub-gradient with respect to $w$ is $-y_i x_i$. Subtracting the gradient ($\times \eta$) yields the exact perceptron update $w \leftarrow w + \eta y_i x_i$. When correctly classified, loss and gradient are 0.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>A linearly separable dataset has all feature vectors bounded inside an origin-centred sphere of radius $R = 6.0$. A separating hyperplane exists with a geometric margin of $\gamma = 0.5$. According to Novikoff's theorem, what is the maximum number of mistakes (weight updates) the perceptron can make starting from $w = 0$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>24</span></button><button class="opt" type="button"><b>B</b><span>72</span></button><button class="opt" type="button"><b>C</b><span>144</span></button><button class="opt" type="button"><b>D</b><span>576</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By Novikoff’s convergence theorem, the maximum number of mistakes is bounded by $(R / \gamma)^2 = (6.0 / 0.5)^2 = 12^2 = 144$. Notably, this bound is independent of the number of training samples $N$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>A perceptron with $\eta = 1.0$ starts at $w = [0, 0]^\top, b = 0$. It encounters $x_1 = [1, 2]^\top$ ($y_1 = +1$), then $x_2 = [2, 0]^\top$ ($y_2 = -1$). Both trigger updates. What is the resulting score $w^\top x_3 + b$ when evaluated on a new point $x_3 = [1, 1]^\top$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$-2.0$</span></button><button class="opt" type="button"><b>B</b><span>$+1.0$</span></button><button class="opt" type="button"><b>C</b><span>$+3.0$</span></button><button class="opt" type="button"><b>D</b><span>$0.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> After $x_1$, $w = [1, 2]^\top$ and $b = 1$. For $x_2$, score is $1(2) + 2(0) + 1 = 3 &gt; 0$, misclassifying negative point $y_2 = -1$. Updating gives $w = [1, 2]^\top - [2, 0]^\top = [-1, 2]^\top$ and $b = 1 - 1 = 0$. Evaluating at $x_3 = [1, 1]^\top$ gives $(-1)(1) + 2(1) + 0 = +1.0$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>If all training feature vectors $x_i$ are multiplied by a positive scalar $c = 3.0$ while labels remain unchanged, what happens to Novikoff's theoretical mistake bound $(R / \gamma)^2$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The bound increases by a factor of 9 because $R^2$ increases by $3^2 = 9$</span></button><button class="opt" type="button"><b>B</b><span>The bound decreases by a factor of 3 because larger coordinates provide stronger gradient signals</span></button><button class="opt" type="button"><b>C</b><span>The bound remains completely unchanged because the geometric margin $\gamma$ scales up by the exact same factor $c$ as the radius $R$</span></button><button class="opt" type="button"><b>D</b><span>The bound becomes infinite because the data is no longer compact</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Scaling all input vectors by $c$ scales the maximum radius to $cR$ and also widens the geometric distance of the closest point to the separating hyperplane to $c\gamma$. Therefore, $\frac{cR}{c\gamma} = \frac{R}{\gamma}$, and the upper bound on mistakes $(R / \gamma)^2$ is strictly scale-invariant.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -175,11 +225,11 @@ model = <span class="f">make_pipeline</span>(<span class="f">StandardScaler</spa
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsk5j4h" defer></script>
+<script src="../../assets/labs/core.js?v=mvsk5j4h" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsk5j4h" defer></script>
+<script src="../../assets/labs/models.js?v=mvsk5j4h" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsk5j4h" defer></script>
+<script src="../../assets/learn.js?v=mvsk5j4h" defer></script>
 </body>
 </html>
