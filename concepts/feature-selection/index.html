@@ -1,277 +1,166 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Feature Selection & Dimensionality Reduction · Learn ML · Yogesh Awate</title>
-  <meta name="theme-color" content="#070709">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
-  <script>
-    function renderKatex() {
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.body, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-          ],
-          throwOnError: false
-        });
-      }
-    }
-    document.addEventListener("DOMContentLoaded", renderKatex);
-    window.addEventListener("load", renderKatex);
-  </script>
-  <link rel="stylesheet" href="../../visual-components.css">
-  <link rel="stylesheet" href="../../concept.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070709">
+<title>Feature Selection: Filter, Wrapper and Embedded Methods · Learn · Yogesh Awate</title>
+<meta name="description" content="Choosing which inputs a model sees. Fewer, better features mean faster, more robust and more explainable models.">
+<meta property="og:title" content="Feature Selection: Filter, Wrapper and Embedded Methods · Learn · Yogesh Awate">
+<meta property="og:description" content="Choosing which inputs a model sees. Fewer, better features mean faster, more robust and more explainable models.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css?v=mvruuhrl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvruuhrl">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>document.documentElement.classList.add('js')</script>
 </head>
-<body>
-  <!-- Fixed Navigation -->
-  <nav id="nav">
-    <div class="nav-left">
-      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-      <div class="nav-breadcrumbs">
-        <a href="../../index.html#learn">Learn</a>
-        <span class="sep">/</span>
-        <a href="../../index.html#learn-concepts">Concepts</a>
-        <span class="sep">/</span>
-        <span>Feature Selection & Dimensionality Reduction</span>
-      </div>
-    </div>
-    <div class="nav-right">
-      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
-      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
-    </div>
-  </nav>
+<body class="page-lesson" data-lesson="feature-selection">
+<a class="skip" href="#main">Skip to content</a>
 
-  <main class="concept-content">
-    <header class="concept-header">
-      <div class="concept-kicker">Preprocessing & Feature Engineering · 03</div>
-      <h1>Feature Selection & Dimensionality Reduction</h1>
-      <p class="concept-lead">Filter, wrapper, and embedded techniques to isolate informative signals, eliminate multicollinearity, and prevent the curse of dimensionality.</p>
-    </header>
+<nav id="nav">
+  <div class="brand"><a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, home">YA<span>.</span></a><a class="brand-sub" href="../../">Learn</a></div>
+  <div class="navlinks" id="navlinks">
+    <a href="../../#paths">Paths</a>
+    <a href="../../#curriculum">Curriculum</a>
+    <a href="../../#datasets">Datasets</a>
+    <a href="https://yogesh660.github.io/about/">About</a>
+    <a class="pill" href="https://yogesh660.github.io/">Portfolio <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+  <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</nav>
 
-    
-      <div class="pipeline-box">
-        <span class="canvas-tag">Feature Selection Taxonomy: Filter vs. Wrapper vs. Embedded</span>
-        <div class="pipeline-diagram">
-          <div class="pipeline-node">
-            <span class="pipeline-badge">Input</span>
-            <h4>Raw Features X</h4>
-            <p>High-dimensional candidate predictors.</p>
-            <span class="tensor-shape">p features</span>
+<main id="main">
+
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="../../#path-foundations">Path 01 · Foundations</a> / Data first / Lesson 2 of 17</span>
+    <h1 class="case-title">Feature Selection: Filter, Wrapper and Embedded Methods</h1>
+    <p class="lede rise" style="--d:3">Choosing which inputs a model sees. Fewer, better features mean faster, more robust and more explainable models.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline"><span class="lvl" data-l="2"><i><b></b></i>Intermediate</span></span>
+      <span class="tagline">18 min</span>
+      <span class="tagline lab">Live lab</span>
+      <span class="prereq">Before this: <a href="../../concepts/exploratory-data-analysis/">Exploratory data analysis</a></span>
+    </div>
+  </header>
+
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+          <dt>Path</dt><dd>Foundations · Data first</dd>
+          <dt>Level</dt><dd>Intermediate</dd>
+          <dt>Used by</dt><dd>4 model lessons</dd>
+      </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>Step by step</a></li><li><a href="#lab"><span>03</span>Try it</a></li><li><a href="#maths"><span>04</span>The maths</a></li><li><a href="#takeaways"><span>05</span>Key takeaways</a></li><li><a href="#code"><span>06</span>In code</a></li><li><a href="#quiz"><span>07</span>Check yourself</a></li><li><a href="#related"><span>08</span>Where it shows up</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
+    </aside>
+
+    <div class="story">
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">Feature selection removes inputs that add noise, cost or risk without adding signal. Three families: filters score features independently, wrappers search subsets with a model, and embedded methods select during training.</p>
+        <p><strong>Filter</strong> methods are fast and model-agnostic: correlation with the target, mutual information, chi-squared, variance thresholds. They can miss features that only matter in combination.</p>
+        <p><strong>Wrapper</strong> methods such as recursive feature elimination (RFE) or forward selection train the model on candidate subsets and keep what helps. They respect interactions but are expensive and can overfit the selection to the validation data.</p>
+        <p><strong>Embedded</strong> methods select as part of training: <a class="inline" href="../../models/lasso_regression/">L1</a> zeroes coefficients, trees rank features by how much they reduce impurity or by permutation importance. Usually the best trade-off.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Packing for a trip: filters weigh each item alone, wrappers try packing different bags, embedded methods pack as you go and leave behind what you never used.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> Step by step</h2>
+        <ol class="steps"><li>Remove obvious junk: IDs, constants, near-duplicates, leaky columns.</li><li>Filter by a cheap score to cut a very wide set down.</li><li>Use an embedded or wrapper method with cross-validation on what remains.</li><li>Check stability: does the same set survive across CV folds?</li><li>Keep selection inside the CV pipeline so it does not see validation data.</li></ol>
+      </section>
+      <section class="reveal" id="lab">
+        <h2 class="h3"><span>03</span> Try it</h2>
+        <p>Ten candidate features, three of which actually drive the target. Compare what a filter (correlation), an embedded method (lasso) and a wrapper (greedy forward selection) pick.</p>
+        <div class="lab" data-lab="feature-selection" data-kind="concepts" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
+        <div class="try"><small class="kicker">Things to try</small><ol><li>Find the feature that only matters through an interaction: the filter misses it, forward selection may not.</li><li>Raise the noise and see which method still finds the true three.</li></ol></div>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>04</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Mutual information</h3><div class="formula">$$I(X; Y) = \sum_{x,y}p(x,y)\log\frac{p(x,y)}{p(x)\,p(y)}$$</div><p>Zero when the feature and target are independent; captures non-linear relationships that correlation misses.</p></li>
+          <li><h3>Permutation importance</h3><div class="formula">$$\mathrm{PI}_j = \text{score}(X) - \mathbb E\big[\text{score}(X^{\pi_j})\big]$$</div><p>The drop in held-out score when feature $j$’s column is shuffled. Model-agnostic and honest, but shared between correlated features.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="takeaways">
+        <h2 class="h3"><span>05</span> Key takeaways</h2>
+        <div class="box use"><ul><li>Selection done outside cross-validation leaks: the selected set has already seen the validation folds.</li><li>Correlated features split importance between them; dropping one can make the other look more important.</li><li>Fewer features are worth a small accuracy loss when they make the model cheaper, more stable or easier to explain.</li></ul></div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>06</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">from</span> sklearn.pipeline <span class="k">import</span> make_pipeline
+<span class="k">from</span> sklearn.feature_selection <span class="k">import</span> SelectKBest, mutual_info_regression, RFECV
+<span class="k">from</span> sklearn.linear_model <span class="k">import</span> LinearRegression
+<span class="k">from</span> sklearn.model_selection <span class="k">import</span> cross_val_score
+
+filt = <span class="f">make_pipeline</span>(<span class="f">SelectKBest</span>(mutual_info_regression, k=<span class="n">5</span>), <span class="f">LinearRegression</span>())
+<span class="k">print</span>(<span class="s">&quot;filter CV R2:&quot;</span>, <span class="f">cross_val_score</span>(filt, X, y, cv=<span class="n">5</span>).<span class="f">mean</span>().<span class="f">round</span>(<span class="n">3</span>))
+
+rfe = <span class="f">RFECV</span>(<span class="f">LinearRegression</span>(), step=<span class="n">1</span>, cv=<span class="n">5</span>).<span class="f">fit</span>(X, y)                   <span class="c"># wrapper</span>
+<span class="k">print</span>(<span class="s">&quot;RFE keeps:&quot;</span>, <span class="f">list</span>(X.columns[rfe.support_]))</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Selecting on the full dataset and then cross-validating the model. Put selection inside the pipeline.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Trusting impurity importances for high-cardinality features.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Dropping a feature because it is weakly correlated with the target, when it matters through an interaction.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>07</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>Which family uses the model itself to evaluate subsets of features?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Filter</span></button><button class="opt" type="button"><b>B</b><span>Wrapper</span></button><button class="opt" type="button"><b>C</b><span>Embedded</span></button><button class="opt" type="button"><b>D</b><span>None</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Wrappers (RFE, forward/backward selection) train and score the model on candidate subsets.</div>
           </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node" style="border-color:var(--cyan);">
-            <span class="pipeline-badge" style="color:var(--cyan);">1. Filter Methods</span>
-            <h4>Statistical Scoring</h4>
-            <p>VIF, Pearson r, Mutual Information.</p>
-            <span class="tensor-shape">Independent of model</span>
-          </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node" style="border-color:var(--amber);">
-            <span class="pipeline-badge" style="color:var(--amber);">2. Wrapper Methods</span>
-            <h4>Iterative Search</h4>
-            <p>Recursive Feature Elimination (RFE).</p>
-            <span class="tensor-shape">Greedy subset search</span>
-          </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node" style="border-color:var(--violet);">
-            <span class="pipeline-badge" style="color:var(--violet-2);">3. Embedded</span>
-            <h4>Intrinsic Selection</h4>
-            <p>Lasso L1 Sparsity, Tree Gain.</p>
-            <span class="tensor-shape">Trained during fit</span>
-          </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node">
-            <span class="pipeline-badge">Output</span>
-            <h4>Optimal Subset k</h4>
-            <p>Minimal collinearity, max signal.</p>
-            <span class="tensor-shape">$k \ll p \text{ (VIF } < 5.0)$</span>
+          <div class="q" data-answer="2">
+            <p><span>Q2</span>Lasso is an example of:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A filter method</span></button><button class="opt" type="button"><b>B</b><span>A wrapper method</span></button><button class="opt" type="button"><b>C</b><span>An embedded method</span></button><button class="opt" type="button"><b>D</b><span>Dimensionality reduction</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Selection happens inside training via the L1 penalty.</div>
           </div>
         </div>
-      </div>
-    
-
-    
-    
-    
-    <div id="lab-feature-selection"></div>
-    
-    
-    
-    
-
-
-    <section class="concept-section">
-      <h2 class="section-title">
-        <span class="section-dot violet"></span> 1. Taxonomy of Feature Selection Methods
-      </h2>
-      <div class="concept-body">
-        
-          <p>Selecting an optimal subset of features improves model interpretability, accelerates training, mitigates overfitting, and removes noisy collinear predictors.</p>
-          <div class="card-grid-3">
-            <div class="feature-card">
-              <span class="card-num">Type 1 / Independent</span>
-              <h3>Filter Methods</h3>
-              <p>Evaluate feature relevance using statistical scores independent of model training. Extremely fast and computationally scalable.</p>
-              <ul style="padding-left:18px; margin:0; font-size:13px; color:var(--muted);">
-                <li>Pearson & Spearman Correlation</li>
-                <li>Mutual Information Gain</li>
-                <li>ANOVA F-statistic (Classification)</li>
-                <li>Variance Thresholding</li>
-              </ul>
-            </div>
-            <div class="feature-card">
-              <span class="card-num">Type 2 / Iterative</span>
-              <h3>Wrapper Methods</h3>
-              <p>Treat model training as a black-box evaluation metric, iteratively adding or pruning features to maximize cross-validation performance.</p>
-              <ul style="padding-left:18px; margin:0; font-size:13px; color:var(--muted);">
-                <li>Recursive Feature Elimination (RFE)</li>
-                <li>Sequential Forward Selection (SFS)</li>
-                <li>Sequential Backward Elimination</li>
-                <li>Genetic Algorithm Search</li>
-              </ul>
-            </div>
-            <div class="feature-card">
-              <span class="card-num">Type 3 / Built-In</span>
-              <h3>Embedded Methods</h3>
-              <p>Feature selection is naturally embedded into the model objective function during loss optimization.</p>
-              <ul style="padding-left:18px; margin:0; font-size:13px; color:var(--muted);">
-                <li>L1 Lasso Regularization Shrinkage</li>
-                <li>Elastic Net Group Sparsity</li>
-                <li>Tree Feature Importance (Gini / Gain)</li>
-                <li>Gradient Boosted Feature Importances</li>
-              </ul>
-            </div>
-          </div>
-        
-      </div>
-    </section>
-  
-
-    <section class="concept-section">
-      <h2 class="section-title">
-        <span class="section-dot cyan"></span> 2. Diagnosing Multicollinearity: Variance Inflation Factor (VIF)
-      </h2>
-      <div class="concept-body">
-        
-          <p>In linear models ($OLS$, Ridge, Logistic Regression), high collinearity between predictors inflates standard errors of coefficients, making parameter estimates wildly erratic and unstable.</p>
-          <div class="callout violet">
-            <span class="callout-title">The VIF Formulation</span>
-            <p>The Variance Inflation Factor for predictor $X_j$ measures how much of its variance is explained by all other predictors in the dataset:</p>
-            <div class="math-card">
-              $$\text{VIF}_j = \frac{1}{1 - R_j^2}$$
-            </div>
-            <p>Where $R_j^2$ is the coefficient of determination obtained from regressing feature $X_j$ against all other remaining features.</p>
-            <ul style="margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--soft);">
-              <li><strong>$\text{VIF} = 1$</strong>: Complete orthogonality (no correlation with other features).</li>
-              <li><strong>$\text{VIF} > 5$</strong>: Moderate multicollinearity; requires monitoring.</li>
-              <li><strong>$\text{VIF} > 10$</strong>: Severe multicollinearity; inversion $(X^T X)^{-1}$ becomes ill-conditioned. Feature pruning or L2 Ridge shrinkage is required.</li>
-            </ul>
-          </div>
-        
-      </div>
-    </section>
-  
-
-    <section class="concept-section">
-      <h2 class="section-title">
-        <span class="section-dot green"></span> 3. Decision Framework: Which Technique to Choose?
-      </h2>
-      <div class="concept-body">
-        
-          <div class="table-wrap">
-            <table class="concept-table">
-              <thead>
-                <tr>
-                  <th>Data & Architecture Scenario</th>
-                  <th>Recommended Feature Selection Technique</th>
-                  <th>Core Engineering Justification</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="highlight">Linear Models (OLS, Ridge, Logistic)</td>
-                  <td class="code-val">VIF Filtering + Pearson Correlation + Lasso (L1)</td>
-                  <td>Linear models are vulnerable to matrix singularity when features are collinear. VIF eliminates linear dependencies.</td>
-                </tr>
-                <tr>
-                  <td class="highlight">High-Dimensional Data ($p \gg n$)</td>
-                  <td class="code-val">Mutual Information + L1 Lasso Shrinkage</td>
-                  <td>Filters zero-information noise quickly, then Lasso forces uninformative weights strictly to zero.</td>
-                </tr>
-                <tr>
-                  <td class="highlight">Tree Ensembles (Random Forest, XGBoost)</td>
-                  <td class="code-val">Permutation Importance / SHAP Values</td>
-                  <td>Captures non-linear dependencies and feature interactions without assuming monotonic relationships.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        
-      </div>
-    </section>
-  
-
-    <!-- Related Model Implementations in Zoo -->
-    <section class="linked-models-wrap">
-      <h3>Architectures Using This Concept in the Zoo</h3>
-      <div class="model-badges">
-        
-    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
-      <span class="dot"></span> Ordinary Least Squares
-    </a>
-  
-    <a href="../../models/lasso_regression/index.html" class="model-badge regression">
-      <span class="dot"></span> Lasso Regression
-    </a>
-  
-    <a href="../../models/elastic_net/index.html" class="model-badge regression">
-      <span class="dot"></span> Elastic Net
-    </a>
-  
-    <a href="../../models/random_forest_regressor/index.html" class="model-badge regression">
-      <span class="dot"></span> Random Forest Regressor
-    </a>
-  
-    <a href="../../models/xgboost_regressor/index.html" class="model-badge regression">
-      <span class="dot"></span> XGBoost Regressor
-    </a>
-  
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-    <div>
-      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
-      <a href="../../index.html#learn">Back to Learn Hub</a>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>08</span> Where it shows up</h2>
+        <div class="related"><a href="../../concepts/regularization/"><small class="kicker">Concept</small><b>Regularisation</b></a><a href="../../concepts/cross-validation/"><small class="kicker">Concept</small><b>Cross-validation</b></a><a href="../../models/lasso_regression/"><small class="kicker">Regression</small><b>Lasso regression</b></a><a href="../../models/elastic_net/"><small class="kicker">Regression</small><b>Elastic net</b></a><a href="../../models/random_forest_regressor/"><small class="kicker">Regression</small><b>Random forest regressor</b></a><a href="../../models/catboost_regressor/"><small class="kicker">Regression</small><b>CatBoost</b></a></div>
+      </section>
     </div>
-    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
-  </footer>
+  </div>
 
-  <script src="../../visual-simulators.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      if (window.MLVisualLabs) {
-        if ('feature-selection' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
-        if ('feature-selection' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
-        if ('feature-selection' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
-        if ('feature-selection' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
-        if ('feature-selection' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
-        if ('feature-selection' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
-        if ('feature-selection' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
-        if ('feature-selection' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
-      }
-    });
-  </script>
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    <a href="../../concepts/exploratory-data-analysis/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Foundations</small><b>Exploratory data analysis</b></a>
+    <a class="pager-next" href="../../concepts/cost-vs-loss-vs-error/"><small>Next · Foundations <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>Cost vs loss vs error</b></a>
+  </div>
+</article>
+</main>
+
+<section id="contact" class="contact">
+  <span class="tag reveal">Let's connect</span>
+  <h2 class="reveal">Have a hard problem?<br><span>Let's make it simple.</span></h2>
+  <a class="email reveal" href="mailto:awateyogeshs@gmail.com">awateyogeshs@gmail.com <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <div class="socials reveal">
+    <a href="https://www.linkedin.com/in/yogesh-s-awate/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+    <a href="https://github.com/yogesh660" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.2-.3-2.5-1-3.5.3-1.1.3-2.4 0-3.5 0 0-1 0-3 1.5a10.5 10.5 0 0 0-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.4 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg> GitHub</a>
+    <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Medium</a>
+    <a href="https://twitter.com/YogeshSAwate1" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> X / Twitter</a>
+  </div>
+</section>
+
+<footer>
+  <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+  <div class="footlinks"><a href="../../">Learn</a><a href="https://yogesh660.github.io/work/">Work</a><a href="https://yogesh660.github.io/projects/">Open source</a><a href="https://yogesh660.github.io/about/">About</a></div>
+  <span>© 2026 YOGESH AWATE</span>
+</footer>
+
+<script src="../../assets/site.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/core.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/models.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvruuhrl" defer></script>
+<script src="../../assets/learn.js?v=mvruuhrl" defer></script>
 </body>
 </html>

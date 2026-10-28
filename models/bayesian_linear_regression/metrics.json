@@ -1,5 +1,17 @@
 {
-  "RMSE": "0.7456",
-  "MAE": "0.5332",
-  "R\u00b2 Score": "0.5756"
+  "dataset": "California housing sample",
+  "summary": "Bayesian ridge trained on 80% of the California housing sample (MedHouseVal as target), scored on a held-out 20%. The baseline always predicts the training mean.",
+  "model_label": "Bayesian ridge",
+  "baseline_label": "Predict the mean",
+  "metrics": {
+    "RMSE": 0.4358,
+    "MAE": 0.336,
+    "R²": 0.7925
+  },
+  "baseline": {
+    "RMSE": 0.9568,
+    "MAE": 0.8149,
+    "R²": -0.0001
+  },
+  "generated": "generated 2026-10-28"
 }

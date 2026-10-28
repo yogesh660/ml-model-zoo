@@ -1,23 +1,56 @@
-"""
-Training & Evaluation Pipeline for LightGBM Regressor
-Dataset: California Housing
+"""Train and evaluate LightGBM on the California housing sample.
+
+Run from the repository root:
+
+    python models/lightgbm_regressor/train.py
+
+Writes models/lightgbm_regressor/metrics.json, which the lesson page reads.
+Needs: pip install lightgbm
 """
 import json
+from datetime import date
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-
+from sklearn.dummy import DummyRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 import lightgbm as lgb
-model = lgb.LGBMRegressor(n_estimators=200, learning_rate=0.05, num_leaves=31)
+
+ROOT = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent
+
+df = pd.read_csv(ROOT / "datasets/raw/california_housing.csv")
+X, y = df.drop(columns="MedHouseVal"), df["MedHouseVal"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = lgb.LGBMRegressor(n_estimators=600, learning_rate=0.05, num_leaves=15, min_child_samples=20,
+                          subsample=0.8, subsample_freq=1, colsample_bytree=0.8, random_state=0, verbose=-1)
 model.fit(X_train, y_train)
-preds = model.predict(X_test)
+baseline = DummyRegressor(strategy="mean").fit(X_train, y_train)
 
-# Export metrics
-metrics = {
-  "RMSE": "0.4650",
-  "MAE": "0.3090",
-  "R\u00b2 Score": "0.8350"
+
+def evaluate(estimator):
+    pred = estimator.predict(X_test)
+    return {
+        "RMSE": round(float(mean_squared_error(y_test, pred) ** 0.5), 4),
+        "MAE": round(float(mean_absolute_error(y_test, pred)), 4),
+        "R²": round(float(r2_score(y_test, pred)), 4),
+    }
+
+
+result = {
+    "dataset": "California housing sample",
+    "summary": "LightGBM trained on 80% of the California housing sample (MedHouseVal as target), "
+               "scored on a held-out 20%. The baseline always predicts the training mean.",
+    "model_label": "LightGBM",
+    "baseline_label": "Predict the mean",
+    "metrics": evaluate(model),
+    "baseline": evaluate(baseline),
+    "generated": f"generated {date.today().isoformat()}",
 }
-with open("metrics.json", "w") as f:
-    json.dump(metrics, f, indent=2)
-
-print("Pipeline executed successfully for lightgbm_regressor.")
+(HERE / "metrics.json").write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
+print(json.dumps(result, indent=2, ensure_ascii=False))

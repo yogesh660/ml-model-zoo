@@ -1,603 +1,182 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BIRCH Clustering · Learn ML · Yogesh Awate</title>
-  <meta name="theme-color" content="#070709">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
-  <script>
-    function renderKatex() {
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.body, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-          ],
-          throwOnError: false
-        });
-      }
-    }
-    document.addEventListener("DOMContentLoaded", renderKatex);
-    window.addEventListener("load", renderKatex);
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="../../visual-components.css">
-  <link rel="stylesheet" href="../../model.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070709">
+<title>BIRCH Clustering · Learn · Yogesh Awate</title>
+<meta name="description" content="Compresses a huge dataset into a tree of small summaries in one pass, then clusters the summaries.">
+<meta property="og:title" content="BIRCH Clustering · Learn · Yogesh Awate">
+<meta property="og:description" content="Compresses a huge dataset into a tree of small summaries in one pass, then clusters the summaries.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css?v=mvruuhrl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvruuhrl">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>document.documentElement.classList.add('js')</script>
 </head>
-<body>
-  <!-- Fixed Top Navigation -->
-  <nav id="nav">
-    <div class="nav-left">
-      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-      <div class="nav-breadcrumbs">
-        <a href="../../index.html#learn">Learn</a>
-        <span class="sep">/</span>
-        <a href="../../index.html#learn-models">Models</a>
-        <span class="sep">/</span>
-        <span>BIRCH Clustering</span>
-      </div>
+<body class="page-lesson" data-lesson="birch_clustering">
+<a class="skip" href="#main">Skip to content</a>
+
+<nav id="nav">
+  <div class="brand"><a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, home">YA<span>.</span></a><a class="brand-sub" href="../../">Learn</a></div>
+  <div class="navlinks" id="navlinks">
+    <a href="../../#paths">Paths</a>
+    <a href="../../#curriculum">Curriculum</a>
+    <a href="../../#datasets">Datasets</a>
+    <a href="https://yogesh660.github.io/about/">About</a>
+    <a class="pill" href="https://yogesh660.github.io/">Portfolio <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+  <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</nav>
+
+<main id="main">
+
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="../../#path-clustering">Path 04 · Clustering</a> / Hierarchical / Lesson 7 of 14</span>
+    <h1 class="case-title">BIRCH Clustering</h1>
+    <p class="lede rise" style="--d:3">Compresses a huge dataset into a tree of small summaries in one pass, then clusters the summaries.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline"><span class="lvl" data-l="3"><i><b></b></i>Advanced</span></span>
+      <span class="tagline">14 min</span>
+      <span class="tagline lab">Live lab</span>
+      <span class="prereq">Before this: <a href="../../models/agglomerative_hierarchical/">Agglomerative clustering</a></span>
     </div>
-    <div class="nav-badges">
-      <span class="badge-cat clustering">clustering</span>
-      <a href="../../index.html#learn" class="nav-concepts-link">&larr; Back to Learn</a>
+  </header>
+
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+          <dt>Task</dt><dd>Clustering</dd>
+          <dt>Family</dt><dd>Hierarchical, streaming</dd>
+          <dt>What it learns</dt><dd>A CF-tree of sub-clusters</dd>
+          <dt>Training cost</dt><dd>$O(n)$ single pass</dd>
+          <dt>Prediction cost</dt><dd>$O(\log n)$</dd>
+          <dt>In code</dt><dd><code class="no-math">sklearn.<wbr>cluster.<wbr>Birch</code></dd>
+      </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>How it works</a></li><li><a href="#lab"><span>03</span>Try it</a></li><li><a href="#maths"><span>04</span>The maths</a></li><li><a href="#tuning"><span>05</span>Hyperparameters</a></li><li><a href="#when"><span>06</span>When to use it</a></li><li><a href="#code"><span>07</span>In code</a></li><li><a href="#results"><span>08</span>On real data</a></li><li><a href="#quiz"><span>09</span>Check yourself</a></li><li><a href="#related"><span>10</span>Related lessons</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
+    </aside>
+
+    <div class="story">
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">BIRCH streams through the data once and builds a CF-tree: a hierarchy of tiny sub-clusters, each stored as a compact summary (count, linear sum, squared sum). A final step clusters those summaries.</p>
+        <p>Holding millions of points in memory is expensive. A Clustering Feature $(N, LS, SS)$ is enough to compute a sub-cluster’s centre and radius, and two CFs merge by simply adding them. So BIRCH absorbs each incoming point into the nearest leaf sub-cluster if it stays within a radius threshold, and starts a new sub-cluster otherwise.</p>
+        <p>The threshold sets the granularity: small means many fine sub-clusters, large means few coarse ones. A global algorithm (agglomerative, or k-means) then groups the sub-clusters into the final $k$.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Sorting a flood of letters into pigeonholes as they arrive, counting and summing as you go, and only organising the pigeonholes at the end.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> How it works</h2>
+        <ol class="steps"><li>For each point, descend the CF-tree to the closest leaf entry.</li><li>If adding it keeps the entry’s radius below the threshold, absorb it; otherwise create a new entry (splitting nodes if they exceed the branching factor).</li><li>After one pass, cluster the leaf entries globally.</li><li>Assign original points to the nearest final centre.</li></ol>
+      </section>
+      <section class="reveal" id="lab">
+        <h2 class="h3"><span>03</span> Try it</h2>
+        <p>Rings are BIRCH leaf sub-clusters (radius ≤ threshold). Colours are the final global clusters.</p>
+        <div class="lab" data-lab="birch_clustering" data-kind="models" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
+        <div class="try"><small class="kicker">Things to try</small><ol><li>Lower the threshold and count the sub-clusters.</li><li>Raise it until sub-clusters start swallowing whole blobs.</li></ol></div>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>04</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Clustering Feature</h3><div class="formula">$$CF = (N,\; LS = \textstyle\sum_i x_i,\; SS = \sum_i\lVert x_i\rVert^2), \qquad CF_1 + CF_2 = (N_1 + N_2, LS_1 + LS_2, SS_1 + SS_2)$$</div><p>Additivity is what makes the one-pass algorithm work.</p></li>
+          <li><h3>Centre and radius from a CF</h3><div class="formula">$$\mu = \frac{LS}{N}, \qquad R = \sqrt{\frac{SS}{N} - \lVert\mu\rVert^2}$$</div><p>No raw points need to be kept.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="tuning">
+        <h2 class="h3"><span>05</span> Hyperparameters</h2>
+        <div class="table-wrap"><table class="kv">
+          <thead><tr><th>Setting</th><th>What it does</th><th>Typical choice</th></tr></thead>
+          <tbody><tr><td><span class="hp">threshold</span></td><td>Max sub-cluster radius.</td><td>Tune to the data scale (0.3–1 after standardising).</td></tr><tr><td><span class="hp">branching_factor</span></td><td>Max children per node.</td><td>50.</td></tr><tr><td><span class="hp">n_clusters</span></td><td>Global clustering step.</td><td>An int, or a clusterer.</td></tr></tbody>
+        </table></div>
+      </section>
+      <section class="reveal" id="when">
+        <h2 class="h3"><span>06</span> When to use it</h2>
+        <div class="split2">
+          <div class="box good"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Strengths</h3><ul><li>One pass; works on streams and data larger than memory.</li><li>Supports incremental updates (partial_fit).</li></ul></div>
+          <div class="box bad"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg> Limitations</h3><ul><li>Sensitive to the threshold and to data order.</li><li>Favours spherical clusters.</li><li>Only for numeric features.</li></ul></div>
+          <div class="box use"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> Reach for it when</h3><p>Very large or streaming numeric data where you need a quick, memory-light clustering.</p></div>
+          <div class="box avoid"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Think twice when</h3><p>Small data (just use k-means or agglomerative) or non-convex shapes.</p></div>
+        </div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>07</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> sklearn.preprocessing <span class="k">import</span> StandardScaler
+
+df = pd.<span class="f">read_csv</span>(<span class="s">&quot;datasets/raw/mall_customers.csv&quot;</span>)
+X = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span>(df[[<span class="s">&quot;Annual_Income_k&quot;</span>, <span class="s">&quot;Spending_Score&quot;</span>]])
+<span class="k">from</span> sklearn.cluster <span class="k">import</span> Birch
+
+birch = <span class="f">Birch</span>(threshold=<span class="n">0.4</span>, branching_factor=<span class="n">50</span>, n_clusters=<span class="n">5</span>).<span class="f">fit</span>(X)
+<span class="k">print</span>(<span class="s">&quot;leaf sub-clusters:&quot;</span>, <span class="k">len</span>(birch.subcluster_centers_))</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Using the default threshold on unscaled data.</span></li></ul>
+      </section>
+      <section class="reveal" id="results">
+        <h2 class="h3"><span>08</span> On real data</h2>
+        <p>BIRCH (threshold 0.3) on standardised annual income and spending score of the mall customers sample. No labels exist, so the scores are internal: higher silhouette and lower Davies–Bouldin are better.</p>
+        <div class="table-wrap" style="margin-top:18px"><table class="kv results-table">
+          <thead><tr><th>Metric</th><th>BIRCH (threshold 0.3)</th><th>k-means (k = 5)</th></tr></thead>
+          <tbody><tr><td>Clusters</td><td>5.000</td><td>5.000</td></tr><tr><td>Noise points</td><td>0.000</td><td>0.000</td></tr><tr><td>Silhouette</td><td>0.364</td><td>0.404</td></tr><tr><td>Davies–Bouldin</td><td>0.892</td><td>0.828</td></tr><tr><td>Calinski–Harabasz</td><td>412.9</td><td>489.200</td></tr><tr><td>Leaf sub-clusters</td><td>33.0</td><td>–</td></tr></tbody>
+        </table></div>
+        <p class="note">Produced by <a href="https://github.com/yogesh660/ml-model-zoo/blob/main/models/birch_clustering/train.py" target="_blank" rel="noopener">models/birch_clustering/train.py</a> · generated 2026-10-28. Run it yourself: <code class="no-math">python models/birch_clustering/train.py</code></p>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>09</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>What makes BIRCH’s one-pass approach possible?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Random sampling</span></button><button class="opt" type="button"><b>B</b><span>Clustering Features can be merged by addition</span></button><button class="opt" type="button"><b>C</b><span>It stores every point</span></button><button class="opt" type="button"><b>D</b><span>It uses a GPU</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $(N, LS, SS)$ summaries are additive, so sub-clusters update in constant time.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>10</span> Related lessons</h2>
+        <div class="related"><a href="../../models/agglomerative_hierarchical/"><small class="kicker">Clustering</small><b>Agglomerative clustering</b></a><a href="../../models/kmeans_clustering/"><small class="kicker">Clustering</small><b>k-means</b></a><a href="../../concepts/clustering-metrics/"><small class="kicker">Concept</small><b>Clustering metrics</b></a></div>
+      </section>
     </div>
-  </nav>
+  </div>
 
-  <main class="detail-content">
-    <!-- Header -->
-    <header class="detail-header">
-      <div class="subfamily-tag">Graph, Grid & Scalable</div>
-      <h1>BIRCH Clustering</h1>
-      <p>Incrementally builds a balanced Clustering Feature (CF) tree to compress large-scale datasets into dense subclusters for fast clustering.</p>
-      
-      <div class="concept-chips-bar">
-        <span class="concept-chip-label">Essential Concepts:</span>
-        <a class="concept-chip" href="../../concepts/clustering-metrics/index.html">Silhouette Analysis</a>
-        <a class="concept-chip" href="../../concepts/clustering-metrics/index.html">Elbow Method (WCSS)</a>
-        <a class="concept-chip" href="../../concepts/feature-selection/index.html">PCA Dimensionality Reduction</a>
-        <a class="concept-chip" href="../../concepts/exploratory-data-analysis/index.html">EDA & Preprocessing</a>
-      </div>
-    
-    </header>
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    <a href="../../models/divisive_hierarchical/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Clustering</small><b>Divisive clustering</b></a>
+    <a class="pager-next" href="../../models/dbscan_clustering/"><small>Next · Clustering <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>DBSCAN</b></a>
+  </div>
+</article>
+</main>
 
-    <!-- 1. Intuition & Mental Model + Computational Pipeline -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot"></span> 1. Intuition & Algorithmic Mental Model
-      </h2>
-      <div class="card-grid-2">
-        <div class="info-card">
-          <h3>How the Algorithm Solves Problems</h3>
-          <p>Incrementally builds a balanced Clustering Feature (CF) tree to compress large-scale datasets into dense subclusters for fast clustering.</p>
-          <p>By framing learning as an explicit optimization task, this architecture establishes an optimal balance governed by the <a class="concept-link" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>, ensuring generalizability to unseen data.</p>
-        </div>
-        <div class="info-card">
-          <h3>Core Theoretical Assumptions</h3>
-          <ul class="assumptions-checklist">
+<section id="contact" class="contact">
+  <span class="tag reveal">Let's connect</span>
+  <h2 class="reveal">Have a hard problem?<br><span>Let's make it simple.</span></h2>
+  <a class="email reveal" href="mailto:awateyogeshs@gmail.com">awateyogeshs@gmail.com <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <div class="socials reveal">
+    <a href="https://www.linkedin.com/in/yogesh-s-awate/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+    <a href="https://github.com/yogesh660" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.2-.3-2.5-1-3.5.3-1.1.3-2.4 0-3.5 0 0-1 0-3 1.5a10.5 10.5 0 0 0-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.4 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg> GitHub</a>
+    <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Medium</a>
+    <a href="https://twitter.com/YogeshSAwate1" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> X / Twitter</a>
+  </div>
+</section>
 
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Distance Metric Validity:</strong> Euclidean or density metric reliably reflects true semantic domain similarity.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Geometric Cluster Compactness:</strong> Assumes clusters exhibit convex spherical geometry (K-Means) or connected density (DBSCAN).</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Equal Feature Weighting:</strong> Features must be standardized so wide-range covariates do not dominate Euclidean distance.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Absence of Dominant Outliers:</strong> Extreme noise points must be filtered or handled via robust core density thresholds.</div></li>
-    
-          </ul>
-        </div>
-      </div>
+<footer>
+  <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+  <div class="footlinks"><a href="../../">Learn</a><a href="https://yogesh660.github.io/work/">Work</a><a href="https://yogesh660.github.io/projects/">Open source</a><a href="https://yogesh660.github.io/about/">About</a></div>
+  <span>© 2026 YOGESH AWATE</span>
+</footer>
 
-      
-    <div class="pipeline-box">
-      <span class="canvas-tag">End-to-End System Architecture &amp; Computational Dataflow</span>
-      <div class="pipeline-diagram">
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 01 &bull; Unlabeled Space</span>
-          <h4>Unsupervised Metric Cloud</h4>
-          <p>Feature coordinates without supervisory ground-truth labels.</p>
-          <span class="tensor-shape">$\mathbf{X} \in \mathbb{R}^{n \times p}$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 02 &bull; Seeding / Density Scan</span>
-          <h4>Initialization Protocol</h4>
-          <p>Spread initial seeds via k-Means++ or compute density radii.</p>
-          <span class="tensor-shape">$P(\mathbf{x}) \propto D(\mathbf{x})^2 \text{ or } N_\varepsilon(\mathbf{x})$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 03 &bull; Expectation (E-Step)</span>
-          <h4>Voronoi Assignment</h4>
-          <p>Assign each instance to nearest centroid or core neighborhood.</p>
-          <span class="tensor-shape">$C_k = \{\mathbf{x}_i : \|\mathbf{x}_i - \boldsymbol{\mu}_k\|^2 \le \|\mathbf{x}_i - \boldsymbol{\mu}_j\|^2\}$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 04 &bull; Maximization (M-Step)</span>
-          <h4>Centroid Relocation</h4>
-          <p>Recompute cluster centers of mass until shift $\Delta \boldsymbol{\mu} &lt; \epsilon$.</p>
-          <span class="tensor-shape">$\boldsymbol{\mu}_k^{(t+1)} = \frac{1}{|C_k|}\sum_{\mathbf{x}_i \in C_k} \mathbf{x}_i$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 05 &bull; Cluster Scoring</span>
-          <h4>Partition Inference</h4>
-          <p>Assign unseen query point to nearest learned cluster centroid.</p>
-          <span class="tensor-shape">$\hat{k} = \arg\min_k \|\mathbf{x}_{\text{new}} - \boldsymbol{\mu}_k\|_2 \in \{1..K\}$</span>
-        </div>
-  
-      </div>
-    </div>
-  
-    </section>
-  
-
-    <!-- 2. Interactive Simulation Laboratory -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot violet"></span> 2. Interactive Simulation Laboratory
-      </h2>
-      <div id="model-sim-lab"></div>
-    </section>
-  
-
-    <!-- 3. Mathematical Derivation & Blueprint -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot cyan"></span> 3. Step-by-Step Mathematical Derivation & Blueprint
-      </h2>
-
-      <div class="math-dissection-grid">
-        
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathcal{D} = \{\mathbf{x}_1, \dots, \mathbf{x}_n\} \subset \mathbb{R}^p$</span>
-          <span class="dissect-role">Unlabeled Input Manifold</span>
-          <span class="dissect-desc">Continuous $p$-dimensional feature observations without prior ground-truth target annotations.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\boldsymbol{\mu}_k \in \mathbb{R}^p, \; k \in \{1..K\}$</span>
-          <span class="dissect-role">Cluster Exemplar Centroids</span>
-          <span class="dissect-desc">Geometric centroids or density modes representing partitioned clusters in metric space.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathcal{J}_{\text{WCSS}} / \log p(\mathbf{X})$</span>
-          <span class="dissect-role">Inertia / Likelihood Objective</span>
-          <span class="dissect-desc">Objective measuring within-cluster sum-of-squares compactness or mixture log-likelihood.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$K, \; \epsilon, \; \text{MinPts}$</span>
-          <span class="dissect-role">Partitioning Envelope</span>
-          <span class="dissect-desc">Controls cluster granularity, epsilon neighborhood radius, or minimum core density threshold.</span>
-        </div>
-      </div>
-
-      <div class="derivation-container" style="margin-top:20px;">
-        <div class="derivation-step">
-          <div class="step-header">
-            <span class="step-num">Step 01</span>
-            <span class="step-title">Clustering Feature (CF) Additive Triplet</span>
-          </div>
-          <div class="step-formula">
-            $$\text{CF} = (N, \vec{LS}, SS), \quad N = |C|, \quad \vec{LS} = \sum_{i=1}^N x_i, \quad SS = \sum_{i=1}^N \|x_i\|^2$$
-          </div>
-          <p class="step-desc">Compresses arbitrary subclusters into compact zero-th, first, and second order statistical moments $(N, \vec{LS}, SS)$, satisfying linear additivity $\text{CF}_1 + \text{CF}_2 = (N_1+N_2, \vec{LS}_1+\vec{LS}_2, SS_1+SS_2)$.</p>
-        </div>
-
-        <div class="derivation-step">
-          <div class="step-header">
-            <span class="step-num">Step 02</span>
-            <span class="step-title">CF-Tree Radius Threshold Metric & Re-Clustering</span>
-          </div>
-          <div class="step-formula">
-            $$R = \sqrt{\frac{SS}{N} - \left\|\frac{\vec{LS}}{N}\right\|^2} \le T, \quad \mu = \frac{\vec{LS}}{N}$$
-          </div>
-          <p class="step-desc">Streams data points through an in-memory height-balanced CF-tree in a single $O(n)$ scan, inserting points into existing leaf entries if cluster radius $R \le T$, followed by global clustering.</p>
-        </div>
-      </div>
-    </section>
-  
-
-    <!-- 4. Modular Multi-Dataset Benchmarks -->
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot green"></span> 4. Modular Multi-Dataset Laboratory (EDA & Feature Selection)
-      </h2>
-      <p style="color:var(--muted); font-size:14.5px; margin-top:-8px;">
-        Explore how this architecture adapts across different datasets. Review the raw data schema, exploratory data analysis, feature selection techniques tested, and the exact rationale for the chosen preprocessing pipeline.
-      </p>
-
-      
-      <div class="dataset-switcher-bar">
-        <div class="switcher-header">
-          <div class="switcher-title-wrap">
-            <span class="pulse-dot"></span>
-            <span class="switcher-label">Active Benchmark Dataset:</span>
-          </div>
-          <span class="switcher-helper">Switch datasets to explore how Raw Data, Clusters, Silhouette, and Inertia adapt</span>
-        </div>
-        <div class="dataset-tabs">
-          <button class="dataset-tab active" data-target="ds-mall">
-            <span>Mall Customers</span>
-            <span class="tab-badge">Retail &bull; 500 rows</span>
-          </button>
-          <button class="dataset-tab" data-target="ds-iris">
-            <span>Morphological Geometry</span>
-            <span class="tab-badge">Spatial &bull; 500 rows</span>
-          </button>
-        </div>
-      </div>
-    
-
-      
-      <!-- Panel 1: Mall Customers -->
-      <div id="ds-mall" class="dataset-panel active">
-        <div class="callout cyan">
-          <span class="callout-title">Dataset Profile: Mall Customer Spending Segmentation</span>
-          <p><strong>Goal:</strong> Partition retail clientele into distinct behavioural cohorts based on annual income and spending score.</p>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (mall_customers.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>5</strong> Features</span>
-          <span class="meta-pill"><strong>500</strong> Records</span>
-          <span class="meta-pill target">Target: <code>Spending_Score</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">CustomerID </th><th class="">Gender </th><th class="">Age </th><th class="">Annual_Income_k </th><th class="target-col">Spending_Score <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">1</td><td class="">Female</td><td class="">23</td><td class="">31</td><td class="target-col-cell">21</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">2</td><td class="">Female</td><td class="">34</td><td class="">131</td><td class="target-col-cell">30</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">3</td><td class="">Female</td><td class="">67</td><td class="">74</td><td class="target-col-cell">92</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">4</td><td class="">Male</td><td class="">54</td><td class="">36</td><td class="target-col-cell">31</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">5</td><td class="">Male</td><td class="">35</td><td class="">38</td><td class="target-col-cell">26</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">6</td><td class="">Male</td><td class="">43</td><td class="">139</td><td class="target-col-cell">22</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">7</td><td class="">Male</td><td class="">66</td><td class="">95</td><td class="target-col-cell">21</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">8</td><td class="">Male</td><td class="">33</td><td class="">99</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">9</td><td class="">Female</td><td class="">25</td><td class="">65</td><td class="target-col-cell">37</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">10</td><td class="">Female</td><td class="">41</td><td class="">64</td><td class="target-col-cell">77</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">11</td><td class="">Male</td><td class="">30</td><td class="">25</td><td class="target-col-cell">85</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">12</td><td class="">Female</td><td class="">46</td><td class="">70</td><td class="target-col-cell">46</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <strong>Natural Cluster Geometry:</strong> Scatter visualization reveals 5 pronounced clusters in the Income vs Spending Score plane (low income/low spend, low income/high spend, average, high income/low spend, high income/high spend).</p>
-            <p>2. <strong>No Label Supervision:</strong> Requires internal validation via Silhouette Coefficient and Inertia elbow inflection.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: Variance Thresholding + Index Dropping</span>
-              <h4>Why this was selected:</h4>
-              <p><code>CustomerID</code> contains zero semantic information and was dropped. Features <code>Annual_Income_k</code> and <code>Spending_Score</code> were standardized via StandardScaler to prevent scale distortion in Euclidean distance computation.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Clustering Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Optimal K</a></td><td class="val">5</td><td>Elbow inflection point on within-cluster sum of squares.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Silhouette Score</a></td><td class="val">50</td><td>Values &gt; 0.5 indicate well-separated cohesive clusters.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Davies-Bouldin Index</a></td><td class="val">0.5720</td><td>Lower values confirm tight clusters with wide separation.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Mall Customers: 2D Cluster Separation Visualization</div>
-            <div class="chart-wrap">
-              <canvas id="chartMall"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel 2: Iris Morphological -->
-      <div id="ds-iris" class="dataset-panel">
-        <div class="callout violet">
-          <span class="callout-title">Dataset Profile: Geographic Spatial Segmentation</span>
-          <p><strong>Goal:</strong> Unsupervised spatial block-group clustering based on latitude and longitude coordinates.</p>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (california_housing.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>9</strong> Features</span>
-          <span class="meta-pill"><strong>500</strong> Records</span>
-          <span class="meta-pill target">Target: <code>MedHouseVal</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">MedInc </th><th class="">HouseAge </th><th class="">AveRooms </th><th class="">AveBedrms </th><th class="">Population </th><th class="">AveOccup </th><th class="">Latitude </th><th class="">Longitude </th><th class="target-col">MedHouseVal <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">4.31</td><td class="">21</td><td class="">6.48</td><td class="">0.83</td><td class="">2530</td><td class="">4.26</td><td class="">36.45</td><td class="">-116.46</td><td class="target-col-cell">1.56</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">8.63</td><td class="">13</td><td class="">3.07</td><td class="">1.06</td><td class="">1988</td><td class="">3.85</td><td class="">39.34</td><td class="">-120.11</td><td class="target-col-cell">3.22</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">6.99</td><td class="">37</td><td class="">6.65</td><td class="">1.26</td><td class="">787</td><td class="">2.48</td><td class="">36.03</td><td class="">-119.30</td><td class="target-col-cell">3.05</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">5.99</td><td class="">24</td><td class="">3.98</td><td class="">1.67</td><td class="">2150</td><td class="">3.53</td><td class="">40.76</td><td class="">-116.45</td><td class="target-col-cell">2.11</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">2.67</td><td class="">17</td><td class="">8.29</td><td class="">1.53</td><td class="">1145</td><td class="">3.09</td><td class="">39.44</td><td class="">-118.31</td><td class="target-col-cell">0.52</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">2.67</td><td class="">32</td><td class="">3.82</td><td class="">1.54</td><td class="">2471</td><td class="">3.44</td><td class="">38.65</td><td class="">-122.29</td><td class="target-col-cell">1.13</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">1.94</td><td class="">33</td><td class="">5.28</td><td class="">1.23</td><td class="">3332</td><td class="">3.85</td><td class="">40.06</td><td class="">-118.40</td><td class="target-col-cell">0.50</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">8.00</td><td class="">17</td><td class="">3.47</td><td class="">1.15</td><td class="">3137</td><td class="">4.02</td><td class="">39.66</td><td class="">-120.22</td><td class="target-col-cell">2.94</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">6.01</td><td class="">50</td><td class="">8.48</td><td class="">1.17</td><td class="">2761</td><td class="">4.11</td><td class="">32.84</td><td class="">-119.60</td><td class="target-col-cell">2.17</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">6.81</td><td class="">39</td><td class="">5.76</td><td class="">1.79</td><td class="">2303</td><td class="">2.63</td><td class="">36.25</td><td class="">-124.02</td><td class="target-col-cell">3.32</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">1.65</td><td class="">10</td><td class="">6.27</td><td class="">0.84</td><td class="">2048</td><td class="">2.08</td><td class="">41.34</td><td class="">-122.20</td><td class="target-col-cell">0.50</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">8.77</td><td class="">22</td><td class="">3.37</td><td class="">1.67</td><td class="">985</td><td class="">3.85</td><td class="">33.69</td><td class="">-121.49</td><td class="target-col-cell">2.85</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. Spatial coordinates naturally reveal coastal economic dense clusters versus inland rural regions.</p>
-            <p>2. Density-based algorithms like DBSCAN and HDBSCAN naturally discover arbitrary non-spherical shapes here where K-Means fails.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: Spatial Haversine Projection</span>
-              <h4>Why this was selected:</h4>
-              <p>Isolates <code>Latitude</code> and <code>Longitude</code> with standard Euclidean projection to prevent socio-demographic features from masking geographical spatial clustering.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Clustering Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Optimal K</a></td><td class="val">3</td><td>Matches coastal, central, and valley natural geography.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/clustering-metrics/index.html">Silhouette Score</a></td><td class="val">0.6860</td><td>High cohesion and separation score.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Spatial 2D Cluster Scatter Visualization</div>
-            <div class="chart-wrap">
-              <canvas id="chartIris"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    
-    </section>
-
-    <!-- 5. Architectural Trade-offs & Failure Modes Playbook -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot amber"></span> 5. Architectural Trade-offs & Failure Modes Playbook
-      </h2>
-      <div class="card-grid-2">
-        <div class="callout green">
-          <span class="callout-title">When to Choose this Architecture</span>
-          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
-            <li>When direct interpretability and explainability are mandatory for regulatory compliance.</li>
-            <li>When dataset volume is moderate and computational training budget is strictly limited.</li>
-            <li>When robust linear or well-conditioned relationships dominate after proper <a class="concept-link" href="../../concepts/feature-selection/index.html">Feature Selection</a>.</li>
-          </ul>
-        </div>
-        <div class="callout violet">
-          <span class="callout-title">When NOT to Choose this Architecture</span>
-          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
-            <li>When complex, high-order non-linear feature interactions exist that simple kernels cannot capture.</li>
-            <li>When features exhibit extreme multicollinearity without applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization (Ridge/Lasso)</a>.</li>
-            <li>When severe class imbalance makes standard accuracy misleading, requiring metric optimization for <a class="concept-link" href="../../concepts/precision-recall-f1/index.html">Recall & F1</a>.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="card-grid-2" style="margin-top:20px;">
-        <div class="callout amber">
-          <span class="callout-title">Production Failure Mode: High Variance & Overfitting</span>
-          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
-            Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
-          </p>
-          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Apply $L_2$ Ridge shrinkage ($\lambda > 0$) or prune tree depth.</li>
-            <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
-            <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
-          </ul>
-        </div>
-        <div class="callout red">
-          <span class="callout-title">Production Failure Mode: Leverage Outliers & Shift</span>
-          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
-            High-leverage anomalies drag the optimization surface away from the true data generating manifold.
-          </p>
-          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Use robust losses like Huber Loss ($\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
-            <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
-            <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-  
-  </main>
-
-  <footer>
-    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-    <div>
-      <a href="../../index.html#learn-concepts">Concepts Hub</a> &bull;
-      <a href="../../index.html#learn">Back to Learn Hub</a>
-    </div>
-    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
-  </footer>
-
-  <script src="../../visual-simulators.js"></script>
-  <script src="../../model-interactive.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      
-      // 1. Mall Clusters Chart
-      const cluster1 = Array.from({length: 15}, () => ({x: 25 + Math.random()*15, y: 75 + Math.random()*20}));
-      const cluster2 = Array.from({length: 15}, () => ({x: 25 + Math.random()*15, y: 20 + Math.random()*15}));
-      const cluster3 = Array.from({length: 15}, () => ({x: 55 + Math.random()*15, y: 50 + Math.random()*15}));
-      const cluster4 = Array.from({length: 15}, () => ({x: 85 + Math.random()*20, y: 80 + Math.random()*15}));
-      const cluster5 = Array.from({length: 15}, () => ({x: 85 + Math.random()*20, y: 20 + Math.random()*15}));
-      window.createClusterChart('chartMall', [cluster1, cluster2, cluster3, cluster4, cluster5]);
-
-      // 2. Iris Clusters Chart
-      const iris1 = Array.from({length: 18}, () => ({x: 1.5 + Math.random()*0.8, y: 0.3 + Math.random()*0.3}));
-      const iris2 = Array.from({length: 18}, () => ({x: 4.2 + Math.random()*0.8, y: 1.3 + Math.random()*0.4}));
-      const iris3 = Array.from({length: 18}, () => ({x: 5.5 + Math.random()*0.9, y: 2.0 + Math.random()*0.4}));
-      window.createClusterChart('chartIris', [iris1, iris2, iris3]);
-    
-      if (window.MLVisualLabs) {
-        
-          window.MLVisualLabs.initClusteringLab('model-sim-lab');
-        
-      }
-    });
-  </script>
+<script src="../../assets/site.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/core.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/models.js?v=mvruuhrl" defer></script>
+<script src="../../assets/learn.js?v=mvruuhrl" defer></script>
 </body>
 </html>

@@ -1,86 +1,66 @@
-# Machine Learning Model Zoo (47 Architectures)
+# Learn · machine learning from first principles
 
-A comprehensive architectural benchmark suite and educational laboratory featuring 47 distinct machine learning algorithms spanning regression, classification, and unsupervised clustering.
+An interactive learning hub with 64 lessons: 47 machine learning models and 17 statistics and theory concepts, arranged into five learning paths. Every lesson explains the idea in plain words, works through the maths, shows runnable code and includes a live lab where the algorithm actually trains in your browser.
+
+It is meant to sit at `yogesh660.github.io/ml-model-zoo/` and uses the same design system as the portfolio: same tokens, nav, reveals, card spotlight and footer.
+
+## Learning paths
+
+| Path | Lessons | What it covers |
+|---|---|---|
+| 01 Foundations | 17 | EDA, feature selection, loss functions, gradient descent, MLE, Newton/BFGS, bias–variance, regularisation, cross-validation, log-odds, link functions, metrics |
+| 02 Regression | 17 | OLS to polynomial, ridge, lasso, elastic net, robust and Bayesian regression, k-NN, SVR, Gaussian processes, trees, random forests, GBM, XGBoost, LightGBM, CatBoost, MLP |
+| 03 Classification | 12 | Logistic regression, LDA, QDA, naive Bayes, SVM, k-NN, trees, random forests, AdaBoost, gradient boosting, stacking |
+| 04 Clustering | 14 | k-means, k-means++, k-medoids, fuzzy c-means, agglomerative, divisive, BIRCH, DBSCAN, HDBSCAN, OPTICS, mean shift, GMM, spectral, affinity propagation |
+| 05 Neural networks | 4 | Perceptron, MLP, CNNs, RNNs and Transformers |
+
+Each lesson follows the same structure: the idea, how it works, a live lab, the maths, hyperparameters (or key takeaways), when to use it, code with common pitfalls, results on a dataset (models), a short quiz and related lessons.
 
 ## Structure
-- **Root `index.html`**: Interactive dark-themed landing hub with instant real-time search, category filtering, and metrics overview.
-- **`models/<model_id>/`**: Each of the 47 models has its own isolated subfolder containing:
-  - `index.html`: Deep technical dive featuring KaTeX mathematical formulations, dataset breakdown, EDA, benchmark evaluation, and interactive Chart.js visualization.
-  - `train.py`: Self-contained Python training and evaluation pipeline.
-  - `metrics.json`: Exported validation metrics.
-- **`datasets/raw/`**: Standardized benchmarking datasets (California Housing, Titanic, Mall Customers).
 
-## Learn Hub: Models & Concepts (60 Units)
-
-The unified **Learn** curriculum consists of **47 Models** and **13 Foundational Concepts**:
-- **47 Algorithmic Models**: Step-by-step mathematical derivations, modular multi-dataset benchmarking, EDA insights, and justified feature selection.
-- **13 Core Concept Guides**: Loss functions, Confusion Matrix, Bias-Variance Tradeoff, VIF Multicollinearity, Feature Selection, and ROC-AUC.
-
-### 1. Regression Models (17)
-- Ordinary Least Squares (OLS) Linear Regression
-- Ridge Regression (L2)
-- Lasso Regression (L1)
-- Elastic Net
-- Polynomial Regression
-- Robust Regression (Huber / RANSAC / Theil-Sen)
-- Support Vector Regression (SVR)
-- K-Nearest Neighbors Regressor (KNN)
-- Decision Tree Regressor (CART)
-- Random Forest Regressor
-- Gradient Boosting Regressor (GBM)
-- XGBoost Regressor
-- LightGBM Regressor
-- CatBoost Regressor
-- Bayesian Linear Regression
-- Gaussian Process Regression (GPR)
-- Multi-Layer Perceptron (MLP) Regressor
-
-### 2. Classification Models (16)
-- Logistic Regression
-- Linear Discriminant Analysis (LDA)
-- Quadratic Discriminant Analysis (QDA)
-- Perceptron
-- Gaussian Naive Bayes
-- Multinomial & Bernoulli Naive Bayes
-- Support Vector Classifier (SVC)
-- K-Nearest Neighbors Classifier (KNN)
-- Decision Tree Classifier (CART / C4.5)
-- Random Forest Classifier
-- AdaBoost Classifier
-- Gradient Boosted Classifiers (XGBoost / LightGBM / CatBoost)
-- Stacking & Voting Classifiers
-- Multi-Layer Perceptron (MLP) Classifier
-- Convolutional Neural Networks (CNNs)
-- Transformers & Recurrent Networks (RNNs / LSTMs)
-
-### 3. Clustering Models (14)
-- K-Means
-- K-Means++
-- K-Medoids (PAM)
-- Fuzzy C-Means (Soft Clustering)
-- Agglomerative Hierarchical Clustering
-- Divisive Hierarchical Clustering
-- DBSCAN
-- HDBSCAN
-- OPTICS
-- Mean Shift
-- Gaussian Mixture Models (GMM)
-- Spectral Clustering
-- Affinity Propagation
-- BIRCH
-
----
-## Running Locally
-Start the built-in HTTP server:
-```bash
-node server.js
 ```
-Open **[http://localhost:8000](http://localhost:8000)** in your browser.
+content/              every word on the site
+  curriculum.js       paths, modules and lesson order
+  concepts.js         the 17 foundation lessons
+  regression.js       classification.js  clustering.js  neural.js
+assets/
+  site.css, site.js   straight copies of the portfolio's stylesheet and script
+  learn.css, learn.js what Learn adds: paths, syllabus, lesson layout, labs, quiz, progress
+  labs/               the in-browser labs (no dependencies)
+    core.js           canvas plotting, seeded datasets, controls
+    algos.js          from-scratch implementations of every algorithm
+    models.js         one lab per model lesson
+    concepts.js       one lab per concept lesson
+scripts/build.js      content -> index.html, models/<id>/index.html, concepts/<id>/index.html
+models/<id>/          train.py (scikit-learn or PyTorch) and the metrics.json it writes
+datasets/raw/         small synthetic teaching samples modelled on well-known datasets
+```
 
-## UI & Theme Design
-Crafted to seamlessly integrate with Yogesh Awate's portfolio site ([yogesh660.github.io](https://yogesh660.github.io/)):
-- **Typography**: Manrope for editorial headings and DM Mono for code, metrics, and tags.
-- **Palette**: Deep near-black background (`#070709`), electric violet (`#8c7cff`), cyan (`#56d9ff`), and terminal green (`#74df9b`).
-- **Interactive Features**: Dynamic cursor spotlight glow on cards, live search filter, category toggles, animated counters, KaTeX equations, and Chart.js diagnostic plots.
+## Build and run
 
-Published with GitHub Pages: `https://yogesh660.github.io/ml-model-zoo/`
+```bash
+node scripts/build.js        # regenerates every page from content/
+node server.js               # http://localhost:8000
+```
+
+No npm install is needed. Pages are plain HTML; KaTeX (for the maths) and Google Fonts load from CDNs, the same way the portfolio does.
+
+To change a lesson, edit its entry in `content/` and rebuild. `[[lesson-id]]` or `[[lesson-id|text]]` inside any text becomes a link to that lesson; the build fails if the id does not exist, so links cannot rot.
+
+## Training scripts
+
+Every model has a self-contained `models/<id>/train.py` that trains on one of the CSVs, compares against a trivial baseline on a held-out split and writes `metrics.json`. The lesson page shows those numbers under "On real data".
+
+```bash
+pip install -r requirements.txt
+python models/random_forest_regressor/train.py
+node scripts/build.js        # pick up the new metrics
+```
+
+The XGBoost, LightGBM and CatBoost scripts need their libraries, and the CNN and RNN/Transformer scripts need PyTorch (`pip install torch`); they train on scikit-learn's bundled digits so nothing is downloaded. Until they have been run, those five lessons simply leave out the results section.
+
+The CSVs are synthetic and deliberately easy, so some scores (Titanic in the mid-90s, breast cancer at 100%) are far higher than you would see on the original datasets. They are there to make the scripts runnable and comparable, not to benchmark models.
+
+## Progress
+
+"Mark as complete" and the path progress bars use `localStorage`, so progress stays in the visitor's browser and is never sent anywhere.

@@ -1,806 +1,177 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LightGBM Regressor · Learn ML · Yogesh Awate</title>
-  <meta name="theme-color" content="#070709">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
-  <script>
-    function renderKatex() {
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.body, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-          ],
-          throwOnError: false
-        });
-      }
-    }
-    document.addEventListener("DOMContentLoaded", renderKatex);
-    window.addEventListener("load", renderKatex);
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="../../visual-components.css">
-  <link rel="stylesheet" href="../../model.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070709">
+<title>LightGBM Regression · Learn · Yogesh Awate</title>
+<meta name="description" content="Gradient boosting built for speed: histogram binning, leaf-wise tree growth and gradient-based row sampling.">
+<meta property="og:title" content="LightGBM Regression · Learn · Yogesh Awate">
+<meta property="og:description" content="Gradient boosting built for speed: histogram binning, leaf-wise tree growth and gradient-based row sampling.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css?v=mvruuhrl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvruuhrl">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>document.documentElement.classList.add('js')</script>
 </head>
-<body>
-  <!-- Fixed Top Navigation -->
-  <nav id="nav">
-    <div class="nav-left">
-      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-      <div class="nav-breadcrumbs">
-        <a href="../../index.html#learn">Learn</a>
-        <span class="sep">/</span>
-        <a href="../../index.html#learn-models">Models</a>
-        <span class="sep">/</span>
-        <span>LightGBM Regressor</span>
-      </div>
+<body class="page-lesson" data-lesson="lightgbm_regressor">
+<a class="skip" href="#main">Skip to content</a>
+
+<nav id="nav">
+  <div class="brand"><a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, home">YA<span>.</span></a><a class="brand-sub" href="../../">Learn</a></div>
+  <div class="navlinks" id="navlinks">
+    <a href="../../#paths">Paths</a>
+    <a href="../../#curriculum">Curriculum</a>
+    <a href="../../#datasets">Datasets</a>
+    <a href="https://yogesh660.github.io/about/">About</a>
+    <a class="pill" href="https://yogesh660.github.io/">Portfolio <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+  <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</nav>
+
+<main id="main">
+
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="../../#path-regression">Path 02 · Regression</a> / Trees and ensembles / Lesson 15 of 17</span>
+    <h1 class="case-title">LightGBM Regression</h1>
+    <p class="lede rise" style="--d:3">Gradient boosting built for speed: histogram binning, leaf-wise tree growth and gradient-based row sampling.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline"><span class="lvl" data-l="3"><i><b></b></i>Advanced</span></span>
+      <span class="tagline">18 min</span>
+      <span class="tagline lab">Live lab</span>
+      <span class="prereq">Before this: <a href="../../models/gradient_boosting_regressor/">Gradient boosting regressor</a></span>
     </div>
-    <div class="nav-badges">
-      <span class="badge-cat regression">regression</span>
-      <a href="../../index.html#learn" class="nav-concepts-link">&larr; Back to Learn</a>
+  </header>
+
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+          <dt>Task</dt><dd>Regression</dd>
+          <dt>Family</dt><dd>Boosting (histogram)</dd>
+          <dt>What it learns</dt><dd>Leaf-wise trees on histograms</dd>
+          <dt>Training cost</dt><dd>$O(M \cdot \text{leaves} \cdot p \cdot \text{bins})$ after binning</dd>
+          <dt>Prediction cost</dt><dd>$O(M \cdot \text{depth})$</dd>
+          <dt>In code</dt><dd><code class="no-math">lightgbm.<wbr>LGBMRegressor</code></dd>
+      </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>How it works</a></li><li><a href="#lab"><span>03</span>Try it</a></li><li><a href="#maths"><span>04</span>The maths</a></li><li><a href="#tuning"><span>05</span>Hyperparameters</a></li><li><a href="#when"><span>06</span>When to use it</a></li><li><a href="#code"><span>07</span>In code</a></li><li><a href="#quiz"><span>08</span>Check yourself</a></li><li><a href="#related"><span>09</span>Related lessons</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
+    </aside>
+
+    <div class="story">
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">LightGBM gets its speed from three ideas: bucket each feature into a small number of bins, grow trees leaf-wise (always splitting the most useful leaf), and sample rows smartly by gradient size.</p>
+        <p><strong>Histograms:</strong> instead of sorting every value, each feature is bucketed into at most 255 bins once. Split search then scans bins, not rows. It is a lot faster and barely less accurate.</p>
+        <p><strong>Leaf-wise growth:</strong> level-wise trees (XGBoost’s default) split every node at a depth. LightGBM always splits the single leaf with the largest gain. For the same number of leaves, this reduces loss more, but it can grow deep, lopsided branches, so <code>num_leaves</code> and <code>min_data_in_leaf</code> matter.</p>
+        <p><strong>GOSS</strong> keeps all rows with large gradients (the ones the model gets wrong) and a random sample of the rest, up-weighted to stay unbiased. <strong>EFB</strong> bundles mutually exclusive sparse features into one.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Instead of sorting every house by exact price, sort them into 255 price bands, and always spend effort on the neighbourhood where predictions are worst.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> How it works</h2>
+        <ol class="steps"><li>Bin each feature into histograms once.</li><li>For each round, compute gradients; optionally apply GOSS row sampling.</li><li>Grow a tree leaf-wise: repeatedly split the leaf with the best gain until <code>num_leaves</code> is reached.</li><li>Add the shrunken tree and repeat with early stopping.</li></ol>
+      </section>
+      <section class="reveal" id="lab">
+        <h2 class="h3"><span>03</span> Try it</h2>
+        <p>A browser booster with LightGBM’s two signature ideas: features bucketed into a set number of bins, and leaf-wise tree growth limited by a leaf budget.</p>
+        <div class="lab" data-lab="lightgbm_regressor" data-kind="models" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
+        <div class="try"><small class="kicker">Things to try</small><ol><li>Drop the bin count to 4: thresholds snap to coarse bin edges and the fit gets blocky.</li><li>Switch between leaf-wise and level-wise growth at the same leaf budget and compare training loss.</li></ol></div>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>04</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Histogram split search</h3><div class="formula">$$\text{Gain}(b) = \frac{G_{\le b}^2}{H_{\le b} + \lambda} + \frac{G_{&gt;b}^2}{H_{&gt;b} + \lambda} - \frac{G^2}{H + \lambda}$$</div><p>Gradient sums per bin are accumulated once; every candidate threshold $b$ is then a cumulative sum. Cost per feature is $O(\text{bins})$ instead of $O(n)$.</p></li>
+          <li><h3>GOSS re-weighting</h3><div class="formula">$$\tilde G = \sum_{i \in A} g_i + \frac{1 - a}{b}\sum_{i \in B} g_i$$</div><p>$A$ is the top-$a$ fraction by $|g|$; $B$ is a random $b$ fraction of the rest, up-weighted so the gradient estimate stays unbiased.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="tuning">
+        <h2 class="h3"><span>05</span> Hyperparameters</h2>
+        <div class="table-wrap"><table class="kv">
+          <thead><tr><th>Setting</th><th>What it does</th><th>Typical choice</th></tr></thead>
+          <tbody><tr><td><span class="hp">num_leaves</span></td><td>Max leaves per tree (main complexity knob).</td><td>15–255; keep below 2^max_depth.</td></tr><tr><td><span class="hp">min_child_samples</span></td><td>Min rows per leaf.</td><td>20–100 to curb deep branches.</td></tr><tr><td><span class="hp">learning_rate / n_estimators</span></td><td>Shrinkage and rounds.</td><td>0.03–0.1 with early stopping.</td></tr><tr><td><span class="hp">max_bin</span></td><td>Histogram resolution.</td><td>255 default; lower is faster and more regularised.</td></tr><tr><td><span class="hp">feature_fraction, bagging_fraction</span></td><td>Column and row sampling.</td><td>0.7–0.9.</td></tr></tbody>
+        </table></div>
+      </section>
+      <section class="reveal" id="when">
+        <h2 class="h3"><span>06</span> When to use it</h2>
+        <div class="split2">
+          <div class="box good"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Strengths</h3><ul><li>Very fast on large data; low memory.</li><li>Native categorical support.</li><li>Accuracy on par with XGBoost.</li></ul></div>
+          <div class="box bad"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg> Limitations</h3><ul><li>Leaf-wise growth overfits small datasets more easily.</li><li>Many parameters, with aliases that can confuse.</li></ul></div>
+          <div class="box use"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> Reach for it when</h3><p>Large tabular datasets where training speed matters.</p></div>
+          <div class="box avoid"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Think twice when</h3><p>Very small datasets (a few thousand rows), unless you constrain num_leaves and leaf size.</p></div>
+        </div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>07</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> lightgbm <span class="k">as</span> lgb
+
+model = lgb.<span class="f">LGBMRegressor</span>(n_estimators=<span class="n">5000</span>, learning_rate=<span class="n">0.03</span>, num_leaves=<span class="n">31</span>,
+                          min_child_samples=<span class="n">30</span>, feature_fraction=<span class="n">0.8</span>, bagging_fraction=<span class="n">0.8</span>,
+                          bagging_freq=<span class="n">1</span>, random_state=<span class="n">0</span>, verbose=-<span class="n">1</span>)
+model.<span class="f">fit</span>(X_tr, y_tr, eval_set=[(X_te, y_te)], callbacks=[lgb.<span class="f">early_stopping</span>(<span class="n">100</span>, verbose=<span class="k">False</span>)])
+<span class="k">print</span>(<span class="s">&quot;best iteration:&quot;</span>, model.best_iteration_)</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Setting num_leaves to $2^{\text{max\_depth}}$ by habit: that is far more complex than an equivalent XGBoost tree.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Passing categorical columns as plain integers without telling LightGBM they are categorical.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>08</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>Leaf-wise growth differs from level-wise growth because it:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Splits every leaf at the current depth</span></button><button class="opt" type="button"><b>B</b><span>Always splits the single leaf with the largest gain</span></button><button class="opt" type="button"><b>C</b><span>Never splits leaves</span></button><button class="opt" type="button"><b>D</b><span>Uses random splits</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> It greedily spends the leaf budget where it reduces loss most, which can produce deep, asymmetric trees.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q2</span>What does histogram binning trade away?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Nothing</span></button><button class="opt" type="button"><b>B</b><span>A little split precision for a large speed-up</span></button><button class="opt" type="button"><b>C</b><span>Support for missing values</span></button><button class="opt" type="button"><b>D</b><span>Regularisation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Thresholds can only fall on bin edges, which rarely matters in practice.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>09</span> Related lessons</h2>
+        <div class="related"><a href="../../models/xgboost_regressor/"><small class="kicker">Regression</small><b>XGBoost</b></a><a href="../../models/catboost_regressor/"><small class="kicker">Regression</small><b>CatBoost</b></a><a href="../../models/gradient_boosting_regressor/"><small class="kicker">Regression</small><b>Gradient boosting regressor</b></a><a href="../../concepts/regularization/"><small class="kicker">Concept</small><b>Regularisation</b></a></div>
+      </section>
     </div>
-  </nav>
+  </div>
 
-  <main class="detail-content">
-    <!-- Header -->
-    <header class="detail-header">
-      <div class="subfamily-tag">Tree-Based & Ensemble</div>
-      <h1>LightGBM Regressor</h1>
-      <p>Fast histogram-based gradient boosting implementing Gradient-based One-Side Sampling (GOSS) and Exclusive Feature Bundling (EFB) with leaf-wise growth.</p>
-      
-      <div class="concept-chips-bar">
-        <span class="concept-chip-label">Essential Concepts:</span>
-        <a class="concept-chip" href="../../concepts/loss-functions/index.html">Loss Functions</a>
-        <a class="concept-chip" href="../../concepts/cost-vs-loss-vs-error/index.html">Cost vs Loss vs Error</a>
-        <a class="concept-chip" href="../../concepts/feature-selection/index.html">Feature Selection (VIF)</a>
-        <a class="concept-chip" href="../../concepts/regression-metrics/index.html">Regression Metrics</a>
-        <a class="concept-chip" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>
-        <a class="concept-chip" href="../../concepts/regularization/index.html">Regularization</a>
-        <a class="concept-chip" href="../../concepts/cross-validation/index.html">Cross-Validation</a>
-      </div>
-    
-    </header>
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    <a href="../../models/xgboost_regressor/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Regression</small><b>XGBoost</b></a>
+    <a class="pager-next" href="../../models/catboost_regressor/"><small>Next · Regression <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>CatBoost</b></a>
+  </div>
+</article>
+</main>
 
-    <!-- 1. Intuition & Mental Model + Computational Pipeline -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot"></span> 1. Intuition & Algorithmic Mental Model
-      </h2>
-      <div class="card-grid-2">
-        <div class="info-card">
-          <h3>How the Algorithm Solves Problems</h3>
-          <p>Fast histogram-based gradient boosting implementing Gradient-based One-Side Sampling (GOSS) and Exclusive Feature Bundling (EFB) with leaf-wise growth.</p>
-          <p>By framing learning as an explicit optimization task, this architecture establishes an optimal balance governed by the <a class="concept-link" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>, ensuring generalizability to unseen data.</p>
-        </div>
-        <div class="info-card">
-          <h3>Core Theoretical Assumptions</h3>
-          <ul class="assumptions-checklist">
+<section id="contact" class="contact">
+  <span class="tag reveal">Let's connect</span>
+  <h2 class="reveal">Have a hard problem?<br><span>Let's make it simple.</span></h2>
+  <a class="email reveal" href="mailto:awateyogeshs@gmail.com">awateyogeshs@gmail.com <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <div class="socials reveal">
+    <a href="https://www.linkedin.com/in/yogesh-s-awate/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+    <a href="https://github.com/yogesh660" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.2-.3-2.5-1-3.5.3-1.1.3-2.4 0-3.5 0 0-1 0-3 1.5a10.5 10.5 0 0 0-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.4 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg> GitHub</a>
+    <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Medium</a>
+    <a href="https://twitter.com/YogeshSAwate1" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> X / Twitter</a>
+  </div>
+</section>
 
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Data Generation:</strong> Assumes instances are independent and identically distributed ($i.i.d.$).</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Feature Representation:</strong> Input space vectors $X$ are expected to be properly scaled via EDA and Preprocessing.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Optimization Surface:</strong> Relies on optimizing a mathematically rigorous Loss Function surface.</div></li>
-    
-          </ul>
-        </div>
-      </div>
+<footer>
+  <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+  <div class="footlinks"><a href="../../">Learn</a><a href="https://yogesh660.github.io/work/">Work</a><a href="https://yogesh660.github.io/projects/">Open source</a><a href="https://yogesh660.github.io/about/">About</a></div>
+  <span>© 2026 YOGESH AWATE</span>
+</footer>
 
-      
-    <div class="pipeline-box">
-      <span class="canvas-tag">End-to-End System Architecture &amp; Computational Dataflow</span>
-      <div class="pipeline-diagram">
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 01 &bull; Input Space</span>
-          <h4>Feature Space Representation</h4>
-          <p>Continuous and discrete covariates formatted into design matrix.</p>
-          <span class="tensor-shape">$\mathbf{X} \in \mathbb{R}^{n \times p}$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 02 &bull; Preprocessing &amp; Scaling</span>
-          <h4>Standardization &amp; Encoding</h4>
-          <p>Ensure consistent feature scale and handle missing values.</p>
-          <span class="tensor-shape">$\mu = 0, \; \sigma^2 = 1$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 03 &bull; Optimization Engine</span>
-          <h4>Objective Function Minimization</h4>
-          <p>Optimize parameters to minimize empirical task risk.</p>
-          <span class="tensor-shape">$\min_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 04 &bull; Parameter Convergence</span>
-          <h4>Hypothesis Verification</h4>
-          <p>Validate learned model parameters against convergence tolerance.</p>
-          <span class="tensor-shape">$\nabla J(\boldsymbol{\theta}) \to \mathbf{0}$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 05 &bull; Production Inference</span>
-          <h4>Prediction Scoring Engine</h4>
-          <p>Execute forward inference pass for new incoming test samples.</p>
-          <span class="tensor-shape">${cat === "regression" ? "\hat{y} = f(\mathbf{x}) \in \mathbb{R}" : cat === "classification" ? "\hat{y} \in \{0, 1\}" : "k \in \{1..K\}"}</span>
-        </div>
-  
-      </div>
-    </div>
-  
-    </section>
-  
-
-    <!-- 2. Interactive Simulation Laboratory -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot violet"></span> 2. Interactive Simulation Laboratory
-      </h2>
-      <div id="model-sim-lab"></div>
-    </section>
-  
-
-    <!-- 3. Mathematical Derivation & Blueprint -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot cyan"></span> 3. Step-by-Step Mathematical Derivation & Blueprint
-      </h2>
-
-      <div class="math-dissection-grid">
-        
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathbf{X} \in \mathbb{R}^{n \times p}$</span>
-          <span class="dissect-role">Design Feature Matrix</span>
-          <span class="dissect-desc">Batch of $n$ training instances each characterized by $p$ normalized continuous predictors.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\boldsymbol{\beta} \in \mathbb{R}^p, \; \beta_0 \in \mathbb{R}$</span>
-          <span class="dissect-role">Learnable Parameter Vector</span>
-          <span class="dissect-desc">Model coefficients and bias learned via closed-form normal inversion or gradient descent.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathcal{L}_{\text{MSE}}(\boldsymbol{\beta}) = \frac{1}{2n} \|\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\|_2^2$</span>
-          <span class="dissect-role">Objective Cost Functional</span>
-          <span class="dissect-desc">Empirical risk penalty measuring squared Euclidean residual distance against continuous ground truth.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\lambda \ge 0, \; \alpha, \; \eta$</span>
-          <span class="dissect-role">Hyperparameter Envelope</span>
-          <span class="dissect-desc">Controls regularization capacity ($L_1 / L_2$ shrinkage), elastic mix ratio, or learning step size.</span>
-        </div>
-      </div>
-
-      <div class="derivation-container" style="margin-top:20px;">
-        <div class="derivation-step">
-          <div class="step-header">
-            <span class="step-num">Step 01</span>
-            <span class="step-title">Histogram-Based Gradient Discretization</span>
-          </div>
-          <div class="step-formula">
-            $$x_{ij} \mapsto b \in \{0, 1, \dots, 255\}, \quad \mathcal{H}[b] = \left( \sum_{i: x_{ij} \in b} g_i, \, \sum_{i: x_{ij} \in b} h_i \right)$$
-          </div>
-          <p class="step-desc">LightGBM discretizes continuous features into discrete 8-bit bins (histograms), slashing memory consumption and replacing $O(n)$ continuous split searches with $O(\text{bins})$ bin aggregations.</p>
-        </div>
-
-        <div class="derivation-step">
-          <div class="step-header">
-            <span class="step-num">Step 02</span>
-            <span class="step-title">Leaf-Wise (Best-First) Growth Tree Policy</span>
-          </div>
-          <div class="step-formula">
-            $$\text{leaf}^* = \arg\max_{\text{leaf} \in \text{T}} \Delta \mathcal{L}(\text{leaf}), \quad \text{Gain} = \frac{1}{2} \left[ \frac{G_L^2}{H_L + \lambda} + \frac{G_R^2}{H_R + \lambda} - \frac{G_P^2}{H_P + \lambda} \right]$$
-          </div>
-          <p class="step-desc">Rather than growing trees level-by-level, LightGBM splits the single leaf with highest loss reduction, achieving lower loss with fewer splits under max-depth constraints.</p>
-        </div>
-      </div>
-    </section>
-  
-
-    <!-- 4. Modular Multi-Dataset Benchmarks -->
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot green"></span> 4. Modular Multi-Dataset Laboratory (EDA & Feature Selection)
-      </h2>
-      <p style="color:var(--muted); font-size:14.5px; margin-top:-8px;">
-        Explore how this architecture adapts across different datasets. Review the raw data schema, exploratory data analysis, feature selection techniques tested, and the exact rationale for the chosen preprocessing pipeline.
-      </p>
-
-      
-      <div class="dataset-switcher-bar">
-        <div class="switcher-header">
-          <div class="switcher-title-wrap">
-            <span class="pulse-dot"></span>
-            <span class="switcher-label">Active Benchmark Dataset:</span>
-          </div>
-          <span class="switcher-helper">Switch datasets to explore how Raw Data, EDA, Feature Selection, and Metrics adapt</span>
-        </div>
-        <div class="dataset-tabs">
-          <button class="dataset-tab active" data-target="ds-california">
-            <span>California Housing</span>
-            <span class="tab-badge">Census &bull; 500 rows</span>
-          </button>
-          <button class="dataset-tab" data-target="ds-diabetes">
-            <span>Diabetes Clinical</span>
-            <span class="tab-badge">Serum &bull; 442 rows</span>
-          </button>
-          <button class="dataset-tab" data-target="ds-collinear">
-            <span>Collinear Real-Estate</span>
-            <span class="tab-badge">Multicollinearity &bull; 500 rows</span>
-          </button>
-        </div>
-      </div>
-    
-
-      
-      <!-- Panel 1: California Housing -->
-      <div id="ds-california" class="dataset-panel active">
-        <div class="callout violet">
-          <span class="callout-title">Dataset Profile: California Housing Census</span>
-          <p><strong>Goal:</strong> Predict median California block group housing values ($100k) from 8 geographic and socio-demographic features.</p>
-          <div class="table-wrap" style="margin-top:10px;">
-            <table class="diag-table">
-              <thead>
-                <tr><th>Feature</th><th>Type</th><th>Mean / Range</th><th>Correlation with Target</th><th>Domain Significance</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>MedInc</code></td><td>Float</td><td>3.87 [0.5 - 15.0]</td><td class="val">+0.69 (Strong)</td><td>Median income in block group; primary linear predictor.</td></tr>
-                <tr><td><code>HouseAge</code></td><td>Float</td><td>28.6 [1.0 - 52.0]</td><td class="val">+0.11 (Weak)</td><td>Median age of a house within a block.</td></tr>
-                <tr><td><code>AveRooms</code></td><td>Float</td><td>5.43 [0.8 - 141.9]</td><td class="val">+0.15 (Collinear)</td><td>Average number of rooms per household. Highly correlated with AveBedrms.</td></tr>
-                <tr><td><code>AveBedrms</code></td><td>Float</td><td>1.10 [0.3 - 34.1]</td><td class="val">-0.05 (Collinear)</td><td>Average bedrooms. High collinearity causes variance inflation.</td></tr>
-                <tr><td><code>Latitude / Longitude</code></td><td>Float</td><td>35.6 / -119.5</td><td class="val">-0.14 / -0.05</td><td>Spatial coordinates indicating proximity to coastal economic hubs.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (california_housing.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>9</strong> Features</span>
-          <span class="meta-pill"><strong>500</strong> Records</span>
-          <span class="meta-pill target">Target: <code>MedHouseVal</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">MedInc </th><th class="">HouseAge </th><th class="">AveRooms </th><th class="">AveBedrms </th><th class="">Population </th><th class="">AveOccup </th><th class="">Latitude </th><th class="">Longitude </th><th class="target-col">MedHouseVal <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">4.31</td><td class="">21</td><td class="">6.48</td><td class="">0.83</td><td class="">2530</td><td class="">4.26</td><td class="">36.45</td><td class="">-116.46</td><td class="target-col-cell">1.56</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">8.63</td><td class="">13</td><td class="">3.07</td><td class="">1.06</td><td class="">1988</td><td class="">3.85</td><td class="">39.34</td><td class="">-120.11</td><td class="target-col-cell">3.22</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">6.99</td><td class="">37</td><td class="">6.65</td><td class="">1.26</td><td class="">787</td><td class="">2.48</td><td class="">36.03</td><td class="">-119.30</td><td class="target-col-cell">3.05</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">5.99</td><td class="">24</td><td class="">3.98</td><td class="">1.67</td><td class="">2150</td><td class="">3.53</td><td class="">40.76</td><td class="">-116.45</td><td class="target-col-cell">2.11</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">2.67</td><td class="">17</td><td class="">8.29</td><td class="">1.53</td><td class="">1145</td><td class="">3.09</td><td class="">39.44</td><td class="">-118.31</td><td class="target-col-cell">0.52</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">2.67</td><td class="">32</td><td class="">3.82</td><td class="">1.54</td><td class="">2471</td><td class="">3.44</td><td class="">38.65</td><td class="">-122.29</td><td class="target-col-cell">1.13</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">1.94</td><td class="">33</td><td class="">5.28</td><td class="">1.23</td><td class="">3332</td><td class="">3.85</td><td class="">40.06</td><td class="">-118.40</td><td class="target-col-cell">0.50</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">8.00</td><td class="">17</td><td class="">3.47</td><td class="">1.15</td><td class="">3137</td><td class="">4.02</td><td class="">39.66</td><td class="">-120.22</td><td class="target-col-cell">2.94</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">6.01</td><td class="">50</td><td class="">8.48</td><td class="">1.17</td><td class="">2761</td><td class="">4.11</td><td class="">32.84</td><td class="">-119.60</td><td class="target-col-cell">2.17</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">6.81</td><td class="">39</td><td class="">5.76</td><td class="">1.79</td><td class="">2303</td><td class="">2.63</td><td class="">36.25</td><td class="">-124.02</td><td class="target-col-cell">3.32</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">1.65</td><td class="">10</td><td class="">6.27</td><td class="">0.84</td><td class="">2048</td><td class="">2.08</td><td class="">41.34</td><td class="">-122.20</td><td class="target-col-cell">0.50</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">8.77</td><td class="">22</td><td class="">3.37</td><td class="">1.67</td><td class="">985</td><td class="">3.85</td><td class="">33.69</td><td class="">-121.49</td><td class="target-col-cell">2.85</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <!-- EDA & Feature Selection for California Housing -->
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <strong>Target Capping:</strong> <code>MedHouseVal</code> is artificially capped at $5.00 ($500,000) in the raw census, creating a right-hand boundary ceiling.</p>
-            <p>2. <strong>Extreme Collinearity:</strong> <code>AveRooms</code> and <code>AveBedrms</code> exhibit an empirical Pearson correlation of <strong>r = 0.85</strong>, causing a Variance Inflation Factor (VIF) &gt; 12.0.</p>
-            <p>3. <strong>Heavy-Tailed Skewness:</strong> Population and room averages contain positive leverage outliers, requiring quantile clipping and standard scaling.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: VIF Pruning + StandardScaler</span>
-              <h4>Why this was selected over alternatives:</h4>
-              <p>For unregularized linear models, high multicollinearity causes the gram matrix $(X^T X)$ to be nearly singular, inflating standard errors. We prune <code>AveBedrms</code> (reducing max VIF from 14.2 to 2.1) and retain <code>MedInc</code>, <code>HouseAge</code>, and geographic coordinates.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Metrics & Chart -->
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Evaluation Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">0.4650</td><td>Average deviation of ~$74,550 on house values.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">MAE</a></td><td class="val">0.3090</td><td>Mean absolute prediction error across test split.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">R² Score</a></td><td class="val">0.5757</td><td>Explains 57.6% of target variance in California housing.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">California Housing: Actual vs Predicted Parity Plot</div>
-            <div class="chart-wrap">
-              <canvas id="chartCalifornia"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Code Block -->
-        <div class="code-card">
-          <div class="code-header"><span>Python 3 · scikit-learn · California Housing Pipeline</span><span>train_california.py</span></div>
-          <div class="code-body">
-            <pre><code>import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import root_mean_squared_error, r2_score
-
-# 1. Load California Housing Dataset
-df = pd.read_csv('../../datasets/raw/california_housing.csv')
-X = df.drop(columns=['MedHouseVal', 'AveBedrms']) # Drop collinear AveBedrms via VIF
-y = df['MedHouseVal']
-
-# 2. Train/Test Split with Scaling
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# 3. Model Fitting & Evaluation
-model = LinearRegression()
-model.fit(X_train_scaled, y_train)
-preds = model.predict(X_test_scaled)
-print(f"RMSE: {root_mean_squared_error(y_test, preds):.4f}, R2: {r2_score(y_test, preds):.4f}")</code></pre>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel 2: Diabetes Clinical -->
-      <div id="ds-diabetes" class="dataset-panel">
-        <div class="callout cyan">
-          <span class="callout-title">Dataset Profile: Diabetes Disease Progression</span>
-          <p><strong>Goal:</strong> Quantitative measure of disease progression one year after baseline in diabetes patients using 10 physiological and serum markers.</p>
-          <div class="table-wrap" style="margin-top:10px;">
-            <table class="diag-table">
-              <thead><tr><th>Feature</th><th>Type</th><th>Clinical Description</th><th>Target Association</th></tr></thead>
-              <tbody>
-                <tr><td><code>BMI</code></td><td>Continuous</td><td>Body Mass Index (key physiological metabolic indicator)</td><td class="val">Strong positive (+0.59)</td></tr>
-                <tr><td><code>BP</code></td><td>Continuous</td><td>Average blood pressure measurement</td><td class="val">Moderate positive (+0.44)</td></tr>
-                <tr><td><code>S1 - S6</code></td><td>Continuous</td><td>Six blood serum measurements (tc, ldl, hdl, tch, ltg, glu)</td><td class="val">Grouped collinear markers</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (diabetes.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>11</strong> Features</span>
-          <span class="meta-pill"><strong>442</strong> Records</span>
-          <span class="meta-pill target">Target: <code>Target</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">Age </th><th class="">Sex </th><th class="">BMI </th><th class="">BP </th><th class="">S1 </th><th class="">S2 </th><th class="">S3 </th><th class="">S4 </th><th class="">S5 </th><th class="">S6 </th><th class="target-col">Target <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">20.90</td><td class="">1</td><td class="">20.60</td><td class="">86.10</td><td class="">136.60</td><td class="">98.20</td><td class="">33.60</td><td class="">3.90</td><td class="">4.45</td><td class="">75</td><td class="target-col-cell">239</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">24</td><td class="">2</td><td class="">23.70</td><td class="">81.50</td><td class="">145.50</td><td class="">109.90</td><td class="">32</td><td class="">4.51</td><td class="">5.45</td><td class="">71.60</td><td class="target-col-cell">263</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">22</td><td class="">1</td><td class="">22.60</td><td class="">84.60</td><td class="">138</td><td class="">107.70</td><td class="">39.70</td><td class="">3.23</td><td class="">6.46</td><td class="">75.50</td><td class="target-col-cell">279</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">25.90</td><td class="">2</td><td class="">25.80</td><td class="">83.50</td><td class="">134.20</td><td class="">101.70</td><td class="">40.60</td><td class="">3.41</td><td class="">4.81</td><td class="">74.10</td><td class="target-col-cell">252</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">27.80</td><td class="">1</td><td class="">23.80</td><td class="">89.70</td><td class="">139.10</td><td class="">105.10</td><td class="">37.40</td><td class="">3.55</td><td class="">5.95</td><td class="">76.10</td><td class="target-col-cell">266</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">29.60</td><td class="">2</td><td class="">24.70</td><td class="">85.90</td><td class="">145.80</td><td class="">108.60</td><td class="">38</td><td class="">3.94</td><td class="">4.16</td><td class="">81.10</td><td class="target-col-cell">239</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">27.70</td><td class="">1</td><td class="">26.10</td><td class="">93.90</td><td class="">153.90</td><td class="">111.50</td><td class="">36.40</td><td class="">4.17</td><td class="">5.15</td><td class="">78.80</td><td class="target-col-cell">271</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">30.70</td><td class="">2</td><td class="">26.80</td><td class="">95.40</td><td class="">151.20</td><td class="">119.30</td><td class="">39.70</td><td class="">3.83</td><td class="">6.28</td><td class="">86.40</td><td class="target-col-cell">291</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">30</td><td class="">1</td><td class="">28.10</td><td class="">97</td><td class="">138.10</td><td class="">109.20</td><td class="">43.10</td><td class="">3.14</td><td class="">4.64</td><td class="">85.10</td><td class="target-col-cell">267</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">31.70</td><td class="">2</td><td class="">31.30</td><td class="">92.30</td><td class="">143.60</td><td class="">108.70</td><td class="">41.30</td><td class="">3.47</td><td class="">5.72</td><td class="">84.30</td><td class="target-col-cell">298</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">31.90</td><td class="">1</td><td class="">31.30</td><td class="">90.90</td><td class="">141.20</td><td class="">107.40</td><td class="">40.80</td><td class="">3.44</td><td class="">4.34</td><td class="">89.30</td><td class="target-col-cell">269</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">32.30</td><td class="">2</td><td class="">31.90</td><td class="">98.20</td><td class="">153.70</td><td class="">108</td><td class="">43.80</td><td class="">3.51</td><td class="">5.37</td><td class="">86.60</td><td class="target-col-cell">298</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <strong>Normally Distributed Target:</strong> Progression score spans [25, 346] with unimodal symmetric distribution (no ceiling effect).</p>
-            <p>2. <strong>Serum Group Multicollinearity:</strong> Serum markers S1 and S2 exhibit r = 0.89 correlation, creating severe parameter instability in unregularized estimators.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: L1 Lasso / Elastic Net Regularization</span>
-              <h4>Why this was selected:</h4>
-              <p>Because blood serum measurements represent interconnected biological mechanisms, hard filtering risks discarding vital interaction signals. Embedded L1 shrinkage smoothly shrinks uninformative markers while retaining active biomarkers (BMI, BP, S5).</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Evaluation Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">54.21</td><td>Predictive progression error on clinical scale.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">MAE</a></td><td class="val">43.18</td><td>Median clinical deviation across patient cohort.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">R² Score</a></td><td class="val">0.5184</td><td>Explains 51.8% of variance in progression timeline.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Diabetes: Actual vs Predicted Parity Plot</div>
-            <div class="chart-wrap">
-              <canvas id="chartDiabetes"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel 3: Collinear Real-Estate -->
-      <div id="ds-collinear" class="dataset-panel">
-        <div class="callout green">
-          <span class="callout-title">Dataset Profile: Collinear Real-Estate Benchmark</span>
-          <p><strong>Goal:</strong> Specifically benchmark how the architecture behaves when predictors share near-perfect collinearity.</p>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (collinear_housing.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>8</strong> Features</span>
-          <span class="meta-pill"><strong>500</strong> Records</span>
-          <span class="meta-pill target">Target: <code>Price</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">SqFt </th><th class="">Bedrooms </th><th class="">Bathrooms </th><th class="">LotSize </th><th class="">EnergyRating </th><th class="">Age </th><th class="">TaxRate </th><th class="target-col">Price <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">922</td><td class="">2</td><td class="">1.80</td><td class="">2625</td><td class="">54</td><td class="">3</td><td class="">1.16</td><td class="target-col-cell">340</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">900</td><td class="">1</td><td class="">1</td><td class="">2560</td><td class="">48</td><td class="">4</td><td class="">0.95</td><td class="target-col-cell">353</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">912</td><td class="">2</td><td class="">1.60</td><td class="">2548</td><td class="">48</td><td class="">7</td><td class="">1.08</td><td class="target-col-cell">342</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">918</td><td class="">2</td><td class="">1.50</td><td class="">2719</td><td class="">55</td><td class="">9</td><td class="">1.12</td><td class="target-col-cell">349</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">914</td><td class="">2</td><td class="">1.60</td><td class="">2618</td><td class="">49</td><td class="">10</td><td class="">1.14</td><td class="target-col-cell">336</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">923</td><td class="">2</td><td class="">1.70</td><td class="">2545</td><td class="">59</td><td class="">11</td><td class="">1.14</td><td class="target-col-cell">339</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">945</td><td class="">2</td><td class="">1.60</td><td class="">2616</td><td class="">59</td><td class="">9</td><td class="">1.02</td><td class="target-col-cell">348</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">972</td><td class="">2</td><td class="">1.70</td><td class="">2862</td><td class="">55</td><td class="">10</td><td class="">1</td><td class="target-col-cell">345</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">978</td><td class="">2</td><td class="">1.50</td><td class="">2855</td><td class="">59</td><td class="">14</td><td class="">0.98</td><td class="target-col-cell">341</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">939</td><td class="">2</td><td class="">1.80</td><td class="">2753</td><td class="">59</td><td class="">11</td><td class="">1.01</td><td class="target-col-cell">344</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">1000</td><td class="">2</td><td class="">1.70</td><td class="">2720</td><td class="">60</td><td class="">16</td><td class="">1.06</td><td class="target-col-cell">364</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">1004</td><td class="">2</td><td class="">1.80</td><td class="">2775</td><td class="">59</td><td class="">14</td><td class="">1.08</td><td class="target-col-cell">347</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <code>SqFt</code> and <code>Bedrooms</code> have an artificial collinearity of <strong>r = 0.92</strong> with <strong>VIF = 18.4</strong>.</p>
-            <p>2. In standard OLS without feature selection, the regression coefficient for <code>Bedrooms</code> turns negative (-$14,200), defying real-world economics due to matrix instability.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: Recursive Feature Elimination (RFE)</span>
-              <h4>Why this was selected:</h4>
-              <p>RFE iteratively fits the model, identifies the least important collinear predictor, and prunes it until all remaining features maintain VIF &lt; 5.0, restoring realistic positive coefficients.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Evaluation Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">RMSE</a></td><td class="val">18.45</td><td>Price prediction deviation on collinear benchmark.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/regression-metrics/index.html">Condition Number</a></td><td class="val">3.4e4</td><td>Severe matrix condition degradation without feature selection.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Collinear Benchmark: Actual vs Predicted Parity Plot</div>
-            <div class="chart-wrap">
-              <canvas id="chartCollinear"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    
-    </section>
-
-    <!-- 5. Architectural Trade-offs & Failure Modes Playbook -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot amber"></span> 5. Architectural Trade-offs & Failure Modes Playbook
-      </h2>
-      <div class="card-grid-2">
-        <div class="callout green">
-          <span class="callout-title">When to Choose this Architecture</span>
-          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
-            <li>When direct interpretability and explainability are mandatory for regulatory compliance.</li>
-            <li>When dataset volume is moderate and computational training budget is strictly limited.</li>
-            <li>When robust linear or well-conditioned relationships dominate after proper <a class="concept-link" href="../../concepts/feature-selection/index.html">Feature Selection</a>.</li>
-          </ul>
-        </div>
-        <div class="callout violet">
-          <span class="callout-title">When NOT to Choose this Architecture</span>
-          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
-            <li>When complex, high-order non-linear feature interactions exist that simple kernels cannot capture.</li>
-            <li>When features exhibit extreme multicollinearity without applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization (Ridge/Lasso)</a>.</li>
-            <li>When severe class imbalance makes standard accuracy misleading, requiring metric optimization for <a class="concept-link" href="../../concepts/precision-recall-f1/index.html">Recall & F1</a>.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="card-grid-2" style="margin-top:20px;">
-        <div class="callout amber">
-          <span class="callout-title">Production Failure Mode: High Variance & Overfitting</span>
-          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
-            Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
-          </p>
-          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Apply $L_2$ Ridge shrinkage ($\lambda > 0$) or prune tree depth.</li>
-            <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
-            <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
-          </ul>
-        </div>
-        <div class="callout red">
-          <span class="callout-title">Production Failure Mode: Leverage Outliers & Shift</span>
-          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
-            High-leverage anomalies drag the optimization surface away from the true data generating manifold.
-          </p>
-          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Use robust losses like Huber Loss ($\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
-            <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
-            <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-  
-  </main>
-
-  <footer>
-    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-    <div>
-      <a href="../../index.html#learn-concepts">Concepts Hub</a> &bull;
-      <a href="../../index.html#learn">Back to Learn Hub</a>
-    </div>
-    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
-  </footer>
-
-  <script src="../../visual-simulators.js"></script>
-  <script src="../../model-interactive.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      
-      // 1. California Housing Chart
-      const dataCal = Array.from({length: 30}, (_, i) => ({
-        x: Number((1.2 + i * 0.11 + Math.random() * 0.25).toFixed(2)),
-        y: Number((1.15 + i * 0.10 + Math.random() * 0.3).toFixed(2))
-      }));
-      window.createParityChart('chartCalifornia', dataCal, 'Actual Median House Value ($100k)', 'Predicted House Value ($100k)');
-
-      // 2. Diabetes Chart
-      const dataDia = Array.from({length: 30}, (_, i) => ({
-        x: Number((50 + i * 8.5 + (Math.random() - 0.5) * 25).toFixed(1)),
-        y: Number((45 + i * 8.8 + (Math.random() - 0.5) * 30).toFixed(1))
-      }));
-      window.createParityChart('chartDiabetes', dataDia, 'Actual Disease Progression', 'Predicted Progression');
-
-      // 3. Collinear Chart
-      const dataCol = Array.from({length: 30}, (_, i) => ({
-        x: Number((160 + i * 7.5 + (Math.random() - 0.5) * 15).toFixed(1)),
-        y: Number((158 + i * 7.6 + (Math.random() - 0.5) * 18).toFixed(1))
-      }));
-      window.createParityChart('chartCollinear', dataCol, 'Actual Price ($k)', 'Predicted Price ($k)');
-    
-      if (window.MLVisualLabs) {
-        
-          window.MLVisualLabs.initRegressionLab('model-sim-lab', { regularized: false });
-        
-      }
-    });
-  </script>
+<script src="../../assets/site.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/core.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/models.js?v=mvruuhrl" defer></script>
+<script src="../../assets/learn.js?v=mvruuhrl" defer></script>
 </body>
 </html>

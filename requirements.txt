@@ -6,3 +6,4 @@ seaborn>=0.13.0
 xgboost>=2.0.0
 lightgbm>=4.3.0
 catboost>=1.2.0
+# optional: torch>=2.2  (CNN and RNN/Transformer training scripts)

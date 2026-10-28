@@ -1,600 +1,184 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gradient Boosted Classifiers (XGBoost / LightGBM / CatBoost) · Learn ML · Yogesh Awate</title>
-  <meta name="theme-color" content="#070709">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
-  <script>
-    function renderKatex() {
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.body, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-          ],
-          throwOnError: false
-        });
-      }
-    }
-    document.addEventListener("DOMContentLoaded", renderKatex);
-    window.addEventListener("load", renderKatex);
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="../../visual-components.css">
-  <link rel="stylesheet" href="../../model.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070709">
+<title>Gradient Boosted Trees for Classification (XGBoost, LightGBM, CatBoost) · Learn · Yogesh Awate</title>
+<meta name="description" content="Boosted trees on the log-odds scale: the strongest general-purpose classifier for tabular data.">
+<meta property="og:title" content="Gradient Boosted Trees for Classification (XGBoost, LightGBM, CatBoost) · Learn · Yogesh Awate">
+<meta property="og:description" content="Boosted trees on the log-odds scale: the strongest general-purpose classifier for tabular data.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css?v=mvruuhrl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvruuhrl">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>document.documentElement.classList.add('js')</script>
 </head>
-<body>
-  <!-- Fixed Top Navigation -->
-  <nav id="nav">
-    <div class="nav-left">
-      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-      <div class="nav-breadcrumbs">
-        <a href="../../index.html#learn">Learn</a>
-        <span class="sep">/</span>
-        <a href="../../index.html#learn-models">Models</a>
-        <span class="sep">/</span>
-        <span>Gradient Boosted Classifiers (XGBoost / LightGBM / CatBoost)</span>
-      </div>
+<body class="page-lesson" data-lesson="gradient_boosted_classifiers">
+<a class="skip" href="#main">Skip to content</a>
+
+<nav id="nav">
+  <div class="brand"><a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, home">YA<span>.</span></a><a class="brand-sub" href="../../">Learn</a></div>
+  <div class="navlinks" id="navlinks">
+    <a href="../../#paths">Paths</a>
+    <a href="../../#curriculum">Curriculum</a>
+    <a href="../../#datasets">Datasets</a>
+    <a href="https://yogesh660.github.io/about/">About</a>
+    <a class="pill" href="https://yogesh660.github.io/">Portfolio <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+  <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</nav>
+
+<main id="main">
+
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="../../#path-classification">Path 03 · Classification</a> / Trees and ensembles / Lesson 11 of 12</span>
+    <h1 class="case-title">Gradient Boosted Trees for Classification (XGBoost, LightGBM, CatBoost)</h1>
+    <p class="lede rise" style="--d:3">Boosted trees on the log-odds scale: the strongest general-purpose classifier for tabular data.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline"><span class="lvl" data-l="3"><i><b></b></i>Advanced</span></span>
+      <span class="tagline">20 min</span>
+      <span class="tagline lab">Live lab</span>
+      <span class="prereq">Before this: <a href="../../models/gradient_boosting_regressor/">Gradient boosting regressor</a> <a href="../../models/logistic_regression/">Logistic regression</a></span>
     </div>
-    <div class="nav-badges">
-      <span class="badge-cat classification">classification</span>
-      <a href="../../index.html#learn" class="nav-concepts-link">&larr; Back to Learn</a>
+  </header>
+
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+          <dt>Task</dt><dd>Classification</dd>
+          <dt>Family</dt><dd>Boosting (log-loss)</dd>
+          <dt>What it learns</dt><dd>Trees on the log-odds scale</dd>
+          <dt>Training cost</dt><dd>$O(M\cdot\text{depth}\cdot p\,n)$</dd>
+          <dt>Prediction cost</dt><dd>$O(M\cdot\text{depth})$</dd>
+          
+      </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>How it works</a></li><li><a href="#lab"><span>03</span>Try it</a></li><li><a href="#maths"><span>04</span>The maths</a></li><li><a href="#tuning"><span>05</span>Hyperparameters</a></li><li><a href="#when"><span>06</span>When to use it</a></li><li><a href="#code"><span>07</span>In code</a></li><li><a href="#results"><span>08</span>On real data</a></li><li><a href="#quiz"><span>09</span>Check yourself</a></li><li><a href="#related"><span>10</span>Related lessons</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
+    </aside>
+
+    <div class="story">
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">For classification, boosting builds an additive model of the log-odds. Each tree is fitted to the gradient of log-loss, $y - p$, so it focuses on the examples the model is most wrong about.</p>
+        <p>The model keeps a running score $F(x)$ for each row, starting from the log-odds of the base rate. Each tree nudges $F$ toward the truth; the <a class="inline" href="../../concepts/sigmoid-and-link-functions/">sigmoid</a> of $F$ is the probability. The pseudo-residual $y - p$ is large for confident mistakes and small for easy rows.</p>
+        <p>XGBoost, LightGBM and CatBoost all implement this with different engineering: second-order leaf values and explicit regularisation (XGBoost), histogram binning and leaf-wise growth (LightGBM), symmetric trees and ordered categorical encoding (CatBoost). The regression lessons go through each in detail; the classification versions only change the loss.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Adjusting a running score for every applicant, with each new rule written specifically for the applicants the current score misjudges.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> How it works</h2>
+        <ol class="steps"><li>Initialise $F_0 = \log\frac{\bar y}{1 - \bar y}$.</li><li>Compute $p_i = \sigma(F(x_i))$, gradients $g_i = p_i - y_i$, Hessians $h_i = p_i(1 - p_i)$.</li><li>Fit a tree to the gradients; set leaf values $-G/(H + \lambda)$.</li><li>Update $F \leftarrow F + \eta\cdot\text{tree}$; repeat with early stopping.</li></ol>
+      </section>
+      <section class="reveal" id="lab">
+        <h2 class="h3"><span>03</span> Try it</h2>
+        <p>Gradient boosting with log-loss, trained round by round in your browser.</p>
+        <div class="lab" data-lab="gradient_boosted_classifiers" data-kind="models" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
+        <div class="try"><small class="kicker">Things to try</small><ol><li>Watch the boundary sharpen as rounds accumulate.</li><li>Use depth-1 trees: boundaries stay axis-aligned and additive, with no interactions.</li><li>Raise the learning rate to 1 and compare test accuracy.</li></ol></div>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>04</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Gradient and Hessian of log-loss</h3><div class="formula">$$L = -[y\log p + (1-y)\log(1-p)], \;\; p = \sigma(F) \;\Rightarrow\; \frac{\partial L}{\partial F} = p - y, \;\; \frac{\partial^2 L}{\partial F^2} = p(1-p)$$</div><p>Rows the model is unsure about ($p \approx 0.5$) have the largest Hessian, so they carry the most weight in leaf values.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="tuning">
+        <h2 class="h3"><span>05</span> Hyperparameters</h2>
+        <div class="table-wrap"><table class="kv">
+          <thead><tr><th>Setting</th><th>What it does</th><th>Typical choice</th></tr></thead>
+          <tbody><tr><td><span class="hp">n_estimators + early stopping</span></td><td>Boosting rounds.</td><td>Set high; stop on validation log-loss.</td></tr><tr><td><span class="hp">learning_rate</span></td><td>Shrinkage.</td><td>0.02–0.1.</td></tr><tr><td><span class="hp">max_depth / num_leaves</span></td><td>Tree complexity.</td><td>depth 3–8; leaves 15–127.</td></tr><tr><td><span class="hp">scale_pos_weight / class_weight</span></td><td>Imbalance handling.</td><td>≈ negatives / positives.</td></tr></tbody>
+        </table></div>
+      </section>
+      <section class="reveal" id="when">
+        <h2 class="h3"><span>06</span> When to use it</h2>
+        <div class="split2">
+          <div class="box good"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Strengths</h3><ul><li>Top accuracy on tabular classification.</li><li>Handles missing values, mixed types and interactions.</li><li>Mature libraries with GPU support and SHAP explanations.</li></ul></div>
+          <div class="box bad"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg> Limitations</h3><ul><li>Needs tuning and early stopping.</li><li>Can overfit small data.</li><li>Probabilities may still need calibration.</li></ul></div>
+          <div class="box use"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> Reach for it when</h3><p>Tabular classification when accuracy matters: credit risk, churn, fraud, ranking.</p></div>
+          <div class="box avoid"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Think twice when</h3><p>Raw images, audio or text, where neural networks shine.</p></div>
+        </div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>07</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">from</span> sklearn.ensemble <span class="k">import</span> HistGradientBoostingClassifier   <span class="c"># scikit-learn's LightGBM-style booster</span>
+<span class="c"># import xgboost as xgb; import lightgbm as lgb; from catboost import CatBoostClassifier</span>
+
+hgb = <span class="f">HistGradientBoostingClassifier</span>(learning_rate=<span class="n">0.05</span>, max_iter=<span class="n">1000</span>, max_leaf_nodes=<span class="n">31</span>,
+                                     early_stopping=<span class="k">True</span>, validation_fraction=<span class="n">0.15</span>,
+                                     random_state=<span class="n">0</span>).<span class="f">fit</span>(X_tr, y_tr)
+<span class="k">print</span>(<span class="s">&quot;rounds used:&quot;</span>, hgb.n_iter_, <span class="s">&quot;test accuracy:&quot;</span>, <span class="f">round</span>(hgb.<span class="f">score</span>(X_te, y_te), <span class="n">3</span>))</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Early stopping on accuracy instead of log-loss; accuracy is too coarse.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Reporting AUC from the same data used for early stopping.</span></li></ul>
+      </section>
+      <section class="reveal" id="results">
+        <h2 class="h3"><span>08</span> On real data</h2>
+        <p>Histogram gradient boosting trained on 80% of the Titanic sample and scored on a stratified 20% hold-out. The baseline always predicts the most common class.</p>
+        <div class="table-wrap" style="margin-top:18px"><table class="kv results-table">
+          <thead><tr><th>Metric</th><th>Histogram gradient boosting</th><th>Majority class</th></tr></thead>
+          <tbody><tr><td>Accuracy</td><td>0.960</td><td>0.630</td></tr><tr><td>F1 (survived)</td><td>0.946</td><td>0.000</td></tr><tr><td>ROC-AUC</td><td>0.990</td><td>0.500</td></tr></tbody>
+        </table></div>
+        <p class="note">Produced by <a href="https://github.com/yogesh660/ml-model-zoo/blob/main/models/gradient_boosted_classifiers/train.py" target="_blank" rel="noopener">models/gradient_boosted_classifiers/train.py</a> · generated 2026-10-28. Run it yourself: <code class="no-math">python models/gradient_boosted_classifiers/train.py</code></p>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>09</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>In boosting for binary classification, each tree is fitted to:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The labels</span></button><button class="opt" type="button"><b>B</b><span>The negative gradient $y - p$</span></button><button class="opt" type="button"><b>C</b><span>Bootstrap samples</span></button><button class="opt" type="button"><b>D</b><span>The previous tree’s errors in accuracy</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $y - p$ is the negative gradient of log-loss with respect to the raw score $F$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q2</span>Which rows have the largest Hessian $p(1-p)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Confidently correct rows</span></button><button class="opt" type="button"><b>B</b><span>Rows where $p \approx 0.5$</span></button><button class="opt" type="button"><b>C</b><span>Confidently wrong rows</span></button><button class="opt" type="button"><b>D</b><span>All rows equally</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $p(1-p)$ peaks at 0.25 when $p = 0.5$.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>10</span> Related lessons</h2>
+        <div class="related"><a href="../../models/xgboost_regressor/"><small class="kicker">Regression</small><b>XGBoost</b></a><a href="../../models/lightgbm_regressor/"><small class="kicker">Regression</small><b>LightGBM</b></a><a href="../../models/catboost_regressor/"><small class="kicker">Regression</small><b>CatBoost</b></a><a href="../../concepts/loss-functions/"><small class="kicker">Concept</small><b>Loss functions</b></a><a href="../../concepts/roc-auc/"><small class="kicker">Concept</small><b>ROC and AUC</b></a><a href="../../concepts/precision-recall-f1/"><small class="kicker">Concept</small><b>Precision, recall &amp; F1</b></a></div>
+      </section>
     </div>
-  </nav>
+  </div>
 
-  <main class="detail-content">
-    <!-- Header -->
-    <header class="detail-header">
-      <div class="subfamily-tag">Tree-Based & Ensemble</div>
-      <h1>Gradient Boosted Classifiers (XGBoost / LightGBM / CatBoost)</h1>
-      <p>High-throughput tree boosting optimizing Bernoulli cross-entropy loss via second-order Hessian calculations and histogram binning.</p>
-      
-      <div class="concept-chips-bar">
-        <span class="concept-chip-label">Essential Concepts:</span>
-        <a class="concept-chip" href="../../concepts/confusion-matrix/index.html">Confusion Matrix</a>
-        <a class="concept-chip" href="../../concepts/precision-recall-f1/index.html">Precision, Recall & F1</a>
-        <a class="concept-chip" href="../../concepts/roc-auc/index.html">ROC-AUC Analysis</a>
-        <a class="concept-chip" href="../../concepts/loss-functions/index.html">Cross-Entropy Loss</a>
-        <a class="concept-chip" href="../../concepts/log-odds/index.html">Log-Odds</a>
-        <a class="concept-chip" href="../../concepts/sigmoid-and-link-functions/index.html">Sigmoid Link</a>
-        <a class="concept-chip" href="../../concepts/maximum-likelihood-estimation/index.html">Bernoulli MLE</a>
-        <a class="concept-chip" href="../../concepts/quasi-newton-and-lbfgs/index.html">Quasi-Newton (L-BFGS)</a>
-      </div>
-    
-    </header>
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    <a href="../../models/adaboost_classifier/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Classification</small><b>AdaBoost</b></a>
+    <a class="pager-next" href="../../models/stacking_voting_classifiers/"><small>Next · Classification <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>Stacking &amp; voting</b></a>
+  </div>
+</article>
+</main>
 
-    <!-- 1. Intuition & Mental Model + Computational Pipeline -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot"></span> 1. Intuition & Algorithmic Mental Model
-      </h2>
-      <div class="card-grid-2">
-        <div class="info-card">
-          <h3>How the Algorithm Solves Problems</h3>
-          <p>High-throughput tree boosting optimizing Bernoulli cross-entropy loss via second-order Hessian calculations and histogram binning.</p>
-          <p>By framing learning as an explicit optimization task, this architecture establishes an optimal balance governed by the <a class="concept-link" href="../../concepts/bias-variance-tradeoff/index.html">Bias-Variance Tradeoff</a>, ensuring generalizability to unseen data.</p>
-        </div>
-        <div class="info-card">
-          <h3>Core Theoretical Assumptions</h3>
-          <ul class="assumptions-checklist">
+<section id="contact" class="contact">
+  <span class="tag reveal">Let's connect</span>
+  <h2 class="reveal">Have a hard problem?<br><span>Let's make it simple.</span></h2>
+  <a class="email reveal" href="mailto:awateyogeshs@gmail.com">awateyogeshs@gmail.com <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <div class="socials reveal">
+    <a href="https://www.linkedin.com/in/yogesh-s-awate/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+    <a href="https://github.com/yogesh660" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.2-.3-2.5-1-3.5.3-1.1.3-2.4 0-3.5 0 0-1 0-3 1.5a10.5 10.5 0 0 0-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.4 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg> GitHub</a>
+    <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Medium</a>
+    <a href="https://twitter.com/YogeshSAwate1" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> X / Twitter</a>
+  </div>
+</section>
 
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Non-Parametric Geometry:</strong> Makes zero assumptions about underlying feature distributions or error normality.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Monotonic Scale Invariance:</strong> Invariant to monotonic feature transformations; scaling or outlier clipping is unnecessary.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Axis-Aligned Partitioning:</strong> Approximates decision manifolds via orthogonal recursive splits along single features.</div></li>
-            <li><span class="assump-icon">&#10003;</span> <div><strong>Ensemble Diversity:</strong> Bagging or gradient boosting relies on combining de-correlated trees to extinguish variance or bias.</div></li>
-    
-          </ul>
-        </div>
-      </div>
+<footer>
+  <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+  <div class="footlinks"><a href="../../">Learn</a><a href="https://yogesh660.github.io/work/">Work</a><a href="https://yogesh660.github.io/projects/">Open source</a><a href="https://yogesh660.github.io/about/">About</a></div>
+  <span>© 2026 YOGESH AWATE</span>
+</footer>
 
-      
-    <div class="pipeline-box">
-      <span class="canvas-tag">End-to-End System Architecture &amp; Computational Dataflow</span>
-      <div class="pipeline-diagram">
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 01 &bull; Input Partition Space</span>
-          <h4>Raw Covariates &amp; Target</h4>
-          <p>Continuous &amp; categorical feature matrix with labels.</p>
-          <span class="tensor-shape">$\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^n$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 02 &bull; Resampling Engine</span>
-          <h4>Bootstrap / Gradient Residuals</h4>
-          <p>Draw bootstrap sample with replacement or compute pseudo-residuals.</p>
-          <span class="tensor-shape">$\mathcal{D}_b \sim \mathcal{D} \text{ or } r_{im} = -\frac{\partial \mathcal{L}}{\partial \hat{y}_i}$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 03 &bull; Greedy Splitting</span>
-          <h4>Optimal Impurity Cutoff</h4>
-          <p>Scan candidate thresholds maximizing Gini / Variance reduction.</p>
-          <span class="tensor-shape">$\arg\max_{(j, \tau)} \Delta I = I(S) - \sum \frac{|S_v|}{|S|}I(S_v)$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 04 &bull; Forest / Boost Chain</span>
-          <h4>Additive Tree Assembly</h4>
-          <p>Aggregate de-correlated trees or sequential boosting stages.</p>
-          <span class="tensor-shape">$F_M(\mathbf{x}) = F_0(\mathbf{x}) + \sum_{m=1}^M \eta f_m(\mathbf{x})$</span>
-        </div>
-  
-
-        <div class="pipeline-node">
-          <span class="pipeline-badge">Step 05 &bull; Ensemble Consensus</span>
-          <h4>Consensus Inference</h4>
-          <p>Route query down trees and pool votes or average leaf outputs.</p>
-          <span class="tensor-shape">$\hat{y} = \text{mode}\{f_m(\mathbf{x})\} \text{ or } \frac{1}{M}\sum f_m(\mathbf{x})$</span>
-        </div>
-  
-      </div>
-    </div>
-  
-    </section>
-  
-
-    <!-- 2. Interactive Simulation Laboratory -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot violet"></span> 2. Interactive Simulation Laboratory
-      </h2>
-      <div id="model-sim-lab"></div>
-    </section>
-  
-
-    <!-- 3. Mathematical Derivation & Blueprint -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot cyan"></span> 3. Step-by-Step Mathematical Derivation & Blueprint
-      </h2>
-
-      <div class="math-dissection-grid">
-        
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathbf{X} \in \mathbb{R}^{n \times p}, \; y_i \in \{0, 1\}$</span>
-          <span class="dissect-role">Feature Matrix &amp; Ground Truth</span>
-          <span class="dissect-desc">Batch of $n$ instances with $p$ predictors paired with discrete target class labels.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathbf{w}^T \mathbf{x} + b = 0$</span>
-          <span class="dissect-role">Separating Decision Boundary</span>
-          <span class="dissect-desc">Parametric hyperplane partitioning feature space into discrete categorical classification regions.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\mathcal{L}_{\text{CE}} / \mathcal{L}_{\text{Hinge}}$</span>
-          <span class="dissect-role">Loss Objective Functional</span>
-          <span class="dissect-desc">Empirical log-loss or margin penalty quantifying discrepancy between probabilities and labels.</span>
-        </div>
-        <div class="dissect-card">
-          <span class="dissect-symbol">$\tau \in (0, 1), \; C > 0$</span>
-          <span class="dissect-role">Decision &amp; Slack Envelope</span>
-          <span class="dissect-desc">Classification decision cutoff threshold $\tau$ and soft-margin regularization trade-off parameter $C$.</span>
-        </div>
-      </div>
-
-      <div class="derivation-container" style="margin-top:20px;">
-        <div class="derivation-step">
-          <div class="step-header">
-            <span class="step-num">Step 01</span>
-            <span class="step-title">Multi-Class Multinomial Log-Loss Expansion</span>
-          </div>
-          <div class="step-formula">
-            $$p_k(x) = \frac{e^{F_k(x)}}{\sum_{j=1}^K e^{F_j(x)}}, \quad \mathcal{L} = -\sum_{k=1}^K y_k \ln p_k(x), \quad g_{ik} = p_k(x_i) - y_{ik}$$
-          </div>
-          <p class="step-desc">Gradient boosted classification models probability outputs via softmax logit transforms, computing exact negative gradient residuals $g_{ik} = p_{ik} - y_{ik}$.</p>
-        </div>
-
-        <div class="derivation-step">
-          <div class="step-header">
-            <span class="step-num">Step 02</span>
-            <span class="step-title">Stage-Wise Tree Fitting to Gradient Residuals</span>
-          </div>
-          <div class="step-formula">
-            $$F_{km}(x) = F_{k, m-1}(x) + \eta \sum_{j=1}^J \gamma_{jkm} \mathbb{I}(x \in R_{jkm}), \quad \gamma_{jkm} = \frac{\sum_{x_i \in R_j} (y_{ik} - p_{ik})}{\sum_{x_i \in R_j} p_{ik}(1 - p_{ik})}$$
-          </div>
-          <p class="step-desc">Each stage fits $K$ parallel regression trees to the probability residuals. Terminal node values $\gamma_{jkm}$ are solved using a Newton-Raphson 2nd-order step.</p>
-        </div>
-      </div>
-    </section>
-  
-
-    <!-- 4. Modular Multi-Dataset Benchmarks -->
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot green"></span> 4. Modular Multi-Dataset Laboratory (EDA & Feature Selection)
-      </h2>
-      <p style="color:var(--muted); font-size:14.5px; margin-top:-8px;">
-        Explore how this architecture adapts across different datasets. Review the raw data schema, exploratory data analysis, feature selection techniques tested, and the exact rationale for the chosen preprocessing pipeline.
-      </p>
-
-      
-      <div class="dataset-switcher-bar">
-        <div class="switcher-header">
-          <div class="switcher-title-wrap">
-            <span class="pulse-dot"></span>
-            <span class="switcher-label">Active Benchmark Dataset:</span>
-          </div>
-          <span class="switcher-helper">Switch datasets to explore how Raw Data, Confusion Matrix, and Feature Selection adapt</span>
-        </div>
-        <div class="dataset-tabs">
-          <button class="dataset-tab active" data-target="ds-titanic">
-            <span>Titanic Survival</span>
-            <span class="tab-badge">Demographics &bull; 500 rows</span>
-          </button>
-          <button class="dataset-tab" data-target="ds-cancer">
-            <span>Breast Cancer Wisconsin</span>
-            <span class="tab-badge">Cell Nuclei &bull; 500 rows</span>
-          </button>
-        </div>
-      </div>
-    
-
-      
-      <!-- Panel 1: Titanic -->
-      <div id="ds-titanic" class="dataset-panel active">
-        <div class="callout violet">
-          <span class="callout-title">Dataset Profile: Titanic Passenger Survival</span>
-          <p><strong>Goal:</strong> Predict binary survival (1 = Survived, 0 = Deceased) across socio-demographic features including passenger class, age, gender, and fare.</p>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (titanic.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>7</strong> Features</span>
-          <span class="meta-pill"><strong>500</strong> Records</span>
-          <span class="meta-pill target">Target: <code>Survived</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">Pclass </th><th class="">Sex </th><th class="">Age </th><th class="">SibSp </th><th class="">Parch </th><th class="">Fare </th><th class="target-col">Survived <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">1</td><td class="">male</td><td class="">38.46</td><td class="">0</td><td class="">0</td><td class="">28.76</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">3</td><td class="">female</td><td class="">27.14</td><td class="">2</td><td class="">0</td><td class="">24.69</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">3</td><td class="">female</td><td class="">3.74</td><td class="">0</td><td class="">0</td><td class="">7.20</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">3</td><td class="">female</td><td class="">23.83</td><td class="">0</td><td class="">0</td><td class="">7.20</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">2</td><td class="">female</td><td class="">15.43</td><td class="">1</td><td class="">0</td><td class="">10.98</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">3</td><td class="">male</td><td class="">31.17</td><td class="">0</td><td class="">2</td><td class="">68.45</td><td class="target-col-cell">0</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">3</td><td class="">male</td><td class="">46.27</td><td class="">0</td><td class="">0</td><td class="">7.20</td><td class="target-col-cell">0</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">2</td><td class="">male</td><td class="">56.63</td><td class="">3</td><td class="">0</td><td class="">39.71</td><td class="target-col-cell">0</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">3</td><td class="">female</td><td class="">29.90</td><td class="">1</td><td class="">0</td><td class="">116.02</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">3</td><td class="">male</td><td class="">5.66</td><td class="">0</td><td class="">0</td><td class="">50.03</td><td class="target-col-cell">0</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">1</td><td class="">female</td><td class="">29.88</td><td class="">3</td><td class="">0</td><td class="">8.91</td><td class="target-col-cell">1</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">2</td><td class="">male</td><td class="">30.26</td><td class="">0</td><td class="">0</td><td class="">76.48</td><td class="target-col-cell">0</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <strong>Gender Dominance:</strong> Female survival rate was 74.2% versus male survival rate of 18.9%, making <code>Sex</code> the single most decisive split criterion.</p>
-            <p>2. <strong>Class Disparity:</strong> First-class passengers achieved 62.9% survival compared to 24.2% for third-class passengers.</p>
-            <p>3. <strong>Missing Values:</strong> <code>Age</code> contained ~20% missing entries, imputed using median age grouped by <code>Pclass</code> and <code>Sex</code>.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: Mutual Information Gain</span>
-              <h4>Why this was selected:</h4>
-              <p>Mutual information captures non-linear associations between mixed categorical variables (Sex, Pclass) and the discrete survival target without requiring parametric normality assumptions.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Classification Metric</th><th>Validation Score</th><th>Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/confusion-matrix/index.html">Accuracy</a></td><td class="val">83.85%</td><td>Baseline overall classification accuracy.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/precision-recall-f1/index.html">Precision</a></td><td class="val">78.4%</td><td>Positive predictive value on survival predictions.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/precision-recall-f1/index.html">Recall (Sensitivity)</a></td><td class="val">74.2%</td><td>Percentage of actual survivors captured.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/precision-recall-f1/index.html">F1-Score</a></td><td class="val">0.8010</td><td>Harmonic mean balancing precision and recall.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/roc-auc/index.html">ROC-AUC</a></td><td class="val">0.8540</td><td>Rank discrimination capacity across thresholds.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Titanic Confusion Matrix Diagnostic Breakdown</div>
-            <div class="chart-wrap">
-              <canvas id="chartTitanic"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel 2: Breast Cancer -->
-      <div id="ds-cancer" class="dataset-panel">
-        <div class="callout cyan">
-          <span class="callout-title">Dataset Profile: Breast Cancer Diagnostic</span>
-          <p><strong>Goal:</strong> High-stakes clinical classification predicting Malignant vs. Benign cell nuclei.</p>
-        </div>
-
-        
-    <div class="data-preview-card">
-      <div class="data-preview-header">
-        <div class="data-preview-title-wrap">
-          <span class="preview-badge"><span class="pulse-dot"></span> Live Raw Dataset View</span>
-          <h4>Feature Matrix &amp; Ground Truth Preview (breast_cancer.csv)</h4>
-          <p class="data-preview-sub">Scroll horizontally to inspect all feature columns; scroll vertically to view sample observations.</p>
-        </div>
-        <div class="data-preview-meta">
-          <span class="meta-pill"><strong>9</strong> Features</span>
-          <span class="meta-pill"><strong>500</strong> Records</span>
-          <span class="meta-pill target">Target: <code>Diagnosis</code></span>
-        </div>
-      </div>
-
-      <div class="dataset-scroll-wrap">
-        <table class="raw-data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="">Radius_Mean </th><th class="">Texture_Mean </th><th class="">Perimeter_Mean </th><th class="">Area_Mean </th><th class="">Smoothness_Mean </th><th class="">Compactness_Mean </th><th class="">Concavity_Mean </th><th class="">Concave_Points </th><th class="target-col">Diagnosis <span class="target-tag">Target</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            
-              <tr>
-                <td class="row-idx">1</td>
-                <td class="">15.74</td><td class="">23.25</td><td class="">99.14</td><td class="">194.60</td><td class="">0.12</td><td class="">0.15</td><td class="">0.12</td><td class="">0.06</td><td class="target-col-cell">Malignant</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">2</td>
-                <td class="">11.22</td><td class="">18.36</td><td class="">68.78</td><td class="">98.90</td><td class="">0.10</td><td class="">0.10</td><td class="">0.08</td><td class="">0.04</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">3</td>
-                <td class="">11.85</td><td class="">18.39</td><td class="">73.27</td><td class="">110.30</td><td class="">0.10</td><td class="">0.11</td><td class="">0.06</td><td class="">0.04</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">4</td>
-                <td class="">16.13</td><td class="">24.36</td><td class="">101.50</td><td class="">204.30</td><td class="">0.12</td><td class="">0.13</td><td class="">0.12</td><td class="">0.06</td><td class="target-col-cell">Malignant</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">5</td>
-                <td class="">13.21</td><td class="">16.11</td><td class="">83.57</td><td class="">137.10</td><td class="">0.08</td><td class="">0.09</td><td class="">0.08</td><td class="">0.03</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">6</td>
-                <td class="">13.10</td><td class="">19.17</td><td class="">81.70</td><td class="">134.80</td><td class="">0.09</td><td class="">0.10</td><td class="">0.09</td><td class="">0.04</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">7</td>
-                <td class="">18.30</td><td class="">25.60</td><td class="">113.16</td><td class="">263</td><td class="">0.13</td><td class="">0.14</td><td class="">0.10</td><td class="">0.06</td><td class="target-col-cell">Malignant</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">8</td>
-                <td class="">12.35</td><td class="">17.56</td><td class="">78.25</td><td class="">119.80</td><td class="">0.10</td><td class="">0.11</td><td class="">0.07</td><td class="">0.05</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">9</td>
-                <td class="">13.18</td><td class="">16.59</td><td class="">83.96</td><td class="">136.40</td><td class="">0.08</td><td class="">0.11</td><td class="">0.09</td><td class="">0.04</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">10</td>
-                <td class="">17.63</td><td class="">23.29</td><td class="">112.33</td><td class="">244.10</td><td class="">0.12</td><td class="">0.14</td><td class="">0.12</td><td class="">0.06</td><td class="target-col-cell">Malignant</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">11</td>
-                <td class="">13.08</td><td class="">17.48</td><td class="">84.39</td><td class="">134.40</td><td class="">0.09</td><td class="">0.10</td><td class="">0.08</td><td class="">0.05</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-              <tr>
-                <td class="row-idx">12</td>
-                <td class="">11.81</td><td class="">17.54</td><td class="">75.34</td><td class="">109.50</td><td class="">0.10</td><td class="">0.10</td><td class="">0.09</td><td class="">0.05</td><td class="target-col-cell">Benign</td>
-              </tr>
-            
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
-
-        <div class="card-grid-2">
-          <div class="info-card">
-            <h3>Exploratory Data Analysis (EDA) Findings</h3>
-            <p>1. <code>Radius_Mean</code>, <code>Perimeter_Mean</code>, and <code>Area_Mean</code> have correlation <strong>r &gt; 0.98</strong> (extreme geometric collinearity).</p>
-            <p>2. <strong>Asymmetric Cost:</strong> False Negatives (missing a malignant tumor) are catastrophic, meaning <strong>Recall must be prioritized over raw Accuracy</strong>.</p>
-          </div>
-          <div class="info-card">
-            <h3>Feature Selection Decision & Rationale</h3>
-            <div class="fs-card chosen">
-              <span class="fs-card-type">Chosen Technique: Variance Threshold + Correlation Pruning</span>
-              <h4>Why this was selected:</h4>
-              <p>Dropping collinear perimeter and area while retaining <code>Radius_Mean</code>, <code>Concave_Points</code>, and <code>Texture_Mean</code> eliminates matrix redundancy while preserving 99.1% of predictive AUC.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="diag-grid">
-          <div class="table-card">
-            <table class="diag-table">
-              <thead><tr><th>Classification Metric</th><th>Validation Score</th><th>Clinical Assessment</th></tr></thead>
-              <tbody>
-                <tr><td><a class="metric-link" href="../../concepts/confusion-matrix/index.html">Recall (Sensitivity)</a></td><td class="val">96.8%</td><td>Critical: minimizes life-threatening False Negatives.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/precision-recall-f1/index.html">Precision</a></td><td class="val">94.1%</td><td>Limits unnecessary invasive biopsy false alarms.</td></tr>
-                <tr><td><a class="metric-link" href="../../concepts/roc-auc/index.html">ROC-AUC</a></td><td class="val">0.9870</td><td>Outstanding discrimination boundary.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Breast Cancer: Confusion Matrix Breakdown</div>
-            <div class="chart-wrap">
-              <canvas id="chartCancer"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    
-    </section>
-
-    <!-- 5. Architectural Trade-offs & Failure Modes Playbook -->
-    
-    <section class="detail-section">
-      <h2 class="section-title">
-        <span class="section-dot amber"></span> 5. Architectural Trade-offs & Failure Modes Playbook
-      </h2>
-      <div class="card-grid-2">
-        <div class="callout green">
-          <span class="callout-title">When to Choose this Architecture</span>
-          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
-            <li>When direct interpretability and explainability are mandatory for regulatory compliance.</li>
-            <li>When dataset volume is moderate and computational training budget is strictly limited.</li>
-            <li>When robust linear or well-conditioned relationships dominate after proper <a class="concept-link" href="../../concepts/feature-selection/index.html">Feature Selection</a>.</li>
-          </ul>
-        </div>
-        <div class="callout violet">
-          <span class="callout-title">When NOT to Choose this Architecture</span>
-          <ul style="margin:6px 0 0; padding-left:18px; font-size:14px; color:var(--soft); line-height:1.7;">
-            <li>When complex, high-order non-linear feature interactions exist that simple kernels cannot capture.</li>
-            <li>When features exhibit extreme multicollinearity without applying <a class="concept-link" href="../../concepts/regularization/index.html">Regularization (Ridge/Lasso)</a>.</li>
-            <li>When severe class imbalance makes standard accuracy misleading, requiring metric optimization for <a class="concept-link" href="../../concepts/precision-recall-f1/index.html">Recall & F1</a>.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="card-grid-2" style="margin-top:20px;">
-        <div class="callout amber">
-          <span class="callout-title">Production Failure Mode: High Variance & Overfitting</span>
-          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
-            Occurs when model capacity exceeds sample complexity or when collinear features inflate parameter variance.
-          </p>
-          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Apply $L_2$ Ridge shrinkage ($\lambda > 0$) or prune tree depth.</li>
-            <li>Perform 5-fold cross-validation to detect train/validation generalization divergence.</li>
-            <li>Prune redundant collinear covariates using <a class="concept-link" href="../../concepts/feature-selection/index.html">Variance Inflation Factor (VIF)</a>.</li>
-          </ul>
-        </div>
-        <div class="callout red">
-          <span class="callout-title">Production Failure Mode: Leverage Outliers & Shift</span>
-          <p style="font-size:13.5px; color:var(--muted); margin:4px 0 8px; line-height:1.6;">
-            High-leverage anomalies drag the optimization surface away from the true data generating manifold.
-          </p>
-          <ul style="margin:0; padding-left:18px; font-size:13px; color:var(--soft); line-height:1.6;">
-            <li>Use robust losses like Huber Loss ($\delta = 1.0$) or Soft-Margin Slack ($C$).</li>
-            <li>Clip features via interquartile range (Tukey IQR) during production EDA.</li>
-            <li>Audit residual distribution normality using Q-Q diagnostic plots.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-  
-  </main>
-
-  <footer>
-    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-    <div>
-      <a href="../../index.html#learn-concepts">Concepts Hub</a> &bull;
-      <a href="../../index.html#learn">Back to Learn Hub</a>
-    </div>
-    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
-  </footer>
-
-  <script src="../../visual-simulators.js"></script>
-  <script src="../../model-interactive.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      
-      window.createConfusionMatrixChart('chartTitanic', { tp: 72, fp: 18, fn: 25, tn: 105 });
-      window.createConfusionMatrixChart('chartCancer', { tp: 62, fp: 4, fn: 2, tn: 102 });
-    
-      if (window.MLVisualLabs) {
-        
-          window.MLVisualLabs.initClassificationLab('model-sim-lab');
-        
-      }
-    });
-  </script>
+<script src="../../assets/site.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/core.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/models.js?v=mvruuhrl" defer></script>
+<script src="../../assets/learn.js?v=mvruuhrl" defer></script>
 </body>
 </html>

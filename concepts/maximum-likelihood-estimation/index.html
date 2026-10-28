@@ -1,237 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maximum Likelihood Estimation & Bernoulli Log-Likelihood · Learn ML · Yogesh Awate</title>
-  <meta name="theme-color" content="#070709">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderKatex()"></script>
-  <script>
-    function renderKatex() {
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.body, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-          ],
-          throwOnError: false
-        });
-      }
-    }
-    document.addEventListener("DOMContentLoaded", renderKatex);
-    window.addEventListener("load", renderKatex);
-  </script>
-  <link rel="stylesheet" href="../../visual-components.css">
-  <link rel="stylesheet" href="../../concept.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070709">
+<title>Maximum Likelihood Estimation · Learn · Yogesh Awate</title>
+<meta name="description" content="Choose the parameters under which the observed data is most probable. Where most loss functions come from.">
+<meta property="og:title" content="Maximum Likelihood Estimation · Learn · Yogesh Awate">
+<meta property="og:description" content="Choose the parameters under which the observed data is most probable. Where most loss functions come from.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css?v=mvruuhrl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvruuhrl">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>document.documentElement.classList.add('js')</script>
 </head>
-<body>
-  <!-- Fixed Navigation -->
-  <nav id="nav">
-    <div class="nav-left">
-      <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-      <div class="nav-breadcrumbs">
-        <a href="../../index.html#learn">Learn</a>
-        <span class="sep">/</span>
-        <a href="../../index.html#learn-concepts">Concepts</a>
-        <span class="sep">/</span>
-        <span>Maximum Likelihood Estimation & Bernoulli Log-Likelihood</span>
-      </div>
-    </div>
-    <div class="nav-right">
-      <a href="../../index.html#learn-models" class="nav-pill">47 Models</a>
-      <a href="../../index.html#learn" class="nav-pill">&larr; Back to Learn</a>
-    </div>
-  </nav>
+<body class="page-lesson" data-lesson="maximum-likelihood-estimation">
+<a class="skip" href="#main">Skip to content</a>
 
-  <main class="concept-content">
-    <header class="concept-header">
-      <div class="concept-kicker">Statistical Inference • 16</div>
-      <h1>Maximum Likelihood Estimation & Bernoulli Log-Likelihood</h1>
-      <p class="concept-lead">The principled statistical framework for fitting parametric models by finding parameter weights that maximize the joint probability of observing the empirical training data.</p>
-    </header>
+<nav id="nav">
+  <div class="brand"><a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, home">YA<span>.</span></a><a class="brand-sub" href="../../">Learn</a></div>
+  <div class="navlinks" id="navlinks">
+    <a href="../../#paths">Paths</a>
+    <a href="../../#curriculum">Curriculum</a>
+    <a href="../../#datasets">Datasets</a>
+    <a href="https://yogesh660.github.io/about/">About</a>
+    <a class="pill" href="https://yogesh660.github.io/">Portfolio <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+  <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</nav>
 
-    
-      <div class="pipeline-box">
-        <span class="canvas-tag">Maximum Likelihood Optimization Pipeline: From Samples to Global Maximum</span>
-        <div class="pipeline-diagram">
-          <div class="pipeline-node">
-            <span class="pipeline-badge">Empirical Data</span>
-            <h4>i.i.d. Samples</h4>
-            <p>Observations & labels.</p>
-            <span class="tensor-shape">${(mathbf{x}_i, y_i)}_{i=1}^n$</span>
+<main id="main">
+
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="../../#path-foundations">Path 01 · Foundations</a> / Learning as optimisation / Lesson 6 of 17</span>
+    <h1 class="case-title">Maximum Likelihood Estimation</h1>
+    <p class="lede rise" style="--d:3">Choose the parameters under which the observed data is most probable. Where most loss functions come from.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline"><span class="lvl" data-l="2"><i><b></b></i>Intermediate</span></span>
+      <span class="tagline">18 min</span>
+      <span class="tagline lab">Live lab</span>
+      <span class="prereq">Before this: <a href="../../concepts/loss-functions/">Loss functions</a></span>
+    </div>
+  </header>
+
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+          <dt>Path</dt><dd>Foundations · Learning as optimisation</dd>
+          <dt>Level</dt><dd>Intermediate</dd>
+          <dt>Used by</dt><dd>4 model lessons</dd>
+      </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>Step by step</a></li><li><a href="#lab"><span>03</span>Try it</a></li><li><a href="#maths"><span>04</span>The maths</a></li><li><a href="#takeaways"><span>05</span>Key takeaways</a></li><li><a href="#code"><span>06</span>In code</a></li><li><a href="#quiz"><span>07</span>Check yourself</a></li><li><a href="#related"><span>08</span>Where it shows up</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
+    </aside>
+
+    <div class="story">
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">Maximum likelihood estimation (MLE) asks: of all possible parameter values, which one makes the data we actually observed most probable? Many familiar losses are just negative log-likelihoods in disguise.</p>
+        <p>Flip a coin 10 times and see 7 heads. If the coin’s bias were $p = 0.5$, that outcome has probability 0.117; if $p = 0.7$, it is 0.267, the highest of any $p$. So the MLE is $\hat p = 0.7$: the observed frequency.</p>
+        <p>We maximise the <em>log</em>-likelihood because products of many small probabilities underflow, and logs turn products into sums without moving the maximum. Assume Gaussian noise and the negative log-likelihood becomes squared error, so OLS is MLE. Assume Bernoulli labels and you get log-loss, so <a class="inline" href="../../models/logistic_regression/">Logistic regression</a> is MLE.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>A detective choosing the explanation that makes the evidence least surprising.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> Step by step</h2>
+        <ol class="steps"><li>Write down a probability model $p(x \mid \theta)$ for one observation.</li><li>Assume independence: the likelihood is the product over observations.</li><li>Take logs: the log-likelihood is a sum.</li><li>Maximise it, analytically (set derivative to zero) or numerically (gradient-based).</li></ol>
+      </section>
+      <section class="reveal" id="lab">
+        <h2 class="h3"><span>03</span> Try it</h2>
+        <p>Flip a virtual coin. The curve is the log-likelihood of every possible bias $p$; its peak is the MLE.</p>
+        <div class="lab" data-lab="maximum-likelihood-estimation" data-kind="concepts" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
+        <div class="try"><small class="kicker">Things to try</small><ol><li>Flip 5 times, then 100 times: the peak sharpens as evidence accumulates.</li><li>Drag the probe to $p = 0.5$ and compare its log-likelihood with the peak.</li></ol></div>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>04</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Likelihood and log-likelihood</h3><div class="formula">$$L(\theta) = \prod_{i=1}^n p(x_i \mid \theta), \qquad \ell(\theta) = \sum_{i=1}^n\log p(x_i \mid \theta)$$</div><p>$\hat\theta_{\text{MLE}} = \arg\max_\theta\ell(\theta)$.</p></li>
+          <li><h3>Bernoulli example</h3><div class="formula">$$\ell(p) = k\log p + (n - k)\log(1 - p), \qquad \frac{d\ell}{dp} = \frac kp - \frac{n-k}{1-p} = 0 \;\Rightarrow\; \hat p = \frac kn$$</div><p>The MLE is the sample proportion. Its negative per-example version is exactly binary cross-entropy.</p></li>
+          <li><h3>Gaussian noise gives least squares</h3><div class="formula">$$y_i = x_i^\top\beta + \varepsilon_i,\;\varepsilon_i \sim \mathcal N(0, \sigma^2) \;\Rightarrow\; -\ell(\beta) = \frac{1}{2\sigma^2}\sum_i(y_i - x_i^\top\beta)^2 + \text{const}$$</div><p>Maximising likelihood is minimising squared error.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="takeaways">
+        <h2 class="h3"><span>05</span> Key takeaways</h2>
+        <div class="box use"><ul><li>MLE is consistent and efficient for large samples, but can overfit small ones (7/10 heads is not strong evidence of a biased coin).</li><li>Adding a prior and maximising the posterior (MAP) gives regularisation.</li><li>Choosing a loss is choosing a noise model.</li></ul></div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>06</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">from</span> scipy.optimize <span class="k">import</span> minimize_scalar
+
+flips = np.<span class="f">array</span>([<span class="n">1</span>, <span class="n">1</span>, <span class="n">0</span>, <span class="n">1</span>, <span class="n">1</span>, <span class="n">1</span>, <span class="n">0</span>, <span class="n">1</span>, <span class="n">0</span>, <span class="n">1</span>])        <span class="c"># 7 heads out of 10</span>
+nll = <span class="k">lambda</span> p: -(flips.<span class="f">sum</span>() * np.<span class="f">log</span>(p) + (<span class="k">len</span>(flips) - flips.<span class="f">sum</span>()) * np.<span class="f">log</span>(<span class="n">1</span> - p))
+res = <span class="f">minimize_scalar</span>(nll, bounds=(<span class="n">1e-6</span>, <span class="n">1</span> - <span class="n">1e-6</span>), method=<span class="s">&quot;bounded&quot;</span>)
+<span class="k">print</span>(<span class="s">&quot;numerical MLE:&quot;</span>, <span class="f">round</span>(res.x, <span class="n">4</span>), <span class="s">&quot;closed form:&quot;</span>, flips.<span class="f">mean</span>())</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Treating the MLE from a tiny sample as reliable.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Forgetting the independence assumption behind the product.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>07</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>Why maximise the log-likelihood instead of the likelihood?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It gives a different answer</span></button><button class="opt" type="button"><b>B</b><span>Logs turn products into sums and avoid numerical underflow, without moving the maximum</span></button><button class="opt" type="button"><b>C</b><span>It is required by the data</span></button><button class="opt" type="button"><b>D</b><span>It adds regularisation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\log$ is monotonic, so the arg max is unchanged.</div>
           </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node" style="border-color:var(--green);">
-            <span class="pipeline-badge" style="color:var(--green-2);">Joint Likelihood</span>
-            <h4>Bernoulli Product</h4>
-            <p>Joint sample probability.</p>
-            <span class="tensor-shape">$prod p_i^{y_i} (1-p_i)^{1-y_i}$</span>
-          </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node" style="border-color:var(--violet);">
-            <span class="pipeline-badge" style="color:var(--violet-2);">Log Transformation</span>
-            <h4>Log-Likelihood &ell;(w)</h4>
-            <p>Numerically stable sum.</p>
-            <span class="tensor-shape">$sum [y_i ln p_i + (1-y_i)ln(1-p_i)]$</span>
-          </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-node" style="border-color:var(--cyan);">
-            <span class="pipeline-badge" style="color:var(--cyan-2);">Convex Solver</span>
-            <h4>Newton / L-BFGS</h4>
-            <p>Score $mathbf{X}^T(mathbf{y}-mathbf{p}) = mathbf{0}$.</p>
-            <span class="tensor-shape">$hat{mathbf{w}}_{	ext{MLE}} = argmax ell(mathbf{w})$</span>
+          <div class="q" data-answer="1">
+            <p><span>Q2</span>Minimising binary cross-entropy is equivalent to:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>MLE under a Gaussian model</span></button><button class="opt" type="button"><b>B</b><span>MLE under a Bernoulli model</span></button><button class="opt" type="button"><b>C</b><span>Minimising MAE</span></button><button class="opt" type="button"><b>D</b><span>Bayesian inference with a flat prior over functions</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Cross-entropy is the negative Bernoulli log-likelihood per example.</div>
           </div>
         </div>
-      </div>
-    
-
-    
-    
-    
-    
-    
-    
-    <div id="lab-mle-bernoulli"></div>
-    
-
-
-    <section class="concept-section">
-      <h2 class="section-title">
-        <span class="section-dot green"></span> 1. The Principle of Maximum Likelihood
-      </h2>
-      <div class="concept-body">
-        
-          <p>Given an observed dataset $\mathcal{D} = \{(\mathbf{x}_1, y_1), \dots, (\mathbf{x}_n, y_n)\}$ drawn independently and identically distributed ($i.i.d.$) from a data generation process parameterized by unknown weights $\mathbf{w}$, the <strong>Likelihood function</strong> $L(\mathbf{w})$ quantifies the probability of observing this exact sample:</p>
-          <div class="math-card">
-            $L(\mathbf{w}) = P(\mathcal{D}; \mathbf{w}) = \prod_{i=1}^n P(y_i \mid \mathbf{x}_i; \mathbf{w})$
-          </div>
-          <p>The Maximum Likelihood principle seeks optimal weights $\hat{\mathbf{w}}_{\text{MLE}}$ that make the empirical data most plausible:</p>
-          <div class="math-card">
-            $\hat{\mathbf{w}}_{\text{MLE}} = \arg\max_{\mathbf{w}} L(\mathbf{w})$
-          </div>
-          <div class="callout cyan">
-            <span class="callout-title">Why the Log-Likelihood Transformation is Mandatory</span>
-            <p>Multiplying thousands of probabilities $p_i \in (0, 1)$ precipitates severe numerical arithmetic underflow ($p_1 \times p_2 \dots < 10^{-308} \to 0$). Since the natural logarithm is strictly monotonically increasing, $\arg\max L(\mathbf{w}) \equiv \arg\max \ln L(\mathbf{w})$. Taking the logarithm converts product chains into numerically stable summations:</p>
-            <div class="math-card">
-              $\ell(\mathbf{w}) = \ln L(\mathbf{w}) = \sum_{i=1}^n \ln P(y_i \mid \mathbf{x}_i; \mathbf{w})$
-            </div>
-          </div>
-        
-      </div>
-    </section>
-  
-
-    <section class="concept-section">
-      <h2 class="section-title">
-        <span class="section-dot violet"></span> 2. Derivation of Bernoulli Log-Likelihood & Binary Cross-Entropy
-      </h2>
-      <div class="concept-body">
-        
-          <p>In binary classification with labels $y_i \in \{0, 1\}$, each observation is a Bernoulli trial with success probability $p_i = \sigma(\mathbf{w}^T \mathbf{x}_i)$. The unified Probability Mass Function (PMF) is:</p>
-          <div class="math-card">
-            $P(Y = y_i \mid \mathbf{x}_i) = p_i^{y_i} (1 - p_i)^{1 - y_i}$
-          </div>
-          <p>Under the $i.i.d.$ assumption, the joint likelihood is:</p>
-          <div class="math-card">
-            $L(\mathbf{w}) = \prod_{i=1}^n p_i^{y_i} (1 - p_i)^{1 - y_i}$
-          </div>
-          <p>Taking the natural logarithm yields the <strong>Bernoulli Log-Likelihood</strong>:</p>
-          <div class="math-card">
-            $\ell(\mathbf{w}) = \sum_{i=1}^n \left[ y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right]$
-          </div>
-          <div class="callout green" style="margin-top:14px;">
-            <span class="callout-title">The Exact Identity with Binary Cross-Entropy (BCE)</span>
-            <p>In machine learning, algorithms minimize loss rather than maximizing likelihood. Multiplying by $-\frac{1}{n}$ defines the empirical cost function:</p>
-            <div class="math-card">
-              $J(\mathbf{w}) = -\frac{1}{n}\ell(\mathbf{w}) = -\frac{1}{n}\sum_{i=1}^n \left[ y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right] = \mathcal{L}_{\text{BCE}}(\mathbf{w})$
-            </div>
-            <p>Maximizing Bernoulli log-likelihood is mathematically and computationally equivalent to minimizing Binary Cross-Entropy loss.</p>
-          </div>
-        
-      </div>
-    </section>
-  
-
-    <section class="concept-section">
-      <h2 class="section-title">
-        <span class="section-dot cyan"></span> 3. Score Function, Hessian Matrix & Strict Concavity
-      </h2>
-      <div class="concept-body">
-        
-          <p>Applying the chain rule $\frac{\partial \ell}{\partial w_j} = \sum_{i=1}^n \frac{\partial \ell}{\partial p_i} \frac{\partial p_i}{\partial z_i} \frac{\partial z_i}{\partial w_j}$ yields the <strong>Score Vector (Gradient)</strong>:</p>
-          <div class="math-card">
-            $\nabla_{\mathbf{w}} \ell(\mathbf{w}) = \sum_{i=1}^n (y_i - p_i) \mathbf{x}_i = \mathbf{X}^T (\mathbf{y} - \mathbf{p})$
-          </div>
-          <p>Notice the exact structural parallel to Ordinary Least Squares (OLS) normal equations $\mathbf{X}^T (\mathbf{y} - \hat{\mathbf{y}})$!</p>
-          <p>Differentiating a second time yields the <strong>Hessian Matrix</strong>:</p>
-          <div class="math-card">
-            $\mathbf{H} = \nabla_{\mathbf{w}}^2 \ell(\mathbf{w}) = -\sum_{i=1}^n p_i(1 - p_i) \mathbf{x}_i \mathbf{x}_i^T = -\mathbf{X}^T \mathbf{W} \mathbf{X}$
-          </div>
-          <p>where $\mathbf{W} = \text{diag}(p_i(1 - p_i))$ is a diagonal weighting matrix with strictly positive diagonal elements $p_i(1 - p_i) > 0$.</p>
-          <div class="callout violet" style="margin-top:14px;">
-            <span class="callout-title">Guarantee of Unique Global Optimum</span>
-            <p>For any non-zero vector $\mathbf{v} \in \mathbb{R}^p$, $\mathbf{v}^T \mathbf{H} \mathbf{v} = -(\mathbf{X} \mathbf{v})^T \mathbf{W} (\mathbf{X} \mathbf{v}) \le 0$. Hence, $\mathbf{H}$ is <strong>negative semi-definite everywhere</strong>. The Bernoulli log-likelihood surface is strictly concave with <strong>zero local minima or saddle points</strong>: every stationary point $\nabla \ell = \mathbf{0}$ is the unique global maximum!</p>
-          </div>
-        
-      </div>
-    </section>
-  
-
-    <!-- Related Model Implementations in Zoo -->
-    <section class="linked-models-wrap">
-      <h3>Architectures Using This Concept in the Zoo</h3>
-      <div class="model-badges">
-        
-    <a href="../../models/logistic_regression/index.html" class="model-badge classification">
-      <span class="dot"></span> Logistic Regression
-    </a>
-  
-    <a href="../../models/ols_linear_regression/index.html" class="model-badge regression">
-      <span class="dot"></span> Ordinary Least Squares (OLS)
-    </a>
-  
-    <a href="../../models/gaussian_naive_bayes/index.html" class="model-badge classification">
-      <span class="dot"></span> Gaussian Naive Bayes
-    </a>
-  
-    <a href="../../models/linear_discriminant_analysis/index.html" class="model-badge classification">
-      <span class="dot"></span> Linear Discriminant Analysis
-    </a>
-  
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
-    <div>
-      <a href="../../index.html#learn-concepts">All 17 Concepts</a> &bull;
-      <a href="../../index.html#learn">Back to Learn Hub</a>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>08</span> Where it shows up</h2>
+        <div class="related"><a href="../../concepts/log-odds/"><small class="kicker">Concept</small><b>Log-odds (logit)</b></a><a href="../../concepts/sigmoid-and-link-functions/"><small class="kicker">Concept</small><b>Sigmoid &amp; link functions</b></a><a href="../../models/logistic_regression/"><small class="kicker">Classification</small><b>Logistic regression</b></a><a href="../../models/gaussian_mixture_models/"><small class="kicker">Clustering</small><b>Gaussian mixtures</b></a><a href="../../models/gaussian_naive_bayes/"><small class="kicker">Classification</small><b>Gaussian Naive Bayes</b></a><a href="../../models/bayesian_linear_regression/"><small class="kicker">Regression</small><b>Bayesian linear regression</b></a></div>
+      </section>
     </div>
-    <span>&copy; 2026 YOGESH AWATE &bull; MACHINE LEARNING MODEL ZOO</span>
-  </footer>
+  </div>
 
-  <script src="../../visual-simulators.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      if (window.MLVisualLabs) {
-        if ('maximum-likelihood-estimation' === 'confusion-matrix') window.MLVisualLabs.initConfusionMatrixLab('lab-confusion-matrix');
-        if ('maximum-likelihood-estimation' === 'loss-functions') window.MLVisualLabs.initLossFunctionsLab('lab-loss-functions');
-        if ('maximum-likelihood-estimation' === 'bias-variance-tradeoff') window.MLVisualLabs.initBiasVarianceLab('lab-bias-variance');
-        if ('maximum-likelihood-estimation' === 'feature-selection') window.MLVisualLabs.initFeatureSelectionLab('lab-feature-selection');
-        if ('maximum-likelihood-estimation' === 'log-odds') window.MLVisualLabs.initLogOddsLab('lab-log-odds');
-        if ('maximum-likelihood-estimation' === 'sigmoid-and-link-functions') window.MLVisualLabs.initSigmoidLab('lab-sigmoid');
-        if ('maximum-likelihood-estimation' === 'maximum-likelihood-estimation') window.MLVisualLabs.initMleBernoulliLab('lab-mle-bernoulli');
-        if ('maximum-likelihood-estimation' === 'quasi-newton-and-lbfgs') window.MLVisualLabs.initOptimizationSolversLab('lab-optimization-solvers');
-      }
-    });
-  </script>
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    <a href="../../concepts/gradient-descent/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Foundations</small><b>Gradient descent</b></a>
+    <a class="pager-next" href="../../concepts/quasi-newton-and-lbfgs/"><small>Next · Foundations <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>Newton, BFGS &amp; L-BFGS</b></a>
+  </div>
+</article>
+</main>
+
+<section id="contact" class="contact">
+  <span class="tag reveal">Let's connect</span>
+  <h2 class="reveal">Have a hard problem?<br><span>Let's make it simple.</span></h2>
+  <a class="email reveal" href="mailto:awateyogeshs@gmail.com">awateyogeshs@gmail.com <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <div class="socials reveal">
+    <a href="https://www.linkedin.com/in/yogesh-s-awate/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+    <a href="https://github.com/yogesh660" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.2-.3-2.5-1-3.5.3-1.1.3-2.4 0-3.5 0 0-1 0-3 1.5a10.5 10.5 0 0 0-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.4 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg> GitHub</a>
+    <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Medium</a>
+    <a href="https://twitter.com/YogeshSAwate1" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> X / Twitter</a>
+  </div>
+</section>
+
+<footer>
+  <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+  <div class="footlinks"><a href="../../">Learn</a><a href="https://yogesh660.github.io/work/">Work</a><a href="https://yogesh660.github.io/projects/">Open source</a><a href="https://yogesh660.github.io/about/">About</a></div>
+  <span>© 2026 YOGESH AWATE</span>
+</footer>
+
+<script src="../../assets/site.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/core.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/models.js?v=mvruuhrl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvruuhrl" defer></script>
+<script src="../../assets/learn.js?v=mvruuhrl" defer></script>
 </body>
 </html>

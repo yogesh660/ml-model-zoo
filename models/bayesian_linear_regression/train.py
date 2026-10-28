@@ -1,23 +1,54 @@
-"""
-Training & Evaluation Pipeline for Bayesian Linear Regression
-Dataset: California Housing
+"""Train and evaluate Bayesian ridge on the California housing sample.
+
+Run from the repository root:
+
+    python models/bayesian_linear_regression/train.py
+
+Writes models/bayesian_linear_regression/metrics.json, which the lesson page reads.
 """
 import json
+from datetime import date
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-
+from sklearn.dummy import DummyRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import BayesianRidge
-model = BayesianRidge()
+
+ROOT = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent
+
+df = pd.read_csv(ROOT / "datasets/raw/california_housing.csv")
+X, y = df.drop(columns="MedHouseVal"), df["MedHouseVal"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = make_pipeline(StandardScaler(), BayesianRidge())
 model.fit(X_train, y_train)
-mean_preds, std_preds = model.predict(X_test, return_std=True)
+baseline = DummyRegressor(strategy="mean").fit(X_train, y_train)
 
-# Export metrics
-metrics = {
-  "RMSE": "0.7456",
-  "MAE": "0.5332",
-  "R\u00b2 Score": "0.5756"
+
+def evaluate(estimator):
+    pred = estimator.predict(X_test)
+    return {
+        "RMSE": round(float(mean_squared_error(y_test, pred) ** 0.5), 4),
+        "MAE": round(float(mean_absolute_error(y_test, pred)), 4),
+        "R²": round(float(r2_score(y_test, pred)), 4),
+    }
+
+
+result = {
+    "dataset": "California housing sample",
+    "summary": "Bayesian ridge trained on 80% of the California housing sample (MedHouseVal as target), "
+               "scored on a held-out 20%. The baseline always predicts the training mean.",
+    "model_label": "Bayesian ridge",
+    "baseline_label": "Predict the mean",
+    "metrics": evaluate(model),
+    "baseline": evaluate(baseline),
+    "generated": f"generated {date.today().isoformat()}",
 }
-with open("metrics.json", "w") as f:
-    json.dump(metrics, f, indent=2)
-
-print("Pipeline executed successfully for bayesian_linear_regression.")
+(HERE / "metrics.json").write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
+print(json.dumps(result, indent=2, ensure_ascii=False))
