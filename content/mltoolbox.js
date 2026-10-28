@@ -2508,4 +2508,544 @@ print(f"Unbiased nested CV MSE: {np.mean(nested_scores):.4f}")`,
     related: ['cross-validation', 'hyperparameter-search-grid-random-successive-halving', 'bayesian-optimisation-and-optuna'],
     keywords: 'nested cross-validation double cv model selection selection bias hyperparameter tuning outer loop inner loop',
   },
+  {
+    id: 'permutation-and-impurity-feature-importance',
+    short: 'Permutation & impurity',
+    title: 'Permutation and Impurity Feature Importance',
+    task: 'concepts',
+    module: 'Interpretability and fairness',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Contrasting training-set impurity reduction (MDI) with held-out permutation testing (PFI) to measure genuine feature predictive power.`,
+    lead: r`When tree ensembles rank feature importances, practitioners frequently rely on default Mean Decrease in Impurity (MDI). However, MDI suffers from severe structural bias toward high-cardinality features and evaluates importance exclusively on training data, causing overfit noise to appear falsely critical. Permutation Feature Importance (PFI) measures the true drop in model performance when feature values are randomly shuffled on held-out validation data, breaking feature-target associations to quantify genuine generalisable signal.`,
+    intuition: [
+      r`Imagine an employer evaluating job candidates based on three criteria: university grades, relevant industry experience, and employee ID badge numbers. A complex decision tree can easily memorise the training records by splitting on the unique employee ID badge numbers, partitioning candidates perfectly into individual leaf nodes. If you ask the tree which feature reduced training classification errors most aggressively, it will proudly answer: the employee ID badge numbers (high impurity reduction). Yet in the real world, ID numbers carry zero predictive capability for future hires.`,
+      r`This flaw is the Achilles heel of Mean Decrease in Impurity (Gini importance). Because continuous variables and high-cardinality categoricals offer countless potential split thresholds, trees split on them disproportionately often. Furthermore, because MDI is computed entirely on training data, any feature that helps the tree memorise training noise is crowned as "important".`,
+      r`Permutation Feature Importance provides the scientific antidote by asking a simple question: "If I destroy the relationship between this feature and the target on unseen validation data, how badly does the model suffer?" By shuffling the values of one feature across validation rows while leaving all other columns intact, PFI preserves the feature's marginal distribution while obliterating its correlation with the outcome. If shuffling a column causes validation error to spike, the model genuinely relied on that feature. If shuffling causes zero change (or even improves performance), the feature was merely redundant noise.`,
+    ],
+    analogy: r`Assessing which engine component is essential to a car's speed by temporarily disconnecting each wire on a test track and measuring how much lap time degrades.`,
+    steps: [
+      r`Train the predictive model on the training dataset using standard cross-validation or hyperparameter tuning.`,
+      r`Evaluate the baseline performance metric (e.g. MSE, cross-entropy, or ROC-AUC) on an untouched held-out validation dataset: $L_{\\text{base}} = L(y_{\\text{val}}, \\hat{f}(X_{\\text{val}}))$.`,
+      r`For each feature column $j \in \{1, \\dots, d\}$, generate a permuted validation set $X_{\\text{val}}^{\\text{perm}(j)}$ by randomly shuffling row values in column $j$ while keeping all other columns unchanged.`,
+      r`Pass the permuted matrix through the trained model to record the degraded performance metric: $L_{\\text{perm}}(j) = L(y_{\\text{val}}, \\hat{f}(X_{\\text{val}}^{\\text{perm}(j)}))$.`,
+      r`Compute the importance score as the difference $\\Delta L(j) = L_{\\text{perm}}(j) - L_{\\text{base}}$ (or ratio for bounded metrics); repeat across multiple random shuffles to compute confidence intervals.`,
+      r`Inspect correlated feature clusters: if two features are strongly collinear, group them together or evaluate conditional permutations to avoid underestimating shared influence.`,
+    ],
+    math: [
+      {
+        h: 'Mean Decrease in Impurity (MDI / Gini importance)',
+        tex: r`$$\\operatorname{MDI}(j) = \\frac{1}{T} \\sum_{t=1}^T \\sum_{n \in \\mathcal{N}_t: v(n) = j} p(n) \\, \\Delta I(n)$$`,
+        p: r`where $T$ is the number of trees, $\\mathcal{N}_t$ is the set of internal nodes in tree $t$, $v(n)$ denotes the feature split at node $n$, $p(n) = N_n / N_{\\text{total}}$ is the proportion of training samples reaching node $n$, and $\\Delta I(n) = I(n) - \\frac{N_L}{N_n}I(n_L) - \\frac{N_R}{N_n}I(n_R)$ is the reduction in impurity (Gini or variance). Because continuous features offer more split opportunities, MDI exhibits an inherent cardinality bias.`,
+      },
+      {
+        h: 'Permutation Feature Importance (PFI)',
+        tex: r`$$\\operatorname{PFI}(j) = \\mathbb{E}\\left[ L\\big(y, \, \\hat{f}(X^{\\pi_j})\\big) \\right] - \\mathbb{E}\\left[ L\\big(y, \, \\hat{f}(X)\\big) \\right]$$`,
+        p: r`where $X^{\\pi_j}$ denotes the feature matrix where column $j$ has been randomly permuted, breaking the joint distribution $P(X_j, Y)$ while strictly preserving the marginal distribution $P(X_j)$. When evaluated on test data, uninformative features yield $\\operatorname{PFI} \\le 0$, while critical features yield large positive values.`,
+      },
+      {
+        h: 'Standard error of permutation importance across shuffles',
+        tex: r`$$\\operatorname{SE}\\big(\\operatorname{PFI}(j)\\big) = \\frac{s_j}{\\sqrt{B}}, \qquad s_j = \\sqrt{\\frac{1}{B - 1} \\sum_{b=1}^B \\big(\\Delta L_b(j) - \\overline{\\Delta L}(j)\\big)^2}$$`,
+        p: r`where $B$ is the number of independent random permutations (typically $B = 5$ to $10$). Computing the standard error over permutations verifies whether a feature's measured importance is statistically distinct from random baseline noise.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic dataset: x0 is predictive, x1 is noise, x2 is high-cardinality ID
+rng = np.random.default_rng(42)
+n = 200
+x0 = rng.normal(0, 1, n)
+x1 = rng.normal(0, 1, n)
+x2 = np.arange(n, dtype=float)
+y = 2.5 * x0 + rng.normal(0, 0.5, n)
+X = np.column_stack([x0, x1, x2])
+
+# Train / validation split
+X_tr, y_tr = X[:120], y[:120]
+X_val, y_val = X[120:], y[120:]
+w = np.linalg.lstsq(X_tr, y_tr, rcond=None)[0]
+
+# Baseline validation error
+base_mse = np.mean((y_val - X_val @ w) ** 2)
+
+# Compute Permutation Feature Importance (PFI) on held-out validation data
+pfi = []
+for j in range(3):
+    X_perm = X_val.copy()
+    X_perm[:, j] = rng.permutation(X_perm[:, j])
+    perm_mse = np.mean((y_val - X_perm @ w) ** 2)
+    pfi.append(perm_mse - base_mse)
+
+print(f"Baseline validation MSE: {base_mse:.4f}")
+print(f"PFI (x0 - true signal):  {pfi[0]:.4f}")
+print(f"PFI (x1 - noise):        {pfi[1]:.4f}")
+print(f"PFI (x2 - unique ID):    {pfi[2]:.4f}")`,
+    pitfalls: [
+      r`Misinterpreting correlated features: If two features are almost perfectly collinear (e.g. height in centimetres and height in inches), permuting one leaves the model able to use the other, causing PFI to artificially underestimate the importance of both.`,
+      r`Evaluating PFI on training data: Running permutation tests on training data rather than validation data reintroduces memorisation bias, failing to penalise overfit features.`,
+      r`Extrapolation into impossible feature spaces: Permuting correlated features can generate physically impossible combinations (e.g. an pregnant male or an 8-bedroom studio apartment), forcing the model to evaluate out-of-distribution regions.`,
+      r`Ignoring negative importance values: Features with slightly negative PFI scores indicate that permuting them actually reduced error, signalling noisy or overfitted inputs that should be pruned.`,
+    ],
+    keyPoints: [
+      r`MDI evaluates training split reductions and artificially favours high-cardinality variables like unique IDs or continuous noise.`,
+      r`PFI evaluates held-out validation loss degradation and reflects genuine generalisable predictive value.`,
+      r`Shuffling breaks feature-target association while preserving the empirical marginal distribution of the feature.`,
+      r`For correlated predictors, grouped permutation or conditional importance is necessary to avoid mutual dilution.`,
+    ],
+    quiz: [
+      {
+        q: r`Why is default Mean Decrease in Impurity (MDI / Gini importance) dangerous when evaluating tree ensembles on datasets with mixed feature types?`,
+        o: [
+          r`Because MDI cannot be computed for classification trees`,
+          r`Because MDI artificially inflates the importance of continuous and high-cardinality features that offer many split points to overfit training noise`,
+          r`Because MDI requires inverting high-dimensional covariance matrices`,
+          r`Because MDI values always sum to zero`,
+        ],
+        a: 1,
+        why: r`MDI evaluates impurity reduction strictly on training data. Continuous features and high-cardinality categoricals offer far more split candidates, allowing trees to split on them frequently to memorise noise, creating a severe false importance bias.`,
+      },
+      {
+        q: r`What is the core operational principle behind Permutation Feature Importance (PFI)?`,
+        o: [
+          r`It permanently sets the feature column to zero in the training dataset`,
+          r`It inverts the sign of the model coefficients`,
+          r`It randomly shuffles the feature values across held-out validation rows and measures the resulting increase in prediction error`,
+          r`It computes partial derivatives of the output with respect to tree depth`,
+        ],
+        a: 2,
+        why: r`By shuffling a feature column across validation instances, PFI breaks the correlation between that feature and the target while keeping its marginal distribution intact. The resulting drop in validation performance quantifies the model's true reliance on that feature.`,
+      },
+      {
+        q: r`If two input features $X_1$ and $X_2$ are nearly 100% correlated and both strongly drive the target $Y$, what does standard Permutation Feature Importance report for them?`,
+        o: [
+          r`Both will appear falsely unimportant because permuting either one allows the model to predict accurately using the other`,
+          r`Both will receive an importance score of exactly 1.0`,
+          r`The model will immediately crash due to multicollinearity`,
+          r`One will receive 100% importance and the other will receive -100% importance`,
+        ],
+        a: 0,
+        why: r`When two features carry redundant information, permuting $X_1$ leaves $X_2$ completely intact. The model compensates using $X_2$, resulting in a negligible increase in error and misleadingly low PFI scores for both features.`,
+      },
+      {
+        q: r`What does a negative Permutation Feature Importance score (e.g. $\\operatorname{PFI} = -0.015$) indicate about a feature?`,
+        o: [
+          r`The feature has an inverse linear relationship with the target`,
+          r`The feature is the single most important variable in the model`,
+          r`The algorithm encountered a division by zero error`,
+          r`Permuting the feature actually improved validation performance, indicating the feature is pure noise or causing overfitting`,
+        ],
+        a: 3,
+        why: r`A negative score means validation error decreased when the feature was scrambled. This confirms that the model's reliance on that feature was harmful to generalisation, identifying it as a candidate for feature pruning.`,
+      },
+    ],
+    usedBy: ['random_forest_classifier', 'gradient_boosted_classifiers'],
+    prereq: ['random_forest_classifier', 'cross-validation'],
+    related: ['shap', 'pdp-ice-and-ale-plots', 'random_forest_classifier'],
+    keywords: 'permutation feature importance impurity mdi pfi gini importance model interpretability feature selection tree ensembles',
+  },
+  {
+    id: 'shap',
+    short: 'SHAP',
+    title: 'SHAP (SHapley Additive exPlanations)',
+    task: 'concepts',
+    module: 'Interpretability and fairness',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Unified game-theoretic framework explaining individual predictions by allocating fair additive credit across feature coalitions.`,
+    lead: r`Interpreting complex non-linear models requires answering not just what a model predicts, but exactly why it made that specific prediction for an individual instance. Rooted in cooperative game theory (Shapley values), SHAP (SHapley Additive exPlanations) provides the unique mathematical framework that satisfies foundational fairness axioms: local accuracy, missingness, and consistency. By calculating each feature's marginal contribution across all possible coalitions, SHAP unifies local feature attribution with global model interpretability.`,
+    intuition: [
+      r`Imagine three colleagues—Alice, Bob, and Charlie—collaborating on a freelance consulting project that earns a total bonus of £9,000. If Alice worked alone, the project would have earned £2,000. If Bob worked alone, £3,000. If Alice and Bob worked together, their synergy would have yielded £7,000. Charlie brings niche domain expertise that only becomes valuable when paired with Bob. How do you divide the £9,000 bonus fairly among the three team members?`,
+      r`In 1953, mathematician Lloyd Shapley solved this cooperative game theory dilemma by evaluating each player's marginal contribution across every possible coalition they could join. A player's Shapley value is the weighted average of how much value they add when stepping into a room containing any subset of the other players. In 2017, Scott Lundberg and Su-In Lee recognised that predicting an outcome in machine learning is identical to a cooperative game: the model's prediction is the total payout, and the features are the collaborating players.`,
+      r`For any individual prediction, SHAP calculates how much each feature value pushed the prediction away from the dataset's base expected value $\\mathbb{E}[f(X)]$. If a patient has a predicted 35% risk of heart disease compared to the population baseline of 10%, SHAP might reveal that their blood pressure added +18%, their age added +12%, and their active exercise routine subtracted -5%, summing up exactly to the 25% discrepancy. Because SHAP guarantees mathematical additivity, these local explanations can be aggregated globally to create summary plots, interaction matrices, and dependence curves.`,
+    ],
+    analogy: r`Itemising a restaurant bill where friends shared overlapping appetizers and family-style mains: calculating each diner's fair share by averaging their marginal cost across all combinations of who sat at the table.`,
+    steps: [
+      r`Establish the baseline expectation: compute the base value $\\phi_0 = \\mathbb{E}[f(X)]$, representing the model's average prediction across the background training distribution.`,
+      r`Select a candidate instance $x$ whose individual model prediction $f(x)$ requires explanation.`,
+      r`Enumerate feature coalitions: evaluate model predictions across all $2^M$ subsets of features, substituting absent features with background expectation values.`,
+      r`Calculate marginal contributions: for feature $i$ and coalition $S$, compute the marginal lift $\\Delta(S, i) = f(S \\cup \\{i\\}) - f(S)$.`,
+      r`Compute the weighted Shapley average: weight each marginal contribution by the combinatorial probability of coalition size $|S|$ to yield $\\phi_i(x)$.`,
+      r`Verify the efficiency axiom: ensure that the sum of attributions equals the total prediction offset: $\\sum_{i=1}^M \\phi_i(x) = f(x) - \\phi_0$.`,
+      r`Aggregate across the population: stack individual SHAP vectors to construct global beeswarm summary plots, feature importance rankings, and dependency curves.`,
+    ],
+    math: [
+      {
+        h: 'Classical Shapley value formulation',
+        tex: r`$$\\phi_i(x) = \\sum_{S \\subseteq F \\setminus \\{i\\}} \\frac{|S|! \, (|F| - |S| - 1)!}{|F|!} \\Big( f_x(S \\cup \\{i\\}) - f_x(S) \\Big)$$`,
+        p: r`where $F$ is the total set of features, $S$ is a feature coalition excluding feature $i$, and $|S|!(|F| - |S| - 1)! / |F|!$ is the combinatorial probability that feature $i$ enters coalition $S$ under a uniformly random permutation of players. $f_x(S) = \\mathbb{E}[f(X) \\mid X_S = x_S]$ represents the conditional expectation with features in $S$ fixed at their instance values.`,
+      },
+      {
+        h: 'Additive feature attribution and efficiency axiom',
+        tex: r`$$f(x) = \\phi_0 + \\sum_{i=1}^M \\phi_i(x), \qquad \\phi_0 = \\mathbb{E}\\big[f(X)\\big]$$`,
+        p: r`Local accuracy (efficiency) guarantees that the sum of all feature attributions $\\phi_i(x)$ plus the base value $\\phi_0$ recovers the exact model prediction $f(x)$. Unlike heuristic attribution methods (e.g. split counts), SHAP never loses or invents prediction credit.`,
+      },
+      {
+        h: 'The four fundamental Shapley axioms',
+        tex: r`$$\\begin{aligned}
+\\text{Efficiency:} & \\quad \\sum_{i=1}^M \\phi_i(x) = f(x) - \\mathbb{E}[f(X)] \\\\
+\\text{Symmetry:} & \\quad f(S \\cup \\{i\\}) = f(S \\cup \\{j\\}) \\implies \\phi_i = \\phi_j \\\\
+\\text{Dummy (Null):} & \\quad f(S \\cup \\{i\\}) = f(S) \\implies \\phi_i = 0 \\\\
+\\text{Additivity:} & \\quad \\phi_i(f + g) = \\phi_i(f) + \\phi_i(g)
+\\end{aligned}$$`,
+        p: r`Shapley proved that the Shapley formula is the unique attribution method satisfying all four axioms simultaneously. If an attribution method violates consistency, altering a model such that a feature contributes more can paradoxically lower that feature's assigned importance.`,
+      },
+    ],
+    code: r`import numpy as np
+import math
+from itertools import combinations
+
+# Model with interaction: f(x) = 2*x0 + 3*x1 + 4*x0*x1 (x2 is dummy)
+def f(x):
+    return 2.0 * x[0] + 3.0 * x[1] + 4.0 * x[0] * x[1]
+
+x_inst = np.array([1.0, 1.0, 0.5])
+base = np.array([0.0, 0.0, 0.0])
+M = 3
+phi = np.zeros(M)
+
+# Compute exact Shapley values across all 2^M coalitions
+for i in range(M):
+    rest = [j for j in range(M) if j != i]
+    for s_len in range(M):
+        for S in combinations(rest, s_len):
+            x_wo, x_w = base.copy(), base.copy()
+            for j in S:
+                x_wo[j] = x_inst[j]
+                x_w[j] = x_inst[j]
+            x_w[i] = x_inst[i]
+            w = math.factorial(len(S)) * math.factorial(M - len(S) - 1) / math.factorial(M)
+            phi[i] += w * (f(x_w) - f(x_wo))
+
+print(f"Prediction: {f(x_inst):.2f}")
+print(f"Baseline:   {f(base):.2f}")
+print(f"SHAP attributions [x0, x1, x2]: {phi.round(2)}")
+print(f"Sum of attributions: {np.sum(phi):.2f}")`,
+    pitfalls: [
+      r`Exponential complexity of exact Shapley values: Calculating exact attributions across $M$ features requires evaluating $2^M$ coalitions. For large $M$, models require polynomial TreeSHAP or sampled KernelSHAP approximations.`,
+      r`Feature correlation and unrealistic background coalitions: When features are strongly correlated, marginal expectation approximations can query models on impossible feature combinations (e.g. low weight, massive BMI), distorting attribution.`,
+      r`Conflating SHAP attributions with causal effects: SHAP explains how the statistical model uses features to make predictions; it does not prove that changing a feature in the real world will causally shift the outcome.`,
+      r`Choice of background dataset: In KernelSHAP and TreeSHAP, the baseline value $\\phi_0$ depends directly on the chosen background distribution; using a biased reference sample shifts all attribution values.`,
+    ],
+    keyPoints: [
+      r`Grounded in cooperative game theory; uniquely satisfies efficiency, symmetry, dummy player, and additivity axioms.`,
+      r`Provides both local explanations (instance-level waterfall plots) and global insights (beeswarm summary plots).`,
+      r`TreeSHAP computes exact Shapley values in polynomial time $O(T L D^2)$ for tree ensembles.`,
+      r`Fairly divides the credit of non-linear feature interactions among participating features.`,
+    ],
+    quiz: [
+      {
+        q: r`What does the Efficiency axiom guarantee in SHAP feature attribution?`,
+        o: [
+          r`The model executes in $O(1)$ time`,
+          r`The sum of all feature SHAP values equals the difference between the model prediction $f(x)$ and the baseline expected value $\\mathbb{E}[f(X)]$`,
+          r`All features have equal variance across training folds`,
+          r`The model achieves 100% training accuracy`,
+        ],
+        a: 1,
+        why: r`The efficiency (local accuracy) axiom guarantees that the sum of attributions $\\sum \\phi_i(x)$ perfectly bridges the gap between the expected baseline prediction $\\phi_0$ and the instance prediction $f(x)$ with zero unaccounted credit.`,
+      },
+      {
+        q: r`Why is TreeSHAP widely preferred over KernelSHAP when explaining tree ensembles like XGBoost and LightGBM?`,
+        o: [
+          r`TreeSHAP only works on linear regression models`,
+          r`TreeSHAP ignores all interaction terms between features`,
+          r`TreeSHAP requires no training data whatsoever`,
+          r`TreeSHAP exploits tree graph structure to compute exact Shapley values in polynomial time $O(T L D^2)$ instead of exponential sampling`,
+        ],
+        a: 3,
+        why: r`While model-agnostic KernelSHAP must sample exponential coalitions ($2^M$), TreeSHAP recurses down decision tree paths, tracking conditional feature distributions in polynomial time relative to tree depth and leaf counts.`,
+      },
+      {
+        q: r`If a feature has zero marginal impact across every single coalition of features ($f(S \\cup \\{i\\}) = f(S)$ for all $S$), what is its SHAP value according to the Dummy axiom?`,
+        o: [
+          r`Exactly 0`,
+          r`Equal to the baseline value $\\phi_0$`,
+          r`Negative infinity`,
+          r`Equal to the average of all other features`,
+        ],
+        a: 0,
+        why: r`The Dummy (or Null player) axiom mandates that if a feature never contributes to altering model predictions in any context, its allocated credit must be strictly 0.`,
+      },
+      {
+        q: r`Why must SHAP explanations NOT be treated as direct causal statements about the real world?`,
+        o: [
+          r`Because SHAP values cannot be computed on continuous variables`,
+          r`Because SHAP reflects the predictive associations learned by the model, which can rely on confounding variables and proxy correlations rather than causal mechanisms`,
+          r`Because Shapley values are non-deterministic`,
+          r`Because SHAP values are always positive numbers`,
+        ],
+        a: 1,
+        why: r`SHAP explains the internal decision surface of the mathematical model. If a model predicts health outcomes using hospital visit counts as a correlation proxy, SHAP attributes high importance to visits, but hospital visits do not cause illness.`,
+      },
+    ],
+    usedBy: ['gradient_boosted_classifiers', 'random_forest_classifier'],
+    prereq: ['random_forest_classifier', 'gradient_boosted_classifiers'],
+    related: ['permutation-and-impurity-feature-importance', 'pdp-ice-and-ale-plots', 'random_forest_classifier'],
+    keywords: 'shap shapley values additive explanations model interpretability treeshap kernelshap feature attribution xai',
+  },
+  {
+    id: 'pdp-ice-and-ale-plots',
+    short: 'PDP, ICE and ALE plots',
+    title: 'Partial Dependence, ICE and ALE Plots',
+    task: 'concepts',
+    module: 'Interpretability and fairness',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Model-agnostic visualisations of feature effects: comparing global marginal averages (PDP), individual instance trajectories (ICE), and correlation-safe local differences (ALE).`,
+    lead: r`Global feature importance scores like PFI and SHAP reveal which features matter, but they do not show the direction or functional shape of those relationships. Partial Dependence Plots (PDP) and Individual Conditional Expectation (ICE) curves map how model predictions shift as a target feature varies across its domain. Accumulated Local Effects (ALE) plots resolve the catastrophic extrapolation errors that plague PDPs when features are strongly correlated, providing robust, unpolluted visualisations of complex machine learning models.`,
+    intuition: [
+      r`Suppose a real estate model predicts house prices using square footage and number of bedrooms. You want to understand: "If a house gains 500 square feet, how much does its predicted price increase?" A Partial Dependence Plot (PDP) answers this by taking every house in your dataset, artificially overwriting its square footage with a specific grid value (e.g. 2,000 sq ft), predicting all prices, and calculating the overall average. By repeating this across a grid of sizes, PDP draws a smooth curve showing the general relationship between area and price.`,
+      r`However, PDP has two major blind spots. First, it averages away individual differences. If an extra bedroom increases value for large suburban family homes but decreases value for urban studio flats, the upward and downward slopes cancel each other out, leaving PDP with a flat, deceptive horizontal line. Individual Conditional Expectation (ICE) fixes this by plotting a separate curve for every individual house. Instead of a single averaged line, ICE renders a bundle of trajectories, immediately revealing whether all houses react similarly or if distinct subgroups diverge.`,
+      r`The second flaw of PDP is extrapolation on correlated data. Square footage and bedroom count are tightly correlated: 5-bedroom homes are almost never 400 square feet. Yet PDP forces that exact combination into the model, generating nonsensical predictions that contaminate the curve. Accumulated Local Effects (ALE) eliminates this by computing prediction differences strictly within narrow local conditional slices of data (e.g. houses between 1,900 and 2,100 sq ft) and accumulating those differences along the axis, keeping the evaluation entirely within real-world data distributions.`,
+    ],
+    analogy: r`Inspecting medical treatment responses: PDP shows the average patient improvement, ICE plots each patient's individual vital trajectory to catch adverse subgroup reactions, and ALE evaluates responses strictly within appropriate age cohorts rather than dosing toddlers with adult regimens.`,
+    steps: [
+      r`Select the feature of interest $x_S$ (e.g. continuous predictor or low-cardinality discrete variable) and define a grid of evaluation values across its range.`,
+      r`Compute ICE trajectories: for each instance $i$ in the dataset, substitute its feature value with each grid point $z_k$ while preserving all other features $x_C^{(i)}$, and evaluate the model prediction $\\hat{f}(z_k, x_C^{(i)})$.`,
+      r`Generate the PDP curve: compute the pointwise arithmetic mean of all ICE curves across each grid point: $\\bar{f}_S(z_k) = \\frac{1}{n} \\sum_{i=1}^n \\hat{f}(z_k, x_C^{(i)})$.`,
+      r`Detect interactions in ICE: look for non-parallel or crossing ICE curves; parallel trajectories confirm additive effects, while diverging lines indicate strong interactions with other features.`,
+      r`Compute ALE plots if features are correlated: partition $x_S$ into narrow intervals, calculate local prediction differences for instances falling inside each interval, and accumulate the average differences across bins.`,
+      r`Centre the curves: centre ALE at zero so the vertical axis reflects the deviation from the overall dataset mean prediction.`,
+    ],
+    math: [
+      {
+        h: 'Partial Dependence Plot (PDP) formulation',
+        tex: r`$$\\hat{f}_{S}(x_S) = \\mathbb{E}_{X_C}\\big[ \\hat{f}(x_S, X_C) \\big] = \\frac{1}{n} \\sum_{i=1}^n \\hat{f}\\big(x_S, \, x_C^{(i)}\\big)$$`,
+        p: r`where $x_S$ is the feature subset under inspection and $X_C$ represents all other conditioning features. By evaluating the sample average over all $n$ background instances $x_C^{(i)}$, PDP marginalises out the effect of conditioning variables. When $X_S$ and $X_C$ are correlated, this marginalisation forces predictions in unobserved feature spaces.`,
+      },
+      {
+        h: 'Individual Conditional Expectation (ICE) curves',
+        tex: r`$$\\hat{f}_{S}^{(i)}(x_S) = \\hat{f}\\big(x_S, \, x_C^{(i)}\\big), \qquad \\hat{f}_S(x_S) = \\frac{1}{n} \\sum_{i=1}^n \\hat{f}_S^{(i)}(x_S)$$`,
+        p: r`An ICE plot displays the $n$ individual lines $\\hat{f}_S^{(i)}$ simultaneously. Centred ICE (c-ICE) anchors each line at zero at the minimum grid point: $\\hat{f}_{S,\\text{cent}}^{(i)}(x_S) = \\hat{f}_S^{(i)}(x_S) - \\hat{f}_S^{(i)}(x_{S,\\min})$, removing baseline offset differences to highlight heterogeneous slopes.`,
+      },
+      {
+        h: 'Accumulated Local Effects (ALE) formulation',
+        tex: r`$$\\hat{f}_{ALE}(x_S) = \\int_{z_0}^{x_S} \\mathbb{E}_{X_C \\mid X_S = z_S}\\left[ \\frac{\\partial \\hat{f}}{\\partial X_S}(z_S, X_C) \\right] dz_S - c$$`,
+        p: r`where $c$ is a centring constant ensuring $\\mathbb{E}[\\hat{f}_{ALE}(X_S)] = 0$. ALE computes the conditional gradient (or finite differences in empirical bins) strictly among instances whose feature value $X_S$ actually lies near $z_S$, eliminating the unobserved extrapolation errors of PDP.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Model with interaction: f(x1, x2) = x1 * x2 (where x2 in {-1, +1})
+rng = np.random.default_rng(42)
+n = 60
+x1 = rng.uniform(-2, 2, n)
+x2 = rng.choice([-1.0, 1.0], size=n)
+y = x1 * x2
+
+# Evaluation grid for feature x1
+grid = np.linspace(-2, 2, 9)
+
+# Compute ICE curves for all instances
+ice_curves = np.zeros((n, len(grid)))
+for i in range(n):
+    for g_idx, val in enumerate(grid):
+        ice_curves[i, g_idx] = val * x2[i]
+
+# PDP is the pointwise average of ICE curves
+pdp = np.mean(ice_curves, axis=0)
+
+print(f"Grid values: {[round(float(v), 1) for v in grid]}")
+print(f"PDP values:  {[round(float(v), 2) for v in pdp]}")
+print(f"ICE curve instance 0 (x2={x2[0]:.0f}): {[round(float(v), 2) for v in ice_curves[0]]}")
+print(f"ICE curve instance 1 (x2={x2[1]:.0f}): {[round(float(v), 2) for v in ice_curves[1]]}")`,
+    pitfalls: [
+      r`PDP extrapolation on correlated features: Averaging predictions across synthetic combinations that cannot exist in reality distorts the partial dependence curve with nonsensical model extrapolations.`,
+      r`Hidden interactions in flat PDPs: A flat horizontal PDP line does not guarantee that a feature has no effect; equal numbers of positive and negative subgroup effects cancel out to zero unless inspected via ICE.`,
+      r`Computational cost of ICE: For large datasets ($n > 100{,}000$), computing predictions across $n$ instances for $K$ grid points requires $n \times K$ model inferences, requiring subsampling to 500 or 1,000 curves.`,
+      r`Misinterpreting ALE centring: ALE curves are centred around zero; the vertical axis represents difference from average prediction, not the absolute prediction scale.`,
+    ],
+    keyPoints: [
+      r`PDP reveals average marginal feature relationships; ICE exposes individual subgroup heterogeneity and interaction effects.`,
+      r`Parallel ICE lines indicate pure additive effects; intersecting or diverging lines indicate strong interactions.`,
+      r`ALE plots prevent dangerous extrapolation errors when features are correlated by evaluating local conditional differences.`,
+      r`Centred ICE (c-ICE) subtracts instance baselines to isolate heterogeneous response slopes.`,
+    ],
+    quiz: [
+      {
+        q: r`Why can a Partial Dependence Plot (PDP) show a completely flat horizontal line even when a feature has a massive impact on predictions?`,
+        o: [
+          r`Because the model is underfitting`,
+          r`Because PDP can only be calculated on linear regression models`,
+          r`Because opposing subgroup effects (e.g. positive impact on males and negative impact on females) cancel each other out during averaging`,
+          r`Because the feature values were not normalised`,
+        ],
+        a: 2,
+        why: r`PDP computes the average prediction across all instances. If a feature interacts with another variable such that it increases predictions for half the dataset and decreases them for the other half, the average remains flat. ICE plots unmask these hidden interactions.`,
+      },
+      {
+        q: r`What critical flaw in Partial Dependence Plots (PDP) does Accumulated Local Effects (ALE) solve?`,
+        o: [
+          r`PDP cannot run on GPU clusters`,
+          r`PDP creates unrealistic, out-of-distribution synthetic points when features are correlated, while ALE evaluates differences strictly within local conditional slices`,
+          r`PDP is non-deterministic, while ALE is exact`,
+          r`PDP requires training deep neural networks`,
+        ],
+        a: 1,
+        why: r`When features are correlated (such as height and weight), PDP pairs extreme values together that never appear in reality. ALE computes differences only within narrow local intervals of real data, avoiding out-of-distribution extrapolation.`,
+      },
+      {
+        q: r`How does an Individual Conditional Expectation (ICE) plot differ from a Partial Dependence Plot (PDP)?`,
+        o: [
+          r`ICE plots a separate prediction trajectory for every individual instance, whereas PDP averages those curves into a single line`,
+          r`ICE is evaluated on training data, while PDP is evaluated on test data`,
+          r`ICE only works for tree-based models`,
+          r`ICE evaluates classification accuracy rather than prediction outputs`,
+        ],
+        a: 0,
+        why: r`PDP is the point-by-point average of all individual ICE curves. Viewing the individual ICE curves exposes whether all samples follow the average trend or whether distinct clusters of instances diverge.`,
+      },
+      {
+        q: r`What visual pattern in an ICE plot indicates that a feature has purely additive effects with zero interactions with other features?`,
+        o: [
+          r`All ICE curves intersect at the origin`,
+          r`The ICE curves form a vertical wall`,
+          r`All ICE curves are perfectly parallel to one another`,
+          r`The curves form circular concentric rings`,
+        ],
+        a: 2,
+        why: r`If a feature operates additively ($f(x_1, x_2) = g(x_1) + h(x_2)$), changing $x_1$ shifts the prediction by the exact same amount regardless of $x_2$. This makes all ICE curves vertical translations of one another (parallel).`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['permutation-and-impurity-feature-importance', 'shap'],
+    related: ['shap', 'permutation-and-impurity-feature-importance', 'random_forest_classifier'],
+    keywords: 'pdp ice ale partial dependence individual conditional expectation accumulated local effects model interpretability xai',
+  },
+  {
+    id: 'kernel-trick-and-mercers-condition',
+    short: 'Kernel trick & Mercer',
+    title: "Kernel Trick and Mercer's Condition",
+    task: 'concepts',
+    module: 'Learning theory',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Implicitly mapping data into high- or infinite-dimensional Hilbert spaces using positive semidefinite kernel functions without explicit coordinate transformations.`,
+    lead: r`Linear algorithms like Support Vector Machines, ridge regression, and PCA are computationally efficient but fail when data is separated by non-linear decision boundaries. Explicitly mapping features into higher-dimensional polynomial or exponential spaces incurs prohibitive memory and computational costs. The kernel trick replaces explicit transformations with pairwise inner-product evaluations, while Mercer's theorem provides the definitive mathematical condition guaranteeing that a symmetric kernel corresponds to a valid Hilbert feature space.`,
+    intuition: [
+      r`Imagine looking at a flat sheet of rubber where blue pebbles are arranged in a tight inner circle surrounded by a ring of red pebbles. No matter where you draw a straight line with a ruler across the sheet, you cannot separate the blue circle from the surrounding red ring (it is non-linearly separable in 2D). However, if you poke your finger upward beneath the centre of the rubber sheet, the blue pebbles rise into a 3D dome while the red ring remains on the table. You can now slide a flat sheet of cardboard horizontally underneath the dome, cleanly separating the two colours with a flat 2D plane.`,
+      r`This is the core insight of non-linear machine learning: data that is hopelessly entangled in low dimensions often becomes cleanly linearly separable when mapped into a higher-dimensional feature space. But mapping every point into a 10,000-dimensional or infinite-dimensional coordinate space is computationally impossible. You would run out of computer memory before computing the coordinates for a single vector.`,
+      r`The kernel trick performs mathematical sleight of hand. Many linear algorithms depend exclusively on the dot product between data points $\\langle x, z \\rangle$, never on individual coordinates in isolation. The kernel trick replaces that simple dot product with a kernel function $K(x, z) = \\langle \\phi(x), \\phi(z) \\rangle$ that directly evaluates the inner product in the high-dimensional space without ever calculating or storing the high-dimensional coordinates $\\phi(x)$. Mercer's condition ensures that as long as the kernel function produces a positive semidefinite Gram matrix, a valid underlying Hilbert geometry is guaranteed to exist.`,
+    ],
+    analogy: r`Calculating the distance between two ships over the curvature of the Earth using latitude and longitude coordinates, without needing to excavate a physical 3D tunnel through the Earth's mantle.`,
+    steps: [
+      r`Identify the inner-product dependency: verify that the learning algorithm (e.g. SVM dual, Ridge regression, PCA) can be expressed purely in terms of pairwise dot products $\\langle x_i, x_j \\rangle$.`,
+      r`Select a kernel function $K(x, z)$ suited to the problem structure (e.g. polynomial, Radial Basis Function (RBF), or sigmoid).`,
+      r`Verify Mercer's condition: confirm that the candidate kernel is continuous, symmetric ($K(x, z) = K(z, x)$), and positive semidefinite (all Gram matrix eigenvalues $\\lambda_i \\ge 0$).`,
+      r`Compute the kernel Gram matrix $K \\in \\mathbb{R}^{n \\times n}$ across training instances: $K_{ij} = K(x_i, x_j)$.`,
+      r`Solve the dual optimisation problem (e.g. dual ridge weights $\\alpha = (K + \\lambda I)^{-1} y$ or SVM dual multipliers).`,
+      r`Evaluate test instances using kernel evaluations against training support instances: $f(x) = \\sum_{i=1}^n \\alpha_i K(x_i, x) + b$.`,
+    ],
+    math: [
+      {
+        h: 'Mercer\'s Theorem and positive semidefiniteness',
+        tex: r`$$\\iint K(x, z) \\, g(x) \\, g(z) \\, dx \\, dz \\ge 0 \quad \forall \, g \in L_2, \qquad K(x, z) = \\sum_{i=1}^\\infty \\lambda_i \\, \\psi_i(x) \\, \\psi_i(z)$$`,
+        p: r`Mercer's theorem (1909) states that a continuous, symmetric kernel $K(x, z)$ corresponds to an inner product in a Reproducing Kernel Hilbert Space (RKHS) if and only if it is positive semidefinite. The eigenfunctions $\\psi_i(x)$ and non-negative eigenvalues $\\lambda_i \\ge 0$ define the implicit mapping $\\phi(x) = \\big[\\sqrt{\\lambda_1}\\psi_1(x), \\sqrt{\\lambda_2}\\psi_2(x), \\dots\\big]^T$.`,
+      },
+      {
+        h: 'Finite-sample Gram matrix condition',
+        tex: r`$$c^T K c = \\sum_{i=1}^n \\sum_{j=1}^n c_i c_j K(x_i, x_j) \\ge 0 \quad \forall \, c \in \\mathbb{R}^n$$`,
+        p: r`For any finite dataset $\\{x_1, \\dots, x_n\\}$, the kernel Gram matrix $K \\in \\mathbb{R}^{n \\times n}$ with entries $K_{ij} = K(x_i, x_j)$ must be positive semidefinite. All eigenvalues of $K$ must be non-negative, ensuring that the quadratic optimisation problem remains convex.`,
+      },
+      {
+        h: 'Radial Basis Function (RBF) infinite-dimensional expansion',
+        tex: r`$$K_{\\text{RBF}}(x, z) = \\exp\\left(-\\gamma \\|x - z\\|^2\\right) = \\exp(-\\gamma \\|x\\|^2) \\exp(-\\gamma \\|z\\|^2) \\sum_{k=0}^\\infty \\frac{(2\\gamma)^k}{k!} (x^T z)^k$$`,
+        p: r`Applying Taylor series expansion to the cross-term $\\exp(2\\gamma x^T z)$ demonstrates that the RBF (Gaussian) kernel corresponds to an inner product in an infinite-dimensional feature space. The kernel trick computes this infinite dot product in a single closed-form scalar evaluation.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Non-linear 1D function: y = sin(x) + noise
+rng = np.random.default_rng(42)
+x_train = np.linspace(-3, 3, 25)[:, None]
+y_train = np.sin(x_train[:, 0]) + rng.normal(0, 0.1, 25)
+
+# RBF kernel function: K(x, z) = exp(-gamma * ||x - z||^2)
+gamma, lam = 1.0, 0.01
+D2_tr = (x_train - x_train.T) ** 2
+K_tr = np.exp(-gamma * D2_tr)
+
+# Verify Mercer's condition: Gram matrix eigenvalues must be >= 0
+eigvals = np.linalg.eigvalsh(K_tr)
+is_psd = np.all(eigvals >= -1e-10)
+
+# Dual solve for Kernel Ridge Regression: alpha = (K + lambda * I)^{-1} y
+alpha = np.linalg.solve(K_tr + lam * np.eye(len(x_train)), y_train)
+
+# Test evaluation via kernel trick: f(x_test) = sum alpha_i * K(x_i, x_test)
+x_test = np.array([[-1.5], [0.0], [1.5]])
+D2_te = (x_train - x_test.T) ** 2
+K_te = np.exp(-gamma * D2_te)
+y_pred = K_te.T @ alpha
+
+print(f"Gram matrix min eigenvalue: {np.min(eigvals):.6f} (Mercer PSD: {is_psd})")
+print(f"True sin(x_test):  {[round(float(v), 3) for v in np.sin(x_test[:, 0])]}")
+print(f"Kernel prediction: {[round(float(v), 3) for v in y_pred]}")`,
+    pitfalls: [
+      r`Quadratic memory and cubic computation: Storing the Gram matrix requires $O(n^2)$ memory, and inverting it requires $O(n^3)$ compute, making exact kernel methods unscalable to millions of samples without Nyström or random Fourier approximations.`,
+      r`Overfitting via excessive kernel bandwidth: In RBF kernels, setting $\\gamma$ too high narrows the Gaussian bell curve into sharp isolated spikes around individual training points, collapsing generalisation.`,
+      r`Using non-Mercer kernels in convex solvers: Functions that do not produce positive semidefinite matrices (such as certain hyperbolic tangents) violate Mercer's theorem, destroying convexity and causing dual solvers to diverge.`,
+      r`Curse of dimensionality in kernel space: High-dimensional input spaces cause pairwise Euclidean distances in RBF kernels to concentrate, making all off-diagonal kernel entries decay to near-zero.`,
+    ],
+    keyPoints: [
+      r`Enables linear algorithms to learn non-linear boundaries by substituting dot products with kernel functions.`,
+      r`Avoids the computational bottleneck of explicitly constructing high- or infinite-dimensional feature spaces.`,
+      r`Mercer's condition requires the kernel Gram matrix to be positive semidefinite, guaranteeing a valid Hilbert space.`,
+      r`The RBF Gaussian kernel implicitly projects data into an infinite-dimensional feature space via its Taylor expansion.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the core mathematical premise of the "kernel trick"?`,
+        o: [
+          r`It converts continuous variables into discrete binary flags`,
+          r`It computes inner products in a high-dimensional feature space using a function evaluated directly on low-dimensional inputs, without explicitly computing feature coordinates`,
+          r`It removes all outliers from the training distribution`,
+          r`It inverts matrices using gradient descent instead of LU decomposition`,
+        ],
+        a: 1,
+        why: r`The kernel trick evaluates $K(x, z) = \\langle \\phi(x), \\phi(z) \\rangle$ directly on raw coordinates, bypassing the immense (or infinite) computational cost of computing the transformed feature vectors $\\phi(x)$ and $\\phi(z)$.`,
+      },
+      {
+        q: r`What does Mercer's theorem establish about a continuous, symmetric function $K(x, z)$?`,
+        o: [
+          r`It guarantees the function can be evaluated in $O(1)$ constant time`,
+          r`It proves the function corresponds to an inner product in a valid Hilbert space if and only if its Gram matrix is positive semidefinite`,
+          r`It ensures that all classification errors are strictly zero`,
+          r`It forces all eigenvalues of the feature matrix to equal 1.0`,
+        ],
+        a: 1,
+        why: r`Mercer's theorem proves that positive semidefiniteness ($\\iint K(x, z) g(x) g(z) dx dz \\ge 0$) is the necessary and sufficient condition for a continuous symmetric kernel to represent an inner product in a Reproducing Kernel Hilbert Space.`,
+      },
+      {
+        q: r`Into what dimensionality does the Radial Basis Function (RBF / Gaussian) kernel implicitly map input data?`,
+        o: [
+          r`Exactly twice the input dimension ($2d$)`,
+          r`A finite quadratic polynomial space ($d^2 / 2$)`,
+          r`An infinite-dimensional Hilbert space`,
+          r`One-dimensional scalar space`,
+        ],
+        a: 2,
+        why: r`The Taylor series expansion of $\\exp(2\\gamma x^T z)$ contains an infinite series of polynomial terms $(x^T z)^k / k!$, corresponding to an inner product in an infinite-dimensional feature space.`,
+      },
+      {
+        q: r`What is a primary computational limitation of exact kernel methods when scaling to very large datasets ($n > 100{,}000$)?`,
+        o: [
+          r`The Gram matrix requires $O(n^2)$ memory to store and $O(n^3)$ operations to invert`,
+          r`Kernels cannot process floating-point numbers`,
+          r`The kernel trick only works when the number of features exceeds the number of samples ($d > n$)`,
+          r`Mercer's theorem fails when $n$ is an even number`,
+        ],
+        a: 0,
+        why: r`Because the Gram matrix $K$ scales with the square of the sample size ($n \times n$), computing and storing it for large $n$ rapidly exceeds memory limits, requiring approximate methods like Random Fourier Features or Nyström sampling.`,
+      },
+    ],
+    usedBy: ['support_vector_classifier'],
+    prereq: ['support_vector_classifier', 'convex-optimisation-and-duality'],
+    related: ['support_vector_classifier', 'pca', 'convex-optimisation-and-duality'],
+    keywords: 'kernel trick mercer condition rbf kernel gram matrix hilbert space support vector machines positive semidefinite',
+  },
 ];
