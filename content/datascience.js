@@ -1378,4 +1378,504 @@ print(f"sMAPE: {smape(y_actual, y_pred):.1f}%")`,
     related: ['train-validation-test-splits-group-and-time-based', 'data-leakage', 'outlier-handling'],
     keywords: 'forecast metrics mae mase smape wape mape time series demand forecasting scale independent hyndman',
   },
+  {
+    id: 'time-series-cross-validation',
+    short: 'Time-series cross-validation',
+    title: 'Time-Series Cross-Validation',
+    task: 'concepts',
+    module: 'Forecasting at scale',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Evaluating sequential forecasters with expanding or rolling temporal windows, enforcing causal forward testing without lookahead contamination.`,
+    lead: r`Standard k-fold cross-validation shuffles observations at random, which permits models predicting past events to learn from future data. Time-series cross-validation respects the chronological arrow of time by training strictly on historical windows and testing on subsequent future horizons. Selecting between expanding windows, rolling fixed-length windows, and inserting purge/embargo buffers guarantees that backtest metrics faithfully mirror live operational accuracy.`,
+    intuition: [
+      r`Imagine evaluating a weather model that predicts daily rainfall. If you randomly partition 365 calendar days into 5 standard cross-validation folds, fold 1 might test on a rainy Tuesday in April while training on Monday in April, Wednesday in April, and November storms. The model effectively interpolates between known adjacent data points. In reality, on 15 April you only possess data up to 14 April. Shuffled cross-validation dramatically overestimates accuracy because the model exploits future information that will never exist at forecast origin.`,
+      r`Walk-forward evaluation (also known as rolling-origin evaluation) replicates true operational deployment. In the first split, you train on months 1 to 6 and forecast month 7. In the second split, you expand the training window to include months 1 to 7 and forecast month 8. In the third split, you train on months 1 to 8 and forecast month 9. At every step, the forecast origin moves forward in time, generating out-of-sample predictions strictly on future periods.`,
+      r`The choice between an expanding window and a rolling window depends on stationarity. An expanding window retains all historical data, maximising sample size for stable long-term processes. A rolling window maintains a fixed duration (e.g. exactly 180 days), dropping older observations as new ones arrive. When underlying economic regimes, consumer tastes, or operational processes drift, rolling windows prevent obsolete historical patterns from misleading contemporary forecasts.`,
+    ],
+    analogy: r`Testing an investment fund manager day-by-day as the financial calendar advances, rather than letting them trade past quarters using tomorrow's newspaper.`,
+    steps: [
+      r`Define forecast horizon $H$: fix the exact number of future time steps the model must predict simultaneously in production (e.g. 7 days or 12 weeks).`,
+      r`Determine initial training length $T_0$ and stride $S$: establish the minimum warm-up history required for stable model estimation and the step size between evaluation origins.`,
+      r`Choose window geometry: adopt an expanding window if older data reinforces seasonal baselines, or a rolling fixed window if historical regimes become stale.`,
+      r`Enforce purge and embargo margins: purge observations whose feature lookback windows overlap with training data, and embargo between consecutive folds if labels have multi-step duration.`,
+      r`Aggregate out-of-fold performance: compute metrics like MAE, WAPE, or MASE across all evaluation origins to produce a robust temporal generalisation score.`,
+    ],
+    math: [
+      {
+        h: 'Expanding window walk-forward split partition',
+        tex: r`\mathcal{D}_{\text{train}}^{(k)} = \{ (x_t, y_t) \mid t \le T_0 + k \cdot S \}, \qquad \mathcal{D}_{\text{val}}^{(k)} = \{ (x_t, y_t) \mid T_0 + k \cdot S < t \le T_0 + k \cdot S + H \}`,
+        p: r`Where $T_0$ is the initial training duration, $S$ is the stride between forecast origins, and $H$ is the forecast horizon. Every split strictly enforces $\max(t_{\text{train}}) < \min(t_{\text{val}})$, ensuring complete temporal causality.`,
+      },
+      {
+        h: 'Rolling fixed-width window partition',
+        tex: r`\mathcal{D}_{\text{train, rolling}}^{(k)} = \{ (x_t, y_t) \mid T_0 + k \cdot S - W < t \le T_0 + k \cdot S \}`,
+        p: r`Where $W$ is the fixed historical window length. Observations older than $t - W$ are discarded, preventing obsolete structural regimes from biasing model parameters.`,
+      },
+      {
+        h: 'Multi-horizon aggregate forecast loss',
+        tex: r`\mathcal{L}_{\text{TSCV}} = \frac{1}{K \cdot H} \sum_{k=0}^{K-1} \sum_{h=1}^H L\left(y_{T_k + h}, \hat{y}_{T_k + h \mid T_k}\right)`,
+        p: r`Where $\hat{y}_{T_k + h \mid T_k}$ is the forecast generated at origin $T_k = T_0 + k \cdot S$ for lead time $h$. Averaging loss across multiple origins reduces evaluation variance caused by single-period anomalies.`,
+      },
+    ],
+    keyPoints: [
+      r`Walk-forward evaluation preserves temporal causality, completely eliminating lookahead leakage in forecasting benchmarks.`,
+      r`Expanding windows maximise training sample size; rolling windows drop outdated historical data in non-stationary series.`,
+      r`Multi-origin evaluation exposes models to diverse seasonal phases, holidays, and economic cycles.`,
+    ],
+    pitfalls: [
+      r`Using standard shuffled k-fold cross-validation on time-series data, which leaks future information into training folds.`,
+      r`Relying on a single train-test split: a single holdout month may coincide with an outlier event (e.g. severe blizzard or supply shock), yielding misleading validation metrics.`,
+      r`Mismatching evaluation horizon with operational reality: evaluating one-step-ahead forecasts when production demands fourteen-day cumulative supply planning.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+T = 40
+t = np.arange(T)
+y = 10.0 + 0.5 * t + np.random.normal(0, 1.0, size=T)
+
+# Walk-forward expanding window cross-validation (horizon H=3, step S=3, initial T0=25)
+T0, H, S = 25, 3, 3
+n_splits = (T - T0) // S
+maes = []
+
+for k in range(n_splits):
+    split_t = T0 + k * S
+    train_idx = np.arange(split_t)
+    val_idx = np.arange(split_t, split_t + H)
+    
+    # Fit simple autoregressive lag-1 model on historical window
+    y_tr_y = y[train_idx[1:]]
+    y_tr_x = y[train_idx[:-1]]
+    a, b = np.polyfit(y_tr_x, y_tr_y, 1)
+    
+    # 3-step recursive forecast
+    preds = []
+    curr = y[train_idx[-1]]
+    for _ in range(H):
+        curr = a * curr + b
+        preds.append(curr)
+    
+    mae_k = np.mean(np.abs(y[val_idx] - np.array(preds)))
+    maes.append(mae_k)
+    print(f"Fold {k}: Train t=0..{split_t-1}, Test t={split_t}..{split_t+H-1}, MAE: {mae_k:.2f}")
+
+print(f"Average Walk-Forward MAE: {np.mean(maes):.2f}")`,
+    quiz: [
+      {
+        q: r`Why is standard randomly shuffled k-fold cross-validation invalid for evaluating time-series forecasting models?`,
+        o: [
+          r`It requires all time series to be strictly stationary`,
+          r`It scatters future time steps into training folds, enabling the model to predict past events using future knowledge`,
+          r`It can only be computed if the series contains exactly 100 observations`,
+          r`It converts continuous numerical series into discrete categories`,
+        ],
+        a: 1,
+        why: r`Shuffling destroys chronological ordering, allowing future observations to appear in the training fold when predicting past validation points (temporal lookahead leakage).`,
+      },
+      {
+        q: r`Under what condition is a rolling fixed-width window preferred over an expanding window in time-series cross-validation?`,
+        o: [
+          r`When the process is strictly stationary with zero trend`,
+          r`When underlying data-generating dynamics experience structural regime shifts or drift, making distant historical data counterproductive`,
+          r`When the dataset has fewer than 10 total time steps`,
+          r`When the forecast horizon H is equal to 1`,
+        ],
+        a: 1,
+        why: r`Rolling windows discard older observations past a fixed duration W, preventing outdated historical relationships from distorting current predictions when regimes shift.`,
+      },
+      {
+        q: r`Why is evaluating a forecasting model across multiple walk-forward origins superior to evaluating on a single fixed train/test split?`,
+        o: [
+          r`It guarantees that the training loss equals zero on all folds`,
+          r`It tests model resilience across varying economic cycles, seasonality phases, and volatility conditions, lowering evaluation variance`,
+          r`It removes the need to clean or validate the dataset`,
+          r`It allows the model to predict without input features`,
+        ],
+        a: 1,
+        why: r`A single test split might coincide with an unrepresentative period (such as an unusual promotion or supply chain disruption). Averaging across multiple origins yields a far more reliable generalisation metric.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['train-validation-test-splits-group-and-time-based', 'forecast-metrics-mae-mase-smape-wape'],
+    related: ['global-vs-local-models-gradient-boosting-for-forecasting', 'lag-and-rolling-window-features', 'data-leakage'],
+    keywords: 'time series cross validation walk forward rolling origin expanding window backtesting time series split purges embargo',
+  },
+  {
+    id: 'global-vs-local-models-gradient-boosting-for-forecasting',
+    short: 'Global vs local forecasting',
+    title: 'Global vs Local Models: Gradient Boosting for Forecasting',
+    task: 'concepts',
+    module: 'Forecasting at scale',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Comparing individual per-series models against pooled tabular gradient boosters that learn shared cross-series representations across millions of time series.`,
+    lead: r`Classical forecasting fits an independent model (such as ARIMA or ETS) to every individual series. While effective for isolated macroeconomic indicators, this local approach breaks down when managing thousands of retail products with short, noisy histories. Modern global forecasting trains a single machine learning model across all pooled time series simultaneously, cross-learning shared temporal dynamics, calendar events, and cross-sectional features.`,
+    intuition: [
+      r`Imagine a nationwide retailer managing 100,000 product-store combinations. A traditional local modelling strategy fits 100,000 independent ARIMA or exponential smoothing models every week. For a newly launched product with only three weeks of sales history, a local model fails completely because three data points are insufficient to estimate seasonal orders or trend parameters. If thousands of independent models fail to converge or require manual parameter tuning, maintaining the fleet becomes an operational impossibility.`,
+      r`A global model restructures the forecasting challenge into a large tabular regression problem. All 100,000 time series are stacked into a unified dataset where each row corresponds to a specific product, store, and timestamp. Features include historical lags, rolling statistics, calendar flags (day of week, month, holidays), and static entity attributes (category, store size, price tier). A single gradient boosted decision tree (such as LightGBM or XGBoost) is trained across all pooled records.`,
+      r`The global model cross-learns relationships across series: it discovers that discount promotions increase unit sales by 40% across all snack categories, and that sales dip on rainy Mondays across suburban stores. Because the model learns the structural mapping from features to demand, it can forecast a brand-new product on its very first day of sale by relying on its category, price, and store attributes. While local models remain ideal for isolated, high-frequency series with unique dynamics (like regional electrical grid load), global tree ensembles dominate large-scale retail competitions like the M5.`,
+    ],
+    analogy: r`A specialist doctor who has treated 10,000 diverse patients (global model) diagnosing a new patient instantly, versus a doctor who has only ever monitored one patient for a decade (local model).`,
+    steps: [
+      r`Unpivot panel data to long tabular structure: stack all series into rows containing series ID, timestamp, and target values.`,
+      r`Engineer temporal and metadata features: construct causal lag features, rolling summary statistics, calendar flags, and static entity properties.`,
+      r`Normalise series to handle scale heterogeneity: scale each series by its historical mean volume or train on log-transformed targets.`,
+      r`Train unified gradient boosting ensemble: fit LightGBM, CatBoost, or XGBoost minimising Huber or MAE loss across all pooled rows.`,
+      r`Benchmark against local baselines: compare the global model against naive persistence and local exponential smoothing baselines on holdout horizons.`,
+    ],
+    math: [
+      {
+        h: 'Local independent model formulation',
+        tex: r`\hat{y}_{i, t+h} = f_i\left(y_{i, 1:t}; \boldsymbol{\theta}_i\right), \qquad \boldsymbol{\theta}_i = \arg\min_{\boldsymbol{\theta}} \sum_{s=1}^t L\left(y_{i, s}, f_i(y_{i, 1:s-1}; \boldsymbol{\theta})\right)`,
+        p: r`Where an independent parameter vector $\boldsymbol{\theta}_i$ is estimated separately for each series $i \in \{1, \dots, N\}$. Parameters cannot be shared or transferred across series.`,
+      },
+      {
+        h: 'Global pooled model formulation',
+        tex: r`\hat{y}_{i, t+h} = F\left(\mathbf{x}_{i, t}, \mathbf{z}_i; \boldsymbol{\Theta}\right), \qquad \boldsymbol{\Theta} = \arg\min_{\boldsymbol{\Theta}} \sum_{i=1}^N \sum_{s=1}^{T_i} L\left(y_{i, s}, F(\mathbf{x}_{i, s-1}, \mathbf{z}_i; \boldsymbol{\Theta})\right)`,
+        p: r`Where $\mathbf{x}_{i, t}$ represents dynamic temporal features (lags, rolling stats), $\mathbf{z}_i$ represents static entity metadata, and parameter vector $\boldsymbol{\Theta}$ is shared across all $N$ series simultaneously.`,
+      },
+      {
+        h: 'Normalised scaling for global pooling',
+        tex: r`\tilde{y}_{i, t} = \frac{y_{i, t}}{s_i}, \qquad s_i = \frac{1}{T_i} \sum_{t=1}^{T_i} y_{i, t} + \epsilon`,
+        p: r`Dividing each series by its historical scale factor $s_i$ standardises target magnitudes across disparate products, preventing high-volume products from dominating gradient updates.`,
+      },
+    ],
+    keyPoints: [
+      r`Global models train a single estimator across thousands of pooled series, cross-learning shared patterns across items.`,
+      r`Global approaches naturally solve the cold-start problem by forecasting newly introduced products using static metadata attributes.`,
+      r`Scale normalisation is essential: without standardisation, high-volume series dictate tree split criteria at the expense of smaller series.`,
+    ],
+    pitfalls: [
+      r`Failing to normalise target scales across series: high-volume series dominate tree splits, causing poor predictions on low-volume items.`,
+      r`Cross-series leakage in rolling features: computing rolling averages without grouping by series ID, accidentally blending unrelated series together.`,
+      r`Overfitting on high-cardinality raw series IDs: treating series ID as an unregularised categorical feature causes trees to memorise individual historical trajectories.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n_series, time_steps = 4, 30
+scales = [10.0, 50.0, 100.0, 500.0]
+season = np.sin(2 * np.pi * np.arange(time_steps) / 7.0)
+
+all_series = []
+for s in scales:
+    noise = np.random.normal(0, 0.05, size=time_steps)
+    all_series.append(s * (1.0 + 0.3 * season + noise))
+
+train_len, horizon = 24, 6
+# 1. Local models: independent linear trend fitted per series
+local_maes = []
+for i in range(n_series):
+    s_tr = all_series[i][:train_len]
+    s_te = all_series[i][train_len:]
+    slope, intercept = np.polyfit(np.arange(train_len), s_tr, 1)
+    pred_local = slope * np.arange(train_len, train_len + horizon) + intercept
+    local_maes.append(np.mean(np.abs(s_te - pred_local)))
+
+# 2. Global model: pooled regression across series normalised by training mean
+X_pool, y_pool = [], []
+for i in range(n_series):
+    s_tr = all_series[i][:train_len]
+    scale_i = np.mean(s_tr)
+    norm_tr = s_tr / scale_i
+    for t_idx in range(7, train_len):
+        X_pool.append([norm_tr[t_idx-1], norm_tr[t_idx-7]])
+        y_pool.append(norm_tr[t_idx])
+
+X_pool, y_pool = np.array(X_pool), np.array(y_pool)
+w = np.linalg.lstsq(X_pool, y_pool, rcond=None)[0]
+
+global_maes = []
+for i in range(n_series):
+    s_tr = all_series[i][:train_len]
+    s_te = all_series[i][train_len:]
+    scale_i = np.mean(s_tr)
+    norm_tr = list(s_tr / scale_i)
+    preds_norm = []
+    for h in range(horizon):
+        pred_val = w[0] * norm_tr[-1] + w[1] * norm_tr[-7]
+        norm_tr.append(pred_val)
+        preds_norm.append(pred_val)
+    pred_global = np.array(preds_norm) * scale_i
+    global_maes.append(np.mean(np.abs(s_te - pred_global)))
+
+print(f"Local models mean test MAE across series:  {np.mean(local_maes):.2f}")
+print(f"Global model mean test MAE across series: {np.mean(global_maes):.2f}")`,
+    quiz: [
+      {
+        q: r`What is the primary operational advantage of a global forecasting model over thousands of local ARIMA models in large-scale retail?`,
+        o: [
+          r`Global models can only forecast one day ahead`,
+          r`A single global model learns shared patterns across all series, requires maintaining only one training pipeline, and can forecast cold-start items`,
+          r`Global models never require feature engineering`,
+          r`Global models guarantee that forecast errors are strictly zero`,
+        ],
+        a: 1,
+        why: r`Global models pool observations across all products and stores, learning general promotional and seasonal dynamics while dramatically simplifying pipeline maintenance compared to managing 100,000 separate models.`,
+      },
+      {
+        q: r`Why is target scale normalisation crucial when pooling disparate time series into a global gradient boosting model?`,
+        o: [
+          r`Because decision trees can only split on numbers between 0 and 1`,
+          r`To prevent high-volume series from dominating loss gradients and tree split points at the expense of lower-volume series`,
+          r`To convert all time series into categorical text strings`,
+          r`Because scikit-learn models crash if targets exceed 1,000 units`,
+        ],
+        a: 1,
+        why: r`If one series sells 50,000 units and another sells 20 units, absolute errors on the large series will overwhelm tree loss functions unless targets are normalised or log-transformed.`,
+      },
+      {
+        q: r`In which scenario is an independent local forecasting model typically preferred over a global pooled model?`,
+        o: [
+          r`When forecasting 50,000 retail SKUs with high product turnover and short sales histories`,
+          r`When forecasting a single, long, high-frequency time series with unique physical properties (such as electrical grid frequency) and no related series`,
+          r`When introducing a brand-new product with zero historical sales records`,
+          r`When all series have identical mean volume and identical seasonality`,
+        ],
+        a: 1,
+        why: r`When a single series has abundant history and highly specialised physical dynamics with no related series to learn from, a bespoke local model avoids negative transfer from irrelevant external data.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['time-series-cross-validation', 'forecast-metrics-mae-mase-smape-wape'],
+    related: ['lag-and-rolling-window-features', 'encoding-categoricals-one-hot-ordinal-target-woe', 'train-validation-test-splits-group-and-time-based'],
+    keywords: 'global forecasting local forecasting gradient boosting lightgbm arima panel data cross series learning m5 competition',
+  },
+  {
+    id: 'data-drift-psi-ks-and-jensen-shannon',
+    short: 'Data drift: PSI, KS and JS',
+    title: 'Data Drift: PSI, KS and Jensen–Shannon',
+    task: 'concepts',
+    module: 'Monitoring and drift',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Detecting distribution shifts in predictor features between training baseline and live production data using statistical distance metrics.`,
+    lead: r`Machine learning models assume that production inputs follow the same probability distribution as the training data. In reality, seasonal changes, consumer trends, sensor wear, and upstream schema modifications cause input distributions to shift—a phenomenon known as data drift or covariate shift. Population Stability Index (PSI), the Kolmogorov–Smirnov (KS) test, and Jensen–Shannon divergence quantify feature drift without requiring target labels.`,
+    intuition: [
+      r`Suppose a credit risk model is trained on loan applications submitted in 2021, when applicant incomes averaged £45,000 and the median applicant age was 42. In 2024, the bank launches a student mobile app. Suddenly, 60% of incoming applicants are aged 18 to 24 with part-time incomes under £15,000. Even if the model's software pipeline runs without throwing exceptions, the inputs have shifted into a sparse, unrepresentative region of the training feature space. The model is forced to extrapolate, leading to erratic credit score decisions. This is data drift: the input distribution P(X) has changed, even if the underlying definition of credit default P(Y | X) has not yet been observed.`,
+      r`Population Stability Index (PSI) is the industry standard in financial risk and credit scoring for measuring feature drift. You partition the reference training feature into 10 quantile bins (deciles), each containing exactly 10% of training data. You then pass the latest batch of production observations through those exact same bin cutoffs and compute the actual proportion in each bin. For each bin, PSI calculates (Actual - Reference) multiplied by ln(Actual / Reference). Summing across all bins yields the overall PSI. An industry rule of thumb treats PSI below 0.1 as stable, 0.1 to 0.2 as moderate drift, and 0.2 or greater as significant drift requiring investigation or retraining.`,
+      r`Continuous features can also be monitored without binning using the two-sample Kolmogorov–Smirnov (KS) test, which measures the maximum vertical discrepancy between the empirical cumulative distribution functions (CDFs) of training and production samples. For general probability distributions, Jensen–Shannon (JS) divergence provides a smoothed, symmetric, bounded measure based on Kullback–Leibler divergence that gracefully handles differences in feature support.`,
+    ],
+    analogy: r`A manufacturing quality inspector sampling incoming raw metal batches to check whether their density or purity has drifted away from the original engineering specification.`,
+    steps: [
+      r`Establish reference baseline distribution: record quantile boundaries (e.g. deciles) and empirical CDFs on the validated training or holdout test partition.`,
+      r`Sample current production window: aggregate incoming production feature vectors over an operational monitoring window (e.g. daily or weekly).`,
+      r`Compute Population Stability Index (PSI): bin the current data using the baseline quantile thresholds and evaluate the sum of binned divergence terms.`,
+      r`Apply Kolmogorov–Smirnov test on continuous features: compute the maximum distance $D$ between empirical CDFs and evaluate the statistical p-value.`,
+      r`Trigger alert hierarchies: flag features with $\text{PSI} \ge 0.1$ for automated tracking, and escalate features with $\text{PSI} \ge 0.2$ for root-cause analysis and potential model retraining.`,
+    ],
+    math: [
+      {
+        h: 'Population Stability Index (PSI)',
+        tex: r`\text{PSI} = \sum_{k=1}^K \left( \hat{p}_{\text{curr}, k} - \hat{p}_{\text{ref}, k} \right) \cdot \ln\left( \frac{\hat{p}_{\text{curr}, k}}{\hat{p}_{\text{ref}, k}} \right)`,
+        p: r`Where $K$ is the number of bins (typically 10 reference deciles), $\hat{p}_{\text{ref}, k}$ is the baseline proportion in bin $k$, and $\hat{p}_{\text{curr}, k}$ is the current production proportion. Laplace smoothing prevents division by zero when a production bin contains zero samples.`,
+      },
+      {
+        h: 'Two-sample Kolmogorov–Smirnov statistic',
+        tex: r`D_{n, m} = \sup_x \left| F_{\text{ref}, n}(x) - F_{\text{curr}, m}(x) \right|`,
+        p: r`Where $F_{\text{ref}, n}(x)$ and $F_{\text{curr}, m}(x)$ represent empirical cumulative distribution functions of reference and production samples of sizes $n$ and $m$. $D_{n, m}$ measures the supreme absolute divergence between the two empirical curves.`,
+      },
+      {
+        h: 'Jensen–Shannon Divergence (JSD)',
+        tex: r`\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M), \qquad M = \frac{1}{2}(P + Q)`,
+        p: r`Where $D_{\text{KL}}$ is the Kullback–Leibler divergence and $M$ is the average distribution. Unlike standard KL divergence, Jensen–Shannon divergence is strictly symmetric, bounded between $0$ and $\ln(2)$, and well-defined across overlapping supports.`,
+      },
+    ],
+    keyPoints: [
+      r`Data drift detects shifts in input feature distributions P(X) immediately, without waiting for delayed ground-truth target labels.`,
+      r`PSI decile bins must be derived strictly from the reference training set and held static during monitoring.`,
+      r`Standard PSI thresholds: below 0.1 indicates stability, 0.1 to 0.2 indicates moderate change, and 0.2+ signals critical distribution drift.`,
+    ],
+    pitfalls: [
+      r`Recomputing quantile bins dynamically on current production data instead of applying fixed reference training cutoffs.`,
+      r`Zero-count crash in PSI: if a production bin has 0 records, the log term diverges to negative infinity without Laplace or epsilon smoothing.`,
+      r`Assuming absence of data drift implies absence of model decay: concept drift can degrade predictions even when input distributions P(X) remain completely static.`,
+    ],
+    code: r`import numpy as np
+
+def calculate_psi(ref, curr, num_bins=10):
+    # Quantile bins derived strictly from reference baseline
+    quantiles = np.linspace(0, 100, num_bins + 1)
+    bins = np.percentile(ref, quantiles)
+    bins[0] -= 1e-6
+    bins[-1] += 1e-6
+    
+    ref_counts = np.histogram(ref, bins=bins)[0]
+    curr_counts = np.histogram(curr, bins=bins)[0]
+    
+    # Laplace smoothing prevents log(0) and division by zero
+    p_ref = (ref_counts + 1e-4) / (len(ref) + 1e-4 * num_bins)
+    p_curr = (curr_counts + 1e-4) / (len(curr) + 1e-4 * num_bins)
+    
+    psi = np.sum((p_curr - p_ref) * np.log(p_curr / p_ref))
+    return psi
+
+np.random.seed(42)
+reference = np.random.normal(50.0, 10.0, size=1000)
+prod_stable = np.random.normal(50.2, 9.8, size=500)     # Stable
+prod_drifted = np.random.normal(55.0, 12.0, size=500)    # Drifted
+
+psi_stable = calculate_psi(reference, prod_stable)
+psi_drifted = calculate_psi(reference, prod_drifted)
+
+print(f"Baseline vs Stable Production:  PSI = {psi_stable:.3f} (< 0.1 stable)")
+print(f"Baseline vs Drifted Production: PSI = {psi_drifted:.3f} (>= 0.2 significant drift)")`,
+    quiz: [
+      {
+        q: r`What is the primary advantage of monitoring data drift (covariate shift) over monitoring model accuracy metrics in production?`,
+        o: [
+          r`Data drift requires knowing the true ground-truth labels immediately`,
+          r`Data drift can be computed instantly on incoming feature inputs P(X) without waiting for delayed or expensive ground-truth labels Y`,
+          r`Data drift metrics are only valid for linear models`,
+          r`Data drift eliminates the need for cross-validation`,
+        ],
+        a: 1,
+        why: r`Ground-truth outcome labels (such as loan defaults or cancer diagnoses) often take weeks or months to arrive. Data drift alerts engineering teams to distribution changes immediately upon inference.`,
+      },
+      {
+        q: r`When computing Population Stability Index (PSI), how must the bin boundaries be established?`,
+        o: [
+          r`By recomputing quantiles on the incoming production batch every hour`,
+          r`Using fixed quantile cutoffs derived strictly from the baseline reference training dataset`,
+          r`By arbitrarily dividing the feature into 100 equal-width bins`,
+          r`Using the min and max of the production dataset only`,
+        ],
+        a: 1,
+        why: r`PSI measures how current data shifts relative to the reference standard. The bin boundaries must remain fixed to the baseline reference quantiles so each reference bin represents an expected 10% share.`,
+      },
+      {
+        q: r`A production feature produces a PSI value of 0.26 when compared against training data. What action should the engineering team take according to industry conventions?`,
+        o: [
+          r`Do nothing, because PSI below 0.5 indicates complete stability`,
+          r`Permanently delete the feature and all related models`,
+          r`Investigate the root cause of significant drift, check upstream data schemas, and evaluate retraining or recalibrating the model`,
+          r`Invert the sign of all feature values`,
+        ],
+        a: 2,
+        why: r`Industry rules of thumb define PSI >= 0.2 as significant distribution drift that demands immediate root-cause investigation, schema validation, and potential retraining.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['exploratory-data-analysis', 'hypothesis-testing-and-p-values'],
+    related: ['concept-drift-and-performance-monitoring', 'data-cleaning-and-validation', 'missing-data-mcar-mar-mnar-and-imputation'],
+    keywords: 'data drift covariate shift population stability index psi kolmogorov smirnov test jensen shannon divergence model monitoring distribution shift',
+  },
+  {
+    id: 'concept-drift-and-performance-monitoring',
+    short: 'Concept drift and monitoring',
+    title: 'Concept Drift and Performance Monitoring',
+    task: 'concepts',
+    module: 'Monitoring and drift',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Tracking degradation in the statistical relationship between features and targets over time, separating label delay from true relationship decay.`,
+    lead: r`Data drift occurs when input features P(X) change; concept drift occurs when the fundamental relationship between inputs and targets P(Y | X) alters over time. A model trained on pre-pandemic consumer behaviour or historical fraud tactics will fail when human habits evolve, even if feature distributions appear normal. Monitoring concept drift through rolling performance tracking and sequential change-point detection (such as Page–Hinkley) ensures timely model retraining.`,
+    intuition: [
+      r`Imagine an automated fraud detection model protecting an online electronics store. Prior to holiday clearance sales, a purchase of £800 at 2:00 AM on a newly created customer account had a 95% probability of being fraudulent. During a flash holiday clearance sale, legitimate customers wake up at 2:00 AM to buy £800 discounted laptops. The input features (time = 2:00 AM, amount = £800) have not necessarily changed their individual ranges, but the conditional probability P(Fraud | Time, Amount) has dramatically flipped. This is concept drift: the underlying rules and causal relationships connecting features to targets have evolved.`,
+      r`Concept drift manifests in diverse temporal patterns: sudden drift (an abrupt change, such as a major tax law or quarantine policy introduced overnight), gradual drift (competitors slowly releasing alternative products over several months), incremental drift (gradual inflation steadily eroding purchasing power), or recurring cyclical drift (holiday spending patterns returning every November and December). Identifying the type of drift determines whether the model requires a quick retraining patch or a dynamic seasonal architecture.`,
+      r`The principal operational challenge in concept drift monitoring is ground-truth label delay. While input features are observed at the exact millisecond of inference, outcome labels require time to resolve. In credit lending, whether a borrower defaults might not be known for 180 days; in customer subscription churn, inactivity can only be confirmed after 60 days. Performance monitoring frameworks must track cohort maturity carefully, avoiding false alarms caused by incomplete recent label windows.`,
+    ],
+    analogy: r`A chess grandmaster who memorised opening books from the 19th century discovering that contemporary opponents play completely different defensive responses to the same opening moves.`,
+    steps: [
+      r`Classify drift dynamics: determine whether relationship shifts are sudden (policy changes), gradual (inflation), or recurrent (holiday seasons).`,
+      r`Characterise label maturation latency: quantify the label delay distribution $T_{\text{delay}} = t_{\text{ground\_truth}} - t_{\text{prediction}}$ to define mature evaluation windows.`,
+      r`Track rolling operational metrics: compute rolling log-loss, Brier score, ROC-AUC, or WAPE strictly on cohorts with mature, fully resolved labels.`,
+      r`Deploy sequential change-point detection: run online statistical change detectors (such as the Page–Hinkley test) on prediction loss residuals to flag statistically significant shifts.`,
+      r`Execute tiered mitigation policies: fall back to conservative business rules upon detection, retrain models on recent temporal windows, or update prediction calibration curves.`,
+    ],
+    math: [
+      {
+        h: 'Decomposition of joint distribution shift',
+        tex: r`P_{\text{curr}}(X, Y) = P_{\text{curr}}(X) \cdot P_{\text{curr}}(Y \mid X)`,
+        p: r`Where pure data drift (covariate shift) corresponds to $P_{\text{curr}}(X) \ne P_{\text{ref}}(X)$ while $P(Y \mid X)$ remains fixed, whereas pure concept drift corresponds to $P_{\text{curr}}(Y \mid X) \ne P_{\text{ref}}(Y \mid X)$ even if input distribution $P(X)$ is completely unaltered.`,
+      },
+      {
+        h: 'Page–Hinkley sequential change detection test',
+        tex: r`m_t = \sum_{i=1}^t (e_i - \bar{e}_{\text{ref}} - \delta), \qquad M_t = \min_{1 \le i \le t} m_i, \qquad \text{Alarm if } (m_t - M_t) > \lambda`,
+        p: r`Where $e_i = L(y_i, \hat{y}_i)$ is prediction loss at time $i$, $\bar{e}_{\text{ref}}$ is the baseline error mean, $\delta$ is an allowable drift tolerance magnitude, and $\lambda$ is a detection threshold controlling false alarm rate.`,
+      },
+      {
+        h: 'Exponential forgetting loss weighting',
+        tex: r`\boldsymbol{\theta}^* = \arg\min_{\boldsymbol{\theta}} \sum_{t=1}^T \gamma^{T-t} L\left(y_t, f(x_t; \boldsymbol{\theta})\right), \qquad 0 < \gamma \le 1`,
+        p: r`Where decay factor $\gamma$ down-weights older observations exponentially relative to recent events, allowing continuous online retraining to adapt fluidly to evolving target concepts.`,
+      },
+    ],
+    keyPoints: [
+      r`Concept drift represents changes in P(Y | X), altering the predictive mapping between inputs and outcomes.`,
+      r`Label delay is the central bottleneck in concept drift monitoring, requiring separate tracking of mature and immature cohorts.`,
+      r`Sequential change-point algorithms like Page–Hinkley detect statistically significant error increases without requiring arbitrary sliding window sizes.`,
+    ],
+    pitfalls: [
+      r`Confusing label maturation delay with model degradation: declaring false alarm failures on recent cohorts whose positive outcomes have not yet arrived.`,
+      r`Retraining blindly on recent data during cyclical drift: retraining exclusively on summer data deletes critical knowledge required for winter demand.`,
+      r`Relying on aggregate accuracy for imbalanced classification: overall accuracy can remain at 98% while recall on the critical positive class drops to zero.`,
+    ],
+    code: r`import numpy as np
+
+def page_hinkley(errors, ref_mean, delta=0.05, threshold=8.0):
+    cum_sum, min_cum_sum = 0.0, 0.0
+    for t, e in enumerate(errors):
+        cum_sum += (e - ref_mean - delta)
+        if cum_sum < min_cum_sum:
+            min_cum_sum = cum_sum
+        if (cum_sum - min_cum_sum) > threshold:
+            return t
+    return -1
+
+np.random.seed(42)
+# 100 stationary predictions (mean error ~0.15) followed by concept drift (~0.45)
+stationary = np.random.exponential(0.15, size=100)
+drifted = np.random.exponential(0.45, size=50)
+stream = np.concatenate([stationary, drifted])
+ref_mean = np.mean(stationary[:50])
+
+alarm_step = page_hinkley(stream, ref_mean=ref_mean, delta=0.05, threshold=8.0)
+print(f"Baseline mean error: {ref_mean:.2f}, Post-drift mean: {np.mean(drifted):.2f}")
+print(f"Drift introduced at step 100 -> Alarm raised at step {alarm_step}")`,
+    quiz: [
+      {
+        q: r`What distinguishes concept drift from data drift?`,
+        o: [
+          r`Data drift changes the relationship P(Y | X), whereas concept drift changes only input distributions P(X)`,
+          r`Concept drift alters the underlying relationship P(Y | X) between features and target, whereas data drift changes only the input distribution P(X)`,
+          r`Concept drift only occurs in deep neural networks`,
+          r`Data drift can only be measured after ground-truth labels arrive`,
+        ],
+        a: 1,
+        why: r`Data drift (covariate shift) means the input distribution P(X) shifted. Concept drift means the actual relationship between inputs and outputs P(Y | X) changed, degrading model accuracy even if P(X) remains unchanged.`,
+      },
+      {
+        q: r`Why is label verification delay a major challenge when monitoring concept drift in applications like credit default prediction?`,
+        o: [
+          r`Because loan defaults take months or years to materialize, preventing instant measurement of true model error on recent cohorts`,
+          r`Because credit scores cannot be computed on weekends`,
+          r`Because delayed labels cause models to train in reverse order`,
+          r`Because banks are legally forbidden from storing historical predictions`,
+        ],
+        a: 0,
+        why: r`Whether a loan defaults or a subscriber churns cannot be confirmed immediately at prediction time. Evaluating recent performance requires waiting for labels to mature or tracking leading proxy metrics.`,
+      },
+      {
+        q: r`How does the Page–Hinkley sequential test detect concept drift in a streaming production environment?`,
+        o: [
+          r`By fitting an ARIMA model to the input features`,
+          r`By accumulating deviations of prediction errors above an allowable tolerance delta and raising an alarm when the cumulative sum exceeds a threshold lambda`,
+          r`By calculating the correlation between training features and test features`,
+          r`By retraining the model at fixed 24-hour intervals regardless of error`,
+        ],
+        a: 1,
+        why: r`Page–Hinkley tracks cumulative deviations of error residuals against a baseline mean and tolerance parameter delta, signaling a change point when the difference from the running minimum exceeds threshold lambda.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['data-drift-psi-ks-and-jensen-shannon', 'cross-validation'],
+    related: ['train-validation-test-splits-group-and-time-based', 'time-series-cross-validation', 'forecast-metrics-mae-mase-smape-wape'],
+    keywords: 'concept drift performance monitoring covariate shift page hinkley adwin label delay model decay continuous evaluation',
+  },
 ];
