@@ -157,8 +157,8 @@ module.exports = [
       { title: 'LLM foundations', lessons: ['prompting-and-in-context-learning', 'tool-use-and-function-calling', 'evaluating-llms-benchmarks-and-judges', 'hallucination-and-grounding', ...X('Context windows and memory')] },
       { title: 'Retrieval and RAG', lessons: ['chunking-and-embeddings-for-retrieval', ...C('Vector search: HNSW, IVF, PQ ⚙'), 'hybrid-search-and-reranking', 'rag-architecture-end-to-end', 'rag-evaluation', ...X('GraphRAG and multi-hop retrieval')] },
       { title: 'Agents', lessons: ['the-agent-loop-react', 'agent-evaluation-and-test-harnesses', ...X('Planning and task decomposition', 'Memory and state', 'Multi-agent systems', 'Agent protocols: MCP')] },
-      { title: 'LLM systems', lessons: [...C('Inference: KV cache, batching, paged attention', 'Serving, latency and cost'), ...X('Speculative decoding', 'Caching and model routing', 'Observability and tracing')] },
-      { title: 'Safety and society', lessons: [...C('Prompt injection and jailbreaks', 'Guardrails and red-teaming'), ...X('Privacy: differential privacy and federated learning', 'AI governance and regulation', 'Alignment and interpretability overview')] },
+      { title: 'LLM systems', lessons: ['inference-kv-cache-batching-paged-attention', 'serving-latency-and-cost', ...X('Speculative decoding', 'Caching and model routing', 'Observability and tracing')] },
+      { title: 'Safety and society', lessons: ['prompt-injection-and-jailbreaks', 'guardrails-and-red-teaming', ...X('Privacy: differential privacy and federated learning', 'AI governance and regulation', 'Alignment and interpretability overview')] },
     ],
   },
 ];
