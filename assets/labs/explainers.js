@@ -69,7 +69,7 @@
     el.innerHTML = `
       <div class="ex-head"><small class="kicker"><i></i>${spec.title || 'Watch it work'}</small><span class="ex-right"><span class="ex-count"></span><button class="copy ex-full" type="button" aria-label="Full screen"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Full screen</span></button></span></div>
       <div class="ex-stage"><canvas></canvas></div>
-      <div class="ex-cap" aria-live="polite"><b></b><p></p></div>
+      <div class="ex-cap" aria-live="polite"><small class="ex-part"></small><b></b><p></p></div>
       <div class="ex-ctl">
         <button class="ex-btn" data-a="prev" type="button" aria-label="Previous step">${ICON.prev}</button>
         <button class="ex-btn ex-play" data-a="play" type="button" aria-label="Pause">${ICON.pause}</button>
@@ -88,7 +88,7 @@
     const go = (i, keepPlaying) => {
       s = (i + N) % N; t0 = performance.now(); pausedAt = reduced ? 1e9 : 0;
       const st = spec.steps[s];
-      cap.querySelector('b').textContent = st.t; cap.querySelector('p').innerHTML = st.d;
+      cap.querySelector('.ex-part').textContent = st.part || ''; cap.querySelector('b').textContent = st.t; cap.querySelector('p').innerHTML = st.d;
       if (window.renderMath) window.renderMath(cap);
       count.textContent = `Step ${s + 1} of ${N}`;
       dots.forEach((d, j) => { d.classList.toggle('on', j === s); d.classList.toggle('done', j < s); });
@@ -143,129 +143,361 @@
 
   const ex = {};
 
-  // ================================================================== CNN
+  // ================================================================== CNN (in depth)
   ex.cnn = el => {
     const IMG = ['00000000', '01111110', '00000110', '00001100', '00011000', '00110000', '00110000', '00000000'].map(r => [...r].map(Number));
-    const F = [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]];
-    const FM = Array.from({ length: 6 }, (_, i) => Array.from({ length: 6 }, (_, j) => { let s = 0; for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) s += IMG[i + a][j + b] * F[a][b]; return s; }));
-    const RL = FM.map(r => r.map(v => Math.max(0, v)));
-    const PL = Array.from({ length: 3 }, (_, i) => Array.from({ length: 3 }, (_, j) => Math.max(RL[2 * i][2 * j], RL[2 * i + 1][2 * j], RL[2 * i][2 * j + 1], RL[2 * i + 1][2 * j + 1])));
-    const IX = 24, IY = 74, IC = 24, FX = 262, FY = 104, FC = 34, MX = 420, MY = 74, MC = 32, PX = 270, PY = 268, PC = 30;
+    const FV = [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]];
+    const FH = [[-1, -1, -1], [0, 0, 0], [1, 1, 1]];
+    const FD = [[-1, -1, 2], [-1, 2, -1], [2, -1, -1]];
+    const conv = (I, F, st = 1, pad = 0) => {
+      const n = I.length + 2 * pad, k = F.length, o = Math.floor((n - k) / st) + 1;
+      const at = (i, j) => (i < pad || j < pad || i >= I.length + pad || j >= I.length + pad ? 0 : I[i - pad][j - pad]);
+      return Array.from({ length: o }, (_, i) => Array.from({ length: o }, (_, j) => { let s = 0; for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) s += at(i * st + a, j * st + b) * F[a][b]; return s; }));
+    };
+    const relu = M => M.map(r => r.map(v => Math.max(0, v)));
+    const pool = M => Array.from({ length: M.length >> 1 }, (_, i) => Array.from({ length: M.length >> 1 }, (_, j) => Math.max(M[2 * i][2 * j], M[2 * i + 1][2 * j], M[2 * i][2 * j + 1], M[2 * i + 1][2 * j + 1])));
+    const FM = conv(IMG, FV), FM2 = conv(IMG, FV, 2), FMP = conv(IMG, FV, 1, 1), RL = relu(FM), PL = pool(RL);
+    const MH = conv(IMG, FH), MD = conv(IMG, FD);
+    // the patch used for the one-by-one walkthrough: strongest positive response
+    let best = [0, 0]; FM.forEach((r, i) => r.forEach((v, j) => { if (v > FM[best[0]][best[1]]) best = [i, j]; }));
+    const [BR, BC] = best;
+    const fmt = v => (v === 0 ? '0' : v > 0 ? `+${v}` : `−${-v}`);
+    const sgn = v => (v < 0 ? `(−${-v})` : String(v));
+
+    // draw a matrix as rounded cells
+    const grid = (g, M, x, y, cs, o = {}) => {
+      const a = o.a ?? 1, scale = o.scale || Math.max(1, ...M.flat().map(Math.abs));
+      M.forEach((row, i) => row.forEach((v, j) => {
+        let fill = o.fill ? o.fill(v, i, j) : o.binary ? (v ? alpha(T.violet2, 0.85) : 'rgba(255,255,255,0.05)') : v === 0 ? 'rgba(255,255,255,0.05)' : g.cellColor(v / scale);
+        if (o.hide && o.hide(i, j)) fill = 'rgba(255,255,255,0.03)';
+        g.rr(x + j * cs + 1, y + i * cs + 1, cs - 2, cs - 2, Math.min(4, cs / 6), { fill, a });
+        if (o.text !== false && !(o.hide && o.hide(i, j))) g.text(o.label ? o.label(v, i, j) : (o.binary ? String(v) : fmt(v)), x + j * cs + cs / 2, y + i * cs + cs / 2 + 1, { size: o.size || Math.max(8, Math.min(13, cs * 0.42)), color: o.binary && v ? '#14121f' : T.ink, a: a * (o.textA ?? 1) });
+      }));
+    };
+    const frame = (g, x, y, cs, r, c, k, color = T.amber, a = 1) => g.rr(x + c * cs - 1, y + r * cs - 1, cs * k + 2, cs * k + 2, 5, { stroke: color, w: 2.3, a });
+    const label = (g, s, x, y, a = 1) => g.text(s, x, y, { size: 12, color: T.muted, a });
+    const note = (g, lines, x, y, a = 1, o = {}) => lines.forEach((l, i) => g.text(l, x, y + i * (o.lh || 20), { size: o.size || 13, color: o.color || T.soft, align: 'left', a, sans: !o.mono }));
+
+    const steps = [
+      { part: 'Part 1 · The input', t: 'An image is a grid of brightness values', dur: 5200,
+        d: 'A grayscale image is a table of numbers, one per pixel. Cameras store 0 (black) to 255 (white); before training we usually divide by 255 so every value is between 0 and 1. This tiny 8×8 “7” has shape <strong>8 × 8 × 1</strong>: height × width × channels.' },
+      { part: 'Part 1 · The input', t: 'Colour images have three channels', dur: 4400,
+        d: 'A colour image stacks three such grids: red, green and blue intensity for every pixel. Its shape is <strong>H × W × 3</strong>. Everything a CNN does works on these stacks, which deeper layers call <em>channels</em> or <em>feature maps</em>.' },
+      { part: 'Part 2 · One convolution', t: 'A filter is a small grid of learnable weights', dur: 4400,
+        d: 'This 3×3 filter (also called a kernel) has 9 weights plus one bias. Negative on the left, positive on the right: it will produce a big number wherever the image goes from dark (left) to bright (right), a <strong>vertical edge</strong>. In a trained CNN nobody designs these weights; they are learned.' },
+      { part: 'Part 2 · One convolution', t: 'Multiply each pixel by the weight on top of it', dur: 9000,
+        d: 'Place the filter on a 3×3 patch of the image. Take the pixel under each weight, multiply the two, and keep a running total. Nine multiplications, one sum: this is a <strong>dot product</strong> between the patch and the filter.' },
+      { part: 'Part 2 · One convolution', t: 'Add the bias and write one output pixel', dur: 4200,
+        d: 'output = Σ (pixel × weight) + bias. The bias (0 here) shifts how easily the filter “fires”. The result becomes one pixel of a new image called a <strong>feature map</strong>, at the same relative position as the patch.' },
+      { part: 'Part 2 · One convolution', t: 'Slide the filter over every position', dur: 7600,
+        d: 'Move one pixel at a time (stride 1) and repeat. The <strong>same 9 weights</strong> are used everywhere (weight sharing), so a vertical edge is detected wherever it appears. An 8×8 image and a 3×3 filter give 6×6 positions: output size = (8 − 3) / 1 + 1 = 6.' },
+      { part: 'Part 3 · Stride and padding', t: 'Stride 2: jump two pixels at a time', dur: 6400,
+        d: 'With <strong>stride 2</strong> the filter skips every other position, so there are only 3 × 3 positions: ⌊(8 − 3) / 2⌋ + 1 = 3. The feature map is about half as wide and half as tall, which saves computation and downsamples the image.' },
+      { part: 'Part 3 · Stride and padding', t: 'Padding: add a border of zeros', dur: 7200,
+        d: 'Add one ring of zeros around the image (<strong>padding = 1</strong>). Now the filter can also centre on edge pixels and the output keeps the input size: (8 + 2·1 − 3) / 1 + 1 = 8. This is called “same” padding; without it (“valid”) every layer shrinks the image. General rule: <strong>output = ⌊(n + 2p − k) / s⌋ + 1</strong>.' },
+      { part: 'Part 4 · Filters and channels', t: 'Several filters give several feature maps', dur: 6000,
+        d: 'One filter finds one kind of pattern. A layer uses many: here vertical, horizontal and diagonal edge filters. Each produces its own 6×6 map, and the maps are stacked into a 6 × 6 × <strong>3</strong> output. The number of filters is the number of output channels.' },
+      { part: 'Part 4 · Filters and channels', t: 'On multi-channel input, a filter has one slice per channel', dur: 6400,
+        d: 'If the input has 3 channels, each filter is 3 × 3 × <strong>3</strong>: one 3×3 slice per channel. All 27 products are added together (plus one bias) into a <em>single</em> number. So a layer with 16 such filters has 16 × (27 + 1) = 448 parameters, and outputs 16 channels.' },
+      { part: 'Part 5 · Non-linearity and pooling', t: 'ReLU: keep the positive evidence', dur: 5200,
+        d: 'After convolution, every value goes through ReLU: max(0, x). Negative responses (here: bright-to-dark edges) become 0. This non-linearity is essential: without it, stacking convolutions would be no more powerful than a single one.' },
+      { part: 'Part 5 · Non-linearity and pooling', t: 'Max-pooling: keep the strongest value in each window', dur: 7000,
+        d: 'Split the map into 2×2 windows and keep the maximum of each (stride 2, no overlap). 6×6 becomes 3×3. The exact position inside each window is forgotten, which makes the network tolerant to small shifts. Average pooling would keep the mean instead.' },
+      { part: 'Part 6 · Going deeper', t: 'Deeper layers see larger parts of the image', dur: 6400,
+        d: 'A neuron in layer 2 looks at a 3×3 patch of layer 1, and each of those looked at a 3×3 patch of the image. So it depends on a 5×5 region of the input: its <strong>receptive field</strong>. With more layers and pooling, late neurons see whole objects, which is why depth turns edges into shapes into digits.' },
+      { part: 'Part 6 · Going deeper', t: 'Flatten, combine, and classify', dur: 6800,
+        d: 'The final feature maps are unrolled into one vector (<strong>flatten</strong>), a fully connected layer combines evidence from all positions, and a last layer produces one score per class. <strong>Softmax</strong> turns the scores into probabilities that sum to 1. (Probabilities shown are illustrative.)' },
+      { part: 'Part 6 · Going deeper', t: 'How the filters are learned', dur: 7400,
+        d: 'Training starts with random filters. For each image, the loss measures how wrong the prediction is; backpropagation computes how the loss changes with each weight: <strong>∂L/∂w = Σ (error at each output pixel × input pixel under w)</strong>. Gradient descent nudges every weight downhill, and edge detectors emerge on their own.' },
+      { part: 'Part 6 · Going deeper', t: 'The whole network', dur: 6000,
+        d: 'Input → [convolution → ReLU → pooling] × a few → flatten → dense → softmax. Early layers find edges, middle layers combine them into strokes and corners, late layers recognise the digit. The architecture diagram above lets you inspect each of these parts.' },
+    ];
+
     player(el, {
-      title: 'Watch a convolution, step by step',
-      steps: [
-        { t: 'An image is just a grid of numbers', d: 'This 8×8 image of a “7” stores 1 where the pen is and 0 elsewhere. A colour photo is the same idea with three grids (red, green, blue).', dur: 2600 },
-        { t: 'A filter is a small grid of weights', d: 'This 3×3 filter has negative weights on the left and positive on the right, so it responds to <strong>vertical edges</strong>: dark on the left, bright on the right. In a real CNN these weights are learned.', dur: 2800 },
-        { t: 'Lay the filter on a patch, multiply, add up', d: 'Each of the 9 pixels in the highlighted patch is multiplied by the filter weight on top of it, and the 9 products are summed.', dur: 3600 },
-        { t: 'The sum becomes one pixel of the feature map', d: 'A big positive number means “this patch looks like the pattern”. Negative means the opposite pattern (here: bright-to-dark edges).', dur: 2400 },
-        { t: 'Slide the filter across the whole image', d: 'The same 9 weights are reused at every position (<strong>weight sharing</strong>), so the filter finds its pattern wherever it appears. 36 positions give a 6×6 feature map.', dur: 6200 },
-        { t: 'ReLU keeps only the positive evidence', d: 'Negative responses are set to zero. What remains is a map of where the vertical edges are.', dur: 2400 },
-        { t: 'Max-pooling shrinks the map', d: 'Each 2×2 block is replaced by its largest value. The map gets 4× smaller and a little tolerant to small shifts of the image.', dur: 4200 },
-        { t: 'Stack many filters and layers', d: 'Real CNNs learn dozens of filters per layer. Early layers find edges, later layers combine them into shapes and parts, and a final dense layer turns those features into a class: “this is a 7”.', dur: 5200 },
-      ],
+      title: 'Convolution in depth, step by step', steps,
       draw(g, s, p, time) {
-        const fadeAll = s === 7 ? 1 - ease(clamp01(p * 4)) : 1;
-        // positions
-        let pos = -1, filled = 0;
-        if (s === 2 || s === 3) pos = 0;
-        if (s === 4) { pos = Math.min(35, Math.floor(p * 36)); filled = pos + 1; }
-        if (s === 3 && p > 0.65) filled = 1;
-        if (s >= 5) filled = 36;
-        const pr = pos >= 0 ? Math.floor(pos / 6) : 0, pc = pos >= 0 ? pos % 6 : 0;
-        // labels
-        g.text('input image', IX + 96, IY - 22, { color: T.muted, size: 12, a: fadeAll });
-        // input grid
-        for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
-          const v = IMG[i][j], inPatch = pos >= 0 && i >= pr && i < pr + 3 && j >= pc && j < pc + 3;
-          g.rr(IX + j * IC + 1, IY + i * IC + 1, IC - 2, IC - 2, 3, { fill: v ? alpha(T.violet2, 0.85) : 'rgba(255,255,255,0.05)', a: fadeAll });
-          g.text(String(v), IX + j * IC + IC / 2, IY + i * IC + IC / 2 + 1, { size: 10, color: v ? '#14121f' : T.dim, a: fadeAll * (inPatch ? 1 : s <= 1 ? ease(p) : 0.55) });
+        const P = ease(clamp01(p * 1.4));
+        // ---------- part 1
+        if (s === 0) {
+          const cs = 30, x = 34, y = 64;
+          label(g, 'pixel values', x + 120, y - 20);
+          grid(g, IMG, x, y, cs, { binary: true, size: 10, label: v => (p < 0.45 ? (v ? '255' : '0') : (v ? '1.0' : '0')) });
+          const a = ease(clamp01((p - 0.1) * 3));
+          note(g, ['• one number per pixel', '• camera range: 0 (black) … 255 (white)', '• divide by 255 → 0 … 1', '', 'shape = 8 × 8 × 1'], 330, 110, a, { lh: 26 });
+          g.text(p < 0.45 ? 'raw 0–255' : 'normalised ÷ 255', x + 120, y + 8 * cs + 20, { size: 12, color: T.amber, a });
+          return;
         }
-        if (pos >= 0) {
-          g.rr(IX + pc * IC - 1, IY + pr * IC - 1, IC * 3 + 2, IC * 3 + 2, 5, { stroke: T.amber, w: 2.4, a: fadeAll });
-          g.glow(IX + pc * IC + IC * 1.5, IY + pr * IC + IC * 1.5, 60, T.amber, 0.5 * fadeAll);
+        if (s === 1) {
+          const cs = 22, cols = [T.pink, T.green, '#7aa2ff'], names = ['red', 'green', 'blue'];
+          for (let c = 2; c >= 0; c--) {
+            const off = ease(clamp01(p * 2)) * c * 30;
+            const x = 60 + off, y = 70 + off * 0.7;
+            grid(g, IMG, x, y, cs, { text: false, fill: v => alpha(cols[c], v ? 0.75 : 0.12), a: 1 });
+            g.text(names[c], x + 8 * cs + 22, y + 10, { size: 11, color: cols[c], a: ease(clamp01(p * 2 - 0.6)) });
+          }
+          note(g, ['three grids, one per colour', 'shape = 8 × 8 × 3', '', 'later layers have many more', 'channels: 16, 32, 64 …'], 400, 130, ease(clamp01(p * 2 - 0.4)), { lh: 24 });
+          return;
         }
-        // filter
-        if (s >= 1) {
-          const fa = (s === 1 ? ease(p) : 1) * fadeAll;
-          g.text('filter (3×3)', FX + 51, FY - 22, { color: T.muted, size: 12, a: fa });
-          for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) {
-            const w = F[a][b];
-            g.rr(FX + b * FC + 1, FY + a * FC + 1, FC - 2, FC - 2, 4, { fill: w > 0 ? alpha(T.cyan, 0.75) : w < 0 ? alpha(T.pink, 0.7) : 'rgba(255,255,255,0.06)', a: fa });
-            g.text(w > 0 ? '+1' : w < 0 ? '−1' : '0', FX + b * FC + FC / 2, FY + a * FC + FC / 2 + 1, { size: 13, color: T.ink, a: fa });
-          }
-          if (pos >= 0 && s <= 4) {
-            // connector lines from patch to filter
-            const la = s === 2 ? ease(p * 2) : 0.4;
-            g.line([[IX + (pc + 3) * IC + 2, IY + pr * IC], [FX - 4, FY]], { color: T.amber, a: la * 0.6, dash: [3, 4] });
-            g.line([[IX + (pc + 3) * IC + 2, IY + (pr + 3) * IC], [FX - 4, FY + 3 * FC]], { color: T.amber, a: la * 0.6, dash: [3, 4] });
-            // products grid
-            const ga = s === 2 ? clamp01((p - 0.3) / 0.4) : 1;
-            let sum = 0; const CX = FX + 2, CY = FY + 3 * FC + 26, CC = 22;
-            g.text('products', CX + 33, CY - 11, { size: 10, color: T.dim, a: ga });
-            for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) {
-              const v = IMG[pr + a][pc + b] * F[a][b]; sum += v;
-              g.rr(CX + b * CC + 1, CY + a * CC + 1, CC - 2, CC - 2, 3, { fill: v > 0 ? alpha(T.cyan, 0.5) : v < 0 ? alpha(T.pink, 0.5) : 'rgba(255,255,255,0.04)', a: ga });
-              g.text(v === 0 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v), CX + b * CC + CC / 2, CY + a * CC + CC / 2 + 1, { size: 10, color: T.ink, a: ga });
-            }
-            const sa = s === 2 ? clamp01((p - 0.65) / 0.3) : 1;
-            g.text(`sum = ${sum > 0 ? '+' : ''}${sum}`, CX + 112, CY + 33, { size: 16, color: sum > 0 ? T.cyan : sum < 0 ? T.pink : T.ink, a: sa, sans: true, weight: 600 });
-            if (s === 3) {
-              const t = ease(clamp01(p / 0.65));
-              const x = lerp(CX + 112, MX + MC / 2, t), y = lerp(CY + 33, MY + MC / 2, t);
-              if (p < 0.66) { g.dot(x, y, 7, sum >= 0 ? T.cyan : T.pink); g.glow(x, y, 26, T.cyan); }
-            }
-          }
+        // ---------- part 2 layout
+        const IX = 24, IY = 70, IC = 24, FX = 248, FY = 108, FC = 36, MX = 430, MY = 70, MC = 30;
+        if (s === 2) {
+          grid(g, IMG, IX, IY, IC, { binary: true, size: 10 });
+          label(g, 'input', IX + 96, IY - 20);
+          const a = ease(clamp01(p * 2));
+          label(g, 'filter (3×3)', FX + 54, FY - 20, a);
+          grid(g, FV, FX, FY, FC, { a, size: 14, scale: 1.4 });
+          g.text('+ bias b = 0', FX + 54, FY + 3 * FC + 20, { size: 12, color: T.muted, a });
+          const b = ease(clamp01(p * 2 - 0.8));
+          note(g, ['left column  −1', 'middle       0', 'right column +1', '', '→ big output on', '  dark | bright edges'], 410, 120, b, { mono: true, size: 13, lh: 22 });
+          return;
         }
-        // feature map
-        if (s >= 2) {
-          const ma = (s === 2 ? ease(p) : 1) * fadeAll;
-          g.text(s >= 5 ? 'feature map after ReLU' : 'feature map (6×6)', MX + 96, MY - 22, { color: T.muted, size: 12, a: ma });
-          for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) {
-            const k = i * 6 + j, on = k < filled;
-            let v = FM[i][j];
-            if (s >= 5) v = v < 0 ? v * (s === 5 ? 1 - ease(p) : 0) : v;
-            g.rr(MX + j * MC + 1, MY + i * MC + 1, MC - 2, MC - 2, 4, { fill: on ? g.cellColor(v / 3) : 'rgba(255,255,255,0.04)', a: ma });
-            if (on && (s < 5 || v !== 0)) g.text(String(Math.round(v)).replace('-', '−'), MX + j * MC + MC / 2, MY + i * MC + MC / 2 + 1, { size: 11, color: T.ink, a: ma });
-            if (k === pos && s <= 4) g.rr(MX + j * MC - 1, MY + i * MC - 1, MC + 2, MC + 2, 5, { stroke: T.amber, w: 2.2, a: ma });
+        if (s === 3 || s === 4) {
+          grid(g, IMG, IX, IY, IC, { binary: true, size: 10 });
+          label(g, 'input', IX + 96, IY - 20);
+          frame(g, IX, IY, IC, BR, BC, 3);
+          label(g, 'filter', FX + 54, FY - 20);
+          grid(g, FV, FX, FY, FC, { size: 14, scale: 1.4 });
+          const k = s === 3 ? Math.min(8, Math.floor(p * 10)) : 8;
+          let run = 0; const lines = [];
+          for (let q = 0; q <= k; q++) {
+            const a = Math.floor(q / 3), b = q % 3, v = IMG[BR + a][BC + b], w = FV[a][b];
+            run += v * w; lines.push(`${v} × ${sgn(w)} = ${fmt(v * w)}`);
           }
+          if (s === 3) {
+            const a = Math.floor(k / 3), b = k % 3;
+            const ix = IX + (BC + b) * IC + IC / 2, iy = IY + (BR + a) * IC + IC / 2, fx = FX + b * FC + FC / 2, fy = FY + a * FC + FC / 2;
+            g.ring(ix, iy, IC / 2, T.ink, 2); g.ring(fx, fy, FC / 2 - 1, T.ink, 2);
+            g.c.beginPath(); g.c.moveTo(ix, iy); g.c.quadraticCurveTo((ix + fx) / 2, Math.min(iy, fy) - 50, fx, fy); g.c.strokeStyle = T.amber; g.c.lineWidth = 1.6; g.c.stroke();
+            lines.forEach((l, i) => g.text(l, 420, 74 + i * 22, { size: 13, align: 'left', color: i === lines.length - 1 ? T.amber : T.soft }));
+            g.text(`running sum = ${fmt(run)}`, 420, 74 + 9 * 22 + 12, { size: 15, align: 'left', color: T.cyan, weight: 500 });
+          } else {
+            const t = ease(clamp01(p / 0.55));
+            g.text(`Σ = ${fmt(run)}`, FX + 54, FY + 3 * FC + 28, { size: 16, color: T.cyan });
+            g.text(`+ b (0) = ${fmt(run)}`, FX + 54, FY + 3 * FC + 50, { size: 13, color: T.muted });
+            label(g, 'feature map', MX + 90, MY - 20);
+            grid(g, FM, MX, MY, MC, { hide: (i, j) => !(i === BR && j === BC && p > 0.55), size: 12 });
+            frame(g, MX, MY, MC, BR, BC, 1, T.amber, 0.8);
+            if (p < 0.56) { const x = lerp(FX + 54, MX + BC * MC + MC / 2, t), y = lerp(FY + 3 * FC + 28, MY + BR * MC + MC / 2, t); g.dot(x, y, 7, T.cyan); g.glow(x, y, 28, T.cyan); }
+            g.line([[IX + (BC + 3) * IC + 4, IY + BR * IC + 4], [MX + BC * MC - 4, MY + BR * MC + 4]], { color: T.amber, a: 0.25, dash: [3, 5] });
+            g.text('same relative position', MX + 90, MY + 6 * MC + 22, { size: 11, color: T.dim });
+          }
+          return;
         }
-        // pooling
-        if (s >= 6) {
-          const pa = (s === 6 ? ease(p * 2) : 1) * fadeAll;
-          const n = s === 6 ? Math.min(9, Math.floor(p * 10)) : 9;
-          g.text('after 2×2 max-pool (3×3)', PX + 45, PY - 18, { color: T.muted, size: 12, a: pa });
-          for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-            const k = i * 3 + j, on = k < n;
-            g.rr(PX + j * PC + 1, PY + i * PC + 1, PC - 2, PC - 2, 4, { fill: on ? g.cellColor(PL[i][j] / 3) : 'rgba(255,255,255,0.04)', a: pa });
-            if (on) g.text(String(PL[i][j]), PX + j * PC + PC / 2, PY + i * PC + PC / 2 + 1, { size: 11, color: T.ink, a: pa });
-          }
-          if (s === 6 && n < 9) {
-            const i = Math.floor(n / 3), j = n % 3;
-            g.rr(MX + 2 * j * MC - 1, MY + 2 * i * MC - 1, 2 * MC + 2, 2 * MC + 2, 6, { stroke: T.amber, w: 2.4 });
-            g.line([[MX + 2 * j * MC, MY + 2 * i * MC + MC], [PX + j * PC + PC, PY + i * PC + PC / 2]], { color: T.amber, a: 0.5, dash: [3, 4], arrow: true });
-          }
+        if (s === 5) {
+          const pos = Math.min(35, Math.floor(p * 37)), pr = Math.floor(pos / 6), pc = pos % 6;
+          grid(g, IMG, IX, IY, IC, { binary: true, size: 10 });
+          label(g, 'input 8×8', IX + 96, IY - 20);
+          frame(g, IX, IY, IC, pr, pc, 3);
+          label(g, 'filter', FX + 54, FY - 20);
+          grid(g, FV, FX, FY, FC, { size: 14, scale: 1.4 });
+          label(g, 'feature map 6×6', MX + 90, MY - 20);
+          grid(g, FM, MX, MY, MC, { hide: (i, j) => i * 6 + j > pos, size: 12 });
+          frame(g, MX, MY, MC, pr, pc, 1);
+          g.text('(8 − 3) / 1 + 1 = 6', MX + 90, MY + 6 * MC + 24, { size: 13, color: T.amber });
+          g.text(`position ${pos + 1} of 36`, FX + 54, FY + 3 * FC + 26, { size: 12, color: T.muted });
+          return;
         }
-        // the full network
+        // ---------- part 3
+        if (s === 6) {
+          const pos = Math.min(8, Math.floor(p * 10)), pr = Math.floor(pos / 3) * 2, pc = (pos % 3) * 2;
+          grid(g, IMG, IX, IY, IC, { binary: true, size: 10 });
+          label(g, 'input 8×8', IX + 96, IY - 20);
+          for (let q = 0; q < pos; q++) frame(g, IX, IY, IC, Math.floor(q / 3) * 2, (q % 3) * 2, 3, T.amber, 0.18);
+          frame(g, IX, IY, IC, pr, pc, 3);
+          if (pos % 3) g.text('→ 2', IX + (pc - 1) * IC + 4, IY + pr * IC - 8, { size: 11, color: T.amber });
+          label(g, 'filter, stride 2', FX + 54, FY - 20);
+          grid(g, FV, FX, FY, FC, { size: 14, scale: 1.4 });
+          const MC2 = 44;
+          label(g, 'feature map 3×3', MX + 66, MY - 20);
+          grid(g, FM2, MX, MY + 10, MC2, { hide: (i, j) => i * 3 + j > pos, size: 13 });
+          frame(g, MX, MY + 10, MC2, pr / 2, pc / 2, 1);
+          g.text('⌊(8 − 3) / 2⌋ + 1 = 3', MX + 66, MY + 3 * MC2 + 40, { size: 13, color: T.amber });
+          g.text('stride 1 would give 6 × 6', MX + 66, MY + 3 * MC2 + 62, { size: 12, color: T.dim });
+          return;
+        }
         if (s === 7) {
-          const a = ease(clamp01((p - 0.15) / 0.5));
-          const y0 = 170, stages = [
-            { x: 46, label: 'image', sub: '', draw: x => g.rr(x - 30, y0 - 30, 60, 60, 6, { fill: alpha(T.violet2, 0.5), stroke: T.violet2, a }) },
-            { x: 168, label: 'conv + ReLU', sub: 'edges', draw: x => { for (let k = 3; k >= 0; k--) g.rr(x - 26 + k * 7, y0 - 30 - k * 7, 52, 52, 5, { fill: alpha(T.cyan, 0.18 + 0.1 * k), stroke: alpha(T.cyan, 0.8), a }); } },
-            { x: 290, label: 'pool + conv', sub: 'shapes', draw: x => { for (let k = 5; k >= 0; k--) g.rr(x - 18 + k * 6, y0 - 22 - k * 6, 36, 36, 4, { fill: alpha(T.cyan, 0.14 + 0.08 * k), stroke: alpha(T.cyan, 0.8), a }); } },
-            { x: 404, label: 'pool + conv', sub: 'parts', draw: x => { for (let k = 7; k >= 0; k--) g.rr(x - 11 + k * 5, y0 - 14 - k * 5, 22, 22, 3, { fill: alpha(T.green, 0.14 + 0.07 * k), stroke: alpha(T.green, 0.8), a }); } },
-            { x: 510, label: 'dense', sub: 'combine', draw: x => { for (let k = 0; k < 10; k++) g.rr(x - 6, y0 - 50 + k * 10, 12, 8, 2, { fill: alpha(T.amber, 0.25 + (k === 7 ? 0.6 : 0)), a }); } },
-            { x: 592, label: '“7”', sub: 'class', draw: x => g.text('7', x, y0, { size: 34, sans: true, weight: 600, color: T.amber, a }) },
+          const pos = Math.min(63, Math.floor(p * 66)), pr = Math.floor(pos / 8), pc = pos % 8;
+          const PC = 20, PXX = 22, PY = 66;
+          label(g, 'input with padding = 1 (10×10)', PXX + 100, PY - 20);
+          const padded = Array.from({ length: 10 }, (_, i) => Array.from({ length: 10 }, (_, j) => (i === 0 || j === 0 || i === 9 || j === 9 ? -1 : IMG[i - 1][j - 1])));
+          padded.forEach((row, i) => row.forEach((v, j) => {
+            const border = v < 0;
+            g.rr(PXX + j * PC + 1, PY + i * PC + 1, PC - 2, PC - 2, 3, { fill: border ? 'rgba(255,255,255,0.02)' : v ? alpha(T.violet2, 0.85) : 'rgba(255,255,255,0.06)', stroke: border ? 'rgba(255,255,255,0.22)' : null, w: 1 });
+            if (border) g.text('0', PXX + j * PC + PC / 2, PY + i * PC + PC / 2 + 1, { size: 9, color: T.dim });
+          }));
+          frame(g, PXX, PY, PC, pr, pc, 3);
+          label(g, 'filter', 290, 100);
+          grid(g, FV, 254, 118, 24, { size: 11, scale: 1.4 });
+          const OC = 22, OX = 400, OY = 66;
+          label(g, 'output 8×8 (same size)', OX + 88, OY - 20);
+          grid(g, FMP, OX, OY, OC, { hide: (i, j) => i * 8 + j > pos, size: 9 });
+          frame(g, OX, OY, OC, pr, pc, 1);
+          g.text('(8 + 2·1 − 3) / 1 + 1 = 8', OX + 88, OY + 8 * OC + 24, { size: 13, color: T.amber });
+          g.text('out = ⌊(n + 2p − k) / s⌋ + 1', 288, 300, { size: 13, color: T.cyan });
+          return;
+        }
+        // ---------- part 4
+        if (s === 8) {
+          const cs = 16;
+          grid(g, IMG, 20, 140, cs, { binary: true, text: false });
+          label(g, 'input', 84, 124);
+          const rows = [[FV, FM, 'vertical'], [FH, MH, 'horizontal'], [FD, MD, 'diagonal']];
+          rows.forEach(([F, M, name], r) => {
+            const a = ease(clamp01(p * 2.2 - r * 0.45)), y = 46 + r * 116;
+            g.line([[152, 204], [190, y + 30]], { color: 'rgba(255,255,255,0.25)', a, arrow: true });
+            grid(g, F, 194, y + 6, 16, { a, size: 8, scale: 2 });
+            g.text(name, 218, y - 2, { size: 11, color: T.muted, a });
+            g.line([[248, y + 30], [278, y + 30]], { color: 'rgba(255,255,255,0.35)', a, arrow: true });
+            grid(g, M, 284, y, 15, { a, text: false, scale: 3 });
+          });
+          const sa = ease(clamp01(p * 2 - 1.2));
+          [MD, MH, FM].forEach((M, k) => grid(g, M, 470 + k * 16, 120 - k * 14, 14, { a: sa, text: false, scale: 3 }));
+          g.line([[378, 204], [462, 190]], { color: 'rgba(255,255,255,0.35)', a: sa, arrow: true });
+          g.text('stacked: 6 × 6 × 3', 534, 250, { size: 13, color: T.amber, a: sa });
+          g.text('3 filters → 3 channels', 534, 272, { size: 12, color: T.muted, a: sa });
+          return;
+        }
+        if (s === 9) {
+          const cols = [T.pink, T.green, '#7aa2ff'], wts = [1, 0.6, 0.3], cs = 15;
+          for (let c = 2; c >= 0; c--) {
+            const x = 30 + c * 18, y = 80 + c * 22;
+            grid(g, IMG, x, y, cs, { text: false, fill: v => alpha(cols[c], v ? 0.35 + 0.5 * wts[c] : 0.1) });
+            frame(g, x, y, cs, BR, BC, 3, T.amber, 0.9);
+          }
+          label(g, 'input: 8 × 8 × 3', 100, 60);
+          for (let c = 2; c >= 0; c--) {
+            const x = 250 + c * 16, y = 96 + c * 26;
+            FV.forEach((row, i) => row.forEach((v, j) => g.rr(x + j * 22 + 1, y + i * 22 + 1, 20, 20, 3, { fill: alpha(cols[c], v > 0 ? 0.8 : v < 0 ? 0.35 : 0.12) })));
+          }
+          label(g, 'filter: 3 × 3 × 3', 314, 70);
+          const t = ease(clamp01(p * 1.8));
+          [0, 1, 2].forEach(c => g.flow([[130 + c * 18, 120 + c * 22], [240 + c * 16, 120 + c * 26], [480, 200]], time + c * 300, { n: 3, color: cols[c], speed: 0.0005 }));
+          g.dot(480, 200, 22, '#0d0c14'); g.ring(480, 200, 22, T.cyan, 2); g.text('Σ', 480, 201, { size: 20, color: T.cyan, sans: true });
+          g.text('27 products + bias', 480, 238, { size: 12, color: T.muted, a: t });
+          g.line([[504, 200], [566, 200]], { color: T.cyan, arrow: true, a: t });
+          g.rr(572, 186, 28, 28, 5, { fill: alpha(T.cyan, 0.7), a: t });
+          g.text('1 number', 586, 230, { size: 11, color: T.muted, a: t });
+          g.text('params per filter = 3·3·3 + 1 = 28', 320, 330, { size: 13, color: T.amber, a: ease(clamp01(p * 2 - 0.8)) });
+          g.text('16 filters → 16 × 28 = 448 params, 16 output channels', 320, 354, { size: 12, color: T.muted, a: ease(clamp01(p * 2 - 1)) });
+          return;
+        }
+        // ---------- part 5
+        if (s === 10) {
+          const cs = 32, x1 = 30, x2 = 410, y = 74, t = ease(clamp01((p - 0.25) * 1.6));
+          label(g, 'feature map (before)', x1 + 96, y - 20);
+          grid(g, FM, x1, y, cs, { scale: 3 });
+          label(g, 'after ReLU', x2 + 96, y - 20);
+          grid(g, FM.map(r => r.map(v => (v < 0 ? v * (1 - t) : v))), x2, y, cs, { scale: 3, label: v => (Math.abs(v) < 0.05 ? '0' : fmt(Math.round(v))) });
+          // relu graph
+          const gx = 270, gy = 190, sz = 46;
+          g.line([[gx - sz, gy], [gx + sz, gy]], { color: 'rgba(255,255,255,0.25)' }); g.line([[gx, gy + sz], [gx, gy - sz]], { color: 'rgba(255,255,255,0.25)' });
+          g.line([[gx - sz, gy], [gx, gy], [gx + sz, gy - sz]], { color: T.amber, w: 2.4 });
+          g.text('max(0, x)', gx, gy + sz + 18, { size: 12, color: T.amber });
+          g.line([[x1 + 6 * cs + 8, y + 96], [gx - sz - 6, gy - 10]], { color: 'rgba(255,255,255,0.3)', arrow: true }); g.line([[gx + sz + 6, gy - 10], [x2 - 8, y + 96]], { color: 'rgba(255,255,255,0.3)', arrow: true });
+          return;
+        }
+        if (s === 11) {
+          const cs = 34, x1 = 30, y = 66, PC2 = 52, x2 = 440, y2 = 90;
+          const win = Math.min(8, Math.floor(p * 10)), wi = Math.floor(win / 3), wj = win % 3;
+          label(g, 'after ReLU (6×6)', x1 + 102, y - 18);
+          grid(g, RL, x1, y, cs, { scale: 3 });
+          for (let q = 0; q < 9; q++) frame(g, x1, y, cs, Math.floor(q / 3) * 2, (q % 3) * 2, 2, 'rgba(255,255,255,0.18)', 1);
+          frame(g, x1, y, cs, wi * 2, wj * 2, 2);
+          label(g, 'max-pooled (3×3)', x2 + 78, y2 - 22);
+          grid(g, PL, x2, y2, PC2, { hide: (i, j) => i * 3 + j > win, scale: 3, size: 15 });
+          frame(g, x2, y2, PC2, wi, wj, 1);
+          const vals = [RL[2 * wi][2 * wj], RL[2 * wi][2 * wj + 1], RL[2 * wi + 1][2 * wj], RL[2 * wi + 1][2 * wj + 1]];
+          g.text(`max(${vals.join(', ')}) = ${Math.max(...vals)}`, 320, 316, { size: 14, color: T.amber });
+          g.text(`average pooling would give ${(vals.reduce((a, b) => a + b, 0) / 4).toFixed(2)}`, 320, 340, { size: 12, color: T.dim });
+          g.line([[x1 + (wj * 2 + 2) * cs + 4, y + (wi * 2 + 1) * cs], [x2 - 6, y2 + wi * PC2 + PC2 / 2]], { color: T.amber, a: 0.5, dash: [3, 4], arrow: true });
+          return;
+        }
+        // ---------- part 6
+        if (s === 12) {
+          const cs = 21, L0 = [24, 90], L1 = [250, 111], L2 = [456, 132];
+          const a1 = ease(clamp01(p * 2)), a2 = ease(clamp01(p * 2 - 0.6));
+          label(g, 'input 8×8', L0[0] + 84, L0[1] - 20); label(g, 'layer 1: 6×6', L1[0] + 63, L1[1] - 20); label(g, 'layer 2: 4×4', L2[0] + 42, L2[1] - 20);
+          grid(g, IMG, L0[0], L0[1], cs, { binary: true, text: false });
+          grid(g, FM, L1[0], L1[1], cs, { text: false, scale: 3 });
+          grid(g, conv(relu(FM), [[0, 1, 0], [1, 1, 1], [0, 1, 0]]), L2[0], L2[1], cs, { text: false, scale: 6 });
+          frame(g, L2[0], L2[1], cs, 1, 1, 1, T.amber);
+          g.glow(L2[0] + 1.5 * cs, L2[1] + 1.5 * cs, 34, T.amber);
+          frame(g, L1[0], L1[1], cs, 1, 1, 3, T.amber, a1);
+          [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([u, v]) => g.line([[L2[0] + (1 + u) * cs, L2[1] + (1 + v) * cs], [L1[0] + (1 + 3 * u) * cs, L1[1] + (1 + 3 * v) * cs]], { color: T.amber, a: a1 * 0.45 }));
+          frame(g, L0[0], L0[1], cs, 1, 1, 5, T.cyan, a2);
+          [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([u, v]) => g.line([[L1[0] + (1 + 3 * u) * cs, L1[1] + (1 + 3 * v) * cs], [L0[0] + (1 + 5 * u) * cs, L0[1] + (1 + 5 * v) * cs]], { color: T.cyan, a: a2 * 0.4 }));
+          g.text('1 neuron  ←  3×3 in layer 1  ←  5×5 in the image', 320, 330, { size: 13, color: T.soft, a: a2 });
+          g.text('receptive field grows by (k − 1) per 3×3 layer, and doubles at each pooling', 320, 354, { size: 11, color: T.dim, a: a2 });
+          return;
+        }
+        if (s === 13) {
+          const maps = [relu(MH), RL, relu(MD)].map(pool);
+          const pa = ease(clamp01(p * 2.5)), la = ease(clamp01(p * 2.5 - 0.9)), ba = ease(clamp01(p * 2.5 - 1.5));
+          maps.forEach((M, k) => { grid(g, M, 26, 60 + k * 100, 22, { text: false, scale: 3 }); });
+          label(g, '3 pooled maps', 59, 40);
+          // flatten vector
+          const VX = 170, VY = 52, VC = 10.5;
+          const flat = maps.flatMap(M => M.flat());
+          flat.forEach((v, i) => g.rr(VX, VY + i * VC, 18, VC - 1.5, 2, { fill: v ? g.cellColor(v / 3) : 'rgba(255,255,255,0.06)', a: pa }));
+          label(g, 'flatten: 27', VX + 9, VY - 14, pa);
+          g.line([[100, 200], [VX - 8, 200]], { color: 'rgba(255,255,255,0.35)', arrow: true, a: pa });
+          // dense nodes
+          const HX = 320, hid = 6;
+          for (let h = 0; h < hid; h++) {
+            const hy = 80 + h * 44;
+            for (let i = 0; i < flat.length; i += 3) g.line([[VX + 18, VY + i * VC + 4], [HX - 10, hy]], { color: alpha(T.violet2, 0.12), a: la, w: 0.8 });
+            g.dot(HX, hy, 9, alpha(T.violet, 0.5), la); g.ring(HX, hy, 9, T.violet2, 1.2, la);
+          }
+          label(g, 'dense', HX, 56, la);
+          // outputs
+          const probs = [0.01, 0.02, 0.03, 0.04, 0.01, 0.02, 0.01, 0.80, 0.03, 0.03], OX = 450;
+          probs.forEach((pr, k) => {
+            const oy = 56 + k * 29;
+            for (let h = 0; h < hid; h++) g.line([[HX + 10, 80 + h * 44], [OX - 26, oy + 9]], { color: alpha(T.amber, 0.1), a: ba, w: 0.8 });
+            g.text(String(k), OX - 14, oy + 10, { size: 12, color: k === 7 ? T.amber : T.muted, a: ba });
+            g.rr(OX, oy + 2, Math.max(2, pr * 150 * ba), 16, 3, { fill: alpha(T.amber, k === 7 ? 0.95 : 0.35) });
+            if (ba > 0.5) g.text(`${Math.round(pr * 100)}%`, OX + pr * 150 + 22, oy + 10, { size: 11, color: k === 7 ? T.amber : T.dim, a: ba });
+          });
+          label(g, 'softmax', OX + 50, 36, ba);
+          return;
+        }
+        if (s === 14) {
+          const t = ease(clamp01(p * 1.2));
+          const R0 = [[0.3, -0.6, 0.1], [0.5, 0.2, -0.4], [-0.2, 0.7, 0.3]];
+          const W = R0.map((r, i) => r.map((v, j) => lerp(v, FV[i][j], t)));
+          label(g, 'filter weights', 104, 64);
+          grid(g, W, 50, 84, 36, { scale: 1.1, label: v => v.toFixed(1).replace('-', '−'), size: 12 });
+          g.text(t < 0.15 ? 'random at the start' : t > 0.9 ? 'a vertical-edge detector' : 'being updated…', 104, 210, { size: 12, color: T.amber });
+          // loss curve
+          const cx0 = 280, cy0 = 70, cw = 320, ch = 150;
+          g.line([[cx0, cy0], [cx0, cy0 + ch], [cx0 + cw, cy0 + ch]], { color: 'rgba(255,255,255,0.25)' });
+          const pts = []; for (let i = 0; i <= 60; i++) { const u = i / 60; if (u > t) break; pts.push([cx0 + u * cw, cy0 + ch - (ch - 12) * (0.12 + 0.88 * Math.exp(-4.2 * u) + 0.03 * Math.sin(i * 1.7))]); }
+          if (pts.length > 1) g.line(pts, { color: T.pink, w: 2.2 });
+          g.text('loss', cx0 - 4, cy0 - 10, { size: 11, color: T.pink, align: 'left' });
+          g.text('training steps →', cx0 + cw, cy0 + ch + 16, { size: 11, color: T.dim, align: 'right' });
+          note(g, ['∂L/∂w = Σ (error at output pixel × input pixel under w)', 'w ← w − η · ∂L/∂w'], 50, 280, ease(clamp01(p * 2 - 0.3)), { mono: true, size: 13, lh: 28 });
+          g.text('the same weight is used at every position, so its gradient adds up contributions from all 36 positions', 50, 344, { size: 11, color: T.dim, align: 'left', a: ease(clamp01(p * 2 - 0.6)) });
+          return;
+        }
+        if (s === 15) {
+          const y0 = 170;
+          const stages = [
+            { x: 46, label: 'image', sub: '28×28×1', draw: (x, a) => g.rr(x - 30, y0 - 30, 60, 60, 6, { fill: alpha(T.violet2, 0.5), stroke: T.violet2, a }) },
+            { x: 160, label: 'conv + ReLU', sub: 'edges', draw: (x, a) => { for (let k = 3; k >= 0; k--) g.rr(x - 26 + k * 7, y0 - 30 - k * 7, 52, 52, 5, { fill: alpha(T.cyan, 0.18 + 0.1 * k), stroke: alpha(T.cyan, 0.8), a }); } },
+            { x: 272, label: 'pool + conv', sub: 'strokes', draw: (x, a) => { for (let k = 5; k >= 0; k--) g.rr(x - 18 + k * 6, y0 - 22 - k * 6, 36, 36, 4, { fill: alpha(T.cyan, 0.14 + 0.08 * k), stroke: alpha(T.cyan, 0.8), a }); } },
+            { x: 384, label: 'pool + conv', sub: 'parts', draw: (x, a) => { for (let k = 7; k >= 0; k--) g.rr(x - 11 + k * 5, y0 - 14 - k * 5, 22, 22, 3, { fill: alpha(T.green, 0.14 + 0.07 * k), stroke: alpha(T.green, 0.8), a }); } },
+            { x: 494, label: 'flatten + dense', sub: 'combine', draw: (x, a) => { for (let k = 0; k < 10; k++) g.rr(x - 6, y0 - 50 + k * 10, 12, 8, 2, { fill: alpha(T.amber, 0.25 + (k === 7 ? 0.6 : 0)), a }); } },
+            { x: 590, label: 'softmax', sub: '“7”', draw: (x, a) => g.text('7', x, y0, { size: 36, sans: true, weight: 600, color: T.amber, a }) },
           ];
           stages.forEach((st, i) => {
-            const sa = ease(clamp01((p - 0.1 - i * 0.09) / 0.2));
-            g.c.globalAlpha = 1;
-            st.draw(st.x);
-            g.text(st.label, st.x, y0 + 64, { size: 12, color: T.soft, a: sa });
-            if (st.sub) g.text(st.sub, st.x, y0 + 82, { size: 11, color: T.dim, a: sa });
-            if (i < stages.length - 1) g.line([[st.x + 40, y0], [stages[i + 1].x - 36, y0]], { color: 'rgba(255,255,255,0.4)', a: sa, arrow: true });
+            const a = ease(clamp01(p * 2.4 - i * 0.22));
+            st.draw(st.x, a);
+            g.text(st.label, st.x, y0 + 64, { size: 12, color: T.soft, a });
+            g.text(st.sub, st.x, y0 + 82, { size: 11, color: T.dim, a });
+            if (i < stages.length - 1) g.line([[st.x + 40, y0], [stages[i + 1].x - 36, y0]], { color: 'rgba(255,255,255,0.4)', a, arrow: true });
           });
-          g.flow([[86, y0], [552, y0]], time, { n: 6, color: T.amber, speed: 0.00025, a });
-          g.text('features get more abstract and the maps get smaller, layer by layer', 320, 330, { size: 12, color: T.muted, a });
+          g.flow([[86, y0], [556, y0]], time, { n: 6, color: T.amber, speed: 0.00025 });
+          g.text('spatial size shrinks, channels grow: from “where” to “what”', 320, 320, { size: 13, color: T.muted, a: ease(clamp01(p * 2 - 1)) });
         }
       },
     });

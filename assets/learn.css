@@ -391,3 +391,37 @@
 .explainer:-webkit-full-screen .ex-stage { flex: 1; display: grid; place-items: center; min-height: 0; }
 .explainer:fullscreen .ex-cap { min-height: 0; }
 @media (max-width: 760px) { .ex-count { display: none; } }
+
+/* ---------- architecture diagrams ---------- */
+.arch { border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); overflow: hidden; }
+.arch-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.arch-head small { display: inline-flex; align-items: center; gap: 9px; font-size: 11px; color: var(--green); }
+.arch-head small i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); animation: pulse 2.4s ease-in-out infinite; }
+.arch-hint { font: 400 11px var(--mono); letter-spacing: .08em; color: var(--dim); }
+.arch-stage { padding: 14px 10px 4px; background: radial-gradient(circle at 50% 40%, #16142a, #0b0b10 70%); }
+.arch-stage svg { display: block; width: 100%; height: auto; overflow: visible; }
+.arch-node { cursor: pointer; outline: none; }
+.arch-node .arch-hit { fill: transparent; stroke: transparent; transition: fill .2s, stroke .2s; }
+.arch-node:hover .arch-hit, .arch-node:focus-visible .arch-hit { fill: rgba(255,255,255,0.04); stroke: rgba(255,255,255,0.18); }
+.arch-node.on .arch-hit { fill: rgba(140,124,255,0.1); stroke: var(--violet); }
+.arch-node > :not(.arch-hit) { transition: transform .35s var(--ease), opacity .3s; transform-box: fill-box; transform-origin: center; }
+.arch-node.on > :not(.arch-hit):not(text) { filter: drop-shadow(0 0 10px rgba(140,124,255,.45)); }
+.arch-label { font: 500 13px var(--sans); fill: var(--ink); }
+.arch-shape { font: 400 11px var(--mono); fill: var(--muted); }
+.arch-small { font: 400 9px var(--mono); fill: var(--dim); }
+.arch-badge rect { transition: fill .2s, stroke .2s; }
+.arch-badge:hover rect, .arch-badge.on rect { fill: rgba(255,197,107,.22); stroke: var(--amber); }
+.arch-badge-t { font: 400 10.5px var(--mono); fill: var(--amber); }
+.arch-card { padding: 20px 22px; border-top: 1px solid var(--line); min-height: 210px; }
+.arch-card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
+.arch-card-top b { font-weight: 500; font-size: 19px; letter-spacing: -.02em; color: var(--ink); }
+.arch-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 14px; }
+.arch-card dl div { padding: 10px 12px; border-radius: 12px; background: #ffffff06; border: 1px solid var(--line); }
+.arch-card dt { font: 400 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+.arch-card dd { margin: 0; font: 400 13px var(--mono); color: var(--cyan); }
+.arch-card p { font-size: 15px !important; line-height: 1.7 !important; color: var(--soft) !important; margin: 0; }
+.arch-card .arch-more { margin-top: 10px; color: var(--muted) !important; font-size: 14.5px !important; }
+.arch-mini { display: block; width: 100%; max-width: 300px; margin: 6px 0 2px; }
+.arch-foot { padding: 12px 22px; border-top: 1px solid var(--line); font: 400 11px var(--mono); letter-spacing: .06em; color: var(--dim); }
+.ex-part { display: block; font: 400 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--violet-2); margin-bottom: 6px; min-height: 14px; }
+@media (max-width: 760px) { .arch-card dl { grid-template-columns: 1fr; } .arch-card { min-height: 280px; } .arch-hint { display: none; } }

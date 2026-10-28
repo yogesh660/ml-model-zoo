@@ -33,6 +33,7 @@ assets/
     concepts.js       one lab per concept lesson
     sequences.js      labs for the RNN, GRU, LSTM and Transformer lessons
     explainers.js     step-by-step animated explainers shown above the labs (CNN and sequence lessons)
+    architecture.js   interactive architecture diagrams with hover/tap explanations (CNN lesson)
 scripts/build.js      content -> index.html, models/<id>/index.html, concepts/<id>/index.html
 models/<id>/          train.py (scikit-learn or PyTorch) and the metrics.json it writes
 datasets/raw/         small synthetic teaching samples modelled on well-known datasets

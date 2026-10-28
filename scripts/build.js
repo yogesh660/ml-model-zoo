@@ -445,6 +445,9 @@ function lessonPage(l) {
         ${l.analogy ? `<div class="analogy"><small class="kicker">In everyday terms</small><p>${R(l.analogy)}</p></div>` : ''}`);
   add('how', isModel ? 'How it works' : 'Step by step', `
         <ol class="steps">${(l.steps || []).map(s => `<li>${R(s)}</li>`).join('')}</ol>`);
+  if (l.architecture) add('arch', 'The architecture', `
+        <p>A small CNN that reads 28×28 handwritten digits, drawn layer by layer. Hover over any part (or tap it on a phone) to see what it does, its input and output shape and how many weights it learns.</p>
+        <div class="arch" data-architecture="${l.architecture}" style="margin-top:18px"><noscript><p class="lab-noscript">The diagram needs JavaScript.</p></noscript></div>`);
   if (l.explainer) add('watch', 'Watch it work', `
         <p>Press play, or step through at your own pace. Each step adds one idea.</p>
         <div class="explainer" data-explainer="${l.explainer}" style="margin-top:18px"><noscript><p class="lab-noscript">The animation needs JavaScript.</p></noscript></div>`);
@@ -557,7 +560,7 @@ function lessonPage(l) {
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 `;
-  const labScripts = ['core', 'algos', 'models', ...(l.kind === 'concepts' ? ['concepts'] : ['sequences']), ...(l.explainer ? ['explainers'] : [])].map(f => `<script src="${rootRel}assets/labs/${f}.js?v=${VERSION}" defer></script>\n`).join('');
+  const labScripts = ['core', 'algos', 'models', ...(l.kind === 'concepts' ? ['concepts'] : ['sequences']), ...(l.explainer ? ['explainers'] : []), ...(l.architecture ? ['architecture'] : [])].map(f => `<script src="${rootRel}assets/labs/${f}.js?v=${VERSION}" defer></script>\n`).join('');
 
   return shell({
     rootRel, bodyClass: 'page-lesson', lessonId: l.id,

@@ -248,6 +248,11 @@
       if (navigator.clipboard) navigator.clipboard.writeText(pre.innerText).then(ok, () => {});
     }));
 
+    document.querySelectorAll('[data-architecture]').forEach(el => {
+      const fn = window.Labs && window.Labs.architectures && window.Labs.architectures[el.dataset.architecture];
+      if (fn) { try { fn(el); } catch (e) { console.error(e); } }
+    });
+
     // explainers: start them as they approach the viewport too
     document.querySelectorAll('[data-explainer]').forEach(el => {
       const start = () => {
