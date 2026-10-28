@@ -116,7 +116,7 @@ module.exports = [
       { title: 'Sequences', lessons: ['recurrent_neural_networks', 'gru_networks', 'lstm_networks'] },
       { title: 'Architectures', lessons: ['residual-networks-and-skip-connections', 'the-attention-mechanism', 'autoencoders', 'variational-autoencoders', 'gans', 'diffusion-models', ...X('Graph neural networks: GCN, GAT, GraphSAGE', 'Mixture of experts', 'State-space models and Mamba', 'Normalising flows')] },
       { title: 'Representation learning', lessons: ['contrastive-learning-simclr-and-infonce', 'clip-and-multimodal-embeddings', ...X('Self-supervised learning: BYOL, DINO, MAE', 'Metric learning and triplet loss')] },
-      { title: 'Efficiency and scale', lessons: ['quantisation', ...C('LoRA and parameter-efficient fine-tuning'), ...X('Knowledge distillation', 'Pruning and sparsity', 'Scaling laws')] },
+      { title: 'Efficiency and scale', lessons: ['quantisation', 'lora-and-parameter-efficient-fine-tuning', ...X('Knowledge distillation', 'Pruning and sparsity', 'Scaling laws')] },
       { title: 'Reliability', lessons: [...X('Uncertainty: MC dropout and deep ensembles', 'Interpretability: saliency, Grad-CAM, probing', 'Adversarial examples')] },
     ],
   },
@@ -125,7 +125,7 @@ module.exports = [
     blurb: 'From pixels and filters to detection, segmentation, vision transformers and 3D. It picks up from the convolutional network lesson in Deep learning.',
     tasks: ['cv'],
     modules: [
-      { title: 'Image basics', lessons: [...C('Pixels, channels and colour spaces', 'Image filtering and convolution ⚙', 'Edge detection: Sobel and Canny', 'Thresholding, histograms and morphology'), ...X('Classical segmentation: k-means, watershed, GrabCut')] },
+      { title: 'Image basics', lessons: ['pixels-channels-and-colour-spaces', ...C('Image filtering and convolution ⚙'), 'edge-detection-sobel-and-canny', 'thresholding-histograms-and-morphology', ...X('Classical segmentation: k-means, watershed, GrabCut')] },
       { title: 'Classical features', lessons: [...C('Corners and keypoints: Harris, FAST', 'SIFT, ORB and feature matching'), ...X('HOG with SVM', 'Image pyramids and scale space', 'Bag of visual words')] },
       { title: 'Geometry', lessons: [...C('Geometric transforms and homography', 'RANSAC'), ...X('Camera model and calibration', 'Stereo vision and depth', 'Optical flow')] },
       { title: 'CNN foundations', lessons: [...C('Receptive field, stride and pooling', 'CNN architecture tour: LeNet to ResNet to EfficientNet'), ...X('Depthwise-separable convolutions and ConvNeXt')] },

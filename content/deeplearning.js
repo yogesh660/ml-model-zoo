@@ -2610,4 +2610,185 @@ print(f"Sample weight 0: original = {W_fp32[0]:.4f} -> dequantised = {W_reconstr
     related: ['normalisation-batch-layer-rms', 'residual-networks-and-skip-connections', 'the-attention-mechanism'],
     keywords: 'quantisation int8 fp16 int4 post training quantisation quantisation aware training straight through estimator scale zero point ptq qat compression',
   },
+
+  // ------------------------------------------------------------------ LoRA
+  {
+  id: 'lora-and-parameter-efficient-fine-tuning',
+  short: 'LoRA & PEFT',
+  title: 'LoRA and parameter-efficient fine-tuning',
+  task: 'concepts',
+  module: 'Efficiency and scale',
+  level: 2,
+  minutes: 16,
+  noLab: true,
+  summary: r`Parameter-Efficient Fine-Tuning (PEFT) adapts massive pre-trained foundation models without re-training all parameters. Low-Rank Adaptation (LoRA) freezes the pre-trained model weights $W_0 \in \mathbb{R}^{d \times k}$ and injects trainable rank-decomposition matrices $\Delta W = \frac{\alpha}{r} B A$, where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ with $r \ll \min(d, k)$. This cuts trainable parameters and optimiser GPU memory by over 99% while matching full fine-tuning accuracy and introducing zero inference latency via weight merging.`,
+  lead: r`Fine-tuning a 70-billion-parameter foundation model requires hundreds of gigabytes of GPU memory purely to store optimiser states (momentum and variance buffers in AdamW) and activation checkpoints, long before computing the actual gradients. LoRA (Low-Rank Adaptation) overcomes this hardware bottleneck based on the intrinsic rank hypothesis: the parameter updates required to specialise a model to a downstream domain lie on a low-dimensional subspace. Constraining weight updates to low-rank matrix products transforms foundation model customisation from a distributed cluster challenge into a single-workstation workflow.`,
+  intuition: [
+    r`Massive pre-trained transformers are intrinsically over-parameterised. When adapting a multi-billion parameter network to a downstream task (such as contract summarisation, medical triage, or SQL code generation), the weight updates $\Delta W$ do not span the entire ambient parameter space $\mathbb{R}^{d \times k}$. Instead, the degrees of freedom needed to capture the downstream task have an intrinsic dimension orders of magnitude smaller than $d$ and $k$.`,
+    r`Full fine-tuning updates every base parameter $W = W_0 + \Delta W$, necessitating gradient calculations and AdamW moment tracking for all weights. In a 16-bit model, each parameter requires 2 bytes for the weight, 2 bytes for the gradient, and 8 bytes for FP32 first and second optimiser moments—amounting to 12 to 16 bytes per parameter. LoRA freezes $W_0$ entirely. Backpropagation computes gradients solely for two diminutive factor matrices: a down-projection matrix $A \in \mathbb{R}^{r \times k}$ and an up-projection matrix $B \in \mathbb{R}^{d \times r}$, where the rank $r \in \{4, 8, 16, 64\}$.`,
+    r`To prevent disruptive perturbations at the start of training, LoRA initialises $A$ with a random Gaussian distribution $\mathcal{N}(0, \sigma^2)$ and $B$ to exact zeros. Consequently, the low-rank update $\Delta W = B A$ evaluates to exactly zero at step 0. Training begins smoothly from the exact behaviour of the original pre-trained checkpoint, eliminating catastrophic forgetting during initial gradient descent steps.`,
+    r`For production serving, LoRA delivers zero additional latency. The low-rank update can be merged directly into the base weights prior to deployment: $W_{\text{merged}} = W_0 + \frac{\alpha}{r} B A$. The deployed model uses the standard transformer architecture with identical inference latency. Alternatively, in multi-tenant environments, a single base model can remain resident in GPU VRAM while minuscule task-specific adapter weights are dynamically swapped per request.`,
+  ],
+  analogy: r`Imagine customising an exhaustive 1,000-page leather-bound medical encyclopaedia for a specialised paediatric clinic. Full fine-tuning is equivalent to reprinting the entire 1,000-page book with bespoke modifications on every single leaf—a slow, enormously expensive undertaking that must be repeated for every department. LoRA, by contrast, slips a slim two-page transparent overlay booklet into the back pocket. When reading an entry, a paediatrician views the underlying canonical text through the transparent overlay, seeing only the specialised paediatric annotations. The monumental encyclopaedia remains untouched on the clinic shelf, and swapping overlays adapts the reference text for cardiology or neurology in an instant.`,
+  steps: [
+    {
+      title: r`Identify target linear projection layers`,
+      desc: r`Select which weight matrices in the transformer architecture receive low-rank adapter branches.`,
+      detail: r`Original LoRA applied adapter matrices solely to multi-head self-attention query ($W_q$) and value ($W_v$) projections. Contemporary best practice (including QLoRA) attaches adapters to all linear projection layers—queries, keys, values, output projections, and feed-forward MLP projections—which allows using smaller ranks (such as $r=8$ or $r=16$) whilst matching full fine-tuning representational capacity.`,
+    },
+    {
+      title: r`Freeze the base model weights`,
+      desc: r`Disable gradient tracking across all pre-trained backbone parameters to halt optimiser memory allocation.`,
+      detail: r`By setting requires_grad = False on $W_0$, the base model does not allocate gradients or AdamW moment states (momentum and squared gradient averages). In 16-bit mixed precision, this frees roughly 10 to 14 bytes per base parameter from GPU VRAM.`,
+    },
+    {
+      title: r`Initialise low-rank adapter matrices with zero delta`,
+      desc: r`Initialise down-projection factor $A$ with Gaussian noise and up-projection factor $B$ with zeros.`,
+      detail: r`Down-projection matrix $A \in \mathbb{R}^{r \times k}$ is initialised from $\mathcal{N}(0, 1/r)$ or Kaiming uniform initialisation, while up-projection matrix $B \in \mathbb{R}^{d \times r}$ is set to all zeros. Because $B A = 0$ at step zero, the initial output matches the pre-trained model checkpoint without initial transient artifacts.`,
+    },
+    {
+      title: r`Execute dual-branch forward pass with scaling`,
+      desc: r`Compute the parallel adapter projection and scale the output by $\frac{\alpha}{r}$.`,
+      detail: r`For an incoming token activation $x \in \mathbb{R}^{B \times k}$, compute $h = x W_0^T + \frac{\alpha}{r} (x A^T) B^T$. Here $\alpha$ is a fixed scaling constant (commonly chosen as $\alpha = 2r$ or $\alpha = r$). The constant scaling factor $\frac{\alpha}{r}$ stabilises gradient magnitudes and allows practitioners to vary the rank $r$ without re-tuning the learning rate.`,
+    },
+    {
+      title: r`Deploy via weight merging or dynamic adapter routing`,
+      desc: r`Fold adapters into base weights for zero-overhead inference or swap adapters dynamically in multi-tenant serving.`,
+      detail: r`For standalone production deployment, pre-compute $W_{\text{deploy}} = W_0 + \frac{\alpha}{r} B A$. This incurs zero inference latency penalty and requires no architectural changes in serving runtimes. For multi-tenant APIs, keep a single copy of $W_0$ in memory and route activations through customer-specific $A$ and $B$ adapter vectors on the fly.`,
+    },
+  ],
+  math: [
+    {
+      h: r`Low-rank decomposition and scaled forward pass`,
+      tex: r`h = W_0 x + \Delta W x = W_0 x + \frac{\alpha}{r} B A x`,
+      p: r`Here $W_0 \in \mathbb{R}^{d \times k}$ represents the frozen pre-trained weight matrix, $B \in \mathbb{R}^{d \times r}$ is the trainable up-projection, $A \in \mathbb{R}^{r \times k}$ is the trainable down-projection, $r \ll \min(d, k)$ is the bottleneck rank, and $\alpha$ is a constant scaling hyperparameter.`,
+    },
+    {
+      h: r`Parameter reduction ratio`,
+      tex: r`\rho = \frac{|\Theta_{\text{LoRA}}|}{|\Theta_{\text{Base}}|} = \frac{r(d + k)}{d \times k} = r \left(\frac{1}{k} + \frac{1}{d}\right)`,
+      p: r`For a standard projection layer with $d = k = 4096$ and rank $r = 8$, base weights contain $16,777,216$ parameters, whereas the LoRA adapter contains $2 \times 4096 \times 8 = 65,536$ parameters—a parameter reduction of $99.61\%$ (a $256\times$ compression factor).`,
+    },
+    {
+      h: r`Weight merging for zero-latency inference`,
+      tex: r`W_{\text{merged}} = W_0 + \frac{\alpha}{r} B A`,
+      p: r`Because matrix multiplication is distributive across addition, $W_{\text{merged}} x = (W_0 + \frac{\alpha}{r} B A) x = W_0 x + \frac{\alpha}{r} B A x$. Folding the product $B A$ into $W_0$ produces an adapted weight matrix identical in shape to the original layer, requiring zero auxiliary runtime operators during inference.`,
+    },
+  ],
+  keyPoints: [
+    r`LoRA constrains task-specific fine-tuning weight updates to low-rank factorisation matrices $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ with $r \ll \min(d, k)$.`,
+    r`Base backbone weights remain frozen during training; gradients and optimiser states are computed solely for lightweight adapter parameters.`,
+    r`Initialising up-projection matrix $B$ to zero guarantees that $\Delta W = 0$ at step 0, preserving pre-trained behaviour from the start.`,
+    r`The scaling factor $\frac{\alpha}{r}$ stabilises gradient magnitude and allows changing rank $r$ without extensive learning rate re-tuning.`,
+    r`Weight merging folds $\Delta W$ directly into base parameters for production inference, adding zero latency and zero memory overhead at deployment.`,
+  ],
+  pitfalls: [
+    r`Setting rank $r$ unnecessarily high: Empirical studies show that rank $r \in [8, 16]$ often achieves parity with full fine-tuning; larger ranks increase risk of overfitting on modest task datasets without boosting accuracy.`,
+    r`Randomly initialising matrix $B$: If $B$ is initialised with random noise rather than exact zeros, $\Delta W \neq 0$ at step 0, introducing immediate noise that can disrupt pre-trained capabilities.`,
+    r`Omitting the $\frac{\alpha}{r}$ scaling factor: Scaling weight deltas by $\frac{\alpha}{r}$ decouples adaptation magnitude from rank $r$. Omitting this scaling requires re-tuning learning rates every time $r$ changes.`,
+    r`Attempting direct weight merging into quantised base weights: If the base model is stored in INT4 or INT8 (as in QLoRA), merging FP16 adapters directly degrades numerical precision; adapters must either be kept in a separate branch or merged after dequantising to FP16.`,
+    r`Targeting only attention projections: Restricting adapters exclusively to query and value projections often requires higher ranks ($r=64$); distributing low-rank adapters across all linear layers (including MLP projections) yields superior results at lower ranks ($r=8$).`,
+  ],
+  code: r`import numpy as np
+
+# Simulate a linear projection layer with LoRA adaptation
+np.random.seed(42)
+
+in_features = 4096
+out_features = 4096
+rank = 8
+alpha = 16.0
+scaling = alpha / rank
+
+# 1. Base pre-trained weight (frozen, e.g. FP16/FP32)
+W0 = np.random.randn(out_features, in_features).astype(np.float32) * 0.02
+
+# 2. Trainable low-rank adapters: A ~ N(0, 1/sqrt(r)), B = 0
+A = np.random.randn(rank, in_features).astype(np.float32) * (1.0 / np.sqrt(rank))
+B = np.zeros((out_features, rank), dtype=np.float32)
+
+# Verify parameter counts
+base_params = out_features * in_features
+lora_params = (out_features * rank) + (rank * in_features)
+reduction = (1.0 - (lora_params / base_params)) * 100
+
+print(f"Base parameters:            {base_params:,}")
+print(f"LoRA parameters (r={rank}):       {lora_params:,} ({lora_params/base_params*100:.2f}% of base)")
+print(f"Parameter reduction:        {reduction:.2f}%\n")
+
+# Simulate trained B matrix after fine-tuning steps
+B = np.random.randn(out_features, rank).astype(np.float32) * 0.01
+
+# 3. Forward pass with adapter branch: h = x W0^T + scaling * (x A^T) B^T
+x = np.random.randn(2, in_features).astype(np.float32)  # batch of 2 tokens
+
+# Standard base forward pass
+h_base = x @ W0.T
+
+# LoRA branch forward pass
+h_lora = (x @ A.T) @ B.T * scaling
+h_total = h_base + h_lora
+
+# 4. Zero-latency deployment: fold adapter into base weights
+W_merged = W0 + scaling * (B @ A)
+h_merged = x @ W_merged.T
+
+# Verify mathematical equivalence
+diff = np.max(np.abs(h_total - h_merged))
+print(f"Forward output shape:       {h_total.shape}")
+print(f"Base forward norm:          {np.linalg.norm(h_base):.4f}")
+print(f"LoRA delta norm:            {np.linalg.norm(h_lora):.4f}")
+print(f"Max diff (LoRA vs merged):  {diff:.2e}")
+assert diff < 1e-4, "Merged weight forward pass mismatch!"
+print("Weight merging verified successfully!")`,
+  quiz: [
+    {
+      q: r`Why is the up-projection matrix $B$ initialised to zeros while $A$ is initialised with Gaussian noise in LoRA?`,
+      o: [
+        r`To ensure the initial low-rank product $\Delta W = B A$ equals zero, preserving pre-trained model behaviour at the start of training`,
+        r`To prevent division by zero during backward propagation`,
+        r`To force the optimiser to update $B$ before updating $A$`,
+        r`To compress matrix $B$ into an 8-bit integer representation`,
+      ],
+      a: 0,
+      why: r`Initialising $B=0$ guarantees that $\Delta W = B A = 0$ at step 0. The model starts training from the exact pre-trained checkpoint, avoiding noisy disruptions at the onset of fine-tuning.`,
+    },
+    {
+      q: r`In LoRA, what is the role of the constant scaling factor $\frac{\alpha}{r}$ applied to the low-rank branch?`,
+      o: [
+        r`It normalises the activations so their Euclidean norm equals 1`,
+        r`It scales the magnitude of the adapter update, allowing the rank $r$ to be adjusted without re-tuning the learning rate`,
+        r`It clips exploding gradients when backpropagating through attention heads`,
+        r`It converts floating-point weights to low-bit integers for inference`,
+      ],
+      a: 1,
+      why: r`By scaling $\Delta W$ by $\frac{\alpha}{r}$, the magnitude of the weight update remains invariant when varying the rank $r$, stabilising the optimisation process across hyperparameter sweeps.`,
+    },
+    {
+      q: r`How does LoRA eliminate runtime latency overhead during inference in production?`,
+      o: [
+        r`By pruning 90% of the attention tokens dynamically during the forward pass`,
+        r`By folding the adapter product $\frac{\alpha}{r} B A$ directly into the frozen base weights $W_0$ prior to deployment`,
+        r`By skipping feed-forward layers when processing common tokens`,
+        r`By executing the adapter and base projections on separate asynchronous GPUs`,
+      ],
+      a: 1,
+      why: r`Because matrix multiplication is distributive over addition, $W_{\text{deploy}} = W_0 + \frac{\alpha}{r} B A$ can be computed once offline. The resulting matrix has the identical shape of the original layer, incurring zero latency penalty.`,
+    },
+    {
+      q: r`For a linear layer with dimension $d = 4096$ and $k = 4096$, how many trainable parameters does a LoRA module with rank $r = 8$ introduce compared to full fine-tuning?`,
+      o: [
+        r`65,536 parameters vs 16,777,216 parameters (a 99.61% reduction)`,
+        r`131,072 parameters vs 8,388,608 parameters (a 98.44% reduction)`,
+        r`32,768 parameters vs 33,554,432 parameters (a 99.90% reduction)`,
+        r`1,048,576 parameters vs 16,777,216 parameters (a 93.75% reduction)`,
+      ],
+      a: 0,
+      why: r`Base layer parameters are $4096 \times 4096 = 16,777,216$. LoRA consists of matrix $A$ ($8 \times 4096 = 32,768$) and matrix $B$ ($4096 \times 8 = 32,768$), totalling $65,536$ parameters—a 99.61% reduction.`,
+    },
+  ],
+  usedBy: [],
+  prereq: ['the-attention-mechanism', 'transfer-learning-and-fine-tuning', 'the-pytorch-training-loop'],
+  related: ['quantisation', 'residual-networks-and-skip-connections', 'optimisers-sgd-momentum-rmsprop-adam-adamw'],
+  keywords: 'lora peft parameter efficient fine tuning low rank adaptation qlora adapter rank decomposition intrinsic dimension weight merging transformer',
+},
 ];
