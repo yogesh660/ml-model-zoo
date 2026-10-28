@@ -1030,4 +1030,495 @@ print(f"Early stopping triggered at epoch {stop_epoch} (restoring best loss {bes
     related: ['normalisation-batch-layer-rms', 'learning-rate-schedules-and-warm-up', 'vanishing-and-exploding-gradients-clipping'],
     keywords: 'regularisation dropout weight decay early stopping overparameterisation adamw inverted dropout l2 penalty patience co-adaptation validation loss',
   },
+
+// ------------------------------------------------------------------ Lesson 1
+  {
+    id: 'the-pytorch-training-loop',
+    short: 'PyTorch training loop',
+    title: 'The PyTorch Training Loop',
+    task: 'concepts',
+    module: 'Practical deep learning',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`The core heartbeat of deep learning. Five explicit operations inside nested epoch and mini-batch loops convert raw datasets into trained weights with full control over gradient flow.`,
+    lead: r`Unlike high-level frameworks that bury mechanics inside opaque black-box calls, PyTorch exposes the training loop explicitly. An idiomatic loop orchestrates data mini-batching, device transfers, gradient zeroing, forward propagation, loss calculation, backpropagation, and optimiser parameter updates with surgical precision.`,
+    intuition: [
+      r`Training a neural network is an iterative dialogue between empirical data batches and parameter gradients. At the centre of every training script sits a nested loop: an outer loop that repeats over epochs (full sweeps through the dataset) and an inner loop that processes one mini-batch at a time. Within each batch, five fundamental operations must execute in strict sequence: zero gradients, compute predictions, evaluate the loss, backpropagate gradients, and step the optimiser.`,
+      r`The first operation—zeroing gradients via ` + '`optimiser.zero_grad(set_to_none=True)`' + r`—is essential because PyTorch deliberately accumulates gradients by default. If you omit this call, gradients from the current batch add directly to the residual gradients of all preceding batches, quickly blowing parameters to non-finite infinity. Passing ` + '`set_to_none=True`' + r` deletes the gradient memory buffers entirely rather than writing zeros into them, saving valuable GPU memory bandwidth.`,
+      r`Equally crucial is the discipline of toggling execution modes. Setting ` + '`model.train()`' + r` enables stochastic behaviours such as [[regularisation-dropout-weight-decay-early-stopping|dropout]] and updates running statistics in [[normalisation-batch-layer-rms|Batch Normalisation]]. Conversely, before running validation, switching to ` + '`model.eval()`' + r` freezes these layers and wrapping evaluation in ` + '`with torch.no_grad():`' + r` disables computational graph construction, drastically slashing memory consumption and preventing memory leaks.`,
+    ],
+    analogy: r`Like a competitive rowing crew executing a stroke cycle: clear the oars from the water (zero gradients), drive the stroke forward (forward pass), check boat speed against the pace clock (loss), assess blade resistance (backward pass), and adjust rower body angles (optimiser step).`,
+    steps: [
+      r`Assemble the pipeline: define the neural architecture, instantiate the criterion (` + '`nn.CrossEntropyLoss`' + r`), initialise the optimiser ([[optimisers-sgd-momentum-rmsprop-adam-adamw|torch.optim.AdamW]]), and prepare shuffled ` + '`DataLoader`' + r` instances.`,
+      r`Set training mode: invoke ` + '`model.train()`' + r` at the start of each training epoch so dropout masks and normalisation layers engage their stochastic training logic.`,
+      r`Execute the 5-step batch loop: iterate over mini-batches, clear parameter gradients, evaluate the forward pass, compute the loss scalar, run ` + '`loss.backward()`' + r`, and apply ` + '`optimiser.step()`' + r`.`,
+      r`Accumulate metrics cleanly: extract scalar loss values using ` + '`loss.item()`' + r` rather than appending raw loss tensors, preventing dynamic computational graphs from accumulating indefinitely in GPU memory.`,
+      r`Run evaluation under no-grad: switch to ` + '`model.eval()`' + r`, wrap validation loops in ` + '`with torch.no_grad():`' + r`, accumulate validation loss, and step learning-rate schedulers.`,
+    ],
+    math: [
+      {
+        h: 'Gradient accumulation across micro-batches',
+        tex: r`$$g = \frac{1}{K}\sum_{k=1}^K \nabla_\theta \mathcal{L}(B_k; \theta), \qquad \theta \leftarrow \theta - \eta \cdot \Delta(g)$$`,
+        p: r`$K$ is the number of accumulation steps, $B_k$ is the $k$-th micro-batch, and $\Delta(g)$ is the optimiser update direction. Because PyTorch accumulates gradients in ` + '`p.grad`' + r` by default, calling ` + '`optimiser.step()`' + r` and ` + '`optimiser.zero_grad()`' + r` only once every $K$ batches enables training with large effective batch sizes without exhausting GPU VRAM.`,
+      },
+      {
+        h: 'Training vs evaluation forward transformation',
+        tex: r`$$\hat{y}_{\text{train}} = f(x; \theta, \mathbf{m} \sim \operatorname{Bernoulli}(1-p), \mu_B, \sigma_B^2), \qquad \hat{y}_{\text{eval}} = f(x; \theta, \mathbf{1}, \mu_{\text{run}}, \sigma_{\text{run}}^2)$$`,
+        p: r`Illustrates the operational difference between ` + '`model.train()`' + r` and ` + '`model.eval()`' + r`. In training mode, activations are perturbed by random dropout mask $\mathbf{m}$ and normalised by batch statistics $(\mu_B, \sigma_B^2)$; in evaluation mode, all units remain active ($\mathbf{1}$) and frozen population averages $(\mu_{\text{run}}, \sigma^2_{\text{run}})$ ensure deterministic inference.`,
+      },
+    ],
+    keyPoints: [
+      r`Calling ` + '`optimiser.zero_grad(set_to_none=True)`' + r` before ` + '`loss.backward()`' + r` is mandatory; omitting it causes gradients from consecutive batches to compound destructively.`,
+      r`Setting ` + '`model.eval()`' + r` adjusts layer behaviour (dropout, batchnorm) but does not turn off autodiff; ` + '`with torch.no_grad():`' + r` is required to disable computational graph allocation during evaluation.`,
+      r`Tracking total epoch loss must always use ` + '`loss.item()`' + r` (a Python float); adding the raw ` + '`loss`' + r` tensor retains the entire autograd tape in VRAM, causing an out-of-memory crash.`,
+    ],
+    pitfalls: [
+      r`Omitting ` + '`optimiser.zero_grad()`' + r`, causing gradients to compound across batches and producing exploding parameter values in the first epoch.`,
+      r`Evaluating validation data inside ` + '`model.train()`' + r`, which contaminates predictions with stochastic dropout noise and calculates batch statistics on test splits.`,
+      r`Accumulating the autograd graph by writing ` + '`total_loss += loss`' + r` instead of ` + '`total_loss += loss.item()`' + r`, exhausting host or accelerator memory.`,
+    ],
+    code: r`import numpy as np
+
+# Synthetic linear dataset: y = 2*x + 1
+np.random.seed(42)
+X = np.random.randn(20, 1)
+y = 2.0 * X + 1.0 + np.random.randn(20, 1) * 0.05
+
+# Initialise model parameters and learning rate
+w = np.random.randn(1, 1)
+b = np.zeros(1)
+lr = 0.1
+
+print("Executing 5-step training loop across 30 epochs:")
+for epoch in range(1, 31):
+    # Step 1: Zero gradients
+    dw, db = np.zeros_like(w), np.zeros_like(b)
+    # Step 2: Forward pass
+    y_pred = X @ w + b
+    # Step 3: Compute loss (Mean Squared Error)
+    loss = float(np.mean((y_pred - y)**2))
+    # Step 4: Backward pass (analytical autodiff gradients)
+    grad = 2.0 * (y_pred - y) / len(X)
+    dw = X.T @ grad
+    db = np.sum(grad, axis=0)
+    # Step 5: Optimiser parameter update step
+    w -= lr * dw
+    b -= lr * db
+
+print(f"Trained parameter w: {w[0, 0]:.4f} (target: 2.0000)")
+print(f"Trained parameter b: {b[0]:.4f} (target: 1.0000)")
+print(f"Final training loss: {loss:.4f}")`,
+    quiz: [
+      {
+        q: r`What occurs if a developer forgets to call optimiser.zero_grad() between mini-batch iterations?`,
+        o: [
+          r`The model stops updating because gradients are automatically reset to NaN`,
+          r`The gradients of the new batch are added onto the gradients of the previous batch, leading to runaway update magnitudes`,
+          r`PyTorch throws an immediate runtime exception and halts execution`,
+          r`The learning rate is automatically divided by the batch index`,
+        ],
+        a: 1,
+        why: r`PyTorch accumulates gradients into parameter ` + '`.grad`' + r` buffers by default. Without zeroing, gradients from all prior batches sum together, rapidly destabilising training.`,
+      },
+      {
+        q: r`Why is wrapping the validation loop in with torch.no_grad(): strongly recommended?`,
+        o: [
+          r`It disables the backward pass autograd tape, significantly reducing GPU memory consumption and speeding up inference`,
+          r`It automatically applies cosine learning rate decay to the optimiser`,
+          r`It converts the model into a scikit-learn compatible estimator`,
+          r`It forces the model to use 8-bit integer quantisation`,
+        ],
+        a: 0,
+        why: r`During validation, gradients are never computed. Disabling graph tracking prevents PyTorch from allocating memory for intermediate forward activations, avoiding out-of-memory errors.`,
+      },
+      {
+        q: r`Why should running loss be accumulated using loss.item() rather than the loss tensor itself?`,
+        o: [
+          r`Because loss.item() converts the loss to logarithmic units`,
+          r`Because appending the raw tensor keeps a reference to the entire autograd computational graph, causing a memory leak across epochs`,
+          r`Because Python floats cannot be divided by batch count`,
+          r`Because loss.item() automatically normalises the loss across multiple GPUs`,
+        ],
+        a: 1,
+        why: r`A PyTorch loss tensor contains pointers to the backward computational graph. Retaining it prevents garbage collection of the graph, quickly exhausting available system or GPU RAM.`,
+      },
+      {
+        q: r`What is the primary operational benefit of gradient accumulation across multiple micro-batches?`,
+        o: [
+          r`It eliminates the need for computing cross-entropy loss`,
+          r`It allows practitioners to simulate large effective batch sizes without exceeding GPU physical memory limits`,
+          r`It guarantees that the model achieves zero validation error`,
+          r`It replaces weight decay with explicit gradient clipping`,
+        ],
+        a: 1,
+        why: r`By executing multiple forward and backward passes before calling ` + '`optimiser.step()`' + r`, gradient accumulation aggregates gradients over multiple smaller micro-batches, simulating a much larger batch size on hardware with restricted VRAM.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['backpropagation-and-autodiff', 'optimisers-sgd-momentum-rmsprop-adam-adamw'],
+    related: ['reading-loss-curves-and-debugging-training', 'transfer-learning-and-fine-tuning', 'vanishing-and-exploding-gradients-clipping'],
+    keywords: 'pytorch training loop zero_grad backward step optimiser state_dict dataloader model train eval no_grad gradient accumulation loss item',
+  },
+
+  // ------------------------------------------------------------------ Lesson 2
+  {
+    id: 'reading-loss-curves-and-debugging-training',
+    short: 'Reading loss curves',
+    title: 'Reading Loss Curves and Debugging Training',
+    task: 'concepts',
+    module: 'Practical deep learning',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Loss curves are the primary telemetry of machine learning. Diagnosing divergence, underfitting, overfitting, gradient collapse, and bad learning rates from training versus validation trajectories.`,
+    lead: r`Deep learning models rarely converge cleanly on the first try. Training and validation loss curves provide an unfiltered diagnostic window into internal optimisation dynamics: learning rates that are too aggressive, representational underfitting, noise memorisation, or corrupted labels each leave unmistakable graphical signatures.`,
+    intuition: [
+      r`When training a neural network, logging training loss $\mathcal{L}_{\text{train}}$ and validation loss $\mathcal{L}_{\text{val}}$ at regular intervals creates a pair of diagnostic curves. In a healthy run, both curves decline steadily in tandem; the training curve settles slightly below the validation curve, and both decelerate into a smooth asymptotic plateau as parameters approach a high-quality basin.`,
+      r`When learning fails, the curves reveal the underlying pathology. In **overfitting**, the training loss continues its monotonic descent toward zero while the validation loss reaches a trough and turns sharply upward (the classic U-shaped curve). The model has exhausted generalisable patterns and has begun memorising idiosyncratic sample noise. In **underfitting**, both curves flatten almost immediately at an unacceptably high loss plateau: the model lacks sufficient capacity, features lack signal, or the optimisation has stalled.`,
+      r`The single most powerful diagnostic protocol is the **single-batch sanity check**: take 10 to 20 samples from your dataset and train the model on them without regularisation. If an overparameterised network cannot drive training loss to absolute zero on 10 samples within 50 epochs, there is an algorithmic or coding defect in your pipeline—such as inverted loss signs, detached autograd tensors, mismatched label dimensions, or unscaled input features.`,
+    ],
+    analogy: r`Like reading an intensive care telemetry monitor: a steady downward rhythm reflects healthy recovery, erratic vertical spikes indicate cardiac fibrillation (exploding learning rate), and flatlining indicates complete system failure (dead gradients or frozen weights).`,
+    steps: [
+      r`Perform the single-batch check: train on 10 fixed samples with zero regularisation; confirm that loss drives to zero ($< 10^{-4}$) to rule out implementation bugs.`,
+      r`Check initial loss magnitude: verify that initial epoch loss aligns with random guessing (e.g. $-\ln(1/C) = \ln(C)$ for cross-entropy with $C$ balanced classes).`,
+      r`Plot curves on identical step axes: chart $\mathcal{L}_{\text{train}}$ and $\mathcal{L}_{\text{val}}$ simultaneously, smoothing noisy batch fluctuations with exponential moving averages.`,
+      r`Measure the generalisation gap: compute $\Delta = \mathcal{L}_{\text{val}} - \mathcal{L}_{\text{train}}$; an expanding gap signals the onset of overfitting, dictating early stopping or increased weight decay.`,
+      r`Calibrate learning rate from curvature: if loss oscillates wildly or produces NaNs, decrease the rate by $3\times$ to $10\times$; if loss slopes downward at a glacial pace, increase the learning rate or apply warm-up.`,
+    ],
+    math: [
+      {
+        h: 'Expected initial cross-entropy loss baseline',
+        tex: r`$$\mathcal{L}_{\text{init}} = -\sum_{c=1}^C \frac{1}{C} \ln\left(\frac{1}{C}\right) = \ln(C)$$`,
+        p: r`$C$ is the number of mutually exclusive target classes. For a randomly initialised network where all output logits are approximately zero, predicted probabilities are uniform ($1/C$). For CIFAR-10 ($C=10$), initial loss must be near $\ln(10) \approx 2.3026$. An initial loss of $15.0$ or $0.1$ signals broken initialisation, incorrect loss criteria, or faulty label indices.`,
+      },
+      {
+        h: 'Generalisation gap tracking',
+        tex: r`$$\mathcal{G}(t) = \mathcal{L}_{\text{val}}(t) - \mathcal{L}_{\text{train}}(t), \qquad \frac{d\mathcal{G}}{dt} > 0 \quad \text{when } \frac{d\mathcal{L}_{\text{val}}}{dt} > 0 \text{ and } \frac{d\mathcal{L}_{\text{train}}}{dt} < 0$$`,
+        p: r`$\mathcal{G}(t)$ measures the generalisation gap at epoch $t$. When the derivative of validation loss turns positive while training loss continues declining, the model transitions from representation learning to memorisation, indicating that [[regularisation-dropout-weight-decay-early-stopping|early stopping]] should trigger.`,
+      },
+    ],
+    keyPoints: [
+      r`Overfitting a single mini-batch of 10 samples to zero loss is the fastest method to verify that data loading, forward passes, autograd, and loss calculation work correctly.`,
+      r`Initial cross-entropy loss on $C$ balanced classes should always be approximately $\ln(C)$; substantial divergence warns of unnormalised inputs or corrupted labels.`,
+      r`A rising validation loss paired with a collapsing training loss marks the textbook onset of overfitting, calling for increased regularisation or early stopping.`,
+    ],
+    pitfalls: [
+      r`Tuning regularisation hyperparameters before proving that the network can overfit a single mini-batch to zero loss.`,
+      r`Calculating training loss as a cumulative running average across an epoch while evaluating validation loss at epoch end, falsely making validation loss appear lower than training loss.`,
+      r`Confusing optimisation stagnation (loss plateauing early due to vanishing gradients or a tiny learning rate) with genuine model convergence.`,
+    ],
+    code: r`import numpy as np
+
+# 1. Theoretical initial loss check for C=10 classes
+C = 10
+expected_init = np.log(C)
+print(f"Theoretical initial loss for {C} balanced classes: {expected_init:.4f}")
+
+# 2. Diagnose training trajectories from loss history
+epochs = list(range(1, 7))
+train_curve = [2.30, 1.80, 1.20, 0.60, 0.20, 0.05]
+val_curve   = [2.31, 1.85, 1.30, 0.95, 1.10, 1.45]
+
+gap = val_curve[-1] - train_curve[-1]
+is_overfitting = (val_curve[-1] > val_curve[-2]) and (train_curve[-1] < train_curve[-2])
+
+print(f"Epoch 6 - Training loss:   {train_curve[-1]:.2f}")
+print(f"Epoch 6 - Validation loss: {val_curve[-1]:.2f}")
+print(f"Generalisation gap:        {gap:.2f}")
+if is_overfitting:
+    print("Diagnosis: Severe overfitting detected (val loss rising while train loss drops)")`,
+    quiz: [
+      {
+        q: r`You initialise a neural network for a 100-class classification problem. What should the initial loss be approximately if weights are randomised properly?`,
+        o: [
+          r`Approximately 0.0100`,
+          r`Approximately 4.6052`,
+          r`Approximately 10.0000`,
+          r`Approximately 0.6931`,
+        ],
+        a: 1,
+        why: r`With uniform random predictions across $C=100$ balanced classes, predicted probabilities are $1/100 = 0.01$. The expected negative log-likelihood is $-\ln(0.01) = \ln(100) \approx 4.6052$.`,
+      },
+      {
+        q: r`What is the primary purpose of the "single-batch sanity check" in deep learning?`,
+        o: [
+          r`To verify that the model achieves high test-set accuracy on unseen data`,
+          r`To prove that the pipeline has no implementation bugs by confirming the network can memorise 10 samples to zero loss`,
+          r`To calculate the optimal learning rate schedule automatically`,
+          r`To measure the GPU memory bandwidth of the data loader`,
+        ],
+        a: 1,
+        why: r`An overparameterised network has ample capacity to fit 10 samples perfectly. If it cannot achieve zero training loss on a tiny fixed batch, an algorithmic or coding defect exists in the model or loss setup.`,
+      },
+      {
+        q: r`If both training loss and validation loss flatten early at a very high error rate and do not improve with further training, what is the most likely diagnosis?`,
+        o: [
+          r`Severe overfitting to training labels`,
+          r`High bias (underfitting), caused by insufficient network capacity, poor feature scaling, or a learning rate that is too low`,
+          r`Data leakage between training and validation splits`,
+          r`Excessive inverted dropout probability`,
+        ],
+        a: 1,
+        why: r`When both curves plateau together at an unacceptably high loss, the model is failing to fit the training data itself (underfitting), indicating capacity or optimisation constraints rather than variance issues.`,
+      },
+      {
+        q: r`During training, you observe that training loss decreases steadily while validation loss decreases to a minimum at epoch 12 and then steadily rises. What action should you take?`,
+        o: [
+          r`Stop training and deploy the checkpoint saved at epoch 12, or increase regularisation (weight decay, dropout)`,
+          r`Increase the learning rate by a factor of 10 to jump over the validation plateau`,
+          r`Remove all validation data and train exclusively on the combined dataset`,
+          r`Disable early stopping and train for 500 more epochs until validation loss drops`,
+        ],
+        a: 0,
+        why: r`The divergence of validation loss away from training loss indicates that the model has crossed into noise memorisation. Restoring the epoch 12 checkpoint or applying stronger regularisation directly addresses this overfitting.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['the-pytorch-training-loop', 'bias-variance-tradeoff', 'learning-rate-schedules-and-warm-up'],
+    related: ['regularisation-dropout-weight-decay-early-stopping', 'transfer-learning-and-fine-tuning', 'vanishing-and-exploding-gradients-clipping'],
+    keywords: 'loss curves debugging training overfitting underfitting generalisation gap cross-entropy baseline single batch sanity check telemetry',
+  },
+
+  // ------------------------------------------------------------------ Lesson 3
+  {
+    id: 'transfer-learning-and-fine-tuning',
+    short: 'Transfer learning & fine-tuning',
+    title: 'Transfer Learning and Fine-Tuning',
+    task: 'concepts',
+    module: 'Practical deep learning',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Do not train complex vision or language networks from scratch when foundation models have spent millions of GPU hours learning universal representations. Freeze, adapt, and fine-tune for sample-efficient mastery.`,
+    lead: r`Training deep architectures from scratch requires massive labelled datasets and substantial computational budgets. Transfer learning reuses parameter representations learned on massive upstream corpora (such as ImageNet or web-scale text) and adapts them to specialized downstream tasks using linear probing, head replacement, and differential fine-tuning.`,
+    intuition: [
+      r`Deep neural networks learn hierarchical feature representations. In vision backbones, early layers act as Gabor-like edge and texture filters; intermediate layers assemble these primitives into textures, corners, and motifs; and late layers combine parts into task-specific semantic classes. Because early and middle representations capture fundamental statistical structures of the physical world, they transfer effortlessly across domains. A model pre-trained on natural photos already understands edge detection and spatial composition, making it equally adept at learning medical radiographs or satellite images.`,
+      r`Practitioners adapt pre-trained models using two primary methodologies. In **feature extraction (linear probing)**, the entire pre-trained backbone is frozen (` + '`param.requires_grad = False`' + r`), and only a newly appended classification head is trained. This strategy is lightning-fast, computationally cheap, and immune to overfitting on small target datasets ($N < 1,000$). In **fine-tuning**, the backbone weights are unfrozen and trained alongside the head using a substantially reduced learning rate ($10\times$ to $100\times$ smaller than training from scratch), allowing pre-trained filters to adapt gently to target domain nuances.`,
+      r`A common failure mode during fine-tuning is **catastrophic forgetting**: if you unfreeze the backbone immediately while the new head is completely random, large initial gradient updates from the disordered head wash backward through the network, destroying years of pre-trained feature representations in the very first epoch. The standard remedy is staged unfreezing: train the head alone for several epochs until its loss stabilizes, then unfreeze the backbone with layer-wise discriminative learning rates.`,
+    ],
+    analogy: r`Like hiring a classically trained concert pianist to play jazz: you do not need to teach them finger agility, pitch recognition, or reading music from scratch (pre-trained backbone); you simply teach them jazz harmonic progressions and improvisation phrasing (fine-tuning the head).`,
+    steps: [
+      r`Select a foundation backbone: pick a pre-trained model whose upstream data distribution shares structural affinities with the target task (e.g. ResNet/ConvNeXt for vision; BERT/RoBERTa/Llama for NLP).`,
+      r`Replace the task head: strip the original final projection layer and attach a new randomly initialised linear classifier sized to your target class count.`,
+      r`Warm up the head (linear probe): freeze all backbone layers (` + '`requires_grad = False`' + r`) and train only the new head for 3 to 5 epochs to bring output projections into an orderly parameter regime.`,
+      r`Unfreeze with discriminative learning rates: unlock backbone parameters and assign smaller learning rates to early layers ($\eta_{\text{early}} = 0.1 \cdot \eta_{\text{head}}$) to preserve universal primitive filters.`,
+      r`Apply regularisation and evaluate: employ [[regularisation-dropout-weight-decay-early-stopping|weight decay]] and early stopping to prevent overparameterised backbones from memorising small target datasets.`,
+    ],
+    math: [
+      {
+        h: 'Transfer learning objective with parameter regularisation',
+        tex: r`$$\min_{\theta_{\text{bb}}, \theta_{\text{head}}} \frac{1}{N}\sum_{i=1}^N \mathcal{L}\Big(g_{\theta_{\text{head}}}\big(f_{\theta_{\text{bb}}}(x_i)\big), y_i\Big) + \lambda_{\text{head}} \lVert \theta_{\text{head}} \rVert_2^2 + \lambda_{\text{bb}} \lVert \theta_{\text{bb}} - \theta_{\text{bb}}^{(0)} \rVert_2^2$$`,
+        p: r`$f_{\theta_{\text{bb}}}$ is the feature extraction backbone, $g_{\theta_{\text{head}}}$ is the task head, and $\theta_{\text{bb}}^{(0)}$ represents the original pre-trained weight initialisation. The final term anchors backbone weights to their pre-trained values, regularising representation drift during fine-tuning.`,
+      },
+      {
+        h: 'Layer-wise discriminative learning rate schedule',
+        tex: r`$$\eta_l = \eta_{\text{head}} \cdot \xi^{L - l}, \qquad 0 < \xi < 1$$`,
+        p: r`$L$ is the total layer depth, $l \in [1, L]$ is the layer index, and $\xi$ is the decay multiplier (typically $0.7$ to $0.9$). Early layers ($l=1$) receive geometrically smaller updates, ensuring that low-level edge and texture detectors remain stable while higher layers adapt to target semantics.`,
+      },
+    ],
+    keyPoints: [
+      r`Transfer learning drastically reduces the dataset size and training duration required to achieve competitive deep learning accuracy.`,
+      r`Freezing the backbone to train the randomly initialised head first prevents catastrophic forgetting of pre-trained feature hierarchies.`,
+      r`Discriminative learning rates assign smaller update steps to lower layers, protecting universal spatial or syntactic primitives while adapting high-level semantics.`,
+    ],
+    pitfalls: [
+      r`Fine-tuning the entire network end-to-end with a large learning rate from epoch 1, immediately destroying pre-trained representations.`,
+      r`Using mismatched image normalisation statistics (e.g. standardising with mean $0.5$ when the backbone was trained with ImageNet RGB mean and variance).`,
+      r`Attempting feature extraction when the downstream task is drastically dissimilar from pre-training data, where end-to-end fine-tuning is required.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate pre-trained feature extraction on target classification task
+np.random.seed(42)
+N, D = 100, 8  # 100 target samples with 8-dimensional pre-trained embeddings
+X_features = np.random.randn(N, D)
+# Target ground truth driven primarily by features 0 and 1
+y_target = (1.5 * X_features[:, 0] - 2.0 * X_features[:, 1] > 0).astype(int)
+
+# Linear probe: train head weights (8 -> 1) with frozen backbone features
+w_head = np.zeros(D)
+lr_head = 0.2
+
+for _ in range(50):
+    logits = X_features @ w_head
+    probs = 1.0 / (1.0 + np.exp(-logits))
+    grad = X_features.T @ (probs - y_target) / N
+    w_head -= lr_head * grad
+
+# Evaluate target accuracy
+predictions = (X_features @ w_head > 0).astype(int)
+accuracy = float(np.mean(predictions == y_target))
+
+print(f"Linear probe target task accuracy: {accuracy * 100:.1f}%")
+print(f"Learned head weights for top 2 features: {w_head[0]:.3f}, {w_head[1]:.3f}")`,
+    quiz: [
+      {
+        q: r`What is catastrophic forgetting during fine-tuning of deep neural networks?`,
+        o: [
+          r`The model runs out of GPU memory during backward passes`,
+          r`Large gradient updates from a randomly initialised head overwrite and destroy pre-trained representations in early layers`,
+          r`The optimiser permanently deletes learning rate schedule milestones`,
+          r`The validation dataset is accidentally shuffled into the training split`,
+        ],
+        a: 1,
+        why: r`When an untrained head outputs large random errors, backpropagating these massive gradients into an unfrozen backbone immediately shatters the delicately tuned pre-trained weights.`,
+      },
+      {
+        q: r`When is linear probing (feature extraction with a frozen backbone) preferred over full fine-tuning?`,
+        o: [
+          r`When the target dataset has millions of labelled examples`,
+          r`When the target dataset is small (e.g. hundreds of samples) and similar in domain to the pre-training data`,
+          r`When the target task has 1,000 output classes`,
+          r`When the model must run exclusively on CPU hardware`,
+        ],
+        a: 1,
+        why: r`With small target datasets, fine-tuning millions of backbone parameters quickly leads to severe overfitting. Freezing the backbone restricts training to the linear head, preserving generalisation.`,
+      },
+      {
+        q: r`How do discriminative (layer-wise) learning rates help preserve pre-trained knowledge?`,
+        o: [
+          r`They apply progressively smaller learning rates to earlier layers, leaving low-level general feature detectors largely intact while allowing higher layers to adapt`,
+          r`They set the learning rate of odd-numbered layers to zero`,
+          r`They force all convolutional kernels to sum to one`,
+          r`They multiply the learning rate by the batch size at every epoch`,
+        ],
+        a: 0,
+        why: r`Early layers capture universal features (edges, basic textures) that rarely need alteration. Decaying the learning rate with depth shields these foundational filters while granting semantic layers flexibility.`,
+      },
+      {
+        q: r`What pre-processing step is essential when performing transfer learning with a vision backbone like ResNet?`,
+        o: [
+          r`Converting all target images to binary black-and-white silhouettes`,
+          r`Applying the exact same normalisation mean and standard deviation used during the model's original pre-training`,
+          r`Randomly swapping the red and blue colour channels`,
+          r`Padding every image to $1024 \times 1024$ resolution with zeros`,
+        ],
+        a: 1,
+        why: r`Pre-trained neural weights expect input activations to conform to the specific channel means and variances used during upstream training (such as ImageNet channel statistics); mismatching them degrades performance.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['the-pytorch-training-loop', 'learning-rate-schedules-and-warm-up', 'weight-initialisation-xavier-and-he'],
+    related: ['reading-loss-curves-and-debugging-training', 'regularisation-dropout-weight-decay-early-stopping', 'residual-networks-and-skip-connections'],
+    keywords: 'transfer learning fine tuning linear probing frozen backbone catastrophic forgetting discriminative learning rates head adaptation foundation models',
+  },
+
+  // ------------------------------------------------------------------ Lesson 4
+  {
+    id: 'residual-networks-and-skip-connections',
+    short: 'ResNets and skip connections',
+    title: 'Residual Networks and Skip Connections',
+    task: 'concepts',
+    module: 'Architectures',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Standard deep networks degrade as layers multiply. By reformulating layers to learn residual differences $\mathcal{F}(x) = \mathcal{H}(x) - x$, skip connections establish unbroken gradient superhighways across hundreds of layers.`,
+    lead: r`Before 2015, stacking more than 20 or 30 layers in a deep network caused training accuracy to degrade sharply—not due to overfitting, but because optimisation collapsed completely. Residual Networks (ResNets, He et al. 2015) solved this fundamental architectural hurdle by introducing identity shortcut connections, transforming loss surfaces and enabling stable optimisation across hundreds or thousands of layers.`,
+    intuition: [
+      r`In a conventional plain network, each stacked layer attempts to approximate an underlying target mapping $\mathcal{H}(x)$. Imagine constructing a 50-layer network when a 20-layer network already suffices for the problem. To match the shallower model's performance, the remaining 30 layers must learn the identity function $\mathcal{H}(x) = x$. However, fitting an exact identity mapping through non-linear weight transformations ($W_2 \sigma(W_1 x)$) is surprisingly difficult for stochastic gradient descent, causing deep plain networks to achieve higher training error than their shallow counterparts.`,
+      r`ResNet reframes the objective: instead of tasking parameterised layers with fitting $\mathcal{H}(x)$ directly, the layers fit the **residual** difference $\mathcal{F}(x) = \mathcal{H}(x) - x$. The original input is then reintroduced via an identity skip connection: $\mathcal{H}(x) = \mathcal{F}(x) + x$. Under this reformulation, if an identity mapping is optimal, the optimiser can simply drive the residual weights towards zero ($\mathcal{F}(x) \to 0$), which standard weight decay achieves naturally.`,
+      r`The profound mathematical consequence occurs during backpropagation. The derivative of a residual block with respect to its input is $\frac{\partial \mathcal{H}}{\partial x} = \frac{\partial \mathcal{F}}{\partial x} + I$. Because of the additive identity matrix $I$, the backpropagated gradient contains an unattenuated term that flows backward through the skip connection completely independent of weight magnitudes. Even if the parameterised gradient $\frac{\partial \mathcal{F}}{\partial x}$ vanishes, the identity pathway ensures gradient signals reach early layers with full fidelity.`,
+    ],
+    analogy: r`Like an expressway with local detour loops: instead of forcing all traffic through 50 congested city intersections (plain layers), the highway lets traffic cruise unimpeded from start to finish (skip connection), exiting into local workshops (residuals) only when specialized modifications are needed.`,
+    steps: [
+      r`Construct the residual transformation: build two or three convolutional or linear layers with [[normalisation-batch-layer-rms|normalisation]] and non-linear activations ($\mathcal{F}(x)$).`,
+      r`Add the identity shortcut: route the unmodified input $x$ parallel to the transformations and add it element-wise ($y = \mathcal{F}(x) + x$).`,
+      r`Handle dimension changes: when downsampling spatial dimensions or doubling channels, apply a $1 \times 1$ projection convolution on the shortcut path ($y = \mathcal{F}(x) + W_s x$) to align tensor shapes.`,
+      r`Position post-addition activations: apply the non-linear activation (e.g. ReLU or GELU) immediately following the element-wise addition ($\sigma(\mathcal{F}(x) + x)$).`,
+      r`Stack modular stages: assemble residual blocks into hierarchical stages (e.g. 64 → 128 → 256 → 512 channels) to construct deep backbones for vision, speech, or Transformer architectures.`,
+    ],
+    math: [
+      {
+        h: 'Residual block formulation',
+        tex: r`$$\mathcal{H}(x) = \mathcal{F}(x; \{W_i\}) + x$$`,
+        p: r`$x$ is the input tensor, $\mathcal{F}$ represents the residual mapping to be learned across parameterised layers $\{W_i\}$, and $\mathcal{H}(x)$ is the output tensor. If the optimal transformation is the identity function, parameter weights shrink to zero ($\mathcal{F} = 0$), leaving $\mathcal{H}(x) = x$ without distortion.`,
+      },
+      {
+        h: 'Unattenuated gradient highway across depth',
+        tex: r`$$\frac{\partial \mathcal{L}}{\partial x_l} = \frac{\partial \mathcal{L}}{\partial x_L}\frac{\partial x_L}{\partial x_l} = \frac{\partial \mathcal{L}}{\partial x_L} \left( I + \frac{\partial}{\partial x_l}\sum_{k=l}^{L-1} \mathcal{F}_k(x_k) \right)$$`,
+        p: r`$x_l$ is the activation at block $l$, and $x_L = x_l + \sum_{k=l}^{L-1} \mathcal{F}_k(x_k)$ is the activation at block $L$. The gradient contains an additive identity component $I$, guaranteeing that the gradient cannot vanish across depth even if the Jacobians of intermediate residual transformations $\frac{\partial \mathcal{F}_k}{\partial x_l}$ approach zero.`,
+      },
+    ],
+    keyPoints: [
+      r`Residual connections reparameterise layers to learn the differential mapping $\mathcal{F}(x) = \mathcal{H}(x) - x$, making identity functions trivial to approximate.`,
+      r`The additive identity term in backpropagation ($\frac{\partial \mathcal{F}}{\partial x} + I$) creates a gradient superhighway, solving the degradation problem in deep networks.`,
+      r`Skip connections are standard architecture components across modern deep learning, including ResNets, ConvNeXts, Transformers, and diffusion models.`,
+    ],
+    pitfalls: [
+      r`Confusing the degradation problem with overfitting: deeper plain networks suffered from higher *training* error, proving it was an optimisation failure, not excessive variance.`,
+      r`Adding heavy non-linear operations onto the skip path itself, which obstructs the clean linear flow of gradients.`,
+      r`Failing to project shortcut dimensions when spatial resolution or channel depth changes, causing dimension mismatch errors during tensor addition.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate gradient propagation across a 10-layer depth
+depth = 10
+w_scale = 0.5  # Sub-unitary Jacobian weight per layer
+
+# 1. Plain feedforward network: gradients multiply sequentially
+grad_plain = 1.0
+for _ in range(depth):
+    grad_plain *= w_scale  # grad * W
+
+# 2. Residual network: gradients add identity term (W + I)
+grad_res = 1.0
+for _ in range(depth):
+    grad_res *= (w_scale + 1.0)  # grad * (W + I)
+
+print(f"Depth = {depth} layers (layer weight scale = {w_scale}):")
+print(f"Plain network backpropagated gradient:    {grad_plain:.6f} (vanished to zero)")
+print(f"Residual network backpropagated gradient: {grad_res:.2f} (unbroken gradient flow)")`,
+    quiz: [
+      {
+        q: r`What was the degradation problem that motivated the invention of ResNets in 2015?`,
+        o: [
+          r`Deeper plain networks began to overfit because they had too many parameters`,
+          r`Deeper plain networks exhibited higher training error than their shallower counterparts, caused by optimisation failure rather than overfitting`,
+          r`Convolutions ran out of GPU memory when image sizes exceeded 256 pixels`,
+          r`Batch Normalisation failed to compute running means on deep networks`,
+        ],
+        a: 1,
+        why: r`He et al. showed that a 56-layer plain network suffered higher training error than a 20-layer plain network on CIFAR-10. Because the 56-layer network could theoretically mimic the 20-layer network via identity layers, higher training error demonstrated an optimisation breakdown.`,
+      },
+      {
+        q: r`Why does backpropagation through a residual block prevent vanishing gradients?`,
+        o: [
+          r`The derivative of $\mathcal{F}(x) + x$ contains an additive identity matrix $+ I$, providing an unhindered linear path for gradients to flow backward`,
+          r`Residual blocks eliminate all activation functions`,
+          r`Residual blocks double the learning rate at every backward step`,
+          r`The skip connection sets negative gradients to zero`,
+        ],
+        a: 0,
+        why: r`Because $\frac{\partial (\mathcal{F}(x) + x)}{\partial x} = \frac{\partial \mathcal{F}}{\partial x} + I$, the gradient always contains $+ I$, guaranteeing that gradient information reaches early layers even if $\frac{\partial \mathcal{F}}{\partial x}$ is small.`,
+      },
+      {
+        q: r`When downsampling feature maps (e.g. stride 2) in a ResNet, what must be done to the skip connection?`,
+        o: [
+          r`The skip connection must be deleted entirely`,
+          r`A $1 \times 1$ convolution with stride 2 must be applied to the shortcut to match spatial and channel dimensions`,
+          r`The input must be repeated twice`,
+          r`The batch size must be halved`,
+        ],
+        a: 1,
+        why: r`Because element-wise addition requires matching spatial height, width, and channel counts, a $1 \times 1$ strided projection convolution is applied to the shortcut path to align dimensions with the residual branch.`,
+      },
+      {
+        q: r`Why is it easier for a residual block to learn an identity mapping than a plain layer?`,
+        o: [
+          r`Driving residual weights to zero ($\mathcal{F}(x) \to 0$) naturally produces the identity mapping $\mathcal{H}(x) = 0 + x = x$, which weight decay facilitates`,
+          r`Residual connections force all weight matrices to be orthogonal`,
+          r`Identity mappings are strictly forbidden in plain networks`,
+          r`Residual blocks do not use floating-point numbers`,
+        ],
+        a: 0,
+        why: r`In a residual block $\mathcal{H}(x) = \mathcal{F}(x) + x$, setting weights to zero trivially yields $\mathcal{H}(x) = x$. In a plain network, learning an identity function requires finding precise non-zero weights that cancel non-linear activations.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['vanishing-and-exploding-gradients-clipping', 'backpropagation-and-autodiff', 'weight-initialisation-xavier-and-he'],
+    related: ['normalisation-batch-layer-rms', 'transfer-learning-and-fine-tuning', 'the-pytorch-training-loop'],
+    keywords: 'residual networks resnet skip connections identity shortcuts degradation problem gradient highway he et al residual block deep learning architecture',
+  },
 ];
