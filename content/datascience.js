@@ -2318,4 +2318,382 @@ print(f"Truncated axis Lie Factor: {lie_factor_deceptive:.2f} (20.0 = 20x visual
     related: ['cohort-and-funnel-analysis', 'customer-segmentation-with-rfm', 'data-cleaning-and-validation'],
     keywords: 'data visualisation principles data ink ratio lie factor edward tufte cleveland mcgill chartjunk perceptual hierarchy visual encoding',
   },
+  {
+    id: 'docker-and-reproducible-environments',
+    short: 'Docker and reproducibility',
+    title: 'Docker and Reproducible Environments',
+    task: 'concepts',
+    module: 'MLOps and engineering',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Packaging machine learning models, system dependencies, and runtimes into immutable container images to eliminate deployment divergence.`,
+    lead: r`A machine learning pipeline rarely fails because the mathematical weights are wrong; it fails because the target server runs Python 3.10 instead of 3.11, or lacks a specific C++ CUDA driver or OpenMP shared library. Docker packages the entire operating system user space, runtime binaries, pinned Python libraries, and serialised model artifacts into an immutable container image. This guarantees deterministic, byte-for-byte reproducibility from a data scientist's local workstation to production Kubernetes clusters.`,
+    intuition: [
+      r`Imagine spending three months developing a high-performing fraud detection model on your local laptop. In your local Jupyter environment, the code runs flawlessly and achieves 94% precision. You push the code to git and hand it over to the platform engineering team. On the production Linux server, the service crashes instantly on startup: ImportError: libgomp.so.1: cannot open shared object file: No such file or directory. The production operating system has an older Linux distribution lacking the multi-threading C library required by your gradient boosted tree package. You enter dependency hell, manually installing system libraries on production servers and risking breaking other running services.`,
+      r`Virtual machines (VMs) solve isolation by bundling a complete guest operating system, including a full virtualised kernel, which makes them heavy (gigabytes in size) and slow to boot (minutes). Docker containers solve this using Linux kernel primitives: namespaces (which give each container an isolated view of process trees, networking, and filesystems) and cgroups (which enforce strict CPU and memory limits). Containers share the host OS kernel while maintaining completely isolated filesystems and user spaces, booting in milliseconds with negligible performance overhead.`,
+      r`A Dockerfile is a declarative recipe where each instruction (FROM, COPY, RUN) creates an immutable, content-addressable filesystem layer. When you rebuild an image after editing your Python prediction script, Docker reuses cached layers for the base OS and compiled pip packages, rebuilding only the final layer in seconds. Once built, an image tagged with a git commit hash or semantic version is immutable: running docker run on AWS, GCP, Azure, or a colleague's laptop produces an identical, byte-for-byte reproducible execution environment.`,
+    ],
+    analogy: r`A standardised intermodal shipping container: whether transporting electronics, fresh fruit, or auto parts, the container has universal corner castings so cranes and cargo ships can load it without caring about what is packed inside.`,
+    steps: [
+      r`Select a minimal, secure base image: choose official slim or distroless images (e.g. python:3.11-slim) rather than bloated full OS distributions.`,
+      r`Structure Dockerfile instructions to maximise layer caching: copy dependency manifests (requirements.txt or pyproject.toml) and execute pip install before copying volatile application source code.`,
+      r`Implement multi-stage builds: compile heavy dependencies (C++ build tools, wheel compilers) in a builder stage, copying only compiled artifacts into a lightweight production runtime image.`,
+      r`Pin exact dependency versions: lock strict semantic versions for every library in requirements.txt to prevent silent upstream breaking updates during container rebuilds.`,
+      r`Execute under a non-root service user: create an unprivileged user inside the container to prevent potential container breakout vulnerabilities in production clusters.`,
+    ],
+    math: [
+      {
+        h: 'Union filesystem layer composition',
+        tex: r`\mathcal{F}_{\text{image}} = \mathcal{L}_0 \oplus \mathcal{L}_1 \oplus \dots \oplus \mathcal{L}_K, \qquad \mathcal{F}_{\text{container}} = \mathcal{F}_{\text{image}} \cup \mathcal{L}_{\text{R/W}}`,
+        p: r`Where each layer $\mathcal{L}_k$ is an immutable read-only differential changeset (using overlayfs), and $\mathcal{L}_{\text{R/W}}$ is the ephemeral copy-on-write layer instantiated when a container process starts. Modifying files affects only the top writable layer, keeping the underlying base image pristine.`,
+      },
+      {
+        h: 'Content-addressable cryptographic layer digest',
+        tex: r`\text{Digest}(\mathcal{L}_k) = \text{SHA-256}\left(\text{tar}(\Delta \mathcal{F}_k)\right)`,
+        p: r`Every layer is uniquely identified by the cryptographic hash of its filesystem diff. If the instruction and input context for step $k$ do not change, Docker reuses the cached layer instantly without rebuilding.`,
+      },
+      {
+        h: 'Container resource cgroup boundary constraints',
+        tex: r`\sum_{p \in \mathcal{P}_{\text{container}}} \text{CPU}_p(t) \le C_{\text{quota}} \cdot \frac{t}{\text{period}}, \qquad \sum_{p \in \mathcal{P}_{\text{container}}} \text{Mem}_p(t) \le M_{\text{limit}}`,
+        p: r`Where Linux cgroups strictly throttle CPU quotas and enforce hard memory limits. If model memory allocation breaches $M_{\text{limit}}$, the Linux kernel terminates the container process with an Out-Of-Memory (OOM-killer) signal, protecting the host machine from exhaustion.`,
+      },
+    ],
+    keyPoints: [
+      r`Containers provide lightweight OS-level virtualisation via Linux kernel namespaces and cgroups, sharing the host kernel with zero hypervisor overhead.`,
+      r`Instruction ordering in Dockerfiles governs build speed: place slow-changing dependencies early and rapid-changing source code last.`,
+      r`Multi-stage builds dramatically reduce image footprint and attack surface by stripping compilers from final runtime containers.`,
+    ],
+    pitfalls: [
+      r`Copying application source code before installing dependencies: every minor code edit invalidates the pip install cache, forcing 10-minute builds.`,
+      r`Running containers as the root user: container breakouts can grant root privileges on the underlying host node.`,
+      r`Using unpinned base image tags like python:latest: an unexpected upstream update to Python 3.12 can break compiled dependencies overnight.`,
+    ],
+    code: r`# Simulation of Docker content-addressable layer caching
+import hashlib
+
+def hash_layer(name, content):
+    return hashlib.sha256((name + ":" + content).encode()).hexdigest()[:12]
+
+# Initial cold build: all layers built from scratch
+layers_spec = [
+    ("Base OS", "python:3.11-slim"),
+    ("System Dependencies", "gcc libgomp1"),
+    ("Python Libraries", "numpy==1.26.0 scipy==1.11.0"),
+    ("App Code", "v1.0.0 def predict(): return 1")
+]
+
+cache = {}
+cold_build_time = 0.0
+for name, content in layers_spec:
+    h = hash_layer(name, content)
+    cache[name] = h
+    cold_build_time += 10.0  # cold build duration per layer
+
+# Rebuild with ONLY application code updated
+layers_spec_v2 = [
+    ("Base OS", "python:3.11-slim"),
+    ("System Dependencies", "gcc libgomp1"),
+    ("Python Libraries", "numpy==1.26.0 scipy==1.11.0"),
+    ("App Code", "v1.0.1 def predict(): return 2")
+]
+
+cache_hits, rebuild_time = 0, 0.0
+for name, content in layers_spec_v2:
+    h = hash_layer(name, content)
+    if cache.get(name) == h:
+        cache_hits += 1
+        rebuild_time += 0.1  # cache retrieval
+    else:
+        rebuild_time += 10.0 # rebuild layer
+
+print(f"Total layers: {len(layers_spec_v2)}, Cached layers: {cache_hits}")
+print(f"Cold build time: {cold_build_time:.1f}s vs Cached rebuild time: {rebuild_time:.1f}s")
+print(f"Build acceleration factor: {cold_build_time / rebuild_time:.1f}x")`,
+    quiz: [
+      {
+        q: r`Why does Docker recommend copying requirements.txt and running pip install before copying the rest of the application source code in a Dockerfile?`,
+        o: [
+          r`Because pip install cannot run if Python source files exist in the directory`,
+          r`To take advantage of Docker layer caching, so third-party library installations are reused unless requirements.txt itself changes`,
+          r`Because requirements.txt must always be placed in the root directory /`,
+          r`To convert Python libraries into compiled C binaries`,
+        ],
+        a: 1,
+        why: r`Docker caches each layer by comparing instruction text and file checksums. Putting requirements.txt first ensures that edits to application code do not invalidate the cached pip installation layer.`,
+      },
+      {
+        q: r`What is the primary operational difference between a Docker container and a traditional Virtual Machine (VM)?`,
+        o: [
+          r`Containers cannot run Python code`,
+          r`Containers share the host operating system kernel and isolate user space via namespaces and cgroups, whereas VMs bundle an entire guest operating system and virtual kernel`,
+          r`VMs cannot connect to the internet`,
+          r`Containers take hours to boot, while VMs boot in milliseconds`,
+        ],
+        a: 1,
+        why: r`Containers leverage OS-level virtualisation, sharing the host Linux kernel while isolating processes and filesystems, providing instant startup and negligible resource overhead compared to hypervisor VMs.`,
+      },
+      {
+        q: r`What is the purpose of a multi-stage build in a production machine learning Dockerfile?`,
+        o: [
+          r`To train two different models in parallel inside the container`,
+          r`To separate heavy build-time compilers and headers from the final runtime image, drastically reducing image size and security attack surface`,
+          r`To convert the Docker image into a virtual machine image`,
+          r`To run unit tests automatically on the developer's laptop`,
+        ],
+        a: 1,
+        why: r`Multi-stage builds allow compiling libraries in an initial build container, copying only the resulting wheels or binaries into a clean slim container, leaving compilers and build tools behind.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['data-cleaning-and-validation', 'scikit-learn-pipelines-and-columntransformer'],
+    related: ['serving-models-with-fastapi', 'batch-vs-online-inference', 'train-validation-test-splits-group-and-time-based'],
+    keywords: 'docker containerization reproducible environments dockerfile cgroups namespaces oom killer image layers multi-stage build mlops',
+  },
+  {
+    id: 'serving-models-with-fastapi',
+    short: 'Serving models with FastAPI',
+    title: 'Serving Models with FastAPI',
+    task: 'concepts',
+    module: 'MLOps and engineering',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Building high-throughput, low-latency prediction microservices with asynchronous concurrency, strict Pydantic schema validation, and health probes.`,
+    lead: r`A trained machine learning model stored as a serialised weights file cannot deliver business value until other software systems can query it over the network. FastAPI has become the standard framework for Python model serving, pairing asynchronous concurrency with automated OpenAPI documentation and Pydantic schema validation. Architecting endpoints with application lifespan handlers, payload validation, and non-blocking worker pools ensures models serve live predictions in milliseconds under high concurrent traffic.`,
+    intuition: [
+      r`During model training, you run batch inference across a static test dataframe. In production, a mobile app sends a single JSON payload over HTTP: {"user_id": 412, "transaction_amount": 89.50, "merchant_category": "electronics"} and expects a fraud probability response within 50 milliseconds. If you wrap your model in a naive synchronous Flask script, each incoming HTTP request blocks the server process. If 50 users submit transactions simultaneously, request #50 sits in a queue waiting several seconds for the earlier 49 requests to finish, triggering client timeouts.`,
+      r`FastAPI is built on Starlette and Pydantic, running inside an asynchronous ASGI server like Uvicorn. When a request arrives, FastAPI validates the JSON payload types automatically: if transaction_amount is missing or passed as text "invalid", Pydantic returns an explicit HTTP 422 Unprocessable Entity error immediately, protecting your model from missing-value exceptions. Asynchronous event loops allow the server to handle I/O-bound tasks (such as retrieving user embeddings from a database or Redis cache) concurrently without blocking other client requests.`,
+      r`A critical architectural pattern is model lifecycle management. Loading a 1GB deep learning model or an ensemble of 500 gradient boosted trees takes several seconds. A common beginner trap is loading the model inside the prediction route function, which forces the server to reload model weights from disk on every single HTTP request! FastAPI's lifespan context manager loads the model into memory once at application startup, keeping weights warm in RAM for sub-millisecond evaluation.`,
+    ],
+    analogy: r`A sushi restaurant kitchen: the head chef keeps knives sharp and ingredients prepared on the counter at opening time (startup lifespan), while waitstaff validate order tickets (Pydantic) and ferry plates continuously without making customers wait for the kitchen to be built from scratch.`,
+    steps: [
+      r`Define strict input and output data contracts: build Pydantic BaseModel schemas declaring expected field types, default values, and numerical constraints.`,
+      r`Manage model lifecycle via lifespan context: load serialised model artifacts into memory once during application startup, storing them in app state.`,
+      r`Implement dedicated health check endpoints: expose /healthz/live (process is alive) and /healthz/ready (model weights loaded and ready to serve).`,
+      r`Offload CPU-bound inference: wrap heavy NumPy or PyTorch matrix computations in thread pools (run_in_threadpool) to avoid freezing the async event loop.`,
+      r`Configure production ASGI server: deploy Uvicorn with multiple worker processes pinned behind a reverse proxy (e.g. Nginx or Kubernetes ingress).`,
+    ],
+    math: [
+      {
+        h: 'Little\'s Law for concurrent request capacity',
+        tex: r`L = \lambda \cdot W`,
+        p: r`Where $L$ is the average number of concurrent in-flight requests inside the service, $\lambda$ is incoming request arrival rate (requests per second), and $W$ is average response latency. If model latency $W$ is $50\text{ms}$ ($0.05\text{s}$) and traffic $\lambda$ is $1,000\text{ req/s}$, the service must maintain $L = 50$ concurrent connections without degradation.`,
+      },
+      {
+        h: 'Latency percentile bounds (tail SLA compliance)',
+        tex: r`p_{99} = \inf \{ \ell \mid F_{\text{latency}}(\ell) \ge 0.99 \}`,
+        p: r`Where $F_{\text{latency}}$ is the empirical cumulative distribution of request latency. In production microservice architectures, service-level agreements enforce tail constraints (e.g. $p_{99} \le 100\text{ms}$) to prevent downstream timeouts during traffic spikes.`,
+      },
+      {
+        h: 'Asynchronous throughput scaling factor',
+        tex: r`\text{RPS}_{\max} = \frac{N_{\text{workers}}}{T_{\text{CPU}} + T_{\text{I/O}} / C_{\text{async}}}`,
+        p: r`Where $N_{\text{workers}}$ is the number of operating system worker processes, $T_{\text{CPU}}$ is non-preemptible inference compute time, $T_{\text{I/O}}$ is waiting time for network or database calls, and $C_{\text{async}}$ is the asynchronous concurrent multiplexing factor.`,
+      },
+    ],
+    keyPoints: [
+      r`FastAPI uses Pydantic to enforce strict data contracts at the API gateway, returning HTTP 422 before malformed payloads reach model code.`,
+      r`Model weights must be loaded exactly once during application startup lifespan, never reloaded inside request handler routes.`,
+      r`CPU-intensive inference must not block the main async event loop; offload heavy computations to worker thread pools.`,
+    ],
+    pitfalls: [
+      r`Loading serialised weights inside the request handler: reloading a 500MB model on every query spikes latency from 5ms to 2,000ms.`,
+      r`Running heavy CPU-bound inference directly in async def functions: long compute blocks freeze the single-threaded event loop, starving other incoming requests.`,
+      r`Missing input schema validation: passing unvalidated raw JSON dictionaries directly to model.predict() causes unhandled 500 crashes on missing keys.`,
+    ],
+    code: r`import numpy as np
+
+# Mock Pydantic validation and Model serving
+class RequestValidator:
+    @staticmethod
+    def validate(payload):
+        # Validate schema: 'amount' must be positive float, 'age' positive int >= 18
+        if 'amount' not in payload or not isinstance(payload['amount'], (int, float)) or payload['amount'] <= 0:
+            return False, "HTTP 422: Invalid or missing 'amount'"
+        if 'age' not in payload or not isinstance(payload['age'], int) or payload['age'] < 18:
+            return False, "HTTP 422: Invalid or underage 'age'"
+        return True, "HTTP 200: Valid"
+
+# Mock Model loaded once during lifespan startup
+weights = np.array([0.05, 0.01])
+bias = -2.0
+
+requests = [
+    {"amount": 120.0, "age": 35},       # valid
+    {"amount": -50.0, "age": 28},       # invalid amount (422)
+    {"amount": 450.0, "age": 16},       # invalid age (422)
+    {"amount": 80.0,  "age": 42},       # valid
+]
+
+success, rejected = 0, 0
+for r in requests:
+    is_valid, msg = RequestValidator.validate(r)
+    if is_valid:
+        features = np.array([r['amount'], r['age']])
+        prob = 1.0 / (1.0 + np.exp(-(np.dot(weights, features) + bias)))
+        success += 1
+    else:
+        rejected += 1
+
+print(f"Incoming requests processed: {len(requests)}")
+print(f"Valid HTTP 200 predictions: {success}, Schema rejections HTTP 422: {rejected}")
+print(f"Sample prediction for request 0: p(fraud) = {prob:.3f}")`,
+    quiz: [
+      {
+        q: r`Why should a machine learning model artifact be loaded inside FastAPI's lifespan event rather than inside the endpoint route function?`,
+        o: [
+          r`Because lifespan events convert the model from Python to C++ automatically`,
+          r`To load the model into memory once at application startup, avoiding massive disk I/O latency spikes on every individual HTTP request`,
+          r`Because FastAPI routes cannot access NumPy arrays`,
+          r`To ensure the model is deleted after every prediction`,
+        ],
+        a: 1,
+        why: r`Loading a model from disk takes hundreds of milliseconds or seconds. Doing this inside a request handler causes unacceptable latency and memory fragmentation. Lifespan handlers keep the model in memory.`,
+      },
+      {
+        q: r`What HTTP status code does FastAPI return by default when an incoming JSON payload fails Pydantic schema validation?`,
+        o: [
+          r`HTTP 200 OK`,
+          r`HTTP 422 Unprocessable Entity`,
+          r`HTTP 500 Internal Server Error`,
+          r`HTTP 404 Not Found`,
+        ],
+        a: 1,
+        why: r`FastAPI uses Pydantic to inspect request payloads; if required fields are missing or have incorrect datatypes, it automatically returns HTTP 422 with a structured error explanation.`,
+      },
+      {
+        q: r`Why should CPU-intensive model inference not be executed directly in an 'async def' route handler in FastAPI?`,
+        o: [
+          r`Because async def functions are only allowed to return strings`,
+          r`Because CPU-bound execution blocks the single-threaded asyncio event loop, preventing the server from handling other incoming network connections`,
+          r`Because async def functions cannot use NumPy or PyTorch`,
+          r`Because the operating system terminates async functions after 1 millisecond`,
+        ],
+        a: 1,
+        why: r`The asyncio event loop runs on a single thread. If an async function performs heavy non-preemptible CPU computations, the event loop freezes, stalling all concurrent connections. Heavy compute should run in worker thread pools.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['docker-and-reproducible-environments', 'scikit-learn-pipelines-and-columntransformer'],
+    related: ['batch-vs-online-inference', 'data-leakage', 'time-series-cross-validation'],
+    keywords: 'fastapi model serving uvicorn pydantic asgi api microservice latency p99 async inference schema validation',
+  },
+  {
+    id: 'batch-vs-online-inference',
+    short: 'Batch vs online inference',
+    title: 'Batch vs Online Inference',
+    task: 'concepts',
+    module: 'MLOps and engineering',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Architecting prediction systems across offline precomputed batch pipelines and real-time streaming services, evaluating latency, throughput, and freshness trade-offs.`,
+    lead: r`Not all machine learning models belong behind a live HTTP endpoint. Batch inference scores millions of records offline on scheduled pipelines, maximising hardware throughput and amortising computational cost. Online inference generates predictions on-demand in milliseconds using live streaming features, delivering immediate personalisation at the cost of operational complexity. Selecting the right inference pattern—or combining them in a hybrid two-tower architecture—is a fundamental system design decision.`,
+    intuition: [
+      r`Consider two contrasting machine learning applications at a major retail bank. Application A computes weekly credit card churn risk scores for 10 million customers to trigger targeted retention emails. Nobody needs to know a customer's churn score in 20 milliseconds while they are browsing an app; computing scores every Sunday night in an offline batch job using high-throughput Spark or SQL clusters is cheap, robust, and cost-effective. Application B evaluates credit card transactions for fraud: when a customer taps their card at a terminal, the bank has 50 milliseconds to approve or decline the purchase. Computing fraud scores offline the night before is impossible because the transaction features (merchant, location, amount) did not exist until the card was tapped.`,
+      r`The choice between batch and online inference balances cost, latency, and feature freshness. Batch inference prioritises throughput and cost-efficiency: you can run heavy ensembles or compute complex aggregations (e.g. 90-day rolling spend) across full tables, writing precomputed predictions directly into a low-latency key-value cache (like Redis). The downside is staleness: predictions reflect data as of the last batch run. Online inference guarantees maximum freshness: predictions react instantly to a user's latest in-session clicks. However, online inference demands dedicated 24/7 server infrastructure, strict tail SLAs (sub-100ms response), and lightweight feature pipelines.`,
+      r`Modern high-scale recommendation engines (such as streaming platforms and e-commerce marketplaces) combine both paradigms into a hybrid two-tower pattern. Offline batch pipelines precompute candidate item embeddings for 10 million items every night. When a user opens the mobile app, a lightweight online scoring service retrieves the top 100 candidate items via approximate nearest neighbours and ranks them in real-time using current session context (time of day, device, and last 3 clicks).`,
+    ],
+    analogy: r`A bakery preparing bread: baking 500 loaves of sourdough in large ovens overnight (batch precomputation) versus custom-making a fresh hot espresso in 30 seconds when a customer orders at the counter (online inference).`,
+    steps: [
+      r`Audit operational freshness requirements: determine whether the business decision requires data generated at query time or if hourly/daily batch data is sufficient.`,
+      r`Establish latency and throughput budgets: benchmark target response times (e.g. batch: 10,000 items/sec over 2 hours; online: < 50ms per item with p99 < 100ms).`,
+      r`Assess feature store dependencies: verify whether features reside offline in data warehouses (BigQuery, Snowflake) or require streaming feature stores (Redis, Feast) for sub-second retrieval.`,
+      r`Evaluate cost economics: compare continuous 24/7 online server hosting costs against on-demand scheduled batch cluster compute.`,
+      r`Design fallback mechanisms: implement local caching or rule-based fallback heuristics for online inference endpoints when network timeouts occur.`,
+    ],
+    math: [
+      {
+        h: 'Amortised hardware inference cost comparison',
+        tex: r`C_{\text{batch}} = \frac{T_{\text{run}} \cdot P_{\text{compute}}}{N_{\text{total}}}, \qquad C_{\text{online}} = \frac{24 \times 3600 \cdot P_{\text{cluster}}}{N_{\text{requests}}}`,
+        p: r`Where $P_{\text{compute}}$ and $P_{\text{cluster}}$ are hourly infrastructure costs. Because scheduled batch jobs achieve near 100% GPU/CPU utilization during execution, $C_{\text{batch}}$ is typically an order of magnitude cheaper per scored record than continuous online serving under variable traffic.`,
+      },
+      {
+        h: 'End-to-end online serving latency budget',
+        tex: r`T_{\text{total}} = T_{\text{network\_roundtrip}} + T_{\text{feature\_retrieval}} + T_{\text{inference}} + T_{\text{serialization}} \le T_{\text{SLA}}`,
+        p: r`In online inference, model computation $T_{\text{inference}}$ is only one component of the total latency budget; network roundtrip and database feature hydration often dominate total response time.`,
+      },
+      {
+        h: 'Feature freshness staleness function',
+        tex: r`\Delta t_{\text{staleness}} = t_{\text{inference}} - t_{\text{feature\_observed}}`,
+        p: r`In batch systems, $\Delta t$ can range from hours to days; in online streaming systems, $\Delta t \to 0$, maximising responsiveness to immediate user behavioural shifts.`,
+      },
+    ],
+    keyPoints: [
+      r`Batch inference maximises throughput and minimises hardware cost by scoring millions of records in scheduled offline pipelines.`,
+      r`Online inference is mandatory when features only exist at query time (such as fraud detection and search autocomplete).`,
+      r`Hybrid architectures precompute static candidate sets in batch, applying lightweight ranking online using real-time session context.`,
+    ],
+    pitfalls: [
+      r`Building an expensive online microservice when a daily scheduled batch job stored in Redis satisfies the business requirement.`,
+      r`Online feature hydration bottlenecks: designing a 5ms model that times out because retrieving user history from a remote SQL database takes 150ms.`,
+      r`Training-serving skew: using pandas transformations in offline batch training that differ subtly from Java/C++ streaming feature transformations in production online inference.`,
+    ],
+    code: r`import numpy as np
+import time
+
+np.random.seed(42)
+n_samples, n_features = 1000, 10
+X = np.random.normal(0, 1, size=(n_samples, n_features))
+w = np.random.normal(0, 1, size=n_features)
+
+# 1. Batch inference (vectorised matrix-vector product)
+t0 = time.perf_counter()
+preds_batch = 1.0 / (1.0 + np.exp(-np.dot(X, w)))
+t_batch = time.perf_counter() - t0
+throughput_batch = n_samples / t_batch
+
+# 2. Online inference simulation (iterative per-request processing)
+t0 = time.perf_counter()
+preds_online = []
+for i in range(n_samples):
+    x_i = X[i]
+    p_i = 1.0 / (1.0 + np.exp(-np.dot(x_i, w)))
+    preds_online.append(p_i)
+t_online = time.perf_counter() - t0
+throughput_online = n_samples / t_online
+
+print(f"Batch inference throughput:  {throughput_batch:,.0f} samples/sec (Total: {t_batch*1000:.2f}ms)")
+print(f"Online inference throughput: {throughput_online:,.0f} samples/sec (Total: {t_online*1000:.2f}ms)")
+print(f"Throughput speedup factor:   {throughput_batch / throughput_online:.1f}x")`,
+    quiz: [
+      {
+        q: r`When is online (real-time) inference strictly required over batch precomputation?`,
+        o: [
+          r`When the dataset contains more than 10,000 rows`,
+          r`When inference requires features that only exist at query time, such as transaction amount, GPS coordinates, or real-time user session context`,
+          r`When models are trained using linear regression`,
+          r`When the budget for cloud compute is zero`,
+        ],
+        a: 1,
+        why: r`Online inference is essential when features cannot be known in advance (such as a card transaction or search query). If features only appear at the moment of the request, batch precomputation is impossible.`,
+      },
+      {
+        q: r`What is the primary economic advantage of batch inference over online inference?`,
+        o: [
+          r`Batch inference does not require Python`,
+          r`Batch inference maximises hardware utilization by saturating GPUs/CPUs on scheduled jobs, avoiding 24/7 server idle costs under fluctuating traffic`,
+          r`Batch inference guarantees zero model error`,
+          r`Batch inference eliminates the need for test data`,
+        ],
+        a: 1,
+        why: r`Batch jobs run on-demand clusters at near 100% capacity, scoring millions of rows at peak throughput and shutting down, whereas online serving requires 24/7 provisioned capacity sized for peak traffic.`,
+      },
+      {
+        q: r`What is 'training-serving skew' in machine learning operations?`,
+        o: [
+          r`A difference between training loss and validation loss`,
+          r`A discrepancy in performance or logic between the feature engineering code used during offline training and the code used during live inference`,
+          r`A situation where the training set has more columns than rows`,
+          r`A model that predicts negative values for positive targets`,
+        ],
+        a: 1,
+        why: r`Training-serving skew occurs when data pipelines differ between offline training (e.g. batch SQL/pandas) and online serving (e.g. streaming Java/C++ or microservices), causing silent prediction errors in production.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['serving-models-with-fastapi', 'docker-and-reproducible-environments'],
+    related: ['scikit-learn-pipelines-and-columntransformer', 'data-leakage', 'time-series-cross-validation'],
+    keywords: 'batch inference online inference real time prediction feature store streaming latency throughput training serving skew mlops',
+  },
 ];

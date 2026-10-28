@@ -101,7 +101,7 @@ module.exports = [
       { title: 'Monitoring and drift', lessons: ['data-drift-psi-ks-and-jensen-shannon', 'concept-drift-and-performance-monitoring', ...X('Model decay and retraining policies', 'Data quality checks')] },
       { title: 'Product analytics', lessons: ['metric-design-and-north-star-metrics', 'cohort-and-funnel-analysis', 'customer-segmentation-with-rfm', ...X('Churn and retention modelling', 'Customer lifetime value', 'Uplift modelling')] },
       { title: 'Communication', lessons: ['data-visualisation-principles', ...X('Dashboards and storytelling', 'Communicating uncertainty')] },
-      { title: 'MLOps and engineering', lessons: [...C('Docker and reproducible environments', 'Serving models with FastAPI', 'Batch vs online inference'), ...X('CI/CD for ML', 'Model registry and versioning', 'Feature stores', 'Orchestration with Airflow and Databricks', 'Data formats: Parquet and Delta', 'Spark essentials')] },
+      { title: 'MLOps and engineering', lessons: ['docker-and-reproducible-environments', 'serving-models-with-fastapi', 'batch-vs-online-inference', ...X('CI/CD for ML', 'Model registry and versioning', 'Feature stores', 'Orchestration with Airflow and Databricks', 'Data formats: Parquet and Delta', 'Spark essentials')] },
     ],
   },
   {
