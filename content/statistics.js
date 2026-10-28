@@ -3438,4 +3438,419 @@ print(f"95% Credible Interval: [{ci_lower:.3f}, {ci_upper:.3f}]")`,
     related: ['bayesian_linear_regression', 'confidence-intervals', 'maximum-likelihood-estimation'],
     keywords: 'conjugate priors beta binomial bayesian updating posterior prior credible interval pseudo observations',
   },
+  {
+    id: 'stationarity-acf-and-pacf',
+    short: 'Stationarity, ACF and PACF',
+    title: 'Stationarity, Autocorrelation and Partial Autocorrelation',
+    task: 'concepts',
+    module: 'Time series and survival',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Weak stationarity ensures that mean, variance, and autocovariance remain invariant over time, while the ACF and PACF reveal the memory structure of temporal data.`,
+    lead: r`Statistical forecasting models rely on stationarity: historical patterns must behave consistently into the future. Autocorrelation (ACF) measures total linear association between observations at varying lags, whereas partial autocorrelation (PACF) isolates direct linear relationships by removing the confounding influence of intervening lags.`,
+    intuition: [
+      r`Imagine forecasting daily electricity demand. If demand grows steadily by 5% each year as the population expands, yesterday's mean is an unreliable baseline for tomorrow. Similarly, if winter demand swings by 50 GW while spring fluctuations rarely exceed 10 GW, the variance depends on the calendar. A non-stationary process is a moving target whose statistical parameters shift underneath your model, generating spurious correlations and unstable predictions.`,
+      r`Weak (second-order or covariance) stationarity imposes three conditions: a constant mean $\mu$, a constant finite variance $\sigma^2$, and an autocovariance $\gamma(k)$ that depends solely on the time separation $k = |t - s|$, not on the absolute calendar date $t$. When raw data drifts or displays changing volatility, transformations such as logarithmic scaling and differencing ($\Delta y_t = y_t - y_{t-1}$) stabilise the moments, converting persistent wanderings into stationary fluctuations around zero.`,
+      r`Once a series is stationary, we map its temporal memory using autocorrelation functions. The ACF at lag 2 measures the raw correlation between $y_t$ and $y_{t-2}$. However, $y_t$ correlates with $y_{t-1}$, and $y_{t-1}$ correlates with $y_{t-2}$, creating an indirect echo through the intermediate period. The PACF strips away this linear chain of mediation, measuring only the residual connection between $y_t$ and $y_{t-2}$ once $y_{t-1}$ is controlled for. For a pure autoregressive process AR(1), the ACF decays geometrically while the PACF cuts off cleanly after lag 1.`,
+    ],
+    analogy: r`ACF is like the total reverberation echoing down a corridor, while PACF isolates the distinct sound bouncing directly off a specific far wall after silencing echoes from every doorway in between.`,
+    steps: [
+      r`Plot the raw sequence against time to inspect for deterministic trends, seasonal cycles, or widening variance envelopes.`,
+      r`Calculate rolling window metrics (such as a 30-period rolling mean and standard deviation) to visually inspect parameter constancy across historical segments.`,
+      r`Execute formal unit-root hypothesis tests, such as the Augmented Dickey–Fuller (ADF) test, to assess whether stochastic trending requires first-order differencing.`,
+      r`Apply variance-stabilising transformations (e.g. natural logarithms) and differencing ($\Delta y_t = y_t - y_{t-1}$) until the series exhibits mean-reverting behaviour.`,
+      r`Compute sample ACF and PACF coefficients up to lag $K$, plotting them alongside 95% Bartlett confidence bounds ($\pm 1.96 / \sqrt{n}$) for white noise.`,
+      r`Diagnose model signatures: an AR($p$) process displays decaying ACF and sharp PACF cut-off at lag $p$, whereas an MA($q$) process displays sharp ACF cut-off at lag $q$ and decaying PACF.`,
+    ],
+    math: [
+      {
+        h: 'Weak (covariance) stationarity',
+        tex: r`$$\mathbb{E}[y_t] = \mu, \quad \operatorname{Var}(y_t) = \sigma^2 < \infty, \quad \operatorname{Cov}(y_t, y_{t-k}) = \gamma(k) \quad \forall t, k$$`,
+        p: r`A process is weakly stationary if its first moment (mean $\mu$) and second moments (variance $\sigma^2$ and autocovariance $\gamma(k)$) are finite and invariant to time shifts $t$. Strict stationarity requires all joint probability distributions to remain identical under time shifts, but weak stationarity suffices for linear time-series modelling.`,
+      },
+      {
+        h: 'Autocorrelation function (ACF)',
+        tex: r`$$\rho(k) = \frac{\gamma(k)}{\gamma(0)} = \frac{\sum_{t=k+1}^n (y_t - \bar{y})(y_{t-k} - \bar{y})}{\sum_{t=1}^n (y_t - \bar{y})^2}$$`,
+        p: r`$\rho(k)$ measures the linear correlation between observations separated by $k$ periods. Under the null hypothesis of Gaussian white noise, sample autocorrelations are asymptotically normal with variance $1/n$, yielding Bartlett 95% confidence bands of $\pm 1.96 / \sqrt{n}$.`,
+      },
+      {
+        h: 'Partial autocorrelation function (PACF)',
+        tex: r`$$\phi_{kk} = \operatorname{Corr}\big(y_t - \hat{y}_t^{(k-1)}, \; y_{t-k} - \hat{y}_{t-k}^{(k-1)}\big)$$`,
+        p: r`$\phi_{kk}$ represents the partial correlation between $y_t$ and $y_{t-k}$ after projecting both onto the linear subspace spanned by intermediate lags $\{y_{t-1}, \dots, y_{t-k+1}\}$. In an AR($p$) process, $\phi_{kk} = 0$ for all $k > p$, providing an exact diagnostic cut-off.`,
+      },
+    ],
+    keyPoints: [
+      r`Non-stationary series produce spurious regressions: two completely independent drifting series frequently exhibit inflated $R^2$ values and misleadingly tiny p-values.`,
+      r`ACF captures total serial correlation across time including cascaded intermediaries, while PACF isolates the direct conditional correlation at lag $k$.`,
+      r`Bartlett bounds ($\pm 1.96 / \sqrt{n}$) establish the threshold beyond which sample autocorrelations reflect genuine signal rather than sampling noise.`,
+      r`Differencing removes stochastic polynomial trends, but excessive over-differencing adds artificial negative autocorrelation and needlessly inflates forecast variance.`,
+    ],
+    pitfalls: [
+      r`Evaluating ACF and PACF on un-differenced trending data: strong trends cause sample ACF to decay linearly and sluggishly, obscuring the true autoregressive structure.`,
+      r`Over-differencing stationary data: differencing a stationary white noise series creates a non-invertible MA(1) process with $\theta = 1$, introducing artificial negative correlation.`,
+      r`Confusing weak stationarity with strict stationarity: weak stationarity concerns only the first two moments, whereas strict stationarity requires invariance of the entire joint distribution.`,
+      r`Neglecting seasonal non-stationarity: seasonal peaks occurring every $s$ periods violate autocovariance invariance and require seasonal differencing ($y_t - y_{t-s}$).`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n = 300
+eps = np.random.normal(0, 1.0, n)
+y = np.zeros(n)
+for t in range(1, n):
+    y[t] = 0.7 * y[t-1] + eps[t]
+
+# Sample moments
+y_dm = y - np.mean(y)
+gamma0 = np.dot(y_dm, y_dm) / n
+acf = [np.dot(y_dm[k:], y_dm[:-k]) / (n * gamma0) for k in range(1, 4)]
+
+# PACF: lag 1 equals ACF lag 1; lag 2 via OLS conditioning on lag 1
+pacf1 = acf[0]
+X2 = np.column_stack([y[1:-1], y[:-2]])
+y2 = y[2:]
+beta2 = np.linalg.lstsq(X2 - X2.mean(axis=0), y2 - y2.mean(), rcond=None)[0]
+pacf2 = beta2[1]
+bound_95 = 1.96 / np.sqrt(n)
+
+print("Sample mean:", round(float(np.mean(y)), 3))
+print("Sample var:", round(float(np.var(y)), 3))
+print("ACF lags 1..3:", [round(float(x), 3) for x in acf])
+print("PACF lag 1:", round(float(pacf1), 3), "lag 2:", round(float(pacf2), 3))
+print("Bartlett 95% bound:", round(float(bound_95), 3))`,
+    quiz: [
+      {
+        q: r`Which condition is strictly required for a time series to be weakly (covariance) stationary?`,
+        o: [
+          r`All higher-order moments must equal zero`,
+          r`The mean, variance, and autocovariance depend only on lag displacement, not on calendar time`,
+          r`The observations must follow an exact Gaussian distribution`,
+          r`The series must have zero autocorrelation at all lags`,
+        ],
+        a: 1,
+        why: r`Weak stationarity requires constant mean, constant finite variance, and autocovariances that depend solely on the lag difference $k = |t - s|$.`,
+      },
+      {
+        q: r`If a stationary series is generated by an AR(1) process $y_t = \phi y_{t-1} + \epsilon_t$ with $0 < \phi < 1$, what behaviour do ACF and PACF display?`,
+        o: [
+          r`ACF decays geometrically, while PACF cuts off cleanly after lag 1`,
+          r`ACF cuts off sharply after lag 1, while PACF decays exponentially`,
+          r`Both ACF and PACF remain exactly zero at all lags`,
+          r`Both ACF and PACF decay linearly to infinity`,
+        ],
+        a: 0,
+        why: r`In an AR(1) model, ACF displays geometric decay $\rho(k) = \phi^k$, whereas PACF isolates the direct lag effect and drops to zero for all lags $k \ge 2$.`,
+      },
+      {
+        q: r`Why does PACF differ from ACF at lag 2 for an autoregressive process?`,
+        o: [
+          r`PACF squares the correlation values to prevent negative numbers`,
+          r`PACF only uses even-numbered time steps`,
+          r`PACF controls for the linear intermediate influence of lag 1, isolating the direct relationship between $y_t$ and $y_{t-2}$`,
+          r`PACF includes non-linear polynomial interactions while ACF is linear`,
+        ],
+        a: 2,
+        why: r`ACF at lag 2 incorporates both the direct relationship and indirect transmission through $y_{t-1}$; PACF eliminates the intermediate linear mediation of $y_{t-1}$.`,
+      },
+      {
+        q: r`What is the risk of over-differencing a series that is already stationary?`,
+        o: [
+          r`It artificially increases the degrees of freedom`,
+          r`It permanently converts the series into a deterministic linear trend`,
+          r`It eliminates all random error from future forecasts`,
+          r`It introduces artificial negative autocorrelation and induces an unnecessary moving-average unit root`,
+        ],
+        a: 3,
+        why: r`Differencing white noise $y_t = \epsilon_t$ yields $\Delta y_t = \epsilon_t - \epsilon_{t-1}$, introducing an artificial MA(1) structure with $\rho(1) = -0.5$ and inflating prediction variance.`,
+      },
+    ],
+    usedBy: ['arima-and-sarima'],
+    prereq: ['expectation-variance-and-covariance', 'correlation-pearson-spearman-kendall', 'hypothesis-testing-and-p-values'],
+    related: ['arima-and-sarima', 'residual-diagnostics-and-heteroscedasticity', 'exponential-smoothing-ets'],
+    keywords: 'stationarity acf pacf autocorrelation partial autocorrelation time series bartlett bounds unit root differencing',
+  },
+  {
+    id: 'arima-and-sarima',
+    short: 'ARIMA and SARIMA',
+    title: 'Autoregressive Integrated Moving Average Models',
+    task: 'concepts',
+    module: 'Time series and survival',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`ARIMA combines autoregression, differencing, and moving-average error shocks into a flexible framework for non-seasonal and seasonal time-series forecasting.`,
+    lead: r`Real-world temporal sequences exhibit persistence, non-stationarity, and recurring seasonal cycles. ARIMA($p, d, q$) integrates autoregressive lag terms of order $p$, differencing of degree $d$ to enforce stationarity, and moving-average error shocks of order $q$. SARIMA extends this formulation with seasonal operators $(P, D, Q)_s$ to capture periodic cycles without inflating parameter counts.`,
+    intuition: [
+      r`Consider monthly retail revenue. Sales steadily climb over years (trend), spike dramatically every December (seasonality), and display momentum from quarter to quarter (persistence). To forecast next month's sales, three sources of information help: (1) where sales stood last month (autoregression, AR), (2) how much the series drifted recently (differencing, I), and (3) unexpected shocks—such as a promotional surge or a freight delay—whose effects linger into subsequent months (moving average, MA).`,
+      r`ARIMA integrates these three mechanisms into a single linear equation. The parameter $d$ specifies how many times successive differences ($y_t - y_{t-1}$) are taken to eliminate non-stationary drift and stabilise the mean. Once differenced, the AR($p$) component models the current value as a weighted sum of its own previous $p$ values, while the MA($q$) component models it as a linear combination of the current and prior $q$ unobserved white-noise forecast errors.`,
+      r`When dynamics repeat across seasonal periods of length $s$ (e.g. $s = 12$ for monthly cycles), fitting a high-order non-seasonal ARIMA model would require estimating dozens of intermediate coefficients, wasting statistical power. SARIMA resolves this with multiplicative seasonal operators: seasonal differencing $\Delta_s y_t = y_t - y_{t-s}$ eliminates cyclical baselines, while seasonal autoregressive ($P$) and moving-average ($Q$) terms link observations across annual intervals using only a handful of well-identified parameters.`,
+    ],
+    analogy: r`ARIMA steers a vessel by holding course based on recent heading (AR), trimming against prevailing drift (I), and damping turbulence from rogue waves (MA); SARIMA consults an annual tidal chart to anticipate periodic swells.`,
+    steps: [
+      r`Examine time plots, variance stability, and unit-root tests (ADF) to determine the required regular differencing order $d \in \{0, 1, 2\}$.`,
+      r`Inspect seasonal cycles across period $s$ and apply seasonal differencing $D \in \{0, 1\}$ if repeating annual or weekly patterns persist.`,
+      r`Examine ACF and PACF plots of the differenced series: non-seasonal spikes suggest orders $p$ and $q$, while recurring spikes at seasonal multiples ($s, 2s$) suggest $P$ and $Q$.`,
+      r`Estimate model coefficients ($\phi, \theta, \Phi, \Theta$) using conditional maximum likelihood estimation (MLE) or non-linear least squares.`,
+      r`Perform residual diagnostic checks: verify residuals resemble white noise using the Ljung–Box test ($p > 0.05$) and inspect residual ACF for leftover signal.`,
+      r`Compute multi-step point forecasts alongside analytical prediction intervals ($1.96 \times \text{SE}(h)$) that expand with horizon $h$.`,
+    ],
+    math: [
+      {
+        h: 'The non-seasonal ARIMA($p, d, q$) equation',
+        tex: r`$$\phi(B)(1 - B)^d y_t = c + \theta(B)\epsilon_t, \quad \epsilon_t \sim \mathcal{WN}(0, \sigma^2)$$`,
+        p: r`$B$ denotes the backshift operator ($B^k y_t = y_{t-k}$), $\phi(B) = 1 - \sum_{i=1}^p \phi_i B^i$ is the autoregressive polynomial, $(1 - B)^d$ denotes $d$-th order differencing, and $\theta(B) = 1 + \sum_{j=1}^q \theta_j B^j$ is the moving-average polynomial. Constant $c$ governs deterministic drift, and $\epsilon_t$ is zero-mean white noise with variance $\sigma^2$.`,
+      },
+      {
+        h: 'The multiplicative SARIMA($p, d, q) \times (P, D, Q)_s$ model',
+        tex: r`$$\Phi_P(B^s)\,\phi(B)(1 - B^s)^D(1 - B)^d y_t = \Theta_Q(B^s)\,\theta(B)\epsilon_t$$`,
+        p: r`$\Phi_P(B^s) = 1 - \sum_{k=1}^P \Phi_k B^{ks}$ models seasonal autoregression, $(1 - B^s)^D$ represents seasonal differencing of period $s$, and $\Theta_Q(B^s) = 1 + \sum_{m=1}^Q \Theta_m B^{ms}$ models seasonal moving-average errors. Multiplying seasonal and non-seasonal operators yields a parsimonious composite filter.`,
+      },
+      {
+        h: 'Stationarity and invertibility roots',
+        tex: r`$$\text{Roots of } \phi(z) = 0 \text{ and } \theta(z) = 0 \text{ must lie strictly outside the unit circle } (|z| > 1)$$`,
+        p: r`Characteristic roots outside the complex unit circle guarantee that the AR polynomial is stable (stationary) and the MA polynomial is invertible. Invertibility ensures that unobserved noise shocks $\epsilon_t$ can be expressed uniquely as a convergent infinite autoregression of observed past values.`,
+      },
+    ],
+    keyPoints: [
+      r`The "I" stands for integrated: a series differenced $d$ times must be integrated (cumulatively summed) $d$ times to recover original forecast levels.`,
+      r`Parsimony avoids parameter redundancy: adding both redundant AR and MA terms can cause roots to nearly cancel, destabilising numerical optimisation.`,
+      r`Moving-average terms model unobserved past forecast errors ($\epsilon_{t-j}$), not a simple rolling average of observed data points.`,
+      r`Forecast uncertainty expands with horizon: for $d \ge 1$, prediction interval widths grow without bound as time horizon $h \to \infty$.`,
+    ],
+    pitfalls: [
+      r`Over-differencing the series: applying $d=2$ when $d=1$ suffices induces an artificial moving-average root $\theta \approx 1$ and inflates forecast variance.`,
+      r`Neglecting the invertibility condition: non-invertible MA models yield unstable recursive error estimates and unreliable out-of-sample confidence intervals.`,
+      r`Relying on in-sample fit metrics ($R^2$): high-order ARIMA specifications easily overfit historical noise; model selection should minimise AIC or BIC.`,
+      r`Skipping residual diagnostic testing: failing to evaluate the Ljung–Box statistic leaves unmodelled serial dependence buried in forecast residuals.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n = 200
+phi_true, c_true = 0.65, 0.2
+eps = np.random.normal(0, 1.0, n)
+
+# Generate stationary AR(1) process w_t
+w = np.zeros(n)
+for t in range(1, n):
+    w[t] = c_true + phi_true * w[t-1] + eps[t]
+
+# Integrate to create ARIMA(1, 1, 0) series
+y = np.cumsum(w) + 100.0
+
+# Difference series to achieve stationarity
+dy = np.diff(y)
+X = np.column_stack([np.ones(len(dy) - 1), dy[:-1]])
+y_target = dy[1:]
+beta = np.linalg.lstsq(X, y_target, rcond=None)[0]
+c_hat, phi_hat = beta[0], beta[1]
+res = y_target - X @ beta
+sigma2_hat = np.var(res, ddof=2)
+
+# Multi-step point forecast for horizon h = 1, 2, 3
+current_dy = dy[-1]
+forecast_dy = []
+for _ in range(3):
+    current_dy = c_hat + phi_hat * current_dy
+    forecast_dy.append(current_dy)
+forecast_y = y[-1] + np.cumsum(forecast_dy)
+
+print("Estimated drift c:", round(float(c_hat), 3), "true:", c_true)
+print("Estimated phi:", round(float(phi_hat), 3), "true:", phi_true)
+print("Residual variance:", round(float(sigma2_hat), 3))
+print("Last observed y:", round(float(y[-1]), 2))
+print("Forecasts y_{t+1..3}:", [round(float(val), 2) for val in forecast_y])`,
+    quiz: [
+      {
+        q: r`In an ARIMA($p, d, q$) model, what does the parameter $d$ represent?`,
+        o: [
+          r`The number of seasonal dummy variables included in the model`,
+          r`The damping factor applied to multi-step forecasts`,
+          r`The number of times the series is consecutively differenced to eliminate trend and achieve stationarity`,
+          r`The autoregressive lag order of the disturbance term`,
+        ],
+        a: 2,
+        why: r`The parameter $d$ represents the integration order—the number of consecutive differencing operations $(1-B)^d$ required to achieve covariance stationarity.`,
+      },
+      {
+        q: r`What does the moving-average component MA($q$) model?`,
+        o: [
+          r`A linear combination of the current and past $q$ unobserved white-noise forecast errors`,
+          r`A simple rolling arithmetic average of the last $q$ observed historical values`,
+          r`A polynomial trend of degree $q$ fitted via ordinary least squares`,
+          r`The moving variance of the seasonal residuals`,
+        ],
+        a: 0,
+        why: r`The MA($q$) component models current deviations as a linear combination of past random shocks $\epsilon_t + \theta_1 \epsilon_{t-1} + \dots + \theta_q \epsilon_{t-q}$.`,
+      },
+      {
+        q: r`Why is the multiplicative SARIMA parameterisation preferred over including separate indicator dummy variables for every seasonal period?`,
+        o: [
+          r`SARIMA does not require computing any residual diagnostics`,
+          r`SARIMA captures seasonal dependence using far fewer parameters, avoiding degrees-of-freedom depletion and overfitting`,
+          r`SARIMA guarantees that prediction intervals never widen over time`,
+          r`SARIMA can only be applied to non-stationary data`,
+        ],
+        a: 1,
+        why: r`SARIMA models seasonal autoregression and moving averages parsimoniously across period $s$, capturing periodic dynamics with few parameters rather than estimating $s-1$ separate coefficients.`,
+      },
+      {
+        q: r`What condition must the roots of the autoregressive characteristic polynomial $\phi(z) = 0$ satisfy for the model to be stationary?`,
+        o: [
+          r`All roots must equal exactly 1.0`,
+          r`All roots must lie strictly on the imaginary axis`,
+          r`At least one root must lie inside the unit circle ($|z| < 1$)`,
+          r`All roots must lie strictly outside the complex unit circle ($|z| > 1$)`,
+        ],
+        a: 3,
+        why: r`Stationarity requires the roots of $\phi(z) = 1 - \sum \phi_i z^i = 0$ to lie outside the unit circle ($|z| > 1$), ensuring past shocks decay to zero rather than exploding over time.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['stationarity-acf-and-pacf', 'expectation-variance-and-covariance', 'residual-diagnostics-and-heteroscedasticity'],
+    related: ['stationarity-acf-and-pacf', 'exponential-smoothing-ets', 'ols-inference-t-tests-f-test-r2-and-adjusted-r2'],
+    keywords: 'arima sarima time series autoregressive moving average differencing box jenkins seasonal forecasting',
+  },
+  {
+    id: 'exponential-smoothing-ets',
+    short: 'Exponential smoothing (ETS)',
+    title: 'Exponential Smoothing and the ETS Framework',
+    task: 'concepts',
+    module: 'Time series and survival',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Exponential smoothing generates forecasts using geometrically decaying weights on past data, generalised by the ETS state-space framework into formal statistical likelihood models.`,
+    lead: r`Moving averages assign equal weight to recent observations and drop older history abruptly at window boundaries. Exponential smoothing replaces this cliff edge with geometrically decaying weights, giving greatest weight to recent data. The ETS (Error, Trend, Seasonal) framework formalises these intuitive heuristics into state-space innovations models with exact likelihoods and probabilistic prediction intervals.`,
+    intuition: [
+      r`Imagine tracking customer foot traffic at a café. Yesterday's attendance provides a strong signal for today's staffing needs, whereas traffic from three months ago carries much less relevance. If you compute a simple 7-day moving average, an unusual spike on day 1 drops off abruptly on day 8, causing an artificial jump in your forecast. Exponential smoothing eliminates this cliff: the most recent observation receives weight $\alpha$, the preceding day $\alpha(1-\alpha)$, the day before $\alpha(1-\alpha)^2$, and so on, fading into the past along an elegant, continuous curve.`,
+      r`Simple exponential smoothing (SES) handles stationary series with no clear trend or seasonal rhythm. When a series trends steadily upward or downward, Holt's linear method introduces a second parameter $\beta$ to update a local slope (growth rate). When periodic rhythms appear—such as weekend demand spikes—Holt–Winters smoothing incorporates a third parameter $\gamma$ to adjust seasonal indices, operating additively (constant seasonal amplitude) or multiplicatively (seasonal swings proportional to the series level).`,
+      r`The modern ETS taxonomy (Hyndman et al.) classifies time-series models by their three constituent components: Error ($\{A, M\}$), Trend ($\{N, A, A_d, M\}$), and Seasonal ($\{N, A, M\}$). Formulating exponential smoothing as state-space innovations models provides an exact Gaussian likelihood, transforming heuristic smoothing formulas into rigorous statistical estimators that support automated model selection via AIC and analytical prediction intervals.`,
+    ],
+    analogy: r`Exponential smoothing acts like a vehicular shock absorber: it damps short-term road turbulence while smoothly adjusting to sustained uphill grades (trend) and rhythmic highway ripples (seasonality).`,
+    steps: [
+      r`Decompose the historical series to determine whether trend and seasonal oscillations are absent, additive, or multiplicative.`,
+      r`Select candidate ETS specifications: e.g. $\text{ETS}(A, N, N)$ for level data, $\text{ETS}(A, A, N)$ for trending data, or $\text{ETS}(M, A, M)$ for seasonal series with widening variance.`,
+      r`Formulate state recursive equations for unobserved level $l_t$, trend growth $b_t$, and seasonal factor $s_t$.`,
+      r`Estimate smoothing parameters ($\alpha, \beta, \gamma \in [0, 1]$) and initial states ($l_0, b_0, s_0$) by minimising the sum of squared one-step forecast errors or maximising likelihood.`,
+      r`Generate recursive one-step-ahead fitted values $\hat{y}_{t|t-1}$ across training observations and perform residual diagnostic checks.`,
+      r`Extrapolate state estimates forward across forecast horizon $h$ and compute probabilistic prediction bounds.`,
+    ],
+    math: [
+      {
+        h: 'Simple exponential smoothing (SES)',
+        tex: r`$$\hat{y}_{t+1|t} = l_t, \quad l_t = \alpha y_t + (1 - \alpha) l_{t-1} = l_{t-1} + \alpha(y_t - l_{t-1})$$`,
+        p: r`$l_t$ represents the estimated series level at time $t$, $\alpha \in (0, 1)$ is the smoothing parameter, and $e_t = y_t - l_{t-1}$ is the one-step-ahead forecast error. As $\alpha \to 1$, the model approaches a naive random walk; as $\alpha \to 0$, it converges to the historical sample mean.`,
+      },
+      {
+        h: 'Holt’s linear trend method',
+        tex: r`$$l_t = \alpha y_t + (1 - \alpha)(l_{t-1} + b_{t-1}), \quad b_t = \beta(l_t - l_{t-1}) + (1 - \beta)b_{t-1}$$`,
+        p: r`$l_t$ tracks the local level, $b_t$ tracks local slope (trend), and $\beta \in (0, 1)$ governs the adaptation rate of the trend. Forecasts $h$ steps ahead extrapolate linearly: $\hat{y}_{t+h|t} = l_t + h b_t$. Damped trends multiply $b_t$ by damping factor $\phi \in (0, 1)$ to prevent unrealistic long-horizon divergence.`,
+      },
+      {
+        h: 'The state-space innovations model: ETS(A, A, N)',
+        tex: r`$$y_t = l_{t-1} + b_{t-1} + \epsilon_t, \quad l_t = l_{t-1} + b_{t-1} + \alpha\epsilon_t, \quad b_t = b_{t-1} + \alpha\beta\epsilon_t$$`,
+        p: r`Writing exponential smoothing in state-space form with a single innovation source $\epsilon_t \sim \mathcal{N}(0, \sigma^2)$ defines a joint probability density over the observations. This allows maximum likelihood estimation, information-criterion model selection (AIC, BIC), and exact prediction interval derivations.`,
+      },
+    ],
+    keyPoints: [
+      r`Weights decay geometrically: past observation $y_{t-k}$ carries weight $\alpha(1-\alpha)^k$, ensuring all historical data contributes while recent data dominates.`,
+      r`Damped trend specifications ($\phi \in [0.8, 0.98]$) guard against overly aggressive linear trend extrapolations in long-range forecasting.`,
+      r`Multiplicative error models explicitly accommodate heteroscedasticity where forecast uncertainty scales in proportion to series magnitude.`,
+      r`ETS models focus on trend, level, and seasonal states; unlike ARIMA, they do not explicitly parameterise stationary cyclical autocorrelations.`,
+    ],
+    pitfalls: [
+      r`Selecting smoothing parameters outside permissible stability bounds, which causes state updates to oscillate unstably or diverge.`,
+      r`Unconstrained linear trend extrapolation: projecting undamped linear trends into distant horizons often yields implausibly massive forecasts.`,
+      r`Using additive seasonality when seasonal amplitude expands proportionally with the series level: multiplicative seasonality ($\text{ETS}(\cdot, \cdot, M)$) is required.`,
+      r`Confusing simple moving averages with exponential smoothing: moving averages have a finite rectangular memory, whereas exponential smoothing has an infinite decaying memory.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n = 100
+# Synthesise time series with shifting level and noise
+level = 50.0 + np.cumsum(np.random.normal(0, 0.5, n))
+y = level + np.random.normal(0, 1.5, n)
+
+def ses_fit(y_series, alpha):
+    n_pts = len(y_series)
+    l = np.zeros(n_pts)
+    l[0] = y_series[0]
+    for t in range(1, n_pts):
+        l[t] = alpha * y_series[t-1] + (1 - alpha) * l[t-1]
+    errors = y_series[1:] - l[1:]
+    return l, errors
+
+# Optimise alpha over grid [0.05, 0.95] by minimising sum of squared errors
+alphas = np.linspace(0.05, 0.95, 91)
+best_alpha, best_sse = None, float('inf')
+for a in alphas:
+    _, errs = ses_fit(y, a)
+    sse = np.sum(errs**2)
+    if sse < best_sse:
+        best_sse, best_alpha = sse, a
+
+opt_l, opt_errs = ses_fit(y, best_alpha)
+rmse = np.sqrt(np.mean(opt_errs**2))
+final_level = best_alpha * y[-1] + (1 - best_alpha) * opt_l[-1]
+forecast_h = [final_level] * 3
+
+print("Optimal alpha:", round(float(best_alpha), 3))
+print("In-sample RMSE:", round(float(rmse), 3))
+print("Last observed y:", round(float(y[-1]), 2))
+print("Estimated final level:", round(float(final_level), 2))
+print("3-step ahead forecasts:", [round(float(f), 2) for f in forecast_h])`,
+    quiz: [
+      {
+        q: r`In Simple Exponential Smoothing, how do the weights assigned to past observations behave as we look further back in time?`,
+        o: [
+          r`They decay geometrically at rate $(1 - \alpha)^k$`,
+          r`They remain completely constant up to window length $k$ and then drop to zero`,
+          r`They increase linearly with age`,
+          r`They oscillate periodically between positive and negative values`,
+        ],
+        a: 0,
+        why: r`Expanding the recursive formula shows that observation $y_{t-k}$ receives weight $\alpha(1-\alpha)^k$, decaying smoothly and geometrically as lag $k$ increases.`,
+      },
+      {
+        q: r`When should multiplicative seasonality be chosen over additive seasonality in the ETS framework?`,
+        o: [
+          r`When the series contains negative values only`,
+          r`When the seasonal period $s$ is strictly less than 4`,
+          r`When seasonal swings expand in amplitude as the overall level of the time series rises`,
+          r`When all smoothing parameters are set to 1.0`,
+        ],
+        a: 2,
+        why: r`Additive seasonality assumes seasonal fluctuations have constant magnitude regardless of series level, whereas multiplicative seasonality scales seasonal swings proportionally to the local level.`,
+      },
+      {
+        q: r`What is the primary benefit of formulating exponential smoothing as a state-space innovations model in ETS?`,
+        o: [
+          r`It eliminates the need for historical training data`,
+          r`It guarantees that forecast errors are identically zero`,
+          r`It restricts all smoothing parameters to equal exactly 0.5`,
+          r`It provides an exact statistical likelihood for automated model selection via AIC and derives analytical prediction intervals`,
+        ],
+        a: 3,
+        why: r`The state-space innovations formulation defines an exact probability distribution for the series, enabling maximum likelihood estimation, AIC/BIC comparison, and formal probabilistic forecast intervals.`,
+      },
+      {
+        q: r`Why is trend damping ($\phi < 1$) frequently introduced into Holt’s linear trend method?`,
+        o: [
+          r`To force the trend to reverse direction after every step`,
+          r`To prevent unrealistic and unbounded linear trend extrapolation over long forecast horizons`,
+          r`To convert the series into white noise`,
+          r`To eliminate the need for estimating the level parameter $\alpha$`,
+        ],
+        a: 1,
+        why: r`Linear trends tend to produce overly extreme projections on distant horizons; damping factor $\phi \in (0.8, 0.98)$ gradually flattens the trend toward a constant horizon level.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['stationarity-acf-and-pacf', 'expectation-variance-and-covariance'],
+    related: ['arima-and-sarima', 'stationarity-acf-and-pacf', 'regression-metrics'],
+    keywords: 'exponential smoothing ets holt winters state space forecasting trend seasonal level damping',
+  },
 ];

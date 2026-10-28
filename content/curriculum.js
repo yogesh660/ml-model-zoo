@@ -34,7 +34,7 @@ module.exports = [
       { title: 'Regression inference', lessons: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'residual-diagnostics-and-heteroscedasticity', 'multicollinearity-and-vif', 'generalised-linear-models', ...X('Logistic regression inference: odds ratios, Wald tests', 'Mixed-effects models')] },
       { title: 'Experiments and causality', lessons: ['a-b-testing-end-to-end', 'simpsons-paradox-and-confounding', ...X('Sequential testing and the peeking problem', 'Bayesian A/B testing', 'Causal graphs (DAGs) and adjustment', 'Propensity scores and matching', 'Difference-in-differences')] },
       { title: 'Bayesian and stochastic', lessons: ['conjugate-priors-beta-binomial', ...X('MCMC: Metropolis–Hastings and Gibbs', 'Hamiltonian Monte Carlo', 'Variational inference', 'Markov chains and stationary distributions')] },
-      { title: 'Time series and survival', lessons: [...C('Stationarity, ACF and PACF', 'ARIMA and SARIMA', 'Exponential smoothing (ETS)'), ...X('State-space models and the Kalman filter', 'Survival analysis: Kaplan–Meier and Cox')] },
+      { title: 'Time series and survival', lessons: ['stationarity-acf-and-pacf', 'arima-and-sarima', 'exponential-smoothing-ets', ...X('State-space models and the Kalman filter', 'Survival analysis: Kaplan–Meier and Cox')] },
     ],
   },
   {
