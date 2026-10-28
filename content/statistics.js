@@ -2914,4 +2914,528 @@ print(f"VIF x3: {vifs[2]:.2f} (orthogonal)")`,
     related: ['ols_linear_regression', 'ridge_regression', 'feature-selection'],
     keywords: 'multicollinearity vif variance inflation factor tolerance condition number ridge regression collinear predictors auxiliary regression',
   },
+  {
+    id: 'generalised-linear-models',
+    short: 'Generalised Linear Models',
+    title: r`Generalised Linear Models`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Extend linear regression beyond Gaussian errors to binary, count and skewed outcomes using the exponential dispersion family and link functions.`,
+    lead: r`Ordinary least squares assumes continuous, normally distributed responses with constant variance—an assumption that fails catastrophically for click counts, hospital lengths of stay, or failure probabilities. Generalised Linear Models (GLMs) unify regression by connecting a linear predictor to any distribution in the exponential dispersion family via a monotonic link function. This flexible framework powers Poisson regression for event counts, Gamma regression for positive right-skewed durations, and logistic regression for binary classification.`,
+    intuition: [
+      r`Suppose an online streaming service predicts the number of support tickets $Y$ a customer submits per month based on their subscription tenure and monthly usage hours. Because ticket counts are discrete non-negative integers ($0, 1, 2, \dots$), fitting a standard linear regression model produces nonsensical predictions: for low-usage users, the line predicts negative tickets! Furthermore, count variance naturally scales with the mean (Poisson dispersion), violating the constant variance assumption of OLS.`,
+      r`GLMs solve this with three modular components: a random component choosing an outcome distribution from the exponential dispersion family (such as Poisson for counts or Bernoulli for binary outcomes); a systematic linear predictor $\eta = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p$; and a link function $g(\mu) = \eta$ that bridges expected response $\mu = E[Y]$ onto the unbounded real line $(-\infty, \infty)$.`,
+      r`For count data, the log link $g(\mu) = \ln(\mu)$ ensures that the expected count $\mu = \exp(\mathbf{x}^T\boldsymbol{\beta})$ remains strictly positive for every possible input. Exponentiating coefficients transforms additive changes in $x$ into multiplicative rate ratios: an estimated slope of $\hat{\beta}_1 = 0.417$ means each additional unit of $x$ multiplies expected ticket volume by $\exp(0.417) \approx 1.517$ (a 51.7% increase).`,
+    ],
+    analogy: r`A GLM is like an electrical transformer: the linear predictor produces raw voltage across the real line, and the link function transforms it down into the exact physical voltage (probability, count, or positive duration) required by the appliance.`,
+    steps: [
+      r`Identify the response variable's data type and support: binary ($y \in \{0, 1\}$), integer counts ($y \in \{0, 1, 2, \dots\}$), or positive continuous durations ($y > 0$).`,
+      r`Select an appropriate distribution from the exponential dispersion family: Bernoulli, Poisson, Negative Binomial, or Gamma.`,
+      r`Choose a monotonic link function $g(\mu)$ that maps the expected mean domain onto $(-\infty, \infty)$ (e.g. logit for binary, log for counts).`,
+      r`Formulate the log-likelihood function across observations: $\ell(\boldsymbol{\beta}) = \sum \ln f(y_i; \theta_i, \phi)$.`,
+      r`Estimate parameters via Iteratively Reweighted Least Squares (IRLS) using Fisher scoring until convergence.`,
+      r`Assess model goodness-of-fit using deviance statistics and evaluate individual predictor significance via Wald or likelihood-ratio tests.`,
+    ],
+    math: [
+      {
+        h: 'The Exponential Dispersion Family',
+        tex: r`$$f(y; \theta, \phi) = \exp\left(\frac{y\theta - b(\theta)}{a(\phi)} + c(y, \phi)\right)$$`,
+        p: r`Here $\theta$ is the natural parameter, $b(\theta)$ is the cumulant generator function, $\phi$ is the dispersion parameter, and $a(\phi)$ and $c(y, \phi)$ are known scaling functions. The mean and variance follow directly: $E[Y] = \mu = b'(\theta)$ and $\text{Var}(Y) = b''(\theta) a(\phi) = V(\mu) a(\phi)$, where $V(\mu)$ is the characteristic variance function.`,
+      },
+      {
+        h: 'The Three GLM Components and Link Functions',
+        tex: r`$$\eta_i = \mathbf{x}_i^T\boldsymbol{\beta}, \qquad g(\mu_i) = \eta_i \iff \mu_i = g^{-1}(\mathbf{x}_i^T\boldsymbol{\beta})$$`,
+        p: r`The systematic component $\eta_i$ is a linear combination of explanatory features. The link function $g(\cdot)$ maps the expected mean $\mu_i$ onto the linear predictor. Common canonical links include the identity link $g(\mu) = \mu$ for Gaussian OLS, the logit link $g(\mu) = \ln\left(\frac{\mu}{1-\mu}\right)$ for Bernoulli classification, and the log link $g(\mu) = \ln(\mu)$ for Poisson count regression.`,
+      },
+      {
+        h: 'Iteratively Reweighted Least Squares (IRLS)',
+        tex: r`$$\boldsymbol{\beta}^{(t+1)} = (\mathbf{X}^T\mathbf{W}_t\mathbf{X})^{-1}\mathbf{X}^T\mathbf{W}_t\mathbf{z}_t, \qquad W_{ii} = \frac{1}{V(\mu_i)(g'(\mu_i))^2}$$`,
+        p: r`GLMs are fitted using Fisher scoring, which simplifies to weighted least squares with weights $W_{ii}$ inversely proportional to variance and squared link derivative. The working response vector $\mathbf{z}_t = \boldsymbol{\eta}_t + (\mathbf{y} - \boldsymbol{\mu}_t) \odot g'(\boldsymbol{\mu}_t)$ updates parameters iteratively until log-likelihood changes drop below tolerance.`,
+      },
+    ],
+    keyPoints: [
+      r`GLMs unify linear regression, logistic regression, and Poisson regression under a single rigorous maximum-likelihood framework.`,
+      r`The link function transforms the expected value $\mu = E[Y]$, NOT the raw response variable $y$; regressing $\ln(y)$ in OLS produces biased estimates compared to a log-link GLM.`,
+      r`GLM parameters are estimated via Iteratively Reweighted Least Squares (IRLS), which converges rapidly to the global maximum likelihood estimator for canonical links.`,
+      r`Overdispersion occurs when count variance exceeds the Poisson mean ($\text{Var}(Y) > \mu$); it must be addressed using Negative Binomial or quasi-Poisson models.`,
+    ],
+    pitfalls: [
+      r`Log-transforming counts with zeros ($\ln(y + 1)$) and fitting OLS instead of fitting a Poisson GLM, which introduces substantial bias and heteroscedasticity.`,
+      r`Failing to check for overdispersion in Poisson models, leading to severely deflated standard errors and inflated false positive rates.`,
+      r`Confusing link functions with response transformations: $g(E[Y]) \ne E[g(Y)]$.`,
+      r`Using identity links on non-negative count data, leading to negative rate predictions and convergence failures during IRLS optimisation.`,
+    ],
+    code: r`import numpy as np
+
+rng = np.random.default_rng(42)
+n = 120
+
+# Synthetic count data: true log-linear rate log(mu) = 0.5 + 0.4*x
+x = rng.uniform(0.0, 5.0, size=n)
+true_beta = np.array([0.5, 0.4])
+X = np.column_stack([np.ones(n), x])
+mu_true = np.exp(X @ true_beta)
+y = rng.poisson(mu_true)
+
+# Fit Poisson GLM using IRLS (Newton-Raphson with log link)
+beta = np.array([0.0, 0.0])
+for iteration in range(10):
+    eta = X @ beta
+    mu = np.exp(eta)
+    W = np.diag(mu)
+    z = eta + (y - mu) / mu
+    beta = np.linalg.inv(X.T @ W @ X) @ X.T @ W @ z
+
+rate_ratio = np.exp(beta[1])
+print(f"True beta:      {true_beta}")
+print(f"Estimated beta: [{beta[0]:.3f}, {beta[1]:.3f}]")
+print(f"Rate ratio exp(beta_1): {rate_ratio:.3f} (per unit increase in x)")`,
+    quiz: [
+      {
+        q: r`What is the crucial mathematical difference between fitting a GLM with a log link versus fitting OLS on $\ln(Y)$?`,
+        o: [
+          r`A log-link GLM models $\ln(E[Y])$, preserving the expectation scale, whereas OLS on transformed data models $E[\ln(Y)]$, which introduces Jensen's inequality bias`,
+          r`There is zero mathematical difference`,
+          r`OLS on $\ln(Y)$ only works for negative numbers`,
+          r`GLMs do not use maximum likelihood estimation`,
+        ],
+        a: 0,
+        why: r`Because the logarithm is concave, $E[\ln(Y)] \le \ln(E[Y])$ by Jensen's inequality. Log-transforming the response biases predictions downward, whereas a log-link GLM models $\ln(E[Y])$ directly.`,
+      },
+      {
+        q: r`In a Poisson GLM with a log link, how is a slope coefficient $\hat{\beta}_1 = 0.30$ substantively interpreted?`,
+        o: [
+          r`Each unit increase in $x$ adds $0.30$ to the expected count`,
+          r`Each unit increase in $x$ multiplies the expected count by $\exp(0.30) \approx 1.35$ (a 35% increase)`,
+          r`The probability of success increases by 30 percentage points`,
+          r`The response variance decreases by 30%`,
+        ],
+        a: 1,
+        why: r`Because $\ln(\mu) = \beta_0 + \beta_1 x$, exponentiating gives $\mu = e^{\beta_0} e^{\beta_1 x}$. An increase of 1 in $x$ multiplies $\mu$ by $e^{\beta_1}$.`,
+      },
+      {
+        q: r`Which canonical link function pairs with the Bernoulli distribution in generalised linear modelling?`,
+        o: [
+          r`Identity link $g(\mu) = \mu$`,
+          r`Log link $g(\mu) = \ln(\mu)$`,
+          r`Logit link $g(\mu) = \ln\left(\frac{\mu}{1 - \mu}\right)$`,
+          r`Inverse link $g(\mu) = 1 / \mu$`,
+        ],
+        a: 2,
+        why: r`The logit link maps probability $\mu \in (0, 1)$ to unbounded log-odds $(-\infty, \infty)$ and serves as the canonical link for the Bernoulli distribution.`,
+      },
+      {
+        q: r`What numerical algorithm is universally employed to compute maximum likelihood parameter estimates in GLMs?`,
+        o: [
+          r`Ordinary least squares`,
+          r`Iteratively Reweighted Least Squares (IRLS)`,
+          r`K-means clustering`,
+          r`Markov chain Monte Carlo exclusively`,
+        ],
+        a: 1,
+        why: r`IRLS implements Fisher scoring for exponential families, transforming maximum likelihood optimisation into a sequence of weighted least squares regressions that converge in few iterations.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'ols_linear_regression'],
+    prereq: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'sigmoid-and-link-functions', 'maximum-likelihood-estimation'],
+    related: ['logistic_regression', 'residual-diagnostics-and-heteroscedasticity', 'loss-functions'],
+    keywords: 'glm generalised linear models poisson regression link function exponential family irls deviance overdispersion',
+  },
+  {
+    id: 'a-b-testing-end-to-end',
+    short: 'A/B Testing End-to-End',
+    title: r`A/B Testing End-to-End`,
+    task: 'concepts',
+    module: 'Experiments and causality',
+    level: 1,
+    minutes: 18,
+    noLab: true,
+    summary: r`Design, run and analyse randomised controlled online experiments from sample sizing to hypothesis testing and guardrail metrics.`,
+    lead: r`Online controlled experiments, or A/B tests, represent the gold standard of causal inference in modern software and product engineering. By randomly allocating users between a control variant and an experimental treatment, A/B tests guarantee that observed differences are caused by the feature change rather than confounding factors. Designing an end-to-end test requires disciplined sample sizing, Sample Ratio Mismatch (SRM) validation, statistical testing, and tracking guardrail metrics.`,
+    intuition: [
+      r`Imagine an e-commerce company testing a "Buy with 1-Click" button against the standard 3-step checkout. Over two weeks, 40,000 users are randomly assigned: 20,000 to Control (A) and 20,000 to Treatment (B). In Control, 1,600 users purchase (8.0% conversion). In Treatment, 1,760 users purchase (8.8% conversion)—an apparent absolute uplift of 0.8 percentage points (a 10% relative increase).`,
+      r`How does the team verify this win? First, they audit experiment integrity using a Sample Ratio Mismatch (SRM) test. If the randomisation server delivered 19,200 Control users and 20,800 Treatment users, a chi-square goodness-of-fit test against the expected 50/50 split yields $p < 0.0001$. This indicates that the experiment is fundamentally broken—perhaps buggy JavaScript crashed older browsers in Treatment, silently dropping users and invalidating the sample.`,
+      r`When the allocation passes the SRM test ($p = 1.000$), the team runs a two-proportion $z$-test: the 0.8 percentage point lift with standard error $0.00277$ gives $z = 2.884$ and $p = 0.0039$. Because $p < 0.05$, the lift is statistically significant, with a 95% confidence interval spanning $[0.26\%, 1.34\%]$. Finally, they inspect guardrail metrics: did 1-Click checkout cause a surge in accidental orders and customer support refunds? Only when guardrails remain healthy is the winning variant safely rolled out.`,
+    ],
+    analogy: r`An A/B test is like a randomised medical clinical trial: patients receive either a placebo or the active drug under identical conditions so that health improvements can be attributed solely to the molecule, not to weather, diet, or doctor optimism.`,
+    steps: [
+      r`Formulate a falsifiable causal hypothesis and define the primary evaluation metric and secondary guardrail metrics.`,
+      r`Choose the unit of randomisation (e.g. user ID, cookie, device ID) to prevent cross-contamination across sessions.`,
+      r`Determine the required sample size based on baseline conversion, Minimum Detectable Effect (MDE), significance level $\alpha = 0.05$, and power $1 - \beta = 0.80$.`,
+      r`Run an initial Sample Ratio Mismatch (SRM) chi-square test to verify that traffic allocation matches the design split.`,
+      r`Collect data for a pre-determined duration that encompasses full weekly cycles (minimum 1 to 2 weeks) without early peeking.`,
+      r`Compute the test statistic, confidence interval for the treatment effect, and p-value; check guardrail metrics before rolling out.`,
+    ],
+    math: [
+      {
+        h: 'Two-Sample Proportion Test Statistic',
+        tex: r`$$z = \frac{\hat{p}_B - \hat{p}_A}{\sqrt{\hat{p}_{\text{pool}}(1 - \hat{p}_{\text{pool}})\left(\frac{1}{n_A} + \frac{1}{n_B}\right)}}, \qquad \hat{p}_{\text{pool}} = \frac{x_A + x_B}{n_A + n_B}$$`,
+        p: r`Here $x_A, x_B$ are conversion counts, $n_A, n_B$ are sample sizes, and $\hat{p}_{\text{pool}}$ is the pooled proportion. Under the null hypothesis $H_0: p_A = p_B$, the test statistic $z$ asymptotically follows the standard normal distribution $\mathcal{N}(0, 1)$.`,
+      },
+      {
+        h: 'Sample Ratio Mismatch (SRM) Test',
+        tex: r`$$\chi_{\text{SRM}}^2 = \sum_{v \in \{A, B\}} \frac{(n_v - E_v)^2}{E_v} \sim \chi^2(1), \qquad E_A = E_B = \frac{n_A + n_B}{2}$$`,
+        p: r`The SRM test checks whether observed traffic counts conform to the planned 50/50 allocation ratio. A significant discrepancy ($p < 0.001$) signals severe tracking bugs, redirect delays, or platform-specific crashes that invalidate all downstream statistical inference.`,
+      },
+      {
+        h: 'Sample Size Determination Formula',
+        tex: r`$$n = \frac{2\left(z_{1 - \alpha/2} + z_{1 - \beta}\right)^2 p(1 - p)}{\delta^2}$$`,
+        p: r`Here $p$ is the baseline conversion probability and $\delta = |p_B - p_A|$ is the Minimum Detectable Effect. Sizing experiments to achieve 80% power at $\alpha = 0.05$ requires fixing $n$ in advance to avoid underpowered experiments and inflated false discovery rates.`,
+      },
+    ],
+    keyPoints: [
+      r`A/B testing isolates causality by ensuring treatment and control cohorts differ exclusively by the experimental intervention.`,
+      r`The Sample Ratio Mismatch (SRM) test is a mandatory hygiene check: an SRM failure invalidates all downstream metrics regardless of p-values.`,
+      r`Experiments must run across complete business cycles (typically 7 or 14 full days) to account for weekday versus weekend behavioural shifts.`,
+      r`Guardrail metrics ensure that optimising the primary metric does not silently degrade user experience, system stability, or long-term retention.`,
+    ],
+    pitfalls: [
+      r`Peeking at p-values daily and stopping the test early as soon as significance is reached, multiplying the true false positive rate.`,
+      r`Ignoring Sample Ratio Mismatches (SRMs), treating severe traffic drop-offs as legitimate experimental outcomes.`,
+      r`Seasonality and novelty effects: enthusiastic initial adoption of a new UI that fades after novelty wears off.`,
+      r`Twyman's law: "Any figure that looks interesting or different is usually wrong"—unexpectedly massive uplifts almost always reflect instrumentation bugs.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# A/B test results: 20,000 visitors per variant
+n_a, n_b = 20000, 20000
+x_a, x_b = 1600, 1760  # Conversions
+p_a, p_b = x_a / n_a, x_b / n_b
+
+# 1. Sample Ratio Mismatch (SRM) check (expected 50/50 split)
+chi2_srm, p_srm = stats.chisquare([n_a, n_b], [20000, 20000])
+
+# 2. Two-proportion z-test
+p_pool = (x_a + x_b) / (n_a + n_b)
+se_diff = np.sqrt(p_pool * (1.0 - p_pool) * (1.0 / n_a + 1.0 / n_b))
+z_stat = (p_b - p_a) / se_diff
+p_val = 2.0 * (1.0 - stats.norm.cdf(abs(z_stat)))
+
+lift = p_b - p_a
+ci_low = lift - 1.96 * se_diff
+ci_high = lift + 1.96 * se_diff
+
+print(f"SRM check p-value: {p_srm:.4f} (Valid allocation)")
+print(f"Control conversion:   {p_a:.1%}")
+print(f"Treatment conversion: {p_b:.1%} (Lift: {lift:+.2%})")
+print(f"z-statistic: {z_stat:.3f}, p-value: {p_val:.4f}")
+print(f"95% Confidence Interval: [{ci_low:.4f}, {ci_high:.4f}]")`,
+    quiz: [
+      {
+        q: r`Why does daily "peeking" at accumulated A/B test results and stopping early as soon as $p < 0.05$ invalidate the experiment?`,
+        o: [
+          r`Because sample sizes must always be odd numbers`,
+          r`Because repeated testing across accumulating data inflates the true Type I error rate far above the nominal 5% level`,
+          r`Because early stopping decreases statistical power`,
+          r`Because conversion rates cannot be calculated before 30 days`,
+        ],
+        a: 1,
+        why: r`Continuous monitoring gives random sampling noise multiple opportunities to cross the significance boundary, drastically inflating false discovery rates.`,
+      },
+      {
+        q: r`What does a statistically significant result ($p < 0.0001$) in a Sample Ratio Mismatch (SRM) test indicate?`,
+        o: [
+          r`The treatment variant won with overwhelming confidence`,
+          r`The experiment has severe tracking or allocation flaws (such as browser crashes or redirect drops), invalidating all causal claims`,
+          r`The sample size was too small`,
+          r`The primary conversion metric should be adjusted`,
+        ],
+        a: 1,
+        why: r`An SRM failure indicates that users were systematically dropped or misallocated between variants, violating the fundamental assumption of unbiased random assignment.`,
+      },
+      {
+        q: r`Why must A/B tests typically run for a minimum duration of 7 or 14 full consecutive days?`,
+        o: [
+          r`To capture day-of-week seasonality and cyclical user behavioural differences`,
+          r`Because standard normal distributions require 7 degrees of freedom`,
+          r`To allow database indexes to rebuild`,
+          r`Because p-values cannot be computed on weekends`,
+        ],
+        a: 0,
+        why: r`User behaviour varies systematically across weekdays and weekends; running experiments in full 7-day multiples balances day-of-week cyclicality.`,
+      },
+      {
+        q: r`What is the primary role of "guardrail metrics" in online controlled experiments?`,
+        o: [
+          r`To replace the primary evaluation metric`,
+          r`To ensure that optimising the primary metric does not cause unintended harm to system performance, latency, or customer satisfaction`,
+          r`To guarantee that $R^2$ remains positive`,
+          r`To compute statistical power`,
+        ],
+        a: 1,
+        why: r`Guardrail metrics monitor critical operational and business vitals (e.g. page load latency, crash rates, refund requests) to prevent destructive wins.`,
+      },
+    ],
+    usedBy: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'confidence-intervals'],
+    related: ['simpsons-paradox-and-confounding', 'z-test-and-t-tests', 'chi-square-tests'],
+    keywords: 'a-b testing online experiments randomized controlled trial srm sample ratio mismatch guardrail metrics conversion lift mde',
+  },
+  {
+    id: 'simpsons-paradox-and-confounding',
+    short: 'Simpson\'s Paradox & Confounding',
+    title: r`Simpson's Paradox and Confounding`,
+    task: 'concepts',
+    module: 'Experiments and causality',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Discover how hidden confounding variables can reverse statistical conclusions between aggregated data and subgroup strata.`,
+    lead: r`When analysing aggregated datasets, a statistical trend observed in the population can completely reverse direction when the data is partitioned into subgroups. This statistical phenomenon—Simpson's paradox—occurs when an unobserved or uncontrolled confounding variable distorts the marginal relationship between treatment and outcome. Understanding confounding and applying stratified analysis or causal adjustment prevents disastrously mistaken policy and business decisions.`,
+    intuition: [
+      r`Consider a clinical trial evaluating two treatments for kidney stones: Treatment A (an invasive open surgical procedure) and Treatment B (a non-invasive ultrasound procedure). Looking at the overall aggregate data across 700 patients, Treatment A succeeds in 273 out of 350 patients (78.0%), while Treatment B succeeds in 289 out of 350 patients (82.6%). A health authority inspecting only this aggregate summary would recommend Treatment B, which appears to boast a 4.6 percentage point advantage.`,
+      r`Now partition the data by stone severity (the confounding variable): for small stones, Treatment A succeeds in 81/87 (93.1%), while Treatment B succeeds in 234/270 (86.7%)—Treatment A wins by 6.4 percentage points! For large stones, Treatment A succeeds in 192/263 (73.0%), while Treatment B succeeds in 55/80 (68.8%)—Treatment A wins again by 4.3 percentage points!`,
+      r`Treatment A is medically superior for small stones AND superior for large stones. Yet when pooled together, Treatment A looks worse! Why does this happen? Stone severity acts as a confounder: severe cases have lower survival rates overall, and doctors disproportionately assigned severe patients to invasive Treatment A (263 vs 80). Treatment B received a flood of easy, mild cases (270 vs 87). Aggregation conflates treatment efficacy with patient sickness, producing an illusory reversal. Standardised adjustment reweighting by marginal stone size restores the true positive treatment effect of +5.4%.`,
+    ],
+    analogy: r`Simpson's paradox is like comparing two basketball players' overall shooting percentages when one player shoots mostly easy layups and the other takes contested three-pointers: the second player can have a higher percentage from both ranges yet have a lower overall score.`,
+    steps: [
+      r`Identify the treatment variable $X$, the outcome variable $Y$, and potential confounding covariates $Z$.`,
+      r`Inspect the data at both the aggregated level and within stratified subgroups of $Z$.`,
+      r`Test whether the confounder $Z$ is associated with both the treatment allocation $X$ and the outcome $Y$.`,
+      r`Draw a causal directed acyclic graph (DAG) to determine if $Z$ is a true confounder ($X \leftarrow Z \rightarrow Y$) rather than a mediator ($X \rightarrow Z \rightarrow Y$).`,
+      r`Compute stratum-specific effect sizes and combine them using weighted stratification or standardised adjustment.`,
+      r`Interpret the adjusted causal effect rather than the misleading aggregated marginal association.`,
+    ],
+    math: [
+      {
+        h: 'Mathematical Formulation of Simpson\'s Reversal',
+        tex: r`$$P(Y \mid X) < P(Y \mid \neg X) \quad \text{while} \quad P(Y \mid X, Z_k) > P(Y \mid \neg X, Z_k) \quad \forall k$$`,
+        p: r`By the law of total probability, marginal probability is a weighted sum over subgroups: $P(Y \mid X) = \sum_k P(Y \mid X, Z_k) P(Z_k \mid X)$. When treatment assignment strongly correlates with the confounder $Z$, the subgroup weights $P(Z_k \mid X)$ differ dramatically, allowing the aggregate marginal comparison to reverse sign relative to every subgroup.`,
+      },
+      {
+        h: 'Confounder Structure (Causal DAG)',
+        tex: r`$$X \longleftarrow Z \longrightarrow Y$$`,
+        p: r`A confounder $Z$ is a common cause that affects both treatment assignment $X$ and outcome $Y$. Failing to condition on $Z$ leaves an open backdoor path $X \leftarrow Z \rightarrow Y$, confounding the true causal effect of $X$ on $Y$ with non-causal association.`,
+      },
+      {
+        h: 'Standardised Causal Risk Difference',
+        tex: r`$$\Delta_{\text{adj}} = \sum_{k=1}^K \left[P(Y=1 \mid X=1, Z=k) - P(Y=1 \mid X=0, Z=k)\right] P(Z=k)$$`,
+        p: r`Standardised adjustment eliminates confounding bias by re-weighting stratum-specific treatment differences by the marginal population distribution $P(Z=k)$ rather than the biased treatment-dependent weights $P(Z \mid X)$.`,
+      },
+    ],
+    keyPoints: [
+      r`Simpson's paradox occurs when an uncontrolled confounding variable is associated with both the treatment and the outcome.`,
+      r`A treatment can be superior in every single subgroup yet appear inferior in aggregate data due to imbalanced allocation.`,
+      r`True confounders must be controlled for; however, conditioning on a mediator ($X \rightarrow M \rightarrow Y$) or a collider ($X \rightarrow C \leftarrow Y$) introduces severe bias.`,
+      r`Randomised controlled trials (A/B tests) prevent Simpson's paradox by forcing treatment allocation to be statistically independent of all baseline covariates.`,
+    ],
+    pitfalls: [
+      r`Blindly trusting aggregate conversion rates or medical trial results without checking for subgroup imbalances.`,
+      r`Controlling for variables that are consequences of the treatment (mediators), which blocks the true causal mechanism.`,
+      r`Conditioning on colliders (common effects of treatment and outcome), which artificially manufactures non-existent correlations.`,
+      r`Believing that collecting more observational data resolves Simpson's paradox; more unadjusted data simply estimates the biased number with higher precision.`,
+    ],
+    code: r`import numpy as np
+
+# Kidney stone treatment data: [Successes, Total]
+# Small stones: Treatment A vs B
+a_small, a_small_tot = 81, 87      # 93.1%
+b_small, b_small_tot = 234, 270    # 86.7%
+
+# Large stones: Treatment A vs B
+a_large, a_large_tot = 192, 263    # 73.0%
+b_large, b_large_tot = 55, 80      # 68.8%
+
+# Aggregated data
+rate_a_agg = (a_small + a_large) / (a_small_tot + a_large_tot)
+rate_b_agg = (b_small + b_large) / (b_small_tot + b_large_tot)
+
+# Stratified differences within each stone size
+diff_small = (a_small / a_small_tot) - (b_small / b_small_tot)
+diff_large = (a_large / a_large_tot) - (b_large / b_large_tot)
+
+# Standardised causal risk difference (reweighting by population stone distribution)
+tot_small = a_small_tot + b_small_tot
+tot_large = a_large_tot + b_large_tot
+w_small = tot_small / (tot_small + tot_large)
+w_large = tot_large / (tot_small + tot_large)
+adj_causal_diff = w_small * diff_small + w_large * diff_large
+
+print(f"Aggregate Success:  Treatment A={rate_a_agg:.1%}, B={rate_b_agg:.1%} (B appears +{rate_b_agg - rate_a_agg:.1%} better)")
+print(f"Small Stones:       Treatment A={a_small/a_small_tot:.1%}, B={b_small/b_small_tot:.1%} (A is {diff_small:+.1%} better)")
+print(f"Large Stones:       Treatment A={a_large/a_large_tot:.1%}, B={b_large/b_large_tot:.1%} (A is {diff_large:+.1%} better)")
+print(f"Adjusted Causal Difference: {adj_causal_diff:+.1%} (Treatment A is truly superior)")`,
+    quiz: [
+      {
+        q: r`What causes Simpson's paradox to occur in observational data?`,
+        o: [
+          r`Measurement rounding errors in digital databases`,
+          r`A confounding variable that is correlated with both the treatment assignment and the outcome variable`,
+          r`Small sample sizes that violate the central limit theorem`,
+          r`Negative variances in the calculation`,
+        ],
+        a: 1,
+        why: r`When an uncontrolled confounder influences both treatment allocation and the outcome, the marginal aggregated average is weighted unevenly, reversing the true subgroup direction.`,
+      },
+      {
+        q: r`In the classic kidney stone example, why did Treatment B appear superior in the aggregate data despite being inferior in both stone subgroups?`,
+        o: [
+          r`Treatment B was given predominantly to patients with small stones (easy cases), inflating its overall success rate`,
+          r`Treatment A was administered incorrectly`,
+          r`The study had a Sample Ratio Mismatch`,
+          r`The p-value was greater than 0.50`,
+        ],
+        a: 0,
+        why: r`Doctors disproportionately assigned mild cases to Treatment B and severe cases to Treatment A, confounding treatment efficacy with baseline patient sickness.`,
+      },
+      {
+        q: r`Why does running a properly randomised A/B test prevent Simpson's paradox from occurring?`,
+        o: [
+          r`Because randomisation forces sample sizes to be greater than 1,000`,
+          r`Because random assignment ensures that all baseline confounding variables are balanced across treatment and control groups ($P(Z \mid X) = P(Z \mid \neg X)$)`,
+          r`Because randomisation eliminates random noise`,
+          r`Because it automatically stratifies data into deciles`,
+        ],
+        a: 1,
+        why: r`Random assignment breaks the link between confounders and treatment ($X \leftarrow Z$), ensuring both groups have identical distributions of all baseline characteristics.`,
+      },
+      {
+        q: r`In a causal DAG, what type of variable is positioned on the causal chain between treatment and outcome ($X \rightarrow M \rightarrow Y$)?`,
+        o: [
+          r`A confounder`,
+          r`A mediator`,
+          r`A collider`,
+          r`An instrument`,
+        ],
+        a: 1,
+        why: r`A mediator lies on the causal path from treatment to outcome. Controlling for a mediator blocks the causal effect rather than removing confounding.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'decision_tree_classifier'],
+    prereq: ['probability-rules-and-bayes-theorem', 'a-b-testing-end-to-end', 'correlation-pearson-spearman-kendall'],
+    related: ['a-b-testing-end-to-end', 'logistic_regression', 'feature-selection'],
+    keywords: 'simpsons paradox confounding causal inference backdoor path dag stratification observational data treatment effect',
+  },
+  {
+    id: 'conjugate-priors-beta-binomial',
+    short: 'Beta–Binomial Conjugacy',
+    title: r`Conjugate Priors (Beta–Binomial)`,
+    task: 'concepts',
+    module: 'Bayesian and stochastic',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Update probability beliefs in closed form by combining Beta prior distributions with Binomial observations.`,
+    lead: r`In Bayesian statistics, updating beliefs via Bayes' theorem often involves intractable integrals that require complex Markov chain Monte Carlo (MCMC) simulations. Conjugate priors provide an elegant algebraic shortcut: when the prior and likelihood belong to a conjugate family, the posterior distribution belongs to the exact same family as the prior. The Beta–Binomial model serves as the canonical example of conjugacy, updating binary conversion beliefs by simply adding observed successes and failures to prior hyperparameters.`,
+    intuition: [
+      r`Imagine launching a brand-new website feature where you want to estimate the conversion rate $\theta$. Before collecting data, you have prior experience from dozens of similar features: conversions typically hover around 20%, but rarely drop below 5% or exceed 45%.`,
+      r`In Bayesian terms, we represent this initial uncertainty with a Beta distribution: $\text{Beta}(\alpha, \beta)$. The hyperparameters $\alpha$ and $\beta$ can be intuitively interpreted as "pseudo-observations": $\alpha$ prior successes and $\beta$ prior failures. Setting $\alpha = 4$ and $\beta = 16$ encodes a prior belief centred at $\frac{4}{4 + 16} = 20\%$, backed by the equivalent strength of 20 prior visitors.`,
+      r`Now, run a live experiment: 100 new visitors arrive, and 35 convert (35 successes, 65 failures). Because the Beta distribution is conjugate to the Binomial likelihood, computing the posterior does not require calculus or numerical integration. You simply add live counts directly to your prior counts: $\alpha_{\text{post}} = 4 + 35 = 39$ and $\beta_{\text{post}} = 16 + 65 = 81$. The updated posterior is $\text{Beta}(39, 81)$, with posterior mean $\frac{39}{39 + 81} = 32.5\%$ and 95% credible interval $[24.4\%, 41.1\%]$. The prior gently regularises the noisy raw sample rate of 35% toward baseline beliefs.`,
+    ],
+    analogy: r`Updating a Beta prior with Binomial data is like adding tallies to a score sheet: you start with a few pencil marks representing previous games, and each new game simply adds tally marks in the win and loss columns without having to redesign the sheet.`,
+    steps: [
+      r`Specify the parameter of interest: a success probability $\theta \in [0, 1]$ governing binary Bernoulli or Binomial trials.`,
+      r`Select prior hyperparameters $\alpha_0$ and $\beta_0$ to encode baseline domain knowledge (or set $\alpha_0 = \beta_0 = 1$ for a flat uniform prior).`,
+      r`Observe experimental data: record the number of successes $k$ out of $n$ independent trials (with $n - k$ failures).`,
+      r`Compute posterior hyperparameters in closed form: $\alpha_1 = \alpha_0 + k$ and $\beta_1 = \beta_0 + n - k$.`,
+      r`Calculate summary properties of the posterior $\text{Beta}(\alpha_1, \beta_1)$: posterior mean $\frac{\alpha_1}{\alpha_1 + \beta_1}$ and credible intervals via Beta quantiles.`,
+      r`Use the posterior distribution as the prior for subsequent incoming batches of data in a streaming, sequential learning pipeline.`,
+    ],
+    math: [
+      {
+        h: 'Beta Prior and Binomial Likelihood',
+        tex: r`$$P(\theta) = \frac{\theta^{\alpha - 1}(1 - \theta)^{\beta - 1}}{\text{B}(\alpha, \beta)}, \qquad P(k \mid \theta) = \binom{n}{k} \theta^k (1 - \theta)^{n - k}$$`,
+        p: r`Here $\theta$ is the success probability, $\text{B}(\alpha, \beta) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha + \beta)}$ is the Beta normalisation constant, and $\alpha, \beta > 0$ are shape hyperparameters. The Binomial likelihood gives the probability of observing $k$ successes in $n$ independent trials given rate $\theta$.`,
+      },
+      {
+        h: 'Posterior Derivation via Conjugacy',
+        tex: r`$$P(\theta \mid k) \propto P(k \mid \theta) P(\theta) \propto \theta^k (1 - \theta)^{n - k} \cdot \theta^{\alpha - 1}(1 - \theta)^{\beta - 1} = \theta^{(\alpha + k) - 1} (1 - \theta)^{(\beta + n - k) - 1}$$`,
+        p: r`Multiplying likelihood and prior preserves the exact algebraic functional form: the exponents sum directly. The posterior distribution is identically $\text{Beta}(\alpha + k, \, \beta + n - k)$, proving that the Beta family is conjugate to the Binomial likelihood.`,
+      },
+      {
+        h: 'Posterior Mean as a Weighted Average',
+        tex: r`$$E[\theta \mid k] = \frac{\alpha + k}{\alpha + \beta + n} = \left(\frac{\alpha + \beta}{\alpha + \beta + n}\right) \frac{\alpha}{\alpha + \beta} + \left(\frac{n}{\alpha + \beta + n}\right) \frac{k}{n}$$`,
+        p: r`The Bayesian posterior mean is a transparent convex combination of the prior mean $\frac{\alpha}{\alpha + \beta}$ and the empirical sample mean $\frac{k}{n}$. The relative weight assigned to each component is proportional to effective sample size: $(\alpha + \beta)$ for the prior versus $n$ for the data.`,
+      },
+    ],
+    keyPoints: [
+      r`Conjugacy occurs when the posterior distribution belongs to the exact same functional probability family as the prior distribution.`,
+      r`The Beta distribution is conjugate to the Binomial and Bernoulli likelihoods, reducing Bayesian updating to basic integer addition.`,
+      r`The posterior mean is an exact weighted average between prior belief and sample evidence, providing natural shrinkage regularisation.`,
+      r`Sequential updating is seamless: today's posterior becomes tomorrow's prior as streaming batches of data arrive.`,
+    ],
+    pitfalls: [
+      r`Setting hyperparameter counts $\alpha, \beta$ too large, which rigidly anchors the model and prevents it from learning from moderate sample sizes.`,
+      r`Confusing the posterior mode (MAP estimate, $\frac{\alpha - 1}{\alpha + \beta - 2}$) with the posterior mean ($\frac{\alpha}{\alpha + \beta}$).`,
+      r`Using Beta–Binomial conjugacy on time-varying conversion rates where underlying probabilities drift over time.`,
+      r`Assuming all likelihoods possess conjugate priors; complex neural networks and non-linear models lack conjugate priors and require MCMC or variational approximations.`,
+    ],
+    code: r`import scipy.stats as stats
+
+# Prior: Beta(4, 16) -> centered at 20% conversion
+alpha_0, beta_0 = 4, 16
+prior_mean = alpha_0 / (alpha_0 + beta_0)
+
+# Observed data: 35 conversions out of 100 visitors
+n_visitors = 100
+k_conversions = 35
+
+# Conjugate update: add successes and failures directly
+alpha_1 = alpha_0 + k_conversions
+beta_1 = beta_0 + (n_visitors - k_conversions)
+
+post_mean = alpha_1 / (alpha_1 + beta_1)
+post_mode = (alpha_1 - 1.0) / (alpha_1 + beta_1 - 2.0)
+ci_lower = stats.beta.ppf(0.025, alpha_1, beta_1)
+ci_upper = stats.beta.ppf(0.975, alpha_1, beta_1)
+
+print(f"Prior:     Beta({alpha_0}, {beta_0}), Mean: {prior_mean:.1%}")
+print(f"Observed:  {k_conversions}/{n_visitors} ({k_conversions/n_visitors:.1%})")
+print(f"Posterior: Beta({alpha_1}, {beta_1}), Mean: {post_mean:.1%}, Mode: {post_mode:.1%}")
+print(f"95% Credible Interval: [{ci_lower:.3f}, {ci_upper:.3f}]")`,
+    quiz: [
+      {
+        q: r`Why are conjugate priors computationally advantageous in Bayesian statistics?`,
+        o: [
+          r`They eliminate all uncertainty from parameter estimates`,
+          r`They allow posterior distributions to be calculated in closed form using simple algebra, avoiding costly numerical integration or MCMC sampling`,
+          r`They can only be used when sample sizes exceed 10,000`,
+          r`They guarantee that the prior distribution is always uniform`,
+        ],
+        a: 1,
+        why: r`Conjugacy ensures the posterior belongs to the same functional family as the prior, reducing Bayesian updates to simple parameter addition without numerical integration.`,
+      },
+      {
+        q: r`If you begin with a uniform prior $\text{Beta}(1, 1)$ and observe 7 heads and 3 tails in coin flips, what is the posterior distribution?`,
+        o: [
+          r`$\text{Beta}(7, 3)$`,
+          r`$\text{Beta}(8, 4)$`,
+          r`$\text{Beta}(10, 10)$`,
+          r`$\mathcal{N}(7, 3)$`,
+        ],
+        a: 1,
+        why: r`Adding observed counts to prior hyperparameters gives $\alpha' = 1 + 7 = 8$ and $\beta' = 1 + 3 = 4$, resulting in $\text{Beta}(8, 4)$.`,
+      },
+      {
+        q: r`In the Beta–Binomial model, what happens to the posterior distribution as the sample size $n \to \infty$?`,
+        o: [
+          r`The prior completely dominates the data`,
+          r`The posterior variance shrinks toward zero, and the posterior mean converges to the maximum likelihood sample proportion`,
+          r`The posterior distribution becomes uniform`,
+          r`The posterior mean becomes undefined`,
+        ],
+        a: 1,
+        why: r`As $n$ grows large, the weight $\frac{n}{\alpha + \beta + n}$ approaches 1.0, causing the posterior to concentrate around the sample mean with vanishing variance.`,
+      },
+      {
+        q: r`What intuitive interpretation do the hyperparameters $\alpha$ and $\beta$ carry in a Beta prior?`,
+        o: [
+          r`The number of iterations required for gradient descent`,
+          r`The effective number of pseudo-observations (prior successes and prior failures) before collecting live data`,
+          r`The degrees of freedom of a Student's t-test`,
+          r`The regularisation penalty $\lambda$`,
+        ],
+        a: 1,
+        why: r`The parameters $\alpha$ and $\beta$ act as virtual or pseudo-observations: $\alpha$ reflects prior successes and $\beta$ prior failures, with sum $\alpha + \beta$ representing prior sample strength.`,
+      },
+    ],
+    usedBy: ['bayesian_linear_regression', 'gaussian_naive_bayes'],
+    prereq: ['probability-rules-and-bayes-theorem', 'random-variables-and-distributions', 'sampling-and-standard-error'],
+    related: ['bayesian_linear_regression', 'confidence-intervals', 'maximum-likelihood-estimation'],
+    keywords: 'conjugate priors beta binomial bayesian updating posterior prior credible interval pseudo observations',
+  },
 ];
