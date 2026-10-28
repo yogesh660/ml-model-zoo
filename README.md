@@ -36,6 +36,7 @@ assets/
     explainers.js     step-by-step animated explainers shown above the labs (linear regression, CNN, sequence and language lessons)
     architecture.js   interactive architecture diagrams with hover/tap explanations (linear regression, CNN, tokenizer, embedding and Transformer lessons)
 scripts/build.js      content -> index.html, models/<id>/index.html, concepts/<id>/index.html
+scripts/dev/check.py  screenshots and overflow checks for walkthroughs, diagrams and labs (Playwright)
 models/<id>/          train.py (scikit-learn or PyTorch) and the metrics.json it writes
 datasets/raw/         small synthetic teaching samples modelled on well-known datasets
 ```
