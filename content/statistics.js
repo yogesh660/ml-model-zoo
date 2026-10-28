@@ -2373,4 +2373,545 @@ print(f"Disjoint support JSD: {jsd_max:.4f} bits (bounded maximum = 1.0)")`,
     related: ['clustering-metrics', 'loss-functions'],
     keywords: 'jensen shannon divergence jsd jensen shannon distance symmetric divergence information theory drift monitoring gans',
   },
+  {
+    id: 'mutual-information',
+    short: 'Mutual Information',
+    title: r`Mutual Information`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Measure linear and non-linear dependence between random variables using information gain and entropy reduction.`,
+    lead: r`While Pearson correlation measures strictly linear associations and fails on curved dependencies, Mutual Information (MI) quantifies all forms of statistical dependence—linear, non-linear, and non-monotonic. Grounded in information theory, MI measures how much uncertainty about one random variable is eliminated by knowing the value of another. It serves as a foundational technique for non-linear feature selection, decision tree splitting, and representation learning.`,
+    intuition: [
+      r`Suppose you analyse the relationship between outdoor temperature $X$ and electricity demand $Y$. On freezing winter days and scorching summer days, electricity demand surges to power heating and air conditioning, while on mild spring days demand is low. The relationship forms a parabolic U-shape ($Y \approx X^2$).`,
+      r`If you compute Pearson's linear correlation coefficient $r$, the positive slope on the hot side cancels out the negative slope on the cold side, yielding $r \approx -0.058$ ($p = 0.193$). An analyst relying solely on linear correlation would mistakenly conclude that temperature has zero statistical relationship with electricity demand!`,
+      r`Mutual information avoids this blind spot entirely. It does not look for straight lines; it compares the joint distribution $P(X, Y)$ against the product of the marginals $P(X)P(Y)$ (what the joint distribution would look like if $X$ and $Y$ were completely independent). When temperature strongly dictates electricity demand, knowing $X$ removes substantial uncertainty from $Y$, yielding a high mutual information of $1.722$ bits. If two variables are truly statistically independent, $P(X, Y) = P(X)P(Y)$ everywhere, and mutual information drops to identically $0.0$ bits.`,
+    ],
+    analogy: r`Pearson correlation is like a rigid wooden ruler that can only measure straight paths; mutual information is like a flexible measuring tape that wraps around every curve and bend to measure true connection.`,
+    steps: [
+      r`Estimate the joint probability distribution $P(X, Y)$ and compute individual marginal distributions $P(X)$ and $P(Y)$.`,
+      r`For continuous variables, discretise features into two-dimensional grid bins or employ $k$-nearest neighbours estimators.`,
+      r`Compute the individual Shannon marginal entropies $H(X)$ and $H(Y)$.`,
+      r`Compute the joint entropy $H(X, Y)$ or the conditional entropy $H(Y \mid X)$.`,
+      r`Calculate mutual information: $I(X; Y) = H(X) + H(Y) - H(X, Y) = H(Y) - H(Y \mid X)$.`,
+      r`Rank candidate explanatory features by mutual information with the target label to perform non-linear feature selection.`,
+    ],
+    math: [
+      {
+        h: 'Mutual Information Definition via KL Divergence',
+        tex: r`$$I(X; Y) = D_{\text{KL}}\left(P(X, Y) \parallel P(X)P(Y)\right) = \sum_{x \in \mathcal{X}}\sum_{y \in \mathcal{Y}} P(x, y) \log_2\left(\frac{P(x, y)}{P(x)P(y)}\right)$$`,
+        p: r`Here $P(x, y)$ is the joint probability mass function, and $P(x)P(y)$ is the product of independent marginal distributions. Mutual information measures the Kullback–Leibler divergence between joint reality and the independent null baseline. By Gibbs' inequality, $I(X; Y) \ge 0$, with equality holding if and only if $X$ and $Y$ are statistically independent.`,
+      },
+      {
+        h: 'Entropy Decomposition and Symmetry',
+        tex: r`$$I(X; Y) = H(X) - H(X \mid Y) = H(Y) - H(Y \mid X) = H(X) + H(Y) - H(X, Y)$$`,
+        p: r`Here $H(Y)$ is the initial uncertainty in $Y$, and $H(Y \mid X)$ is the remaining uncertainty in $Y$ after observing $X$. Their difference represents the information gain about $Y$ provided by $X$. Because entropy Venn diagrams are symmetric, $I(X; Y) = I(Y; X)$.`,
+      },
+      {
+        h: 'Continuous Mutual Information and Gaussian Equivalence',
+        tex: r`$$I(X; Y) = -\frac{1}{2} \ln\left(1 - \rho^2\right) \quad \text{for jointly Gaussian variables}$$`,
+        p: r`When $X$ and $Y$ follow a bivariate normal distribution with correlation coefficient $\rho$, mutual information is an exact monotonic function of $\rho^2$. For non-Gaussian variables, $I(X; Y) \ge -\frac{1}{2}\ln(1 - \rho^2)$, capturing higher-order non-linear associations that linear correlation misses.`,
+      },
+    ],
+    keyPoints: [
+      r`Mutual information detects all forms of statistical association, including non-linear, non-monotonic, and periodic relationships.`,
+      r`$I(X; Y)$ is strictly non-negative and symmetric: $I(X; Y) = I(Y; X) \ge 0$, with $I(X; Y) = 0$ if and only if $X$ and $Y$ are independent.`,
+      r`In decision trees, the information gain splitting criterion is mathematically identical to the mutual information between the candidate split feature and the target class.`,
+      r`Unlike Pearson correlation, mutual information is invariant under any invertible, monotonic transformation of the variables.`,
+    ],
+    pitfalls: [
+      r`Naive binning on continuous data: too few bins underestimates true dependence; too many bins overestimates MI due to finite-sample sampling noise.`,
+      r`Expecting an upper bound of 1.0: unnormalised mutual information is bounded by $\min(H(X), H(Y))$; use normalised mutual information (NMI) if a $[0, 1]$ metric is required.`,
+      r`Feature redundancy in greedy selection: picking top features by individual MI can select highly collinear duplicates; use minimum redundancy maximum relevance (mRMR).`,
+      r`High computational cost: estimating high-dimensional joint mutual information suffers from the curse of dimensionality.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 500
+
+# Parabolic non-linear relationship: Y = X^2 + noise
+x = rng.uniform(-3.0, 3.0, size=n)
+y = x**2 + rng.normal(loc=0.0, scale=0.5, size=n)
+
+# 1. Pearson linear correlation (fails on non-linear curves)
+r_val, p_r = stats.pearsonr(x, y)
+
+# 2. Discrete mutual information via 2D binning (Shannon formula in bits)
+bins = 12
+hist_2d, _, _ = np.histogram2d(x, y, bins=bins)
+p_xy = hist_2d / np.sum(hist_2d)
+p_x = np.sum(p_xy, axis=1, keepdims=True)
+p_y = np.sum(p_xy, axis=0, keepdims=True)
+
+# I(X; Y) = sum P(x,y) * log2(P(x,y) / (P(x)*P(y)))
+nonzero = p_xy > 0
+mi_bits = np.sum(p_xy[nonzero] * np.log2(p_xy[nonzero] / (p_x @ p_y)[nonzero]))
+
+print(f"Pearson correlation r: {r_val:.3f} (p-value: {p_r:.3f})")
+print(f"Mutual Information:    {mi_bits:.3f} bits")`,
+    quiz: [
+      {
+        q: r`Why does Pearson's correlation coefficient evaluate to approximately zero on a perfect parabolic relationship ($Y = X^2$ on $[-3, 3]$)?`,
+        o: [
+          r`Because parabolic data violates the central limit theorem`,
+          r`Because the positive linear trend on $X > 0$ cancels out the negative linear trend on $X < 0$`,
+          r`Because Pearson correlation can only be computed on positive values`,
+          r`Because the variance of $Y$ is zero`,
+        ],
+        a: 1,
+        why: r`Pearson correlation evaluates strictly linear slope. In symmetric U-shaped curves, positive and negative slopes cancel out, yielding $r \approx 0$ despite complete deterministic dependence.`,
+      },
+      {
+        q: r`Under what condition is the mutual information $I(X; Y)$ strictly equal to zero?`,
+        o: [
+          r`When $X$ and $Y$ are statistically independent`,
+          r`When $X$ and $Y$ have a negative linear correlation`,
+          r`When $X$ and $Y$ follow standard normal distributions`,
+          r`When the covariance of $X$ and $Y$ is positive`,
+        ],
+        a: 0,
+        why: r`By definition, $I(X; Y) = D_{\text{KL}}(P(X, Y) \parallel P(X)P(Y))$. The divergence is zero if and only if $P(X, Y) = P(X)P(Y)$, which is the exact definition of statistical independence.`,
+      },
+      {
+        q: r`In decision tree induction algorithms like ID3 and C4.5, what information-theoretic quantity corresponds to "information gain"?`,
+        o: [
+          r`Gini impurity difference`,
+          r`Mutual information between the candidate split feature and the target label`,
+          r`Kullback–Leibler divergence between tree branches`,
+          r`Cramér's V statistic`,
+        ],
+        a: 1,
+        why: r`Information gain is defined as $H(Y) - H(Y \mid X)$, which is mathematically identical to the mutual information $I(X; Y)$.`,
+      },
+      {
+        q: r`What is the theoretical upper bound on the mutual information $I(X; Y)$ between two discrete random variables?`,
+        o: [
+          r`1.0 bit`,
+          r`$\min(H(X), H(Y))$`,
+          r`$H(X) + H(Y)$`,
+          r`$\infty$ for any discrete variable`,
+        ],
+        a: 1,
+        why: r`Because knowing $X$ cannot eliminate more uncertainty than exists in $X$ itself or in $Y$, $I(X; Y) \le \min(H(X), H(Y))$.`,
+      },
+    ],
+    usedBy: ['decision_tree_classifier', 'feature-selection'],
+    prereq: ['entropy-and-cross-entropy', 'kl-divergence', 'probability-rules-and-bayes-theorem'],
+    related: ['correlation-pearson-spearman-kendall', 'feature-selection', 'decision_tree_classifier'],
+    keywords: 'mutual information mi entropy information gain non-linear dependence feature selection ksg contingency table',
+  },
+  {
+    id: 'ols-inference-t-tests-f-test-r2-and-adjusted-r2',
+    short: 'OLS Inference: t, F & R-Squared',
+    title: r`OLS Inference: t-Tests, F-Test, R² and Adjusted R²`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 1,
+    minutes: 18,
+    noLab: true,
+    summary: r`Conduct rigorous hypothesis tests on regression coefficients with t-tests, evaluate overall model significance with the F-test, and penalise overfitting with adjusted R².`,
+    lead: r`Fitting an ordinary least squares (OLS) regression line is only the first step in linear modelling. To determine whether estimated slopes represent genuine population relationships rather than sampling noise, we must perform statistical inference. Individual coefficient t-tests evaluate specific predictors, the omnibus F-test assesses whether the model explains more variance than a simple average, and adjusted R² prevents the deceptive inflation of goodness-of-fit as redundant variables are added.`,
+    intuition: [
+      r`Suppose an analyst fits an OLS regression predicting house prices using three features: square footage, number of bedrooms, and the homeowner's lucky lottery number. Least squares outputs estimated slopes: square footage has $\hat{\beta}_1 = 3.350$ (£3,350 per unit), bedrooms has $\hat{\beta}_2 = 12.901$ (£12,900 per bedroom), and lucky number has $\hat{\beta}_3 = -0.031$.`,
+      r`Did the owner's lucky number genuinely influence property price? The estimated slope is $-0.031$, but its standard error is $0.036$. Dividing the coefficient by its standard error gives a $t$-statistic of $t = -0.856$, producing a p-value of $p = 0.394$. Because this p-value is far above the conventional significance threshold $\alpha = 0.05$, we fail to reject the null hypothesis $\beta_3 = 0$ and conclude that lucky number has zero statistical relationship with house prices. Conversely, square footage achieves $t = 25.91$ ($p < 10^{-15}$), demonstrating an overwhelmingly reliable effect.`,
+      r`Next, look at the overall model: the coefficient of determination $R^2$ indicates that the model accounts for $90.7\%$ of total price variance ($R^2 = 0.907$). However, least squares mathematically guarantees that adding any extra variable—even pure random noise—will never decrease $R^2$. Adjusted $R^2$ corrects for this by penalising model complexity: for our model, adjusted $R^2$ is $0.904$. Finally, the omnibus $F$-test evaluates whether all three predictors jointly explain significant variance compared to an intercept-only baseline: an $F$-statistic of $310.4$ ($p < 10^{-15}$) decisively rejects the global null hypothesis.`,
+    ],
+    analogy: r`The coefficient t-test is like interviewing individual job candidates to verify each person pulls their weight; the omnibus F-test checks whether the team as a whole beats random noise; and adjusted R² penalises the manager for hiring unnecessary staff.`,
+    steps: [
+      r`Fit the OLS regression model $\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\epsilon}$ via normal equations: $\hat{\boldsymbol{\beta}} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y}$.`,
+      r`Compute the residual variance estimate $s^2 = \frac{\mathbf{e}^T\mathbf{e}}{n - p - 1}$ and the covariance matrix $\widehat{\text{Var}}(\hat{\boldsymbol{\beta}}) = s^2 (\mathbf{X}^T\mathbf{X})^{-1}$.`,
+      r`Extract standard errors $\text{SE}(\hat{\beta}_j) = s\sqrt{[(\mathbf{X}^T\mathbf{X})^{-1}]_{jj}}$ and compute $t$-statistics $t_j = \hat{\beta}_j / \text{SE}(\hat{\beta}_j)$ with $n - p - 1$ degrees of freedom.`,
+      r`Calculate the unadjusted coefficient of determination $R^2 = 1 - SS_{\text{res}} / SS_{\text{tot}}$.`,
+      r`Calculate adjusted $R^2 = 1 - \left(1 - R^2\right)\frac{n - 1}{n - p - 1}$ to penalise over-parameterisation.`,
+      r`Compute the omnibus $F$-statistic $F = \frac{(SS_{\text{tot}} - SS_{\text{res}}) / p}{SS_{\text{res}} / (n - p - 1)}$ to assess the collective significance of all predictors.`,
+    ],
+    math: [
+      {
+        h: 'Coefficient t-Statistic and Standard Errors',
+        tex: r`$$t_j = \frac{\hat{\beta}_j - 0}{\text{SE}(\hat{\beta}_j)} = \frac{\hat{\beta}_j}{s \sqrt{[(\mathbf{X}^T\mathbf{X})^{-1}]_{jj}}} \sim t(n - p - 1)$$`,
+        p: r`Here $\hat{\beta}_j$ is the estimated slope, $s = \sqrt{SS_{\text{res}} / (n - p - 1)}$ is the residual standard error, and $[(\mathbf{X}^T\mathbf{X})^{-1}]_{jj}$ is the $j$-th diagonal element of the inverted Gram matrix. Under the null hypothesis $H_0: \beta_j = 0$, $t_j$ follows Student's $t$-distribution with $n - p - 1$ degrees of freedom ($n$ observations, $p$ predictors, 1 intercept).`,
+      },
+      {
+        h: 'R-Squared and Adjusted R-Squared',
+        tex: r`$$R^2 = 1 - \frac{SS_{\text{res}}}{SS_{\text{tot}}}, \qquad R_{\text{adj}}^2 = 1 - \left(1 - R^2\right)\frac{n - 1}{n - p - 1}$$`,
+        p: r`Here $SS_{\text{res}} = \sum (y_i - \hat{y}_i)^2$ is the residual sum of squares and $SS_{\text{tot}} = \sum (y_i - \bar{y})^2$ is the total sum of squares. Unadjusted $R^2$ measures the proportion of variance explained by the model, but monotonically increases whenever a new feature is added. Adjusted $R^2$ divides sums of squares by their degrees of freedom, increasing only if the added feature improves model fit by more than expected by chance ($t^2 > 1$).`,
+      },
+      {
+        h: 'Omnibus F-Statistic',
+        tex: r`$$F = \frac{(SS_{\text{tot}} - SS_{\text{res}}) / p}{SS_{\text{res}} / (n - p - 1)} = \frac{R^2 / p}{(1 - R^2) / (n - p - 1)} \sim F(p, \, n - p - 1)$$`,
+        p: r`The omnibus $F$-test evaluates the joint null hypothesis $H_0: \beta_1 = \beta_2 = \dots = \beta_p = 0$ against the alternative that at least one coefficient is non-zero. It tests whether the regression model as a whole explains significantly more variance than a flat horizontal line through the sample mean.`,
+      },
+    ],
+    keyPoints: [
+      r`Individual $t$-tests assess the marginal contribution of each predictor given that all other predictors are already included in the model.`,
+      r`$R^2$ never decreases when adding variables; adjusted $R^2$ penalises degrees of freedom to protect against spurious model complexity.`,
+      r`The omnibus $F$-test guards against false discovery by evaluating whether all explanatory variables jointly explain significant outcome variance.`,
+      r`In the presence of multicollinearity, the omnibus $F$-test can be highly significant even if no individual $t$-test achieves significance.`,
+    ],
+    pitfalls: [
+      r`Mistaking high $R^2$ for causal validity: an overfitted model with 50 irrelevant polynomial terms can achieve $R^2 > 0.98$ while failing completely on new data.`,
+      r`Interpreting a non-significant $t$-test as proof that a feature has no relationship with $Y$; collinearity with another feature can inflate standard errors.`,
+      r`Comparing unadjusted $R^2$ values across models with different numbers of predictors.`,
+      r`Trusting standard OLS p-values when errors are heteroscedastic or serially correlated, which violates Gauss–Markov assumptions.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 100
+p = 3
+
+# Predict house prices using sqft (x1), bedrooms (x2), and lucky number (x3)
+x1 = rng.uniform(10.0, 40.0, size=n)
+x2 = rng.integers(1, 6, size=n)
+x3 = rng.uniform(1.0, 100.0, size=n)  # Pure noise variable
+y = 50.0 + 3.5 * x1 + 12.0 * x2 + rng.normal(0.0, 10.0, size=n)
+
+# OLS normal equations: beta = (X^T X)^(-1) X^T y
+X = np.column_stack([np.ones(n), x1, x2, x3])
+beta = np.linalg.inv(X.T @ X) @ X.T @ y
+residuals = y - X @ beta
+
+# Inference: standard errors, t-statistics, p-values
+s2 = np.sum(residuals**2) / (n - p - 1)
+se_beta = np.sqrt(np.diag(s2 * np.linalg.inv(X.T @ X)))
+t_stats = beta / se_beta
+p_vals = 2.0 * (1.0 - stats.t.cdf(np.abs(t_stats), df=n - p - 1))
+
+# Goodness-of-fit: R2, Adjusted R2, F-statistic
+ss_tot = np.sum((y - np.mean(y))**2)
+ss_res = np.sum(residuals**2)
+r2 = 1.0 - ss_res / ss_tot
+r2_adj = 1.0 - (ss_res / (n - p - 1)) / (ss_tot / (n - 1))
+f_stat = ((ss_tot - ss_res) / p) / (ss_res / (n - p - 1))
+
+print(f"R2: {r2:.3f}, Adjusted R2: {r2_adj:.3f}, F-stat: {f_stat:.1f}")
+print(f"SqFt:   beta={beta[1]:.3f}, SE={se_beta[1]:.3f}, t={t_stats[1]:.2f}, p={p_vals[1]:.4e}")
+print(f"Lucky:  beta={beta[3]:.3f}, SE={se_beta[3]:.3f}, t={t_stats[3]:.2f}, p={p_vals[3]:.3f}")`,
+    quiz: [
+      {
+        q: r`Why does adding a completely random noise feature to a linear regression model always increase (or leave unchanged) the unadjusted $R^2$?`,
+        o: [
+          r`Because random noise always correlates with the target variable`,
+          r`Because least squares minimises residual sum of squares over an expanded parameter space, making $SS_{\text{res}}$ weakly decrease`,
+          r`Because degrees of freedom increase`,
+          r`Because the F-statistic forces $R^2$ upward`,
+        ],
+        a: 1,
+        why: r`Adding any column to $\mathbf{X}$ gives least squares an extra dimension to fit the training points, so $SS_{\text{res}}$ cannot increase and $R^2 = 1 - SS_{\text{res}} / SS_{\text{tot}}$ never decreases.`,
+      },
+      {
+        q: r`What does a non-significant coefficient t-test ($p = 0.45$) for predictor $X_1$ strictly indicate in a multiple regression model?`,
+        o: [
+          r`$X_1$ has zero correlation with the response variable $Y$`,
+          r`Given the other predictors already in the model, $X_1$ provides no statistically significant marginal explanatory power`,
+          r`The entire regression model is statistically invalid`,
+          r`$X_1$ should be replaced with its logarithm`,
+        ],
+        a: 1,
+        why: r`Regression $t$-tests measure marginal significance conditioned on all other included variables; $X_1$ might have strong univariate correlation with $Y$, but be redundant in the presence of other features.`,
+      },
+      {
+        q: r`Under what condition does adding a new explanatory variable cause the adjusted $R^2$ to increase?`,
+        o: [
+          r`Whenever the new variable has a positive slope`,
+          r`Only when the new variable's individual $t$-statistic has $|t| > 1$`,
+          r`Whenever sample size $n > 100$`,
+          r`Adjusted $R^2$ always increases when features are added`,
+        ],
+        a: 1,
+        why: r`Mathematically, adjusted $R^2$ increases if and only if the absolute $t$-statistic of the added variable exceeds 1.0 (or its partial $F$-statistic exceeds 1.0).`,
+      },
+      {
+        q: r`In an OLS regression with 100 observations and 3 predictors (plus intercept), how many degrees of freedom does the residual variance estimator possess?`,
+        o: [
+          r`100`,
+          r`97`,
+          r`96`,
+          r`3`,
+        ],
+        a: 2,
+        why: r`Residual degrees of freedom are $n - p - 1 = 100 - 3 - 1 = 96$, where $p = 3$ is the number of predictors and 1 accounts for the intercept.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'polynomial_regression', 'regression-metrics'],
+    prereq: ['hypothesis-testing-and-p-values', 'z-test-and-t-tests', 'anova-and-post-hoc-tests'],
+    related: ['ols_linear_regression', 'residual-diagnostics-and-heteroscedasticity', 'multicollinearity-and-vif'],
+    keywords: 'ols linear regression inference t-test f-test r-squared adjusted r-squared coefficients standard errors p-value',
+  },
+  {
+    id: 'residual-diagnostics-and-heteroscedasticity',
+    short: 'Residuals & Heteroscedasticity',
+    title: r`Residual Diagnostics and Heteroscedasticity`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Diagnose regression failure modes with residual plots, detect non-constant variance using the Breusch–Pagan test, and correct inference with robust standard errors.`,
+    lead: r`The Gauss–Markov theorem guarantees that ordinary least squares estimators are the Best Linear Unbiased Estimator (BLUE) only when errors are homoscedastic and uncorrelated. When residual variance expands or contracts across predictor ranges (heteroscedasticity), OLS coefficient estimates remain unbiased, but standard errors become severely distorted, invalidating confidence intervals and hypothesis tests. Systematic residual diagnostics and White's heteroscedasticity-consistent standard errors restore valid statistical inference.`,
+    intuition: [
+      r`Imagine predicting annual household expenditure on restaurant dining based on household income. For families earning £25,000 per year, dining spending is tightly constrained between £500 and £1,500 (small error variance). For affluent families earning £250,000 per year, dining spending varies wildly: some families cook gourmet meals at home and spend £2,000, while others dine out constantly and spend £30,000 (huge error variance).`,
+      r`If you plot residuals ($y - \hat{y}$) against fitted values $\hat{y}$, the points do not form a uniform horizontal band. Instead, they fan outward like an opening megaphone—classic heteroscedasticity.`,
+      r`What is the danger? Standard OLS assumes every single data point has identical error variance $\sigma^2$. It treats high-income households (where noise is £15,000) with the exact same credibility as low-income households (where noise is £300). While the estimated slope is still unbiased on average, the standard OLS formula underestimates the true standard error, producing artificially narrow confidence intervals and falsely low p-values. A formal test like the Breusch–Pagan test regresses squared residuals against predictors: if variance scales with income, it yields a significant chi-square statistic ($p < 0.001$). Switching to Huber–White heteroscedasticity-robust standard errors (HC1) corrects the standard error without needing to throw away the linear model.`,
+    ],
+    analogy: r`Fitting standard OLS under heteroscedasticity is like judging an archer's skill on windy days and calm days equally: it mistakes erratic, windblown shots for reliable evidence unless you account for changing conditions.`,
+    steps: [
+      r`Fit the OLS regression model and compute raw residuals $e_i = y_i - \hat{y}_i$.`,
+      r`Plot residuals against fitted values $\hat{y}_i$ to visually check for non-linearity (curved patterns) and heteroscedasticity (fan shapes).`,
+      r`Plot standardised residuals against theoretical normal quantiles (Q-Q plot) to check for heavy-tailed or skewed errors.`,
+      r`Perform the Breusch–Pagan test: regress squared residuals $e_i^2$ on predictors and compute the LM test statistic $n R^2 \sim \chi^2(p)$.`,
+      r`If heteroscedasticity is detected, compute Huber–White heteroscedasticity-consistent (HC) sandwich covariance matrices (e.g. HC1).`,
+      r`Alternatively, apply variance-stabilising transforms (such as $\log y$) or Weighted Least Squares (WLS) if variance weights are known.`,
+    ],
+    math: [
+      {
+        h: 'The Homoscedasticity Assumption vs Heteroscedasticity',
+        tex: r`$$\text{Homoscedasticity: } \text{Var}(\epsilon_i \mid \mathbf{x}_i) = \sigma^2, \qquad \text{Heteroscedasticity: } \text{Var}(\epsilon_i \mid \mathbf{x}_i) = \sigma_i^2$$`,
+        p: r`Under homoscedasticity, the covariance matrix of disturbances is $\boldsymbol{\Sigma} = \sigma^2 \mathbf{I}$, producing the classic textbook variance formula $\text{Var}(\hat{\boldsymbol{\beta}}) = \sigma^2 (\mathbf{X}^T\mathbf{X})^{-1}$. Under heteroscedasticity, the diagonal elements $\sigma_i^2$ vary, turning the true variance into the sandwich form $(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\boldsymbol{\Sigma}\mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1}$.`,
+      },
+      {
+        h: 'The Breusch–Pagan Lagrange Multiplier Test',
+        tex: r`$$e_i^2 = \gamma_0 + \gamma_1 x_{i1} + \dots + \gamma_p x_{ip} + u_i \implies \text{LM} = n R_{e^2}^2 \sim \chi^2(p)$$`,
+        p: r`The Breusch–Pagan test fits an auxiliary regression of squared residuals $e_i^2$ on the original predictors. Under the null hypothesis of homoscedasticity ($H_0: \gamma_1 = \dots = \gamma_p = 0$), the sample size $n$ multiplied by the auxiliary determination coefficient $R_{e^2}^2$ converges asymptotically to a chi-square distribution with $p$ degrees of freedom.`,
+      },
+      {
+        h: 'Huber–White Heteroscedasticity-Consistent (HC1) Standard Errors',
+        tex: r`$$\widehat{\text{Var}}_{\text{HC1}}(\hat{\boldsymbol{\beta}}) = \frac{n}{n - p - 1} (\mathbf{X}^T\mathbf{X})^{-1} \left(\sum_{i=1}^n e_i^2 \mathbf{x}_i \mathbf{x}_i^T\right) (\mathbf{X}^T\mathbf{X})^{-1}$$`,
+        p: r`The White sandwich estimator places squared sample residuals along the diagonal of the central "meat" matrix. Multiplying by degrees-of-freedom correction $\frac{n}{n - p - 1}$ yields HC1. This estimator converges asymptotically to the true covariance matrix without requiring knowledge of the functional form of heteroscedasticity.`,
+      },
+    ],
+    keyPoints: [
+      r`Heteroscedasticity does not bias OLS slope estimates; it invalidates standard error formulas, making confidence intervals and p-values untrustworthy.`,
+      r`Residual-versus-fitted scatter plots serve as the primary diagnostic: homoscedastic errors display an even horizontal cloud with constant vertical spread.`,
+      r`The Breusch–Pagan test provides an objective hypothesis test for linear variance dependence on predictors.`,
+      r`Huber–White robust standard errors (HC1) fix inferential hypothesis testing without altering point estimates or discarding data.`,
+    ],
+    pitfalls: [
+      r`Believing that heteroscedasticity makes regression coefficients biased; coefficients remain completely unbiased and consistent.`,
+      r`Throwing away linear regression models upon detecting heteroscedasticity instead of reporting heteroscedasticity-robust standard errors.`,
+      r`Running standard Breusch–Pagan tests on non-normal errors without Koenker's studentisation, which inflates false positive rates.`,
+      r`Confusing non-linearity with heteroscedasticity: an omitted quadratic term often produces both a curved residual pattern and apparent variance changes.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 150
+
+# Heteroscedastic data: error variance scales proportionally with x
+x = rng.uniform(1.0, 10.0, size=n)
+y = 2.0 + 3.0 * x + rng.normal(0.0, 0.8 * x, size=n)
+X = np.column_stack([np.ones(n), x])
+
+# OLS point estimates
+beta = np.linalg.inv(X.T @ X) @ X.T @ y
+e = y - X @ beta
+
+# 1. Breusch-Pagan test for heteroscedasticity
+e2 = e**2
+beta_aux = np.linalg.inv(X.T @ X) @ X.T @ e2
+r2_aux = 1.0 - np.sum((e2 - X @ beta_aux)**2) / np.sum((e2 - np.mean(e2))**2)
+lm_stat = n * r2_aux
+p_bp = 1.0 - stats.chi2.cdf(lm_stat, df=1)
+
+# 2. Standard OLS SE vs Huber-White HC1 robust SE
+cov_ols = (np.sum(e**2) / (n - 2)) * np.linalg.inv(X.T @ X)
+cov_hc1 = (n / (n - 2)) * np.linalg.inv(X.T @ X) @ (X.T @ np.diag(e2) @ X) @ np.linalg.inv(X.T @ X)
+
+se_ols = np.sqrt(np.diag(cov_ols))[1]
+se_hc1 = np.sqrt(np.diag(cov_hc1))[1]
+
+print(f"Breusch-Pagan LM: {lm_stat:.2f} (p-value: {p_bp:.4e})")
+print(f"Slope beta_1:     {beta[1]:.3f}")
+print(f"Standard OLS SE:  {se_ols:.3f}")
+print(f"Robust HC1 SE:    {se_hc1:.3f}")`,
+    quiz: [
+      {
+        q: r`What is the primary statistical consequence of ignoring heteroscedasticity in an OLS regression model?`,
+        o: [
+          r`The estimated regression coefficients become biased and inconsistent`,
+          r`Standard errors are computed incorrectly, invalidating t-tests, confidence intervals, and p-values`,
+          r`The model cannot compute fitted values`,
+          r`The $R^2$ becomes negative`,
+        ],
+        a: 1,
+        why: r`OLS coefficient estimates remain unbiased under heteroscedasticity, but the textbook formula for $\text{Var}(\hat{\boldsymbol{\beta}})$ is wrong, distorting standard errors and hypothesis tests.`,
+      },
+      {
+        q: r`How does a classic residual-versus-fitted values plot look when heteroscedasticity is present?`,
+        o: [
+          r`A uniform rectangular band with constant vertical thickness`,
+          r`A widening cone or funnel shape where vertical scatter expands across fitted values`,
+          r`A single straight 45-degree diagonal line`,
+          r`A circle centered at the origin`,
+        ],
+        a: 1,
+        why: r`A widening cone (megaphone shape) indicates that error variance is not constant, but scales with the magnitude of predictions.`,
+      },
+      {
+        q: r`What does the Breusch–Pagan test evaluate?`,
+        o: [
+          r`Whether the errors are normally distributed`,
+          r`Whether squared residuals can be predicted by the independent variables, indicating non-constant variance`,
+          r`Whether two predictors are collinear`,
+          r`Whether the true relationship is non-linear`,
+        ],
+        a: 1,
+        why: r`The Breusch–Pagan test regresses squared residuals on the explanatory variables; a significant $R^2$ demonstrates that error variance depends on predictor values.`,
+      },
+      {
+        q: r`How do Huber–White robust standard errors (HC1) resolve the problem of heteroscedasticity?`,
+        o: [
+          r`They delete outliers from the dataset`,
+          r`They recalculate the parameter covariance matrix using a sandwich estimator that provides asymptotically consistent standard errors without changing point estimates`,
+          r`They force residuals to follow a normal distribution`,
+          r`They apply a polynomial transformation to $Y$`,
+        ],
+        a: 1,
+        why: r`Huber–White sandwich estimators substitute squared sample residuals into the covariance calculation, restoring consistent standard errors without altering regression coefficients.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'robust_regression'],
+    prereq: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling'],
+    related: ['ols_linear_regression', 'multicollinearity-and-vif', 'robust_regression'],
+    keywords: 'residual diagnostics heteroscedasticity breusch pagan test robust standard errors huber white hc1 sandwich estimator homoscedasticity',
+  },
+  {
+    id: 'multicollinearity-and-vif',
+    short: 'Multicollinearity & VIF',
+    title: r`Multicollinearity and VIF`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Diagnose redundant predictor correlations in regression models using the Variance Inflation Factor and condition indices.`,
+    lead: r`When two or more explanatory variables in a multiple regression model are strongly correlated with each other, ordinary least squares faces multicollinearity. While multicollinearity does not reduce the model's overall predictive capacity, it inflates coefficient variances dramatically, turning regression estimates erratic, unstable, and uninterpretable. The Variance Inflation Factor (VIF) quantifies how much parameter variance is magnified by linear dependencies among predictors.`,
+    intuition: [
+      r`Imagine an athletic trainer building a regression model to predict sprinting speed using two features: left leg length and right leg length. Naturally, an athlete's left leg and right leg lengths are almost perfectly correlated ($r = 0.957$).`,
+      r`When both variables enter the regression simultaneously, least squares attempts to answer: "What is the effect of lengthening the left leg while keeping the right leg length strictly fixed?" Because this scenario is physically impossible in the data, the algorithm cannot partition credit between the two limbs. The model might assign $+15.0$ to the left leg and $-14.2$ to the right leg. The overall model predicts sprint speed reasonably well, but the standard errors on both coefficients balloon dramatically. Both $t$-statistics drop to near zero, giving non-significant p-values.`,
+      r`An analyst inspecting the p-values might naively conclude that neither leg matters for sprinting! This is the essence of multicollinearity. It does not mean the features lack predictive power; it means the features share redundant information, making it impossible to isolate individual effects. The Variance Inflation Factor (VIF) measures how much the variance of an estimated slope is inflated compared to when predictors are orthogonal. A VIF of 1 means zero collinearity; a VIF of 11.77 means variance is inflated nearly twelve-fold. Dropping one redundant leg from the model instantly collapses VIF and restores stable, significant estimates.`,
+    ],
+    analogy: r`Multicollinearity is like two singers harmonizing into the exact same microphone: the audience hears a rich sound, but the sound engineer cannot determine which singer was singing louder.`,
+    steps: [
+      r`Examine the pairwise correlation matrix of all predictors to identify obvious bivariate correlations ($|r| > 0.8$).`,
+      r`For each predictor $X_j$, fit an auxiliary OLS regression predicting $X_j$ from all remaining $p - 1$ predictors.`,
+      r`Extract the auxiliary determination coefficient $R_j^2$ from the auxiliary regression.`,
+      r`Compute the Variance Inflation Factor: $\text{VIF}_j = \frac{1}{1 - R_j^2}$.`,
+      r`Evaluate VIF against diagnostic thresholds: $\text{VIF} = 1$ is orthogonal, $\text{VIF} > 5$ warrants caution, and $\text{VIF} > 10$ indicates severe, harmful multicollinearity.`,
+      r`Remediate collinearity: remove redundant features, combine correlated features via dimensionality reduction, or apply ridge regularisation.`,
+    ],
+    math: [
+      {
+        h: 'Variance Inflation Factor Formula',
+        tex: r`$$\text{Var}(\hat{\beta}_j) = \frac{\sigma^2}{(n - 1)s_j^2} \cdot \frac{1}{1 - R_j^2} = \frac{\sigma^2}{(n - 1)s_j^2} \cdot \text{VIF}_j$$`,
+        p: r`Here $\sigma^2$ is the residual variance, $s_j^2$ is the sample variance of predictor $X_j$, and $R_j^2$ is the coefficient of determination obtained by regressing $X_j$ on all other predictors. $\text{VIF}_j$ directly measures the factor by which the variance of $\hat{\beta}_j$ is multiplied due to correlation with other explanatory variables.`,
+      },
+      {
+        h: 'Tolerance and Condition Number',
+        tex: r`$$\text{Tolerance}_j = \frac{1}{\text{VIF}_j} = 1 - R_j^2, \qquad \kappa(\mathbf{X}^T\mathbf{X}) = \sqrt{\frac{\lambda_{\max}}{\lambda_{\min}}}$$`,
+        p: r`Tolerance expresses the fraction of variance in $X_j$ that is unique and independent of all other predictors; a tolerance below $0.10$ signifies $\text{VIF} > 10$. The condition number $\kappa$ evaluates the ratio of maximum to minimum eigenvalues of $\mathbf{X}^T\mathbf{X}$; $\kappa > 30$ indicates severe ill-conditioning and numerical instability in matrix inversion.`,
+      },
+      {
+        h: 'Regularisation as a Collinearity Remedy',
+        tex: r`$$\hat{\boldsymbol{\beta}}_{\text{ridge}} = \left(\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}\right)^{-1}\mathbf{X}^T\mathbf{y}$$`,
+        p: r`When predictors are collinear, $\mathbf{X}^T\mathbf{X}$ is nearly singular with eigenvalues near zero, causing $(\mathbf{X}^T\mathbf{X})^{-1}$ to explode. Ridge regression adds a positive constant $\lambda$ along the diagonal, bounding eigenvalues away from zero and dramatically contracting parameter variance.`,
+      },
+    ],
+    keyPoints: [
+      r`Multicollinearity does not bias OLS slope estimates or reduce overall $R^2$; it inflates standard errors and makes individual coefficients erratic and uninterpretable.`,
+      r`High pairwise correlation signals collinearity, but multi-variable collinearity can also emerge from linear combinations of three or more variables with low pairwise correlations.`,
+      r`VIF quantifies the degree of variance inflation; $\text{VIF} > 10$ is the standard empirical threshold denoting severe collinearity.`,
+      r`Regularisation techniques like [[ridge_regression]] directly resolve multicollinearity by trading small bias for large variance reduction.`,
+    ],
+    pitfalls: [
+      r`Dropping important control variables from a causal model without verifying whether their omission creates omitted variable bias.`,
+      r`Relying exclusively on pairwise correlation matrices, failing to detect multi-variable collinearity where $X_1 \approx X_2 + X_3$.`,
+      r`Believing that multicollinearity degrades out-of-sample prediction accuracy when test data follows the same joint predictor distribution.`,
+      r`Confusing multicollinearity (linear dependence among features) with high correlation between features and the target label.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 100
+
+# Collinear features x1 and x2 (r ~ 0.968) and independent feature x3
+x1 = rng.normal(loc=10.0, scale=2.0, size=n)
+x2 = x1 + rng.normal(loc=0.0, scale=0.5, size=n)
+x3 = rng.normal(loc=5.0, scale=1.5, size=n)
+
+X_all = np.column_stack([x1, x2, x3])
+vifs = []
+
+# Compute VIF for each predictor via auxiliary regressions
+for j in range(3):
+    y_aux = X_all[:, j]
+    X_others = np.column_stack([np.ones(n), np.delete(X_all, j, axis=1)])
+    b_aux = np.linalg.inv(X_others.T @ X_others) @ X_others.T @ y_aux
+    res_aux = y_aux - X_others @ b_aux
+    r2_j = 1.0 - np.sum(res_aux**2) / np.sum((y_aux - np.mean(y_aux))**2)
+    vifs.append(1.0 / (1.0 - r2_j))
+
+r_12, _ = stats.pearsonr(x1, x2)
+print(f"Pairwise correlation r(x1, x2): {r_12:.3f}")
+print(f"VIF x1: {vifs[0]:.2f} (severe collinearity)")
+print(f"VIF x2: {vifs[1]:.2f} (severe collinearity)")
+print(f"VIF x3: {vifs[2]:.2f} (orthogonal)")`,
+    quiz: [
+      {
+        q: r`What is the primary consequence of multicollinearity in an ordinary least squares regression?`,
+        o: [
+          r`The model's overall $R^2$ collapses to zero`,
+          r`Coefficient variances and standard errors are inflated, making individual slope estimates erratic and unstable`,
+          r`The regression coefficients become systematically biased`,
+          r`Residuals no longer sum to zero`,
+        ],
+        a: 1,
+        why: r`Multicollinearity does not bias estimates or reduce $R^2$, but inflates coefficient variances, leading to wide confidence intervals and non-significant t-tests.`,
+      },
+      {
+        q: r`If an auxiliary regression of predictor $X_j$ on all other predictors yields $R_j^2 = 0.90$, what is the Variance Inflation Factor $\text{VIF}_j$?`,
+        o: [
+          r`0.9`,
+          r`1.0`,
+          r`10.0`,
+          r`90.0`,
+        ],
+        a: 2,
+        why: r`$\text{VIF}_j = \frac{1}{1 - R_j^2} = \frac{1}{1 - 0.90} = \frac{1}{0.10} = 10.0$.`,
+      },
+      {
+        q: r`Why does Ridge regression effectively resolve numerical problems caused by severe multicollinearity?`,
+        o: [
+          r`It removes correlated variables from the dataset completely`,
+          r`It adds a penalty $\lambda \mathbf{I}$ to $\mathbf{X}^T\mathbf{X}$, bounding eigenvalues away from zero and stabilising matrix inversion`,
+          r`It converts continuous variables into discrete categories`,
+          r`It forces all slopes to be positive`,
+        ],
+        a: 1,
+        why: r`Adding $\lambda \mathbf{I}$ guarantees that the eigenvalues of $\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}$ are at least $\lambda > 0$, preventing matrix singularity and shrinking inflated variances.`,
+      },
+      {
+        q: r`Why is inspecting only the pairwise correlation matrix insufficient to rule out multicollinearity?`,
+        o: [
+          r`Because correlation matrices cannot be computed for more than two variables`,
+          r`Because multicollinearity can arise from linear combinations of three or more variables even when all pairwise correlations are moderate`,
+          r`Because Pearson correlation is insensitive to linear relationships`,
+          r`Because pairwise correlation depends on sample size`,
+        ],
+        a: 1,
+        why: r`Three or more variables can be almost perfectly collinear ($X_1 \approx X_2 + X_3$) even when each individual pairwise correlation is modest (e.g. $r \approx 0.5$). VIF detects this multi-variable dependence.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'ridge_regression'],
+    prereq: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'correlation-pearson-spearman-kendall'],
+    related: ['ols_linear_regression', 'ridge_regression', 'feature-selection'],
+    keywords: 'multicollinearity vif variance inflation factor tolerance condition number ridge regression collinear predictors auxiliary regression',
+  },
 ];
