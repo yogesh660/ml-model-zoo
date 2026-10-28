@@ -1345,4 +1345,520 @@ print(f"Independence rejected at alpha=0.05: {p_val <= 0.05}")`,
     related: ['type-i-ii-errors-power-and-sample-size', 'z-test-and-t-tests', 'confusion-matrix'],
     keywords: 'chi-square test contingency table goodness of fit independence pearsons test expected frequencies categorical',
   },
+  {
+    id: 'anova-and-post-hoc-tests',
+    short: 'ANOVA and Post-Hoc Tests',
+    title: r`ANOVA and Post-Hoc Tests`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Compare means across three or more groups simultaneously with the F-test, and pinpoint specific differences using Tukey's HSD post-hoc procedure.`,
+    lead: r`Running repeated pair-wise t-tests across multiple groups rapidly inflates the false alarm rate to unacceptable levels. Analysis of Variance (ANOVA) solves this multi-group dilemma with a single omnibus F-test that partitions total variability into between-group signal and within-group noise. When the omnibus test reveals significant variance, post-hoc procedures like Tukey's Honest Significant Difference (HSD) safely isolate which specific pairs differ.`,
+    intuition: [
+      r`Imagine an e-commerce platform testing three landing page layouts: A, B, and C. They recruit 30 users per layout (90 users total) and measure session duration in seconds. Average engagement is 45.2 seconds for Layout A, 49.1 seconds for Layout B, and 54.0 seconds for Layout C.`,
+      r`A novice analyst might test Layout A vs B, A vs C, and B vs C with three separate two-sample $t$-tests. However, conducting three independent tests at a 5% false positive threshold gives a combined risk of at least one false alarm of $1 - (1 - 0.05)^3 \approx 14.3\%$. With 10 groups, there are 45 pairwise comparisons, pushing the chance of at least one false discovery over 90%!`,
+      r`ANOVA prevents this multiplicity trap by evaluating all groups at once. It asks a single question: is the variance between group averages substantially larger than the natural random variance among users within each group? For our landing page data, the ratio of between-group variance to within-group variance produces an $F$-statistic of 10.18, with an omnibus p-value of $0.0001$. This establishes that the layouts do not perform identically. Next, Tukey's HSD examines the pairs with family-wise error protection: it reveals that Layout C significantly outperforms Layout A ($p < 0.0001$) and Layout B ($p = 0.0399$), while Layouts A and B do not significantly differ from each other ($p = 0.1114$).`,
+    ],
+    analogy: r`ANOVA is like a stadium metal detector that first checks whether anyone in a crowd is carrying metal; only when the master alarm rings do guards search individuals one by one.`,
+    steps: [
+      r`Define the omnibus hypotheses: $H_0: \mu_1 = \mu_2 = \dots = \mu_K$ versus $H_1$: at least one group mean differs.`,
+      r`Verify ANOVA assumptions: independent observations, approximately normal distributions within each group, and homogeneity of variances (homoscedasticity).`,
+      r`Calculate the sum of squares between groups ($SS_B$) and sum of squares within groups ($SS_W$).`,
+      r`Divide each sum of squares by its respective degrees of freedom to obtain Mean Square Between ($MS_B$) and Mean Square Within ($MS_W$).`,
+      r`Compute the variance ratio $F = MS_B / MS_W$ and obtain the omnibus p-value from the $F(K-1, N-K)$ distribution.`,
+      r`If the omnibus test rejects $H_0$, run Tukey's HSD to identify which pairwise differences are statistically significant while preserving family-wise error control.`,
+    ],
+    math: [
+      {
+        h: 'Total Variance Partitioning',
+        tex: r`$$SS_T = SS_B + SS_W \implies \sum_{i=1}^K \sum_{j=1}^{n_i} (X_{ij} - \bar{X}_{\cdot\cdot})^2 = \sum_{i=1}^K n_i (\bar{X}_{i\cdot} - \bar{X}_{\cdot\cdot})^2 + \sum_{i=1}^K \sum_{j=1}^{n_i} (X_{ij} - \bar{X}_{i\cdot})^2$$`,
+        p: r`Here $X_{ij}$ is observation $j$ in group $i$, $\bar{X}_{i\cdot}$ is the sample mean of group $i$, $\bar{X}_{\cdot\cdot}$ is the grand mean across all observations, and $n_i$ is group size. The total sum of squares $SS_T$ splits cleanly into between-group explained variation $SS_B$ and within-group residual variation $SS_W$.`,
+      },
+      {
+        h: 'The ANOVA F-Statistic',
+        tex: r`$$F = \frac{MS_B}{MS_W} = \frac{SS_B / (K - 1)}{SS_W / (N - K)} \sim F(K - 1, \, N - K)$$`,
+        p: r`Mean squares divide sums of squares by their degrees of freedom: $K - 1$ for groups and $N - K$ for residuals. Under the null hypothesis of equal means, both $MS_B$ and $MS_W$ provide independent, unbiased estimates of the common population variance $\sigma^2$, yielding $F \approx 1$. When true differences exist between group means, $MS_B$ inflates, pushing $F \gg 1$.`,
+      },
+      {
+        h: 'Tukey\'s Honest Significant Difference (HSD)',
+        tex: r`$$q = \frac{\bar{X}_i - \bar{X}_j}{\sqrt{MS_W / n}} \sim q(K, \, N - K) \implies \text{HSD} = q_{\alpha, K, N-K} \sqrt{\frac{MS_W}{n}}$$`,
+        p: r`Tukey's post-hoc procedure evaluates studentised range statistics $q$ across all group pairs. Comparing mean differences against the critical HSD threshold guarantees that the family-wise error rate across all $K(K-1)/2$ pairwise comparisons is strictly capped at $\alpha$.`,
+      },
+    ],
+    keyPoints: [
+      r`ANOVA prevents multiple-testing error inflation by evaluating group differences in a single omnibus test.`,
+      r`Rejecting the null hypothesis in ANOVA indicates that at least one group mean differs, but does not identify which specific groups drive the difference.`,
+      r`Tukey's HSD controls the family-wise error rate across all pairwise contrasts while providing greater statistical power than Bonferroni correction.`,
+      r`When group variances are substantially unequal, standard ANOVA breaks down; Welch's ANOVA should be used instead.`,
+    ],
+    pitfalls: [
+      r`Conducting multiple independent two-sample $t$-tests instead of ANOVA, drastically inflating false discovery rates.`,
+      r`Running post-hoc pairwise comparisons after a non-significant omnibus ANOVA $F$-test (data dredging).`,
+      r`Ignoring severe heteroscedasticity: when group sample sizes are unequal and variances differ, standard ANOVA false positive rates become untrustworthy.`,
+      r`Using standard one-way ANOVA on repeated-measures data, failing to remove between-subject variance.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 30
+
+# User engagement duration (seconds) across three landing page layouts
+layout_a = rng.normal(loc=45.0, scale=10.0, size=n)
+layout_b = rng.normal(loc=48.0, scale=10.0, size=n)
+layout_c = rng.normal(loc=55.0, scale=10.0, size=n)
+
+# 1. One-way ANOVA omnibus test
+f_stat, p_anova = stats.f_oneway(layout_a, layout_b, layout_c)
+
+# 2. Tukey's HSD post-hoc test
+tukey = stats.tukey_hsd(layout_a, layout_b, layout_c)
+
+print(f"ANOVA F-statistic: {f_stat:.3f}, p-value: {p_anova:.4e}")
+print(f"Layout A mean: {np.mean(layout_a):.1f}s, B: {np.mean(layout_b):.1f}s, C: {np.mean(layout_c):.1f}s")
+print(f"Tukey p-values -> A vs B: {tukey.pvalue[0, 1]:.4f}")
+print(f"                 A vs C: {tukey.pvalue[0, 2]:.4e}")
+print(f"                 B vs C: {tukey.pvalue[1, 2]:.4f}")`,
+    quiz: [
+      {
+        q: r`Why is conducting multiple independent two-sample $t$-tests problematic when comparing five experimental groups?`,
+        o: [
+          r`Because Student's t-distribution cannot handle more than 20 observations`,
+          r`Because running 10 pairwise tests compounds the probability of making at least one Type I error to over 40%`,
+          r`Because two-sample t-tests cannot compute standard errors`,
+          r`Because degrees of freedom become negative`,
+        ],
+        a: 1,
+        why: r`With 5 groups there are $\binom{5}{2} = 10$ pairs. Testing each at $\alpha = 0.05$ produces an overall family-wise error rate of $1 - (1 - 0.05)^{10} \approx 40.1\%$.`,
+      },
+      {
+        q: r`Under the null hypothesis that all group means are identical ($\mu_1 = \mu_2 = \dots = \mu_K$), what value is the ANOVA $F$-statistic expected to take on average?`,
+        o: [
+          r`Approximately 0`,
+          r`Approximately 1`,
+          r`Equal to the sample size $N$`,
+          r`Equal to the number of groups $K$`,
+        ],
+        a: 1,
+        why: r`Under $H_0$, both between-group mean square $MS_B$ and within-group mean square $MS_W$ estimate the same population variance $\sigma^2$, so their ratio $F = MS_B / MS_W \approx 1$.`,
+      },
+      {
+        q: r`What is the primary role of a post-hoc procedure like Tukey's HSD following a significant ANOVA test?`,
+        o: [
+          r`To determine whether the data is normally distributed`,
+          r`To identify exactly which specific pairs of group means differ while controlling the family-wise error rate`,
+          r`To recalculate the degrees of freedom for the F-statistic`,
+          r`To transform skewed data into Gaussian distributions`,
+        ],
+        a: 1,
+        why: r`The omnibus ANOVA test only indicates that at least one group mean differs. Tukey's HSD isolates the specific differing pairs without inflating the false positive rate.`,
+      },
+      {
+        q: r`An experiment compares 4 treatments with 25 participants per treatment (total $N = 100$). What are the numerator and denominator degrees of freedom for the ANOVA $F$-test?`,
+        o: [
+          r`3 and 96`,
+          r`4 and 96`,
+          r`3 and 100`,
+          r`4 and 25`,
+        ],
+        a: 0,
+        why: r`Numerator degrees of freedom are $K - 1 = 4 - 1 = 3$. Denominator degrees of freedom are $N - K = 100 - 4 = 96$.`,
+      },
+    ],
+    usedBy: ['feature-selection', 'decision_tree_regressor'],
+    prereq: ['hypothesis-testing-and-p-values', 'z-test-and-t-tests', 'type-i-ii-errors-power-and-sample-size'],
+    related: ['non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis', 'multiple-testing-bonferroni-holm-benjamini-hochberg', 'confidence-intervals'],
+    keywords: 'anova analysis of variance f-test f-statistic tukey hsd post-hoc between-group within-group one-way anova',
+  },
+  {
+    id: 'non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis',
+    short: 'Non-Parametric Rank Tests',
+    title: r`Non-Parametric Tests: Mann–Whitney, Wilcoxon, Kruskal–Wallis`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Replace fragile parametric assumptions with robust rank-based inference for skewed, heavy-tailed or ordinal data.`,
+    lead: r`When data violates normality through heavy skewness, severe outliers or ordinal scales, classical t-tests and ANOVA produce unreliable p-values and lose statistical power. Non-parametric rank tests discard absolute numerical values in favour of relative order, providing exact, distribution-free hypothesis tests. The Mann–Whitney U test, Wilcoxon signed-rank test, and Kruskal–Wallis H-test form the complete non-parametric counterpart to two-sample, paired, and multi-group parametric inference.`,
+    intuition: [
+      r`Consider measuring web service response times. Out of 35 requests, 34 complete in 40 to 90 milliseconds, but one request suffers a database lock timeout and hangs for 45,000 milliseconds (45 seconds). In a standard parametric $t$-test, this single massive outlier drastically distorts both the sample mean and the sample standard deviation, inflating the denominator and destroying our ability to detect genuine improvements in typical user experience.`,
+      r`Non-parametric tests solve this by replacing raw milliseconds with ranks: the fastest request gets rank 1, the second fastest rank 2, and the 45,000 ms timeout simply receives rank 35. Whether that timeout took 200 ms or 200,000 ms, its rank is exactly 35. By working with ranks, extreme values can never pull the test statistic off course.`,
+      r`If we have two independent services, the Mann–Whitney $U$ test pools all observations, ranks them from 1 to $N$, and sums the ranks for each service. If one service systematically responds faster than the other, its rank sum will be much smaller than expected by chance. Similarly, for before-and-after paired data, the Wilcoxon signed-rank test ranks the absolute differences, attaching positive or negative signs. And for three or more independent groups, the Kruskal–Wallis $H$-test generalises rank sums to evaluate whether any group dominates stochastically.`,
+    ],
+    analogy: r`Non-parametric tests are like ranking marathon runners by their finish place rather than their stopwatch times: a runner who stumbles and finishes an hour late does not disrupt who came first, second, and third.`,
+    steps: [
+      r`Inspect the measurement scale and distribution: choose rank tests when data is ordinal, heavily skewed, or contaminated with outliers that invalidate normality.`,
+      r`Select the appropriate rank design: Mann–Whitney $U$ for two independent groups, Wilcoxon signed-rank for paired samples, or Kruskal–Wallis $H$ for three or more independent groups.`,
+      r`Pool observations and assign ascending integer ranks from 1 to $N$, replacing ties with their average rank.`,
+      r`Compute the test statistic by summing ranks per group (or summing positive and negative ranks of paired differences).`,
+      r`Evaluate the p-value: using exact permutation distributions for small sample sizes, or asymptotic normal or chi-square approximations for $N > 20$.`,
+      r`Interpret the test as an assessment of stochastic dominance or median shift under the assumption of similarly shaped distributions.`,
+    ],
+    math: [
+      {
+        h: 'Mann–Whitney U Statistic (Two Independent Samples)',
+        tex: r`$$U_1 = R_1 - \frac{n_1(n_1 + 1)}{2}, \qquad U_2 = n_1 n_2 - U_1, \qquad U = \min(U_1, U_2)$$`,
+        p: r`Here $R_1$ is the sum of ranks for group 1, and $n_1, n_2$ are sample sizes. The statistic $U_1$ directly counts the number of times an observation from group 1 is smaller than an observation from group 2. Under the null hypothesis of equal distributions, $E[U] = n_1 n_2 / 2$ and $\text{Var}(U) = n_1 n_2 (n_1 + n_2 + 1) / 12$.`,
+      },
+      {
+        h: 'Wilcoxon Signed-Rank Statistic (Paired Samples)',
+        tex: r`$$D_i = X_{1,i} - X_{2,i}, \qquad W = \min\left(\sum_{D_i > 0} \text{rank}(|D_i|), \, \sum_{D_i < 0} \text{rank}(|D_i|)\right)$$`,
+        p: r`For paired observations, non-zero differences $D_i$ are ranked by absolute magnitude $|D_i|$. Ranks for positive differences and negative differences are summed separately. Under the null hypothesis of symmetric, zero-median differences, positive and negative rank sums are balanced with expectation $E[W] = n(n + 1) / 4$.`,
+      },
+      {
+        h: 'Kruskal–Wallis H-Statistic (K Independent Groups)',
+        tex: r`$$H = \frac{12}{N(N + 1)} \sum_{k=1}^K \frac{R_k^2}{n_k} - 3(N + 1) \sim \chi^2(K - 1)$$`,
+        p: r`Here $N = \sum n_k$ is the total pooled sample size, and $R_k$ is the rank sum of the $k$-th group. The statistic $H$ measures how far average group ranks deviate from the overall expected average rank $(N + 1) / 2$. Under $H_0$, $H$ converges asymptotically to a chi-square distribution with $K - 1$ degrees of freedom.`,
+      },
+    ],
+    keyPoints: [
+      r`Non-parametric tests do not assume Gaussian distributions; they operate on ranks, making them invariant to monotonic transformations.`,
+      r`The Mann–Whitney U test tests whether one distribution stochastically dominates another ($P(X > Y) \ne 0.5$); it is only a test of medians if distributions share identical shape and spread.`,
+      r`The asymptotic relative efficiency of the Mann–Whitney test compared to Student's t-test is 95.5% on perfect Gaussian data, and can be substantially higher on heavy-tailed distributions.`,
+      r`When sample sizes are small ($n < 20$), exact permutation p-values should be computed rather than normal approximations.`,
+    ],
+    pitfalls: [
+      r`Claiming a significant Mann–Whitney U test proves a difference in medians when group variances or distributional shapes differ substantially.`,
+      r`Discarding zero differences in the Wilcoxon signed-rank test without realising it reduces effective sample size and can induce bias.`,
+      r`Using parametric tests on ordinal survey ratings (e.g. Likert 1–5 scales) where spacing between numbers is not metric or uniform.`,
+      r`Forgetting that non-parametric tests still require independent and identically distributed observations within groups.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 35
+
+# Skewed latency distributions for two services (exponential)
+service_a = rng.exponential(scale=150.0, size=n)
+service_b = rng.exponential(scale=80.0, size=n)
+
+# 1. Mann-Whitney U test (two independent samples)
+u_stat, p_mann = stats.mannwhitneyu(service_b, service_a, alternative='less')
+
+# 2. Wilcoxon signed-rank test (paired benchmark on same 35 workload queries)
+latency_before = rng.exponential(scale=120.0, size=n)
+latency_after = latency_before * rng.uniform(0.70, 0.95, size=n)
+w_stat, p_wilc = stats.wilcoxon(latency_after, latency_before, alternative='less')
+
+# 3. Kruskal-Wallis H-test (three independent groups)
+service_c = rng.exponential(scale=200.0, size=n)
+h_stat, p_kruskal = stats.kruskal(service_a, service_b, service_c)
+
+print(f"Mann-Whitney U: stat={u_stat:.1f}, p={p_mann:.4f}")
+print(f"Wilcoxon signed-rank: stat={w_stat:.1f}, p={p_wilc:.4e}")
+print(f"Kruskal-Wallis H: stat={h_stat:.3f}, p={p_kruskal:.4e}")`,
+    quiz: [
+      {
+        q: r`Why are rank-based tests like Mann–Whitney and Wilcoxon robust against severe outliers?`,
+        o: [
+          r`Because outliers are deleted before calculation begins`,
+          r`Because data points are converted into ranks, bounding the influence of any extreme value to its ordinal position`,
+          r`Because rank tests automatically apply a log transform`,
+          r`Because ranks follow a Student's t-distribution`,
+        ],
+        a: 1,
+        why: r`Converting measurements to ranks ensures that whether an extreme value is 100 or 1,000,000, its impact on the test statistic is limited strictly to its position in the sorted list.`,
+      },
+      {
+        q: r`What does the Mann–Whitney $U$ test formally evaluate without making any distributional shape assumptions?`,
+        o: [
+          r`Equality of population variances`,
+          r`Stochastic dominance: the probability that a random draw from one distribution exceeds a draw from the other ($P(X > Y) = 0.5$)`,
+          r`Strict equality of sample means`,
+          r`Linear correlation between two variables`,
+        ],
+        a: 1,
+        why: r`Mann–Whitney U evaluates stochastic dominance. It only reflects a pure shift in population medians if one assumes the two distributions possess identical shape and variance.`,
+      },
+      {
+        q: r`How does the statistical efficiency of the Mann–Whitney test compare to Student's $t$-test on purely Gaussian data?`,
+        o: [
+          r`It has an asymptotic relative efficiency of roughly 95.5% ($3/\pi$), sacrificing minimal power`,
+          r`It loses more than 50% of statistical power`,
+          r`It cannot be computed on Gaussian data`,
+          r`It always has higher power than the t-test on Gaussian data`,
+        ],
+        a: 0,
+        why: r`The Hodges–Lehmann asymptotic relative efficiency (ARE) of Mann–Whitney relative to the t-test on normal data is $3/\pi \approx 0.955$, meaning very little efficiency is lost even when normality holds.`,
+      },
+      {
+        q: r`Which non-parametric test serves as the distribution-free counterpart to one-way ANOVA for three or more independent groups?`,
+        o: [
+          r`Wilcoxon signed-rank test`,
+          r`Kruskal–Wallis H-test`,
+          r`McNemar's test`,
+          r`Pearson's chi-square test`,
+        ],
+        a: 1,
+        why: r`The Kruskal–Wallis H-test generalises the two-sample Mann–Whitney rank test to three or more independent groups, evaluating whether group rank sums differ significantly.`,
+      },
+    ],
+    usedBy: ['feature-selection', 'decision_tree_classifier'],
+    prereq: ['hypothesis-testing-and-p-values', 'z-test-and-t-tests', 'random-variables-and-distributions'],
+    related: ['anova-and-post-hoc-tests', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling', 'bootstrap-and-jackknife'],
+    keywords: 'non-parametric mann whitney wilcoxon signed rank kruskal wallis ranks median test distribution free',
+  },
+  {
+    id: 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling',
+    short: 'Normality Tests',
+    title: r`Normality Tests: Shapiro–Wilk, Kolmogorov–Smirnov, Anderson–Darling`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Verify whether data satisfies Gaussian assumptions using the correlation-based Shapiro–Wilk test, empirical CDF Kolmogorov–Smirnov test, and tail-sensitive Anderson–Darling test.`,
+    lead: r`Many classical statistical procedures—from linear regression inference to Student's t-tests and ANOVA—rely on assumptions of underlying normality. Rather than relying on wishful thinking or visual inspection of histograms alone, formal normality tests quantify whether sample data deviates significantly from a Gaussian distribution. Understanding the distinct mathematical mechanics of Shapiro–Wilk, Kolmogorov–Smirnov, and Anderson–Darling tests enables practitioners to diagnose skewness, kurtosis, and tail anomalies accurately.`,
+    intuition: [
+      r`Imagine training a regression model and checking whether its residuals conform to the standard assumption of normally distributed errors. You generate 60 residual values. Visually, a histogram or Q-Q plot might look "roughly bell-shaped", but human eyes are notoriously prone to subjective bias.`,
+      r`How can we mathematically evaluate Gaussian adherence? There are three distinct perspectives:`,
+      r`First, correlation with normal order statistics: if data is truly normal, plotting sorted sample values against expected standard normal quantiles should form an almost perfect straight line. The Shapiro–Wilk test computes this exact correlation squared ($W$). For a genuine normal sample of size 60, $W \approx 0.982$ with $p = 0.502$ (no deviation detected). For exponential or skewed data, points curl away from the line, dropping $W$ to $0.833$ with $p \approx 10^{-6}$ (overwhelming rejection). Second, maximum gap between cumulative curves: the Kolmogorov–Smirnov (KS) test compares the empirical step-function distribution against the theoretical smooth normal cumulative curve, measuring the single largest vertical gap ($D$). Third, weighted tail sensitivity: the KS test is insensitive in the extreme tails because cumulative curves are anchored to 0 and 1 at the boundaries. The Anderson–Darling test solves this by weighting discrepancies by $1 / [F(x)(1 - F(x))]$, placing heavy mathematical emphasis on the tails where critical anomalies occur.`,
+    ],
+    analogy: r`Testing normality with these three methods is like inspecting a tailor-made suit: Shapiro–Wilk checks if the overall silhouette matches the pattern, Kolmogorov–Smirnov checks the single widest seam gap, and Anderson–Darling inspects the hems and cuffs where wear and tear happen first.`,
+    steps: [
+      r`Inspect the sample visually with a Q-Q (quantile-quantile) plot to develop an initial diagnostic intuition of skewness and tail weight.`,
+      r`State the formal null hypothesis $H_0$: the sample was drawn from a normally distributed population, versus $H_1$: the parent population is non-normal.`,
+      r`For general univariate data ($n \le 5,000$), run the Shapiro–Wilk test as the most statistically powerful omnibus test of normality.`,
+      r`If tail discrepancies or extreme events are the primary operational risk (such as latency SLAs), evaluate the Anderson–Darling test.`,
+      r`If parameters $(\mu, \sigma)$ are estimated from the sample data rather than known beforehand, do not use standard Kolmogorov–Smirnov tables; use the Lilliefors correction.`,
+      r`Synthesise test results with sample size: in very large samples, slight harmless departures trigger $p < 0.05$; in small samples, low power can mask severe non-normality.`,
+    ],
+    math: [
+      {
+        h: 'Shapiro–Wilk Test Statistic',
+        tex: r`$$W = \frac{\left(\sum_{i=1}^n a_i X_{(i)}\right)^2}{\sum_{i=1}^n (X_i - \bar{X})^2}$$`,
+        p: r`Here $X_{(1)} \le X_{(2)} \le \dots \le X_{(n)}$ are ordered sample statistics, and $\mathbf{a} = \frac{\mathbf{m}^T \mathbf{V}^{-1}}{\sqrt{\mathbf{m}^T \mathbf{V}^{-1}\mathbf{V}^{-1}\mathbf{m}}}$ incorporates the expected values $\mathbf{m}$ and covariance matrix $\mathbf{V}$ of standard normal order statistics. The statistic $W$ lies in $(0, 1]$, where $W = 1$ indicates perfect linearity between sample quantiles and normal quantiles.`,
+      },
+      {
+        h: 'Kolmogorov–Smirnov Test Statistic',
+        tex: r`$$D = \sup_{x} |F_n(x) - F_0(x)|$$`,
+        p: r`Here $F_n(x) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}_{X_i \le x}$ is the empirical cumulative distribution function, and $F_0(x)$ is the reference continuous cumulative distribution function. $D$ represents the supremum absolute vertical distance between the empirical step function and theoretical curve.`,
+      },
+      {
+        h: 'Anderson–Darling Test Statistic',
+        tex: r`$$A^2 = -n - \sum_{i=1}^n \frac{2i - 1}{n} \left[\ln F_0(X_{(i)}) + \ln(1 - F_0(X_{(n+1-i)}))\right]$$`,
+        p: r`The Anderson–Darling statistic weights squared discrepancies by the inverse variance function $[F_0(x)(1 - F_0(x))]^{-1}$. This weighting amplifies discrepancies in the lower and upper tails, making $A^2$ far more sensitive to heavy tails and skewness than the unweighted Kolmogorov–Smirnov statistic.`,
+      },
+    ],
+    keyPoints: [
+      r`The Shapiro–Wilk test exhibits the highest overall statistical power across a broad range of non-normal distributions for sample sizes up to several thousand.`,
+      r`Standard Kolmogorov–Smirnov assumes a fully specified reference distribution; plugging in sample mean and sample variance requires the Lilliefors correction to avoid conservative bias.`,
+      r`Anderson–Darling prioritises tail deviations, making it the preferred diagnostic when detecting heavy tails or extreme-value risk.`,
+      r`In huge datasets ($n > 10,000$), tiny, practically trivial deviations from Gaussian perfection will trigger $p < 0.001$; always combine formal tests with Q-Q plots.`,
+    ],
+    pitfalls: [
+      r`Plugging sample estimates of $\mu$ and $\sigma$ into the standard Kolmogorov–Smirnov test without using Lilliefors critical values, producing falsely inflated p-values.`,
+      r`Mistaking a non-significant normality test in a small sample ($n < 25$) as positive confirmation that the population is normal.`,
+      r`Discarding linear regression models when a massive sample fails a normality test, overlooking that regression coefficient estimators remain asymptotically normal via the central limit theorem.`,
+      r`Testing normality exclusively with numbers while skipping graphical Q-Q plots, missing the structural nature of departures (skewness vs kurtosis vs outliers).`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 60
+
+# Normal sample vs skewed exponential sample
+normal_data = rng.normal(loc=10.0, scale=2.5, size=n)
+skewed_data = rng.exponential(scale=2.5, size=n)
+
+# 1. Shapiro-Wilk test (highest omnibus power)
+w_norm, p_sw_norm = stats.shapiro(normal_data)
+w_skew, p_sw_skew = stats.shapiro(skewed_data)
+
+# 2. Kolmogorov-Smirnov test against fitted normal distribution
+ks_skew, p_ks_skew = stats.kstest(skewed_data, 'norm',
+    args=(np.mean(skewed_data), np.std(skewed_data, ddof=1)))
+
+# 3. Anderson-Darling test (tail-weighted)
+ad_skew = stats.anderson(skewed_data, dist='norm', method='interpolate')
+
+print(f"Normal data: Shapiro W={w_norm:.4f}, p={p_sw_norm:.4f}")
+print(f"Skewed data: Shapiro W={w_skew:.4f}, p={p_sw_skew:.4e}")
+print(f"Skewed data: KS stat={ks_skew:.4f}, p={p_ks_skew:.4f}")
+print(f"Skewed data: Anderson A2={ad_skew.statistic:.3f}, p={ad_skew.pvalue:.4f}")`,
+    quiz: [
+      {
+        q: r`Which normality test is empirically proven to deliver the highest statistical power against the widest variety of non-normal alternative distributions for moderate sample sizes?`,
+        o: [
+          r`Standard Kolmogorov–Smirnov test`,
+          r`Shapiro–Wilk test`,
+          r`Pearson's chi-square goodness-of-fit test`,
+          r`Student's t-test`,
+        ],
+        a: 1,
+        why: r`Extensive Monte Carlo studies confirm that the Shapiro–Wilk test, which evaluates the squared correlation between sample order statistics and normal quantiles, offers superior statistical power across diverse alternatives.`,
+      },
+      {
+        q: r`What occurs if you test normality with the standard Kolmogorov–Smirnov test after estimating $\mu$ and $\sigma$ from the sample?`,
+        o: [
+          r`The test becomes overly conservative, underestimating discrepancies and yielding p-values that are too large`,
+          r`The test statistic becomes undefined`,
+          r`The test automatically converts into an Anderson–Darling test`,
+          r`The p-value is always zero`,
+        ],
+        a: 0,
+        why: r`Estimating parameters from the sample forces the theoretical CDF closer to the empirical CDF than an independent reference curve would be, shrinking $D$ and inflating p-values unless the Lilliefors correction is applied.`,
+      },
+      {
+        q: r`What is the primary advantage of the Anderson–Darling test over the Kolmogorov–Smirnov test?`,
+        o: [
+          r`It requires no sample data`,
+          r`It places inverse variance weights on discrepancies, providing much greater sensitivity to departures in the distribution tails`,
+          r`It only applies to uniform distributions`,
+          r`It eliminates all Type I errors`,
+        ],
+        a: 1,
+        why: r`Anderson–Darling divides deviations by $F_0(x)(1 - F_0(x))$, which prevents tail discrepancies from being compressed to zero near the boundaries and magnifies sensitivity to heavy tails.`,
+      },
+      {
+        q: r`Why is a formal normality test often unhelpful when analysing huge datasets ($n = 100,000$)?`,
+        o: [
+          r`Computational algorithms fail on arrays larger than 1,000 items`,
+          r`The test becomes so powerful that trivial, practically inconsequential imperfections trigger $p < 0.0001$`,
+          r`Large samples can never follow normal distributions`,
+          r`The central limit theorem ceases to operate`,
+        ],
+        a: 1,
+        why: r`With huge sample sizes, test power approaches 100% for microscopic departures that have zero practical impact on downstream estimation or model validity.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'linear_discriminant_analysis'],
+    prereq: ['hypothesis-testing-and-p-values', 'random-variables-and-distributions', 'sampling-and-standard-error'],
+    related: ['non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis', 'z-test-and-t-tests', 'exploratory-data-analysis'],
+    keywords: 'normality tests shapiro wilk kolmogorov smirnov anderson darling goodness of fit gaussian q-q plot lilliefors',
+  },
+  {
+    id: 'multiple-testing-bonferroni-holm-benjamini-hochberg',
+    short: 'Multiple Testing Corrections',
+    title: r`Multiple Testing: Bonferroni, Holm, Benjamini–Hochberg`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Control family-wise error rates and false discovery rates across multiple hypothesis tests using Bonferroni, Holm step-down, and Benjamini–Hochberg procedures.`,
+    lead: r`When testing hundreds of features, genome variants, or concurrent A/B test variations, standard significance thresholds collapse under the weight of multiplicity. Testing 100 null hypotheses at $\alpha = 0.05$ produces an average of five false discoveries by pure chance. Multiple testing corrections adjust p-values to control either the strict probability of even a single false alarm (Family-Wise Error Rate) or the expected proportion of false alarms among all declared discoveries (False Discovery Rate).`,
+    intuition: [
+      r`Suppose a machine learning team evaluates 10 new candidate features for a credit scoring model, running an individual hypothesis test for each feature at the conventional $\alpha = 0.05$ threshold. The resulting raw p-values from smallest to largest are: $[0.001, 0.006, 0.012, 0.024, 0.038, 0.082, 0.150, 0.290, 0.440, 0.810]$. Without any adjustment, five features pass the threshold ($p \le 0.05$). But if all 10 candidate features were actually useless noise, the probability of finding at least one false positive is $1 - (1 - 0.05)^{10} \approx 40.1\%$.`,
+      r`To protect against false discoveries, we can choose between two paradigms:`,
+      r`First, Family-Wise Error Rate (FWER): if a single false claim is unacceptable (such as approving an ineffective drug), we require that the probability of any false positive across all 10 tests remains $\le 5\%$. The Bonferroni correction multiplies each p-value by $m = 10$. Now only the first feature survives ($0.001 \times 10 = 0.010 \le 0.05$), while the second becomes $0.006 \times 10 = 0.060 > 0.05$. The Holm step-down method improves on Bonferroni by stepping down the multiplier $(10, 9, 8, \dots)$, but still declares only 1 discovery. Second, False Discovery Rate (FDR): in exploratory data science and feature selection, demanding zero false positives is overly conservative and discards valuable signal. Benjamini and Hochberg (1995) proposed controlling the expected proportion of false positives among all declared discoveries. Applying the Benjamini–Hochberg procedure declares three discoveries ($p \le [0.010, 0.030, 0.040]$), recovering three legitimate features while strictly capping false discoveries.`,
+    ],
+    analogy: r`FWER methods are like a zero-tolerance airport security checkpoint where a single false alarm grounds all flights; FDR methods are like an automated spam filter that accepts a small, manageable percentage of spam in the inbox in exchange for never missing important emails.`,
+    steps: [
+      r`Assemble all $m$ raw p-values from the family of tests and sort them in ascending order: $p_{(1)} \le p_{(2)} \le \dots \le p_{(m)}$.`,
+      r`Choose the appropriate error control criterion: FWER for confirmatory decisions, or FDR for exploratory screening and feature selection.`,
+      r`For conservative FWER control, apply Bonferroni: reject hypotheses where $p_{(i)} \le \alpha / m$.`,
+      r`For uniformly superior FWER control without additional assumptions, apply Holm's step-down method: compare $p_{(i)}$ against $\alpha / (m - i + 1)$ sequentially, stopping at the first non-rejection.`,
+      r`For balanced FDR control, apply Benjamini–Hochberg: find the largest rank $k$ where $p_{(k)} \le \frac{k}{m} Q$, and reject all hypotheses from rank 1 through $k$.`,
+      r`Report adjusted p-values alongside original unadjusted statistics to maintain full scientific transparency.`,
+    ],
+    math: [
+      {
+        h: 'Family-Wise Error Rate and Bonferroni Inequality',
+        tex: r`$$\text{FWER} = P(V \ge 1) \le \sum_{i=1}^{m_0} P(\text{Reject } H_{0,i} \mid H_{0,i} \text{ true}) \le m_0 \frac{\alpha}{m} \le \alpha$$`,
+        p: r`Here $V$ is the number of false rejections (Type I errors), $m$ is total hypotheses tested, and $m_0 \le m$ is the number of true nulls. By Boole's union bound, testing each hypothesis at significance level $\alpha / m$ ensures the family-wise error rate remains $\le \alpha$ under any dependency structure.`,
+      },
+      {
+        h: 'Holm\'s Sequentially Rejective Step-Down Method',
+        tex: r`$$\text{Step } i: \quad p_{(i)} \le \frac{\alpha}{m - i + 1}$$`,
+        p: r`Holm's method sorts p-values in ascending order and tests sequentially: $p_{(1)}$ against $\alpha / m$, $p_{(2)}$ against $\alpha / (m - 1)$, and so on. As soon as a p-value fails its criterion, testing terminates and all remaining hypotheses are retained. Holm controls FWER at level $\alpha$ under arbitrary dependence while being strictly more powerful than Bonferroni.`,
+      },
+      {
+        h: 'Benjamini–Hochberg False Discovery Rate (FDR)',
+        tex: r`$$\text{FDR} = E\left[\frac{V}{\max(R, 1)}\right] \le Q \implies k = \max\left\{i : p_{(i)} \le \frac{i}{m} Q\right\}, \quad \text{Reject } H_{(1)}, \dots, H_{(k)}$$`,
+        p: r`Here $V$ is false rejections, $R$ is total rejections, and $Q$ is target FDR level. Sorting p-values and finding the largest index $k$ whose p-value falls below the rank line $\frac{i}{m} Q$ guarantees that the expected proportion of false discoveries does not exceed $Q$ under independent or positively dependent test statistics.`,
+      },
+    ],
+    keyPoints: [
+      r`The family-wise error rate (FWER) controls the probability of making at least one false discovery; the false discovery rate (FDR) controls the expected proportion of false discoveries among rejected hypotheses.`,
+      r`Bonferroni is universally valid under any dependence structure, but becomes severely underpowered when testing hundreds or thousands of hypotheses.`,
+      r`Holm's step-down procedure is always at least as powerful as Bonferroni and carries zero extra assumptions; there is virtually no statistical reason to use classic Bonferroni over Holm.`,
+      r`The Benjamini–Hochberg procedure dramatically increases statistical power in high-dimensional settings by tolerating a controlled rate of false positives.`,
+    ],
+    pitfalls: [
+      r`Using Bonferroni correction in large-scale feature selection ($m > 1,000$), which obliterates statistical power and results in severe Type II errors.`,
+      r`Failing to apply any multiplicity correction when examining dozens of subgroup breakdowns or metrics in A/B tests.`,
+      r`Interpreting FDR adjusted p-values as posterior probabilities that a specific hypothesis is null; FDR is a property of the collective discovery set.`,
+      r`Applying multiple testing corrections after cherry-picking which tests to report; corrections require knowing the total number of tests executed.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Raw p-values from 10 parallel A/B tests or candidate features
+p_vals = np.array([0.001, 0.006, 0.012, 0.024, 0.038, 0.082, 0.150, 0.290, 0.440, 0.810])
+m = len(p_vals)
+alpha = 0.05
+
+# 1. Bonferroni: multiply by total tests m
+p_bonf = np.minimum(p_vals * m, 1.0)
+
+# 2. Holm step-down: multiply by (m - rank) and enforce monotonicity
+p_holm = np.maximum.accumulate(np.minimum(p_vals * (m - np.arange(m)), 1.0))
+
+# 3. Benjamini-Hochberg (FDR control)
+p_bh = stats.false_discovery_control(p_vals, method='bh')
+
+print(f"Raw p-values:        {p_vals}")
+print(f"Bonferroni adjusted: {np.round(p_bonf, 3)}")
+print(f"Holm adjusted:       {np.round(p_holm, 3)}")
+print(f"BH adjusted (FDR):   {np.round(p_bh, 3)}")
+print(f"Discoveries at alpha={alpha} -> Unadjusted: {np.sum(p_vals <= alpha)}, "
+      f"Bonferroni: {np.sum(p_bonf <= alpha)}, Holm: {np.sum(p_holm <= alpha)}, "
+      f"Benjamini-Hochberg: {np.sum(p_bh <= alpha)}")`,
+    quiz: [
+      {
+        q: r`What is the crucial difference between Family-Wise Error Rate (FWER) and False Discovery Rate (FDR)?`,
+        o: [
+          r`FWER controls the probability of making at least one false positive, while FDR controls the expected fraction of false positives among declared discoveries`,
+          r`FWER is only for medical trials, while FDR is only for computer science`,
+          r`FWER always yields more discoveries than FDR`,
+          r`FDR assumes all null hypotheses are true`,
+        ],
+        a: 0,
+        why: r`FWER bounds $P(V \ge 1) \le \alpha$, demanding near-certainty of zero false discoveries. FDR bounds $E[V / \max(R, 1)] \le Q$, tolerating a small fraction of false discoveries to boost power.`,
+      },
+      {
+        q: r`Why should practitioners generally prefer Holm's step-down procedure over the classical Bonferroni correction?`,
+        o: [
+          r`Holm's method requires assuming normal distributions`,
+          r`Holm's method controls FWER at the exact same level $\alpha$ under arbitrary dependence while being strictly more powerful`,
+          r`Holm's method computes p-values faster`,
+          r`Holm's method can be run without sorting p-values`,
+        ],
+        a: 1,
+        why: r`Holm's step-down method guarantees the same FWER protection as Bonferroni without any additional assumptions, but uses smaller multipliers for subsequent ranks, making it uniformly more powerful.`,
+      },
+      {
+        q: r`In the Benjamini–Hochberg procedure with $m$ tests and target FDR $Q$, what is the rejection criterion for the sorted p-values $p_{(1)} \le \dots \le p_{(m)}$?`,
+        o: [
+          r`Reject all $p_{(i)} \le Q / m$`,
+          r`Find the largest rank $k$ such that $p_{(k)} \le \frac{k}{m} Q$, and reject all hypotheses from rank 1 to $k$`,
+          r`Reject only hypotheses with $p_{(i)} \le Q$`,
+          r`Reject the single smallest p-value`,
+        ],
+        a: 1,
+        why: r`The Benjamini–Hochberg step-up procedure identifies the largest index $k$ satisfying $p_{(k)} \le \frac{k}{m} Q$ and declares all hypotheses $1, \dots, k$ significant.`,
+      },
+      {
+        q: r`If you evaluate 20 orthogonal features with independent tests at $\alpha = 0.05$ without multiplicity correction, what is the probability of at least one false positive if all features are pure noise?`,
+        o: [
+          r`5.0%`,
+          r`20.0%`,
+          r`Approximately 64.2%`,
+          r`100%`,
+        ],
+        a: 2,
+        why: r`The probability of at least one false alarm across 20 independent true null tests is $1 - (1 - 0.05)^{20} = 1 - 0.95^{20} \approx 1 - 0.3585 = 0.6415$ (or 64.2%).`,
+      },
+    ],
+    usedBy: ['feature-selection', 'decision_tree_classifier'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'probability-rules-and-bayes-theorem'],
+    related: ['anova-and-post-hoc-tests', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling', 'cross-validation'],
+    keywords: 'multiple testing bonferroni holm benjamini hochberg fdr fwer false discovery rate family wise error p-value adjustment',
+  },
 ];
