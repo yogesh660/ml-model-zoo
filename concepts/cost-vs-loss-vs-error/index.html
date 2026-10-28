@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsjbx0g">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsjbx0g">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -112,6 +112,61 @@ rmse = np.<span class="f">sqrt</span>(loss.<span class="f">mean</span>())       
             <div class="opts"><button class="opt" type="button"><b>A</b><span>The error of one example</span></button><button class="opt" type="button"><b>B</b><span>The cost: average loss plus any penalty</span></button><button class="opt" type="button"><b>C</b><span>The test metric</span></button><button class="opt" type="button"><b>D</b><span>Accuracy</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It follows the gradient of the training objective.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q2</span>What is the fundamental distinction between "loss" and "cost" in machine learning?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>"Loss" is evaluated on a single training example, whereas "cost" aggregates loss across the dataset and includes any regularisation penalty</span></button><button class="opt" type="button"><b>B</b><span>"Loss" refers only to classification models, while "cost" refers only to regression models</span></button><button class="opt" type="button"><b>C</b><span>"Loss" is measured on test data, while "cost" is measured on training data</span></button><button class="opt" type="button"><b>D</b><span>"Cost" is always non-negative, whereas "loss" can be negative</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By standard convention, loss $\ell(y_i, \hat{y}_i)$ evaluates the error on a single instance, whereas cost $J(\theta)$ is the overall objective function summing or averaging losses across all training examples, plus any regularisation term.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>Why can gradient descent not directly optimise classification accuracy as its training objective?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Accuracy is a step function whose derivative is zero almost everywhere and undefined at decision boundaries, providing no directional gradient for updates</span></button><button class="opt" type="button"><b>B</b><span>Accuracy can only be computed when classes are perfectly balanced</span></button><button class="opt" type="button"><b>C</b><span>Accuracy requires computing matrix inversions that take $O(n^3)$ time</span></button><button class="opt" type="button"><b>D</b><span>Gradient descent only works on unconstrained linear systems</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> 0/1 mistake loss (and accuracy) has flat plateaus where small parameter tweaks make zero difference to discrete predictions, giving zero gradient. Smooth surrogate losses like log-loss provide continuous non-zero gradients everywhere.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>What is "empirical risk minimisation" (ERM)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Minimising the test set error rate during cross-validation</span></button><button class="opt" type="button"><b>B</b><span>Minimising the average loss across the training dataset without an explicit regularisation penalty</span></button><button class="opt" type="button"><b>C</b><span>Calculating the covariance matrix of input features before modelling</span></button><button class="opt" type="button"><b>D</b><span>Pruning decision trees to minimise out-of-bag variance</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The "empirical risk" is the sample average of the loss over observed training examples $\frac{1}{n}\sum_{i=1}^n \ell(y_i, f_\theta(x_i))$. Minimising it alone without regularisation is empirical risk minimisation (ERM).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>A binary classifier predicts a probability of $\hat{p} = 0.99$ for an observation whose true label is $y = 0$. What are the 0/1 classification error (threshold 0.5) and the binary cross-entropy loss $-\ln(1 - \hat{p})$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0/1 error $= 1$; cross-entropy loss $= -\ln(0.01) \approx 4.605$</span></button><button class="opt" type="button"><b>B</b><span>0/1 error $= 0$; cross-entropy loss $= -\ln(0.99) \approx 0.010$</span></button><button class="opt" type="button"><b>C</b><span>0/1 error $= 1$; cross-entropy loss $= 0.990$</span></button><button class="opt" type="button"><b>D</b><span>0/1 error $= 0.01$; cross-entropy loss $= 1.000$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because $\hat{p} = 0.99 \ge 0.5$, it predicts Class 1. Since the true label is $y = 0$, the 0/1 classification error is 1. The binary cross-entropy loss for $y = 0$ is $-\ln(1 - 0.99) = -\ln(0.01) \approx 4.605$, punishing confident wrong predictions heavily.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q6</span>Why do practitioners frequently train models using log-loss but evaluate and report test set ROC-AUC or accuracy to stakeholders?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Log-loss is mathematically invalid on unseen test data</span></button><button class="opt" type="button"><b>B</b><span>ROC-AUC cannot be computed on training datasets</span></button><button class="opt" type="button"><b>C</b><span>Log-loss is smooth and convex, making gradient optimisation efficient, but business stakeholders understand accuracy and threshold-free ranking metrics like ROC-AUC better</span></button><button class="opt" type="button"><b>D</b><span>Accuracy can only be evaluated after regularisation parameter $\lambda$ is set to zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Training objectives require smooth gradients for numerical optimisers to find good parameters. Evaluation metrics, however, reflect real-world costs and operational interpretability for decision makers.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>During training of a neural network, the training cost $J(\theta)$ steadily decreases across 50 epochs, while the validation metric (error rate) stops decreasing at epoch 15 and begins to climb. What does this indicate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The optimiser has encountered numerical underflow in gradient computation</span></button><button class="opt" type="button"><b>B</b><span>The model has begun overfitting to training noise and idiosyncrasies</span></button><button class="opt" type="button"><b>C</b><span>The learning rate should be multiplied by 10 to escape a local minimum</span></button><button class="opt" type="button"><b>D</b><span>The regularisation penalty $\lambda$ is too large</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The optimiser successfully minimises the training cost function, but memorising training quirks harms generalisation to unseen validation data. This divergence is the hallmark of overfitting.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>What is the risk of selecting model hyperparameters by minimising training cost $J(\theta)$ rather than evaluating a validation metric?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Minimising training cost will favor overly complex models (like $\lambda = 0$ or infinite tree depth) that memorise the training set perfectly but generalise poorly</span></button><button class="opt" type="button"><b>B</b><span>Training cost cannot be calculated when regularisation is present</span></button><button class="opt" type="button"><b>C</b><span>The training cost always overestimates the true test error rate</span></button><button class="opt" type="button"><b>D</b><span>Validation metrics cannot rank models with differing numbers of parameters</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Zero regularisation ($\lambda = 0$) and maximal model capacity minimise empirical training loss to zero, but cause severe overfitting. Hyperparameters must be tuned against validation metrics that test unseen generalisation.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>In the cost function $J(\theta) = \frac{1}{n}\sum_{i=1}^n \ell(y_i, f_\theta(x_i)) + \lambda R(\theta)$, what happens as the regularisation hyperparameter $\lambda \to \infty$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model interpolates every single training point perfectly</span></button><button class="opt" type="button"><b>B</b><span>The empirical loss term dominates the objective</span></button><button class="opt" type="button"><b>C</b><span>The training error drops to zero</span></button><button class="opt" type="button"><b>D</b><span>The optimiser focuses exclusively on minimising parameter penalty $R(\theta)$, driving weights toward zero regardless of training loss</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> As $\lambda \to \infty$, the penalty term $R(\theta)$ overwhelmingly dominates the cost function, forcing the weights towards zero and causing severe underfitting.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>Consider a dataset of $n = 4$ regression points with true targets $y = [10, 20, 30, 40]$ and model predictions $\hat{y} = [12, 18, 35, 38]$. If the cost function is $J(w) = \frac{1}{n}\sum_{i=1}^n (y_i - \hat{y}_i)^2 + \lambda \lVert w\rVert^2$ with $\lambda = 2$ and $\lVert w\rVert^2 = 5$, what is the exact value of the cost $J(w)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$9.25$</span></button><button class="opt" type="button"><b>B</b><span>$18.50$</span></button><button class="opt" type="button"><b>C</b><span>$20.25$</span></button><button class="opt" type="button"><b>D</b><span>$44.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Errors: $e_1 = 10 - 12 = -2$; $e_2 = 20 - 18 = 2$; $e_3 = 30 - 35 = -5$; $e_4 = 40 - 38 = 2$. Squared losses: $(-2)^2 = 4$, $2^2 = 4$, $(-5)^2 = 25$, $2^2 = 4$. Mean squared loss $= \frac{4 + 4 + 25 + 4}{4} = \frac{37}{4} = 8.50$. Regularisation penalty $= \lambda \lVert w\rVert^2 = 2 \times 5 = 10.00$. Total cost $J(w) = 8.50 + 10.00 = 18.50$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Suppose a binary model outputs probabilities $\hat{p} = [0.90, 0.40]$ for two observations with true classes $y = [1, 0]$. If the model uses log-loss $\ell(y, \hat{p}) = -[y\ln(\hat{p}) + (1-y)\ln(1-\hat{p})]$, what is the average empirical loss across these two observations? (Given $\ln(0.90) \approx -0.1054$, $\ln(0.60) \approx -0.5108$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.6162$</span></button><button class="opt" type="button"><b>B</b><span>$0.3081$</span></button><button class="opt" type="button"><b>C</b><span>$0.2054$</span></button><button class="opt" type="button"><b>D</b><span>$0.5108$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For instance 1 ($y = 1$): $\ell_1 = -\ln(0.90) \approx 0.1054$. For instance 2 ($y = 0$): $\ell_2 = -\ln(1 - 0.40) = -\ln(0.60) \approx 0.5108$. Total loss $= 0.1054 + 0.5108 = 0.6162$. Average empirical loss $= \frac{0.6162}{2} = 0.3081$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>A regression model is evaluated on 3 validation points with true values $y = [5, 10, 15]$ and predictions $\hat{y} = [7, 6, 15]$. What are the Mean Absolute Error (MAE) and the Root Mean Squared Error (RMSE) on this validation set?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{MAE} = 3.00$ and $\mathrm{RMSE} = 3.00$</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{MAE} = 6.00$ and $\mathrm{RMSE} \approx 4.47$</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{MAE} = 2.00$ and $\mathrm{RMSE} \approx 2.58$</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{MAE} = 2.00$ and $\mathrm{RMSE} = 4.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Errors: $5 - 7 = -2$, $10 - 6 = 4$, $15 - 15 = 0$. Absolute errors: $|-2| = 2$, $|4| = 4$, $|0| = 0$. $\mathrm{MAE} = \frac{2 + 4 + 0}{3} = \frac{6}{3} = 2.00$. Squared errors: $(-2)^2 = 4$, $4^2 = 16$, $0^2 = 0$. Mean squared error $= \frac{4 + 16 + 0}{3} = \frac{20}{3} \approx 6.667$. $\mathrm{RMSE} = \sqrt{20/3} \approx 2.582$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -147,11 +202,11 @@ rmse = np.<span class="f">sqrt</span>(loss.<span class="f">mean</span>())       
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsjbx0g" defer></script>
+<script src="../../assets/labs/core.js?v=mvsjbx0g" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsjbx0g" defer></script>
+<script src="../../assets/labs/models.js?v=mvsjbx0g" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvsjbx0g" defer></script>
+<script src="../../assets/learn.js?v=mvsjbx0g" defer></script>
 </body>
 </html>
