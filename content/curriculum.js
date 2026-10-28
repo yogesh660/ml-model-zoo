@@ -94,7 +94,7 @@ module.exports = [
     blurb: 'Wrangling, feature engineering, leakage-safe validation, forecasting at scale, drift monitoring, product analytics and shipping models.',
     tasks: ['ds'],
     modules: [
-      { title: 'Data wrangling', lessons: [...C('SQL for analysis: joins and window functions', 'pandas and Polars patterns', 'Data cleaning and validation', 'Missing data: MCAR, MAR, MNAR and imputation', 'Outlier handling'), ...X('Dates, time zones and temporal joins')] },
+      { title: 'Data wrangling', lessons: ['sql-for-analysis-joins-and-window-functions', 'pandas-and-polars-patterns', 'data-cleaning-and-validation', 'missing-data-mcar-mar-mnar-and-imputation', ...C('Outlier handling'), ...X('Dates, time zones and temporal joins')] },
       { title: 'Feature engineering', lessons: [...C('Encoding categoricals: one-hot, ordinal, target, WoE', 'Scaling and transforms: standard, robust, Box–Cox, Yeo–Johnson', 'Lag and rolling-window features'), ...X('Binning and discretisation', 'Interactions and polynomial features', 'Date and text features', 'Feature hashing and high-cardinality columns')] },
       { title: 'Pipelines and validation', lessons: [...C('Train/validation/test splits: group and time-based', 'Data leakage', 'scikit-learn Pipelines and ColumnTransformer'), ...X('Experiment tracking', 'Reproducibility')] },
       { title: 'Forecasting at scale', lessons: [...C('Forecast metrics: MAE, MASE, sMAPE, WAPE', 'Time-series cross-validation', 'Global vs local models, gradient boosting for forecasting'), ...X('Hierarchical forecasting and reconciliation', 'Intermittent demand: Croston and TSB', 'Prophet and trend/seasonality decomposition', 'Probabilistic forecasts and quantile loss')] },
