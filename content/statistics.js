@@ -408,4 +408,436 @@ print(f"With Outlier -> Pearson r: {r_dirty:.3f}, Spearman rho: {rho_dirty:.3f}"
     related: ['feature-selection', 'exploratory-data-analysis', 'ols_linear_regression'],
     keywords: 'correlation pearson spearman kendall rank linear monotonic association collinearity',
   },
+  {
+    id: 'central-limit-theorem-and-law-of-large-numbers',
+    short: 'CLT and LLN',
+    title: 'Central Limit Theorem and Law of Large Numbers',
+    task: 'concepts',
+    module: 'Probability',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Why averages converge and bell curves appear everywhere: the Law of Large Numbers pins down the mean, while the Central Limit Theorem dictates the shape of sample sums.`,
+    lead: r`The Law of Large Numbers guarantees that sample averages converge to the true population expectation as sample size grows. The Central Limit Theorem goes further, proving that the standardised sum or mean of independent random variables converges to a Gaussian distribution, regardless of the underlying distribution's shape.`,
+    intuition: [
+      r`Imagine rolling a fair six-sided die. A single roll has a completely flat, discrete uniform distribution: 1, 2, 3, 4, 5, or 6 each appear with equal probability 1/6. The true expected value is 3.5. If you roll the die 10 times, your average might be 2.9 or 4.1. But roll it 10,000 times, and the average will be virtually indistinguishable from 3.5. That stability is the Law of Large Numbers (LLN): random noise cancels out across large samples.`,
+      r`Now, instead of one long run, imagine taking 1,000 separate players. Each player rolls 30 dice and computes their own average. If you plot the histogram of those 1,000 averages, something remarkable emerges: the flat uniform distribution has completely vanished. In its place sits a smooth, bell-shaped Gaussian curve centred at 3.5.`,
+      r`This is the Central Limit Theorem (CLT). Even if the original population is skewed, bimodal, or uniform, the distribution of sample averages becomes approximately normal once sample size $n$ is sufficiently large (typically $n \ge 30$). This explains why Gaussian assumptions dominate machine learning: measurement errors and composite features are usually sums of many small, independent underlying effects.`,
+    ],
+    analogy: r`The Law of Large Numbers tells you that a fleet of ships will on average reach their port; the Central Limit Theorem describes the bell-shaped dispersion pattern of their arrival times.`,
+    steps: [
+      r`Draw independent, identically distributed (i.i.d.) observations $X_1, X_2, \dots, X_n$ from any population with finite mean $\mu$ and variance $\sigma^2$.`,
+      r`Compute the sample average $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$.`,
+      r`Observe the Law of Large Numbers in action: as $n \to \infty$, the sample mean $\bar{X}_n$ converges in probability to the true population mean $\mu$.`,
+      r`Apply the Central Limit Theorem: standardise the sum or mean to form $Z_n = \frac{\bar{X}_n - \mu}{\sigma / \sqrt{n}}$.`,
+      r`Approximate probabilities of sample averages using the standard Gaussian CDF $\Phi(z)$ whenever $n$ is adequately large.`,
+    ],
+    math: [
+      {
+        h: 'Weak and Strong Laws of Large Numbers',
+        tex: r`$$\text{Weak Law (WLLN): } \lim_{n \to \infty} P(|\bar{X}_n - \mu| \ge \varepsilon) = 0, \qquad \text{Strong Law (SLLN): } P\left(\lim_{n \to \infty} \bar{X}_n = \mu\right) = 1$$`,
+        p: r`The Weak Law (Khinchin's theorem) guarantees convergence in probability: for any margin $\varepsilon > 0$, the probability of a discrepancy larger than $\varepsilon$ decays to 0. The Strong Law (Kolmogorov's theorem) guarantees almost sure convergence: the sample trajectory itself converges to the constant $\mu$ with probability 1.`,
+      },
+      {
+        h: 'The Lindeberg–Lévy Central Limit Theorem',
+        tex: r`$$\sqrt{n}\left(\frac{\bar{X}_n - \mu}{\sigma}\right) \xrightarrow{d} \mathcal{N}(0, 1) \quad \text{as } n \to \infty$$`,
+        p: r`For any sequence of i.i.d. random variables with finite variance $\sigma^2 < \infty$, the distribution of the normalised error converges in distribution ($\xrightarrow{d}$) to a standard Gaussian. Equivalently, the unstandardised sample mean follows approximately $\bar{X}_n \sim \mathcal{N}\left(\mu, \frac{\sigma^2}{n}\right)$.`,
+      },
+      {
+        h: 'Berry–Esseen Rate of Convergence',
+        tex: r`$$\sup_{z \in \mathbb{R}} \big| F_n(z) - \Phi(z) \big| \le \frac{C \cdot \mathbb{E}\big[|X - \mu|^3\big]}{\sigma^3 \sqrt{n}}$$`,
+        p: r`The Berry–Esseen theorem bounds the maximum discrepancy between the actual CDF of the standardised sample mean $F_n(z)$ and the standard normal CDF $\Phi(z)$. The convergence rate is $O(1/\sqrt{n})$, scaled by the population skewness. Heavily skewed distributions require larger $n$ before the normal approximation becomes accurate.`,
+      },
+    ],
+    keyPoints: [
+      r`LLN guarantees that empirical risk converges to expected risk in machine learning as training set size grows.`,
+      r`CLT applies to the sum or average of random variables, not to the raw data distribution itself; raw data does not magically become normal.`,
+      r`Finite variance is an absolute requirement; heavy-tailed distributions like Cauchy have no finite variance and violate the CLT entirely.`,
+      r`The spread of sample averages shrinks at the rate $1/\sqrt{n}$, meaning halving estimation error requires quadrupling the sample size.`,
+    ],
+    pitfalls: [
+      r`Believing the raw data becomes normally distributed with more samples; only sample sums and averages become normal.`,
+      r`Applying CLT to Cauchy or Pareto distributions with infinite variance where averages wander erratically forever.`,
+      r`Assuming $n = 30$ is always sufficient; heavily skewed or zero-inflated distributions can require hundreds or thousands of samples for good Gaussian fits.`,
+      r`Confusing standard deviation of the population ($\sigma$) with standard error of the mean ($\sigma / \sqrt{n}$).`,
+    ],
+    code: r`import numpy as np
+
+rng = np.random.default_rng(42)
+# Draw from a heavily skewed Exponential distribution (scale = 2.0)
+scale = 2.0
+n_samples = 50
+n_experiments = 5000
+
+# True parameters: mean = scale, var = scale^2
+true_mean = scale
+true_se = scale / np.sqrt(n_samples)
+
+# Simulate 5,000 separate sample means of size n = 50
+means = rng.exponential(scale=scale, size=(n_experiments, n_samples)).mean(axis=1)
+
+empirical_mean = np.mean(means)
+empirical_se = np.std(means, ddof=1)
+# Fraction of sample averages falling within 1.96 standard errors of the mean
+coverage = np.mean(np.abs(means - true_mean) <= 1.96 * true_se)
+
+print(f"True Mean: {true_mean:.2f}, Simulated Mean: {empirical_mean:.4f}")
+print(f"Theoretical SE: {true_se:.4f}, Simulated SE: {empirical_se:.4f}")
+print(f"95% Gaussian Coverage: {coverage * 100:.2f}%")`,
+    quiz: [
+      {
+        q: r`What happens to the distribution of individual data points $X_i$ as the sample size $n$ increases?`,
+        o: [r`It approaches a standard normal distribution`, r`It remains exactly the true population distribution from which it is drawn`, r`Its variance drops to zero`, r`It becomes uniform`],
+        a: 1,
+        why: r`The CLT applies exclusively to sample sums and averages. The raw individual observations continue to reflect their true underlying population distribution regardless of sample size.`,
+      },
+      {
+        q: r`If you wish to cut the standard error of a sample mean in half, by what factor must you increase the sample size?`,
+        o: [r`2`, r`$\sqrt{2}$`, r`4`, r`8`],
+        a: 2,
+        why: r`The standard error is $\sigma / \sqrt{n}$. To divide the error by 2, $n$ must increase by a factor of $2^2 = 4$.`,
+      },
+      {
+        q: r`Which fundamental condition must a probability distribution satisfy for the classical Lindeberg–Lévy CLT to hold?`,
+        o: [r`The population must be symmetric`, r`The sample size must exceed 100,000`, r`The observations must be correlated`, r`The population must have finite variance`],
+        a: 3,
+        why: r`The classical CLT requires independent, identically distributed observations with finite mean and finite variance ($\sigma^2 < \infty$). Distributions with infinite variance (like Cauchy) violate CLT.`,
+      },
+      {
+        q: r`What is the conceptual difference between the Law of Large Numbers (LLN) and the Central Limit Theorem (CLT)?`,
+        o: [r`LLN shows the sample mean converges to the true mean; CLT describes the distribution of errors around that mean`, r`LLN describes the limiting Gaussian shape; CLT proves the mean converges to a point`, r`LLN applies only to continuous variables; CLT applies only to discrete variables`, r`There is no difference; they are alternative names for the same theorem`],
+        a: 0,
+        why: r`LLN pins down the destination ($\bar{X}_n \to \mu$), whereas CLT provides the rate and probability distribution of the fluctuations around that destination ($\sqrt{n}(\bar{X}_n - \mu) \to \mathcal{N}(0, \sigma^2)$).`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'linear_discriminant_analysis'],
+    prereq: ['random-variables-and-distributions', 'expectation-variance-and-covariance'],
+    related: ['sampling-and-standard-error', 'confidence-intervals'],
+    keywords: 'central limit theorem law large numbers clt lln gaussian convergence normal distribution standard error',
+  },
+  {
+    id: 'sampling-and-standard-error',
+    short: 'Sampling & standard error',
+    title: 'Sampling and Standard Error',
+    task: 'concepts',
+    module: 'Estimation',
+    level: 1,
+    minutes: 15,
+    noLab: true,
+    summary: r`Distinguishing population variability from estimation uncertainty: standard deviation measures individual spread, standard error measures how much sample statistics fluctuate.`,
+    lead: r`Statistical inference hinges on distinguishing between the spread of individual observations and the uncertainty of a summary statistic. While standard deviation quantifies the dispersion of the raw population, standard error measures the variability of an estimator across hypothetical repeated samples.`,
+    intuition: [
+      r`Suppose you want to know the average income in a city of 1,000,000 residents. Asking every resident is prohibitively expensive, so you draw a random sample of 100 people. Some make £25,000, some £60,000, and a few make £150,000. The standard deviation of your sample—say £20,000—describes the broad diversity of incomes among individual citizens. It will not shrink if you survey 1,000 people instead; people's salaries remain just as diverse.`,
+      r`Now consider the sample mean income, which turns out to be £45,000. If your colleague surveys a completely different random sample of 100 residents, they might find a mean of £43,200. A third sample might yield £47,100. The spread of these hypothetical sample averages is the standard error (SE). Because averages are far more stable than individual measurements, the standard error for $n = 100$ is much smaller than the standard deviation: roughly $£20,000 / \sqrt{100} = £2,000$.`,
+      r`Crucially, while population standard deviation stays constant as sample size grows, standard error shrinks steadily at rate $1/\sqrt{n}$. If you expand your survey to 10,000 residents, your sample standard deviation remains £20,000, but your standard error plunges to $£20,000 / \sqrt{10,000} = £200$. Standard error directly measures the precision of your estimate.`,
+    ],
+    analogy: r`Standard deviation is the size of the waves in the ocean; standard error is the slight bobbing of a massive cargo ship resting on those waves.`,
+    steps: [
+      r`Identify the population parameter of interest (e.g. population mean $\mu$ or proportion $p$).`,
+      r`Draw a representative random sample of size $n$ using independent, identically distributed sampling.`,
+      r`Compute the sample statistic (the point estimate), such as the sample mean $\bar{x}$ or sample proportion $\hat{p}$.`,
+      r`Compute the sample standard deviation $s$ as a measure of raw observational scatter.`,
+      r`Calculate the estimated standard error of the estimator: $\operatorname{SE}(\bar{x}) = s / \sqrt{n}$.`,
+      r`Use the standard error to construct confidence intervals or evaluate statistical significance in hypothesis testing.`,
+    ],
+    math: [
+      {
+        h: 'Standard Deviation vs. Standard Error',
+        tex: r`$$\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2} \qquad \text{vs.} \qquad \operatorname{SE}(\bar{X}) = \frac{\sigma}{\sqrt{n}} \approx \frac{s}{\sqrt{n}}$$`,
+        p: r`The standard deviation $\sigma$ describes the inherent variability of individual observations in the population. The standard error $\operatorname{SE}(\bar{X})$ is the standard deviation of the sampling distribution of the sample mean $\bar{X}$. When the population $\sigma$ is unknown, we substitute the sample standard deviation $s = \sqrt{\frac{1}{n-1}\sum (x_i - \bar{x})^2}$.`,
+      },
+      {
+        h: 'Standard Error of a Proportion',
+        tex: r`$$\operatorname{SE}(\hat{p}) = \sqrt{\frac{p(1 - p)}{n}} \approx \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}}$$`,
+        p: r`For binary outcomes (Bernoulli trials with probability of success $p$), the variance is $p(1-p)$. The standard error of the sample proportion $\hat{p}$ peaks at $p = 0.5$ and decays symmetrically toward the boundaries 0 and 1.`,
+      },
+      {
+        h: 'Finite Population Correction (FPC)',
+        tex: r`$$\operatorname{SE}_{\text{finite}}(\bar{X}) = \frac{\sigma}{\sqrt{n}} \sqrt{\frac{N - n}{N - 1}}$$`,
+        p: r`When sampling without replacement from a finite population of size $N$, observations are not strictly independent. The finite population correction factor $\sqrt{(N-n)/(N-1)}$ shrinks the standard error toward zero as the sample size $n$ approaches the full population size $N$.`,
+      },
+    ],
+    keyPoints: [
+      r`Standard deviation describes data spread; standard error describes estimator precision.`,
+      r`Standard error always decreases as sample size increases, scaling strictly with $1/\sqrt{n}$.`,
+      r`Reporting an estimate without its standard error gives an illusion of certainty without context.`,
+      r`In linear regression, every coefficient $\beta_j$ has a dedicated standard error used to compute $t$-statistics.`,
+    ],
+    pitfalls: [
+      r`Reporting standard deviation when asked for estimation uncertainty, or reporting standard error to describe population diversity.`,
+      r`Assuming non-random convenience samples can be cured with standard error formulas; selection bias invalidates standard error entirely.`,
+      r`Forgetting the $1/\sqrt{n}$ diminishing returns; doubling precision requires a fourfold increase in data.`,
+      r`Omitting Bessel's correction ($n-1$) when computing sample standard deviation on small samples.`,
+    ],
+    code: r`import numpy as np
+
+rng = np.random.default_rng(42)
+true_mu, true_sigma = 50.0, 12.0
+
+sample_sizes = [25, 100, 400, 1600]
+print("True Population SD:", true_sigma)
+
+for n in sample_sizes:
+    # Draw 1,000 independent samples of size n
+    samples = rng.normal(loc=true_mu, scale=true_sigma, size=(1000, n))
+    sample_means = samples.mean(axis=1)
+    
+    single_sample = samples[0]
+    s = np.std(single_sample, ddof=1)
+    estimated_se = s / np.sqrt(n)
+    empirical_se = np.std(sample_means, ddof=1)
+    
+    print(f"n={n:4d} | Sample SD: {s:.2f} | Est SE: {estimated_se:.3f} | Empirical SE: {empirical_se:.3f}")`,
+    quiz: [
+      {
+        q: r`What is the primary conceptual difference between standard deviation and standard error?`,
+        o: [r`Standard deviation measures dispersion of individual observations; standard error measures the variability of a sample statistic across samples`, r`Standard error is for discrete data; standard deviation is for continuous data`, r`Standard error is always larger than standard deviation`, r`Standard deviation decreases with sample size, while standard error remains constant`],
+        a: 0,
+        why: r`Standard deviation describes the spread of individual observations in a population or sample. Standard error describes the spread of the sampling distribution of an estimator (e.g. sample mean).`,
+      },
+      {
+        q: r`If a sample of 64 observations has a sample standard deviation of $s = 16$, what is the estimated standard error of the mean?`,
+        o: [r`0.25`, r`2.0`, r`4.0`, r`8.0`],
+        a: 1,
+        why: r`$\operatorname{SE}(\bar{x}) = s / \sqrt{n} = 16 / \sqrt{64} = 16 / 8 = 2.0$.`,
+      },
+      {
+        q: r`What happens to the population standard deviation $\sigma$ and the standard error of the mean $\operatorname{SE}(\bar{X})$ as the sample size $n$ grows arbitrarily large?`,
+        o: [r`Both converge to zero`, r`$\sigma$ grows toward infinity; $\operatorname{SE}(\bar{X})$ remains constant`, r`$\sigma$ remains fixed (it is a population constant); $\operatorname{SE}(\bar{X})$ converges toward zero`, r`Both remain constant`],
+        a: 2,
+        why: r`The population standard deviation $\sigma$ is a fixed physical attribute of the population. The standard error $\sigma / \sqrt{n}$ measures sampling uncertainty and converges to 0 as $n \to \infty$.`,
+      },
+      {
+        q: r`For a binary classification test set of $n = 400$ instances with an observed accuracy of $\hat{p} = 0.80$, what is the estimated standard error of the accuracy estimate?`,
+        o: [r`0.04`, r`0.16`, r`0.20`, r`0.02`],
+        a: 3,
+        why: r`$\operatorname{SE}(\hat{p}) = \sqrt{\hat{p}(1 - \hat{p}) / n} = \sqrt{(0.80 \times 0.20) / 400} = \sqrt{0.16 / 400} = \sqrt{0.0004} = 0.02$ (or 2 percentage points).`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'logistic_regression'],
+    prereq: ['expectation-variance-and-covariance', 'central-limit-theorem-and-law-of-large-numbers'],
+    related: ['confidence-intervals', 'bootstrap-and-jackknife'],
+    keywords: 'sampling standard error standard deviation population sample mean proportion bessel',
+  },
+  {
+    id: 'confidence-intervals',
+    short: 'Confidence intervals',
+    title: 'Confidence Intervals',
+    task: 'concepts',
+    module: 'Estimation',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Quantifying parameter uncertainty with frequentist coverage: margin of error, critical values, Student's t distribution, and proper probabilistic interpretation.`,
+    lead: r`A point estimate alone provides an incomplete picture of an unknown population parameter. Confidence intervals construct a calibrated range around the estimate, guaranteeing that a chosen percentage of such intervals across repeated sampling will trap the true parameter value.`,
+    intuition: [
+      r`Imagine an archer shooting arrows at a bullseye hidden in thick fog. You cannot see where the bullseye is, but you can see where each arrow lands. If you only look at one arrow, you have a point estimate of where the target might be. But if you draw a circle around that arrow with a radius based on the archer's known spread, you create an interval. If the radius is calibrated for 95% confidence, then across 100 shots in the fog, exactly 95 of your circles will capture the hidden bullseye.`,
+      r`Notice what this means: the bullseye is fixed in one spot; it does not move. It is your circles that shift with each new shot. This is the heart of the frequentist confidence interval. You cannot say "there is a 95% probability the true target lies inside this specific circle"—either it does or it does not (0 or 1). What you can say is that the procedure used to draw the circle captures the target 95% of the time under repeated sampling.`,
+      r`In machine learning and statistics, we build these intervals by taking our point estimate (like a regression coefficient or validation accuracy) and adding and subtracting a margin of error: $\text{Estimate} \pm (\text{Critical Value} \times \text{Standard Error})$. If the population variance is known, we use the standard normal $z$-distribution; when estimating variance from a small sample, we switch to Student's $t$-distribution with heavier tails to account for extra uncertainty.`,
+    ],
+    analogy: r`A confidence interval is like tossing a ring around a fixed peg: the peg does not move, but 95 out of 100 tossed rings will successfully encircle it.`,
+    steps: [
+      r`Specify the desired confidence level $1 - \alpha$ (most commonly 95%, where $\alpha = 0.05$).`,
+      r`Compute the point estimate (e.g. sample mean $\bar{x}$) from the empirical sample.`,
+      r`Compute the estimated standard error of the estimator: $\operatorname{SE} = s / \sqrt{n}$.`,
+      r`Select the appropriate critical value: $z_{1 - \alpha/2}$ for large samples or known $\sigma$; $t_{1 - \alpha/2, n-1}$ for unknown $\sigma$ on small samples.`,
+      r`Calculate the margin of error: $m = \text{Critical Value} \times \operatorname{SE}$.`,
+      r`Construct the interval boundaries: $[\bar{x} - m, \, \bar{x} + m]$.`,
+    ],
+    math: [
+      {
+        h: 'Gaussian and Student\'s t Confidence Intervals',
+        tex: r`$$\text{Known } \sigma: \quad \bar{x} \pm z_{1-\alpha/2} \frac{\sigma}{\sqrt{n}}, \qquad \text{Unknown } \sigma: \quad \bar{x} \pm t_{1-\alpha/2, \, n-1} \frac{s}{\sqrt{n}}$$`,
+        p: r`When $\sigma$ is unknown and estimated by $s$, the ratio follows Student's $t$-distribution with $n - 1$ degrees of freedom. The $t$-distribution has heavier tails than the standard normal distribution, widening the interval to reflect uncertainty in estimating the standard deviation. As $n \to \infty$, $t_{n-1} \to \mathcal{N}(0, 1)$.`,
+      },
+      {
+        h: 'Margin of Error and Sample Size Determination',
+        tex: r`$$m = z_{1-\alpha/2} \frac{\sigma}{\sqrt{n}} \implies n = \left(\frac{z_{1-\alpha/2} \cdot \sigma}{m}\right)^2$$`,
+        p: r`The margin of error $m$ is half the interval width. To achieve a specified target precision $m$ with $(1 - \alpha)$ confidence, the required sample size scales inversely with the square of the margin of error.`,
+      },
+      {
+        h: 'Confidence Interval for a Population Proportion',
+        tex: r`$$\hat{p} \pm z_{1-\alpha/2} \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}}$$`,
+        p: r`The Wald interval for a Bernoulli proportion approximates the binomial distribution with a normal distribution. When $n\hat{p} < 10$ or $n(1-\hat{p}) < 10$, the Wilson score interval or Agresti–Coull adjustment is preferred to prevent coverage breakdown near 0 and 1.`,
+      },
+    ],
+    keyPoints: [
+      r`Confidence is a property of the sampling procedure over infinite hypothetical replications, not a Bayesian posterior probability on a single interval.`,
+      r`Student's $t$-distribution automatically compensates for small sample sizes by expanding critical values.`,
+      r`Narrower intervals indicate higher precision, achieved by increasing sample size $n$ or accepting a lower confidence level.`,
+      r`If a 95% confidence interval for a treatment effect includes 0, the effect is not statistically significant at the $\alpha = 0.05$ level.`,
+    ],
+    pitfalls: [
+      r`Interpreting a 95% CI as "there is a 95% probability the true parameter lies in this specific calculated interval" (that is a Bayesian credible interval).`,
+      r`Using the standard normal $z$-distribution on small samples ($n < 30$) when the population standard deviation is unknown, leading to undercoverage.`,
+      r`Overlapping confidence intervals: two groups whose 95% CIs slightly overlap can still be statistically significantly different.`,
+      r`Ignoring the independence assumption; correlated or clustered data produces artificially narrow confidence intervals that fail to cover at the nominal rate.`,
+    ],
+    code: r`import numpy as np
+from scipy import stats
+
+rng = np.random.default_rng(42)
+true_mu, true_sigma = 75.0, 10.0
+n = 20
+alpha = 0.05
+
+# Simulate 1,000 independent 95% confidence intervals
+trials = 1000
+captured = 0
+
+for _ in range(trials):
+    sample = rng.normal(loc=true_mu, scale=true_sigma, size=n)
+    mean = np.mean(sample)
+    se = stats.sem(sample)
+    # Student's t critical value for df = n - 1
+    t_crit = stats.t.ppf(1.0 - alpha / 2.0, df=n - 1)
+    ci_lower = mean - t_crit * se
+    ci_upper = mean + t_crit * se
+    if ci_lower <= true_mu <= ci_upper:
+        captured += 1
+
+print(f"Sample Size n={n}, Degrees of Freedom={n - 1}")
+print(f"t Critical Value: {t_crit:.3f} (vs normal z = 1.960)")
+print(f"Empirical Coverage: {captured / trials * 100:.1f}% (Nominal: 95.0%)")`,
+    quiz: [
+      {
+        q: r`Which statement correctly reflects the frequentist meaning of a 95% confidence interval $[12.4, 18.2]$ for a population mean $\mu$?`,
+        o: [r`There is a 95% probability that $\mu$ is between 12.4 and 18.2`, r`Across many hypothetical random samples, 95% of the intervals computed using this exact method will contain $\mu$`, r`95% of individual data points in the population lie between 12.4 and 18.2`, r`The probability that $\mu = 15.3$ (the midpoint) is 0.95`],
+        a: 1,
+        why: r`In frequentist statistics, the population parameter $\mu$ is a fixed constant, not a random variable. The 95% confidence level describes the long-run success rate of the interval-generating procedure.`,
+      },
+      {
+        q: r`Why is Student's $t$-distribution used instead of the standard normal $z$-distribution when constructing confidence intervals for small samples?`,
+        o: [r`Because the data is guaranteed to be non-normal`, r`Because $t$-critical values are smaller than $z$-critical values`, r`To account for the additional sampling uncertainty introduced by estimating $\sigma$ with the sample standard deviation $s$`, r`To force the confidence interval to be symmetric`],
+        a: 2,
+        why: r`Estimating the unknown population variance introduces extra randomness. Student's $t$-distribution has heavier tails, producing wider intervals that preserve the correct nominal coverage.`,
+      },
+      {
+        q: r`If a 95% confidence interval for the difference between two model accuracies $(\text{Acc}_A - \text{Acc}_B)$ is $[-0.015, +0.062]$, what can you conclude at the $\alpha = 0.05$ significance level?`,
+        o: [r`Model A is significantly better than Model B`, r`Model B is significantly better than Model A`, r`Both models have exactly identical accuracy`, r`The difference is not statistically significant because the interval contains 0`],
+        a: 3,
+        why: r`Because the 95% confidence interval spans across zero (from negative to positive), the null hypothesis of equal performance ($\text{Acc}_A - \text{Acc}_B = 0$) cannot be rejected at $\alpha = 0.05$.`,
+      },
+      {
+        q: r`How does increasing the confidence level from 90% to 99% affect the width of a confidence interval (all else being equal)?`,
+        o: [r`The interval becomes wider`, r`The interval becomes narrower`, r`The width remains unchanged`, r`The interval shifts to the right`],
+        a: 0,
+        why: r`A higher confidence level requires a larger critical value (e.g. $z = 2.576$ for 99% vs $z = 1.645$ for 90%), expanding the margin of error and widening the interval to guarantee higher coverage.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'bayesian_linear_regression'],
+    prereq: ['sampling-and-standard-error', 'central-limit-theorem-and-law-of-large-numbers'],
+    related: ['bootstrap-and-jackknife', 'cross-validation'],
+    keywords: 'confidence interval student t distribution margin error critical value coverage frequentist estimation',
+  },
+  {
+    id: 'bootstrap-and-jackknife',
+    short: 'Bootstrap & jackknife',
+    title: 'Bootstrap and Jackknife',
+    task: 'concepts',
+    module: 'Estimation',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Non-parametric resampling for uncertainty estimation: sample with replacement to bootstrap any statistic, or leave one out with the jackknife.`,
+    lead: r`When analytical formulas for standard errors do not exist—such as for medians, complex ratios, or pipeline metrics—resampling methods provide a universal computational solution. The bootstrap treats the empirical sample as a proxy population and resamples with replacement, while the jackknife systematically leaves out one observation at a time.`,
+    intuition: [
+      r`Imagine you calculate the median household wealth in a small sample of 50 families. Calculating the standard error of a mean is trivial ($s / \sqrt{n}$), but what is the formula for the standard error of a sample median? Under arbitrary or skewed distributions, there is no simple textbook formula. Historically, statisticians were forced to make rigid parametric assumptions or give up on interval estimates entirely.`,
+      r`In 1979, Bradley Efron proposed the bootstrap: "pulling yourself up by your own bootstraps". If your sample of 50 families is the best representation of the population you have, treat it as the population. Put all 50 values into an imaginary urn, draw 50 families with replacement (so some appear multiple times and others not at all), and compute the median. Repeat this computational drawing 2,000 times. The spread of those 2,000 recomputed medians gives you an accurate standard error, and their 2.5th and 97.5th percentiles give you an empirical 95% confidence interval.`,
+      r`The jackknife is an older, deterministic cousin pioneered by Maurice Quenouille and John Tukey. Instead of random sampling with replacement, the jackknife leaves out observation 1 and recalculates the statistic on the remaining $n - 1$ points, then leaves out observation 2, and so on. This produces $n$ leave-one-out replicates, offering a fast, non-random diagnostic for estimator bias and variance.`,
+    ],
+    analogy: r`Bootstrapping is like photocopying your sample, cutting it into slips of paper, and drawing new random datasets from the hat to see how sensitive your conclusion is.`,
+    steps: [
+      r`Given an original dataset $\mathbf{x} = (x_1, x_2, \dots, x_n)$, compute the point estimate of interest $\hat{\theta} = T(\mathbf{x})$.`,
+      r`For each of $B$ bootstrap iterations (typically $B \in [1000, 5000]$), draw a sample $\mathbf{x}^{*b}$ of size $n$ with replacement from $\mathbf{x}$.`,
+      r`Compute the replicate estimate $\hat{\theta}^{*b} = T(\mathbf{x}^{*b})$ on each resampled dataset.`,
+      r`Estimate the bootstrap standard error as the sample standard deviation of the $B$ replicates: $\widehat{\operatorname{SE}}_B = \sqrt{\frac{1}{B-1}\sum (\hat{\theta}^{*b} - \bar{\theta}^*)^2}$.`,
+      r`Construct confidence intervals: use the percentile method ($[\hat{\theta}^*_{\alpha/2}, \, \hat{\theta}^*_{1-\alpha/2}]$) or bias-corrected accelerated ($\text{BC}_a$) intervals.`,
+      r`For the jackknife, compute $n$ leave-one-out replicates $\hat{\theta}_{(-i)} = T(\mathbf{x} \setminus \{x_i\})$ to estimate bias $\widehat{\text{Bias}}_{\text{jack}} = (n-1)(\bar{\theta}_{(\cdot)} - \hat{\theta})$.`,
+    ],
+    math: [
+      {
+        h: 'Bootstrap Standard Error and Percentile Interval',
+        tex: r`$$\widehat{\operatorname{SE}}_{\text{boot}} = \sqrt{\frac{1}{B - 1} \sum_{b=1}^B \left(\hat{\theta}^{*b} - \bar{\theta}^*\right)^2}, \qquad \text{CI}_{1-\alpha} = \left[ q_{\alpha/2}\left(\{\hat{\theta}^{*b}\}\right), \; q_{1-\alpha/2}\left(\{\hat{\theta}^{*b}\}\right) \right]$$`,
+        p: r`The empirical bootstrap standard error is the standard deviation across all $B$ bootstrap estimates $\hat{\theta}^{*b}$. The percentile confidence interval takes the empirical quantiles of the bootstrap distribution directly, requiring zero normality assumptions.`,
+      },
+      {
+        h: 'The 63.2% Rule of Sampling with Replacement',
+        tex: r`$$P(\text{observation } i \text{ selected}) = 1 - \left(1 - \frac{1}{n}\right)^n \xrightarrow{n \to \infty} 1 - e^{-1} \approx 0.6321$$`,
+        p: r`When drawing $n$ items with replacement from a set of size $n$, each observation has probability $1/n$ of being picked on any single draw. In the limit, each bootstrap sample contains roughly 63.2% unique original observations, leaving approximately 36.8% out-of-bag (OOB).`,
+      },
+      {
+        h: 'Jackknife Variance and Bias Estimators',
+        tex: r`$$\widehat{\operatorname{Var}}_{\text{jack}}(\hat{\theta}) = \frac{n - 1}{n} \sum_{i=1}^n \left(\hat{\theta}_{(-i)} - \bar{\theta}_{(\cdot)}\right)^2, \qquad \widehat{\text{Bias}}_{\text{jack}} = (n - 1)(\bar{\theta}_{(\cdot)} - \hat{\theta})$$`,
+        p: r`The jackknife leaves out each observation $i$ sequentially to compute $\hat{\theta}_{(-i)}$. The scale factor $\frac{n-1}{n}$ corrects for the fact that the leave-one-out subsamples are heavily overlapping and far more similar to each other than independent samples would be.`,
+      },
+    ],
+    keyPoints: [
+      r`Bootstrapping requires no parametric distribution assumptions; it works for medians, ratios, eigenvalues, and complex ML metric pipelines.`,
+      r`Roughly 63.2% of distinct samples appear in each bootstrap sample, leaving 36.8% out-of-bag (the foundation of Random Forest OOB error).`,
+      r`The standard jackknife fails on non-smooth statistics (such as the sample median); the delete-$d$ jackknife or bootstrap must be used instead.`,
+      r`Percentile bootstrap intervals can be biased for skewed distributions; the $\text{BC}_a$ (bias-corrected and accelerated) method adjusts for skewness and acceleration.`,
+    ],
+    pitfalls: [
+      r`Bootstrapping time series data with simple i.i.d. resampling, which destroys serial autocorrelation; block bootstrap must be used instead.`,
+      r`Using the standard leave-one-out jackknife for the median; removing one point changes the median in discrete jumps, leading to inconsistent variance estimates.`,
+      r`Believing the bootstrap creates new information; if the original sample is small or unrepresentative, the bootstrap simply replicates that bias.`,
+      r`Using too few bootstrap replications; while $B = 200$ suffices for standard errors, confidence interval tails require $B \ge 1,000$ to $2,000$.`,
+    ],
+    code: r`import numpy as np
+
+rng = np.random.default_rng(42)
+# Skewed sample of 50 observations (e.g. server latencies in ms)
+data = rng.lognormal(mean=3.0, sigma=0.8, size=50)
+
+# Non-parametric statistic: sample median
+sample_median = np.median(data)
+
+# Bootstrap estimation (B = 2,000 resamples)
+B = 2000
+boot_medians = np.zeros(B)
+n = len(data)
+
+for b in range(B):
+    resample = rng.choice(data, size=n, replace=True)
+    boot_medians[b] = np.median(resample)
+
+boot_se = np.std(boot_medians, ddof=1)
+ci_lower = np.percentile(boot_medians, 2.5)
+ci_upper = np.percentile(boot_medians, 97.5)
+
+print(f"Sample Median: {sample_median:.2f}")
+print(f"Bootstrap SE: {boot_se:.3f}")
+print(f"95% Percentile CI: [{ci_lower:.2f}, {ci_upper:.2f}]")`,
+    quiz: [
+      {
+        q: r`What approximate percentage of unique original training instances are included in any single standard bootstrap sample of size $n$?`,
+        o: [r`50.0%`, r`63.2%`, r`95.0%`, r`100.0%`],
+        a: 1,
+        why: r`Because sampling is done with replacement, each point has probability $1 - (1 - 1/n)^n \approx 1 - e^{-1} \approx 0.6321$ (or 63.2%) of appearing at least once.`,
+      },
+      {
+        q: r`For which of the following statistics does the classical leave-one-out jackknife fail to provide a consistent variance estimate?`,
+        o: [r`Sample mean`, r`Sample variance`, r`Sample median`, r`Linear regression slope`],
+        a: 2,
+        why: r`The jackknife requires the estimator to be smooth (differentiable). The sample median is non-smooth; deleting a single point causes discontinuous jumps in rank.`,
+      },
+      {
+        q: r`Why is naive i.i.d. bootstrapping inappropriate for time-series forecasting models?`,
+        o: [r`Because time-series data cannot be averaged`, r`Because bootstrap samples must be larger than $n$`, r`Because time-series data is always strictly Gaussian`, r`Because random resampling with replacement destroys temporal ordering and autocorrelation`],
+        a: 3,
+        why: r`Independent resampling scrambles the sequence of observations, destroying serial dependence. Time-series data requires block bootstrapping to preserve local autocorrelation.`,
+      },
+      {
+        q: r`What is the primary advantage of the bootstrap over classical asymptotic normal confidence intervals?`,
+        o: [r`It does not require deriving analytical formulas or assuming a specific parametric distribution`, r`It guarantees narrower confidence intervals`, r`It eliminates all sampling bias automatically`, r`It works with zero data`],
+        a: 0,
+        why: r`The bootstrap is fully non-parametric and computational: it estimates standard errors and quantiles directly from empirical resampling without requiring closed-form calculus derivations or Gaussian assumptions.`,
+      },
+    ],
+    usedBy: ['random_forest_regressor', 'random_forest_classifier', 'cross-validation'],
+    prereq: ['sampling-and-standard-error', 'confidence-intervals'],
+    related: ['cross-validation', 'bias-variance-tradeoff'],
+    keywords: 'bootstrap jackknife resampling replacement out-of-bag oob non-parametric percentile',
+  },
 ];
