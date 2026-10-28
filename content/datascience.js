@@ -892,4 +892,490 @@ print(f"Sample 0 -> Target: {y_target[0]:.2f}, Lag-1: {series[2]:.2f}, 3-step Ro
     related: ['stationarity-acf-and-pacf', 'exponential-smoothing-ets', 'gradient_boosting_regressor'],
     keywords: 'lag features rolling window features time series feature engineering ewma lookahead leakage supervised forecasting autocorrelation',
   },
+  {
+    id: 'train-validation-test-splits-group-and-time-based',
+    short: 'Splits: group and time-based',
+    title: 'Train/Validation/Test Splits: Group and Time-Based',
+    task: 'concepts',
+    module: 'Pipelines and validation',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Partitioning data to mirror true production inference constraints, preventing optimistic bias caused by grouped customer records or temporal lookahead.`,
+    lead: r`A naive random 80/20 split assumes observations are independent and identically distributed. In real-world data science, multiple rows often originate from the same patient, device, or customer, and data arrives chronologically over time. Group-aware and time-based splits enforce strict boundaries across clusters and time horizons, ensuring validation scores accurately reflect generalisation to unseen entities and future events.`,
+    intuition: [
+      r`Imagine building a diagnostic computer vision system to detect skin lesions. You collect 10,000 dermatoscopic images across 200 patients. If you shuffle the images uniformly into a standard 80/20 train/test split, photos from almost every patient appear in both the training set and the test set. The model can easily achieve 98% test accuracy simply by memorising patient-specific skin tones, hair patterns, lighting conditions, or hospital background tags. When you ship the model to a new clinic and test it on patient #201, performance collapses to 65% because the model learned patient identity rather than medical pathology. Group-based splitting prevents this by allocating all observations from any single patient exclusively to train or test.`,
+      r`A parallel disaster unfolds in temporal forecasting. Suppose you predict daily supermarket sales. If you shuffle transactions randomly across a year, the training set will contain transactions from Monday, Wednesday, and Friday, while the validation set contains Tuesday and Thursday. The model predicts Tuesday's sales using information from Wednesday and Thursday—an impossible lookahead scenario in deployment. Time-based splitting enforces the chronological arrow of time: training on historical months (e.g. January through September) and validating strictly on subsequent months (e.g. October through December).`,
+      r`The classic three-way partition separates concerns across the modelling lifecycle: the training set optimises internal model parameters; the validation set compares architectures, calibrates thresholds, and tunes hyperparameters; and the test set remains locked in an untouchable vault until final sign-off. Repeatedly consulting test metrics during model iteration leaks test information into human design decisions, turning the final evaluation into a disguised validation set.`,
+    ],
+    analogy: r`Testing a trainee doctor on new patients they have never examined before, rather than quizzing them on the exact same patients they observed during morning rounds.`,
+    steps: [
+      r`Audit structural dependencies: identify whether records cluster within entities (user ID, hospital, vehicle) or follow a continuous timeline.`,
+      r`Select splitting architecture: use GroupKFold or GroupShuffleSplit for clustered entities, and TimeSeriesSplit or chronological holdout for sequential processes.`,
+      r`Enforce temporal embargo gaps: when features use rolling lookback windows or labels take time to resolve, insert an embargo buffer between train and test.`,
+      r`Isolate the final test vault: seal test data prior to exploratory analysis, feature extraction, and preprocessing fitment.`,
+      r`Verify disjoint entity boundaries: programmatically assert that the intersection between training entity identifiers and validation entity identifiers is strictly empty.`,
+    ],
+    math: [
+      {
+        h: 'Disjoint group partition constraint',
+        tex: r`\mathcal{G}_{\text{train}} \cap \mathcal{G}_{\text{val}} = \emptyset, \qquad \mathcal{G}_{\text{train}} \cup \mathcal{G}_{\text{val}} \subseteq \mathcal{G}`,
+        p: r`Where $\mathcal{G}$ represents the universe of unique entity identifiers (such as user or device IDs), and $\mathcal{G}_{\text{train}}$ and $\mathcal{G}_{\text{val}}$ are the subsets allocated to training and validation. Enforcing zero intersection ensures that no entity-specific idiosyncrasies can leak across partition boundaries.`,
+      },
+      {
+        h: 'Chronological split with purge and embargo gap',
+        tex: r`\max_{i \in \mathcal{D}_{\text{train}}} t_i < t_{\text{split}} < t_{\text{split}} + \Delta t_{\text{embargo}} \le \min_{j \in \mathcal{D}_{\text{val}}} t_j`,
+        p: r`Where $t_i$ is the event timestamp for record $i$, $t_{\text{split}}$ is the historical cutoff, and $\Delta t_{\text{embargo}}$ is an enforced purge window. Purging eliminates records whose rolling aggregations or future outcome resolutions span across the split boundary.`,
+      },
+      {
+        h: 'Expected generalisation risk under cluster shift',
+        tex: r`\mathcal{R}_{\text{group}}(\hat{f}) = \mathbb{E}_{G \sim \mathcal{P}_G} \left[ \mathbb{E}_{(X, Y) \sim \mathcal{P}_{XY|G}} [L(Y, \hat{f}(X))] \right]`,
+        p: r`Validation evaluates expected loss across newly drawn groups $G \sim \mathcal{P}_G$ rather than repeated draws from known training groups. This provides an unbiased estimator of true out-of-distribution performance when deploying to fresh customers or environments.`,
+      },
+    ],
+    keyPoints: [
+      r`Random shuffling on clustered or longitudinal data creates severe optimistic bias by rewarding models that memorise entity identities.`,
+      r`Chronological splits preserve the causal arrow of time, replicating true forward-looking production conditions.`,
+      r`Purging and embargo gaps prevent subtle leakage caused by multi-day rolling features or forward-looking label windows near split cutoffs.`,
+    ],
+    pitfalls: [
+      r`Randomly splitting panel datasets where multiple rows originate from the same user, machine, or household.`,
+      r`Evaluating time series with standard k-fold cross-validation, allowing future information to train models predicting past events.`,
+      r`Peeking at the final test set: adjusting hyperparameters or feature selections based on test feedback invalidates unbiased generalisation guarantees.`,
+    ],
+    code: r`import numpy as np
+
+# 1. Simulate longitudinal data: 8 entities, 5 measurements each
+np.random.seed(42)
+n_groups, n_obs = 8, 5
+group_ids = np.repeat(np.arange(n_groups), n_obs)
+# Entity random intercepts induce strong intra-group correlation
+group_effects = np.random.normal(0, 5.0, size=n_groups)
+X = np.random.normal(0, 1.0, size=(n_groups * n_obs, 1))
+y = 2.0 * X[:, 0] + group_effects[group_ids] + np.random.normal(0, 0.5, size=n_groups * n_obs)
+
+# Standard random split: same groups appear in both train and test
+perm = np.random.permutation(len(y))
+train_idx_rand, test_idx_rand = perm[:24], perm[24:]
+rand_overlap = len(set(group_ids[train_idx_rand]) & set(group_ids[test_idx_rand]))
+
+# Group-aware split: groups are partitioned disjointly
+unique_groups = np.unique(group_ids)
+np.random.shuffle(unique_groups)
+train_groups, test_groups = unique_groups[:5], unique_groups[5:]
+train_idx_grp = np.isin(group_ids, train_groups)
+test_idx_grp = np.isin(group_ids, test_groups)
+grp_overlap = len(set(group_ids[train_idx_grp]) & set(group_ids[test_idx_grp]))
+
+print(f"Random split shared entity overlap: {rand_overlap} groups")
+print(f"Group split shared entity overlap:  {grp_overlap} groups")
+print(f"Train groups: {[int(g) for g in train_groups]}, Test groups: {[int(g) for g in test_groups]}")`,
+    quiz: [
+      {
+        q: r`Why does standard random k-fold cross-validation yield misleadingly optimistic accuracy when applied to multi-visit hospital patient records?`,
+        o: [
+          r`Because patient records can only be validated using leave-one-out cross-validation`,
+          r`Because images and measurements from the same patient appear in both train and test folds, allowing models to memorise patient traits`,
+          r`Because k-fold cross-validation forces all features to follow Gaussian distributions`,
+          r`Because random splitting removes rows with missing values automatically`,
+        ],
+        a: 1,
+        why: r`When multi-row records from the same patient are scattered randomly across folds, the model learns patient-specific quirks (skin tone, background artifacts) rather than generalisable disease patterns, producing false confidence.`,
+      },
+      {
+        q: r`When splitting time-series data for a model forecasting demand 7 days ahead, why is an embargo or purge gap necessary at the split boundary?`,
+        o: [
+          r`To prevent rolling window features computed near the boundary from incorporating future post-split information`,
+          r`To ensure the training dataset contains an even number of samples`,
+          r`To artificially boost the variance of the validation predictions`,
+          r`Because scikit-learn models crash if time steps are strictly contiguous`,
+        ],
+        a: 0,
+        why: r`If features compute rolling multi-day averages or if target labels take several days to materialize, observations immediately preceding the split line may incorporate or overlap with target period data unless an embargo buffer is enforced.`,
+      },
+      {
+        q: r`What is the primary role of the holdout test set compared to the validation set in a supervised learning project?`,
+        o: [
+          r`The test set is used to optimise gradient descent learning rates`,
+          r`The test set is used for feature selection, while validation is used for training`,
+          r`The test set provides an untouched, unbiased assessment of final generalisation after all model and tuning decisions are frozen`,
+          r`The test set must be three times larger than the training set`,
+        ],
+        a: 2,
+        why: r`Iterating on models, features, and hyperparameters against a validation set causes subtle validation overfitting. An untouched test set serves as the final arbiter of performance.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['cross-validation', 'bias-variance-tradeoff'],
+    related: ['data-leakage', 'scikit-learn-pipelines-and-columntransformer', 'lag-and-rolling-window-features'],
+    keywords: 'train test split group kfold time based split validation data leakage embargo purge temporal holdout',
+  },
+  {
+    id: 'data-leakage',
+    short: 'Data leakage',
+    title: 'Data Leakage',
+    task: 'concepts',
+    module: 'Pipelines and validation',
+    level: 2,
+    minutes: 15,
+    noLab: true,
+    summary: r`Diagnosing and preventing the insidious contamination of training data with information available only at inference or in the future.`,
+    lead: r`Data leakage occurs when information from outside the training partition—or information unavailable at the real-time moment of prediction—inadvertently contaminates model training. Leakage produces deceptively flawless cross-validation scores that abruptly collapse into catastrophic failures in production. Recognizing target leakage, feature leakage, and preprocessing leakage is essential for reliable machine learning.`,
+    intuition: [
+      r`Imagine training a machine learning model to predict whether a hospital patient will develop severe pneumonia. During feature engineering, you include a column called "Antibiotic IV Dosage Administered". In offline validation, the model achieves a miraculous 99.8% ROC-AUC. But in clinical practice, doctors only prescribe high-dose IV antibiotics after pneumonia has already been diagnosed! The model did not predict pneumonia; it merely detected the physician's reaction to pneumonia. This is classic target leakage—including a feature that is a downstream consequence of the target rather than a genuine antecedent predictor.`,
+      r`A subtler, pervasive trap is preprocessing leakage. Suppose you standardise a dataset by subtracting the mean and dividing by the standard deviation. If you compute the mean and variance across the entire table before splitting into training and test sets, the training data has absorbed statistical parameters derived from the test set. If you perform feature selection or target encoding across the entire table, test labels directly influence the features selected for training, manufacturing artificial predictive power out of pure noise.`,
+      r`The diagnostic hallmark of data leakage is performance that appears "too good to be true". Whenever a model achieves near-perfect metrics on a notoriously noisy or uncertain task, the cause is almost never an algorithmic breakthrough—it is almost always data leakage. Building strict isolation firewalls around the point of prediction ensures models rely solely on information that genuinely exists at decision time.`,
+    ],
+    analogy: r`Studying for a medical licensing exam with a stolen copy of the answer key: you score 100% on practice exams, but fail in the clinic when answers are no longer provided.`,
+    steps: [
+      r`Define the point of prediction: fix the exact real-world timestamp $T_{\text{pred}}$ when inference executes in production.`,
+      r`Audit feature timelines: systematically eliminate any feature created, updated, or recorded after $T_{\text{pred}}$ (downstream consequence of the target).`,
+      r`Fit all transformers inside cross-validation: enforce that scalers, imputers, and encoders call fit strictly on training folds and transform on validation folds.`,
+      r`Isolate target encoding out-of-fold: ensure target-based categorical encodings exclude the current record's label to prevent self-referential leakage.`,
+      r`Stress-test with temporal holdouts: validate models on a strictly future time block; a dramatic divergence between cross-validation and holdout exposes leakage.`,
+    ],
+    math: [
+      {
+        h: 'Mutual information target leakage condition',
+        tex: r`I(X_{\text{leaked}}; Y \mid T_{\text{pred}}) \gg I(X_{\text{valid}}; Y \mid T_{\text{pred}})`,
+        p: r`Where $X_{\text{leaked}}$ represents information generated chronologically after decision timestamp $T_{\text{pred}}$. Such features exhibit spurious high mutual information with target $Y$ during backtesting that disappears under true live inference.`,
+      },
+      {
+        h: 'Global preprocessing parameter mismatch',
+        tex: r`\hat{\mu}_{\text{leaked}} = \frac{1}{n_{\text{tr}} + n_{\text{val}}} \sum_{i \in \mathcal{D}_{\text{tr}} \cup \mathcal{D}_{\text{val}}} x_i \ne \hat{\mu}_{\text{train}} = \frac{1}{n_{\text{tr}}} \sum_{i \in \mathcal{D}_{\text{tr}}} x_i`,
+        p: r`Estimating transformation parameters (such as mean $\hat{\mu}$ or variance $\hat{\sigma}^2$) across the pooled dataset introduces an out-of-fold bias of order $\mathcal{O}(n_{\text{val}} / n)$, breaking the statistical independence assumption between training and validation partitions.`,
+      },
+      {
+        h: 'Out-of-fold target encoding formulation',
+        tex: r`\hat{S}_{i, c} = \frac{\sum_{j \in \mathcal{D}_{\text{tr}} \setminus \{i\}, X_j = c} y_j + m \bar{y}_{\text{tr}}}{n_{c, \text{tr},-i} + m}`,
+        p: r`Target encoding must be computed by explicitly excluding sample $i$ (or via out-of-fold cross-fitting), preventing observation $i$'s own target label $y_i$ from leaking directly into its feature representation.`,
+      },
+    ],
+    keyPoints: [
+      r`Target leakage introduces features that are downstream effects or proxies of the outcome rather than causes.`,
+      r`Preprocessing leakage occurs whenever transformation parameters (means, medians, vocabularies) are learned on pooled train and test data.`,
+      r`Feature selection leakage across the entire dataset can make pure noise appear 80%+ accurate in cross-validation.`,
+    ],
+    pitfalls: [
+      r`Calling fit_transform on the full dataset before splitting into train, validation, and test partitions.`,
+      r`Performing unsupervised or supervised feature selection on the entire dataset prior to cross-validation.`,
+      r`Including database record update timestamps, transaction IDs, or account closure dates that are logged concurrently with the target event.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate feature selection leakage on pure noise (100 samples, 500 noise features)
+np.random.seed(42)
+n_samples, n_features = 100, 500
+X = np.random.normal(0, 1, size=(n_samples, n_features))
+y = np.random.binomial(1, 0.5, size=n_samples)  # independent random binary targets
+
+# 1. LEAKED: Select top 5 correlated features using the FULL dataset before splitting
+corrs = np.array([np.abs(np.corrcoef(X[:, j], y)[0, 1]) for j in range(n_features)])
+top_leaked = np.argsort(corrs)[-5:]
+
+# Nearest centroid classification on test set using leaked features
+train_idx, test_idx = np.arange(70), np.arange(70, 100)
+c1_leak = np.mean(X[train_idx][y[train_idx] == 1][:, top_leaked], axis=0)
+c0_leak = np.mean(X[train_idx][y[train_idx] == 0][:, top_leaked], axis=0)
+preds_leak = (np.linalg.norm(X[test_idx][:, top_leaked] - c1_leak, axis=1) <
+              np.linalg.norm(X[test_idx][:, top_leaked] - c0_leak, axis=1)).astype(int)
+acc_leak = np.mean(preds_leak == y[test_idx])
+
+# 2. CLEAN: Select features using ONLY training partition
+corrs_clean = np.array([np.abs(np.corrcoef(X[train_idx, j], y[train_idx])[0, 1]) for j in range(n_features)])
+top_clean = np.argsort(corrs_clean)[-5:]
+c1_clean = np.mean(X[train_idx][y[train_idx] == 1][:, top_clean], axis=0)
+c0_clean = np.mean(X[train_idx][y[train_idx] == 0][:, top_clean], axis=0)
+preds_clean = (np.linalg.norm(X[test_idx][:, top_clean] - c1_clean, axis=1) <
+               np.linalg.norm(X[test_idx][:, top_clean] - c0_clean, axis=1)).astype(int)
+acc_clean = np.mean(preds_clean == y[test_idx])
+
+print(f"Test accuracy with feature selection leakage: {acc_leak:.2f}")
+print(f"Test accuracy with clean in-fold selection:   {acc_clean:.2f}")`,
+    quiz: [
+      {
+        q: r`A machine learning engineer achieves 99.5% accuracy predicting loan defaults, but in production the model performs no better than random guessing. What is the most probable cause?`,
+        o: [
+          r`The learning rate in gradient descent was set too low`,
+          r`A feature such as 'Collection Agency Referral Date' was included, which is only populated after a borrower defaults (target leakage)`,
+          r`The dataset was scaled using RobustScaler instead of StandardScaler`,
+          r`The model had too few tree estimators`,
+        ],
+        a: 1,
+        why: r`Features that are populated or updated as a consequence of the target event (like referral to collections) leak future outcome knowledge into training, creating deceptive offline performance that fails live.`,
+      },
+      {
+        q: r`Why is computing StandardScaler mean and standard deviation across an entire dataset prior to cross-validation considered data leakage?`,
+        o: [
+          r`It inflates the training set with test distribution statistics, violating the assumption that test data is unseen`,
+          r`It forces continuous features to become discrete integers`,
+          r`It causes the matrix inverse to become singular during regression`,
+          r`It converts the target variable into a normal distribution`,
+        ],
+        a: 0,
+        why: r`Fitting transformers on the full dataset allows test set statistical information to seep into the training set, causing optimistic validation scores.`,
+      },
+      {
+        q: r`How does out-of-fold target encoding prevent target leakage in high-cardinality categorical variables?`,
+        o: [
+          r`By replacing all categorical strings with random Gaussian noise`,
+          r`By ensuring each observation's target encoding is calculated exclusively from other rows, excluding its own target value`,
+          r`By converting categorical columns into one-hot binary columns`,
+          r`By calculating category means only on the test partition`,
+        ],
+        a: 1,
+        why: r`If a row's own target label is included when calculating its category's mean target value, the feature directly leaks the label, especially for rare categories with sample count 1.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['train-validation-test-splits-group-and-time-based', 'cross-validation'],
+    related: ['scikit-learn-pipelines-and-columntransformer', 'missing-data-mcar-mar-mnar-and-imputation', 'encoding-categoricals-one-hot-ordinal-target-woe'],
+    keywords: 'data leakage target leakage preprocessing leakage feature leakage lookahead bias out of fold cross validation',
+  },
+  {
+    id: 'scikit-learn-pipelines-and-columntransformer',
+    short: 'Pipelines and ColumnTransformer',
+    title: 'scikit-learn Pipelines and ColumnTransformer',
+    task: 'concepts',
+    module: 'Pipelines and validation',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Composing heterogeneous feature transformations and estimators into unified, leakage-free workflows that adhere to the standard fit/transform contract.`,
+    lead: r`Real-world datasets mix numeric measurements, categorical identifiers, and text fields that each require distinct preprocessing pipelines. Manually transforming columns across loose scripts invariably induces subtle data leakage and deployment friction. scikit-learn Pipeline chains sequential transformations with estimators, while ColumnTransformer routes heterogeneous columns through dedicated preprocessing branches under an atomic fit/transform contract.`,
+    intuition: [
+      r`Imagine an automobile manufacturing assembly line. Raw steel and chassis components enter at station 1, doors and windows are attached at station 2, the engine is mounted at station 3, and final safety inspection occurs at station 4. If a mechanic at station 2 tries to install doors using measurements from a vehicle that has not yet entered the factory, the entire process breaks down. In messy data science workflows, analysts often run loose pandas scripts that fill missing values with the global median and scale columns across the whole table before splitting. This silently leaks test data into training.`,
+      r`The scikit-learn Pipeline solves this by encapsulating the entire chain into a single composite estimator. When you call pipeline.fit(X_train, y_train), every intermediate step learns its parameters (e.g. imputation medians, scaling means and standard deviations) exclusively on X_train. When you subsequently call pipeline.predict(X_test), those exact learned parameters are applied to X_test without re-fitting. The test set remains completely pristine and unobserved until the prediction step.`,
+      r`ColumnTransformer extends this principle to multi-type tabular data. Instead of forcing you to manually slice and re-glue numpy matrices, ColumnTransformer acts as a declarative routing switchboard: continuous numerical columns are routed to median imputers and standard scalers; categorical columns are routed to frequent imputers and one-hot encoders; and non-informative IDs are dropped. The transformed branches are automatically concatenated horizontally into a dense or sparse design matrix ready for the final model.`,
+    ],
+    analogy: r`A parcel sorting facility where letters, fragile boxes, and oversized packages are routed to dedicated conveyor belts and reassembled into a single delivery truck.`,
+    steps: [
+      r`Partition feature columns by type: identify continuous numerical features, low-cardinality categoricals, and high-cardinality identifiers.`,
+      r`Construct modular sub-pipelines: build dedicated Pipeline objects for each data type (e.g. median imputer + robust scaler for numeric columns).`,
+      r`Assemble ColumnTransformer: bind sub-pipelines to column lists, specifying remainder='drop' or remainder='passthrough'.`,
+      r`Append final estimator: package the ColumnTransformer and the downstream classifier or regressor into a unified root Pipeline.`,
+      r`Execute atomic validation: pass the root Pipeline directly into cross-validation functions; all preprocessing steps re-fit cleanly within each training fold.`,
+    ],
+    math: [
+      {
+        h: 'Sequential transformation composition',
+        tex: r`\hat{y} = f_{\theta} \left( T_k \left( T_{k-1} \left( \dots T_1(X) \dots \right) \right) \right)`,
+        p: r`Where each transformation $T_j(X) = \phi_j(X; \hat{\Theta}_j)$ is parametrised by parameters $\hat{\Theta}_j$ learned strictly during the fitting phase of the training partition $\mathcal{D}_{\text{train}}$, ensuring complete encapsulation.`,
+      },
+      {
+        h: 'ColumnTransformer partitioned dispatch',
+        tex: r`T_{\text{column}}(X) = \bigoplus_{m=1}^M T_m\left(X_{[:, \mathcal{J}_m]}\right)`,
+        p: r`Where $\mathcal{J}_1, \dots, \mathcal{J}_M$ partition the feature column indices, $X_{[:, \mathcal{J}_m]}$ is the submatrix of selected features, and $\bigoplus$ represents horizontal matrix concatenation along the feature axis.`,
+      },
+      {
+        h: 'Out-of-sample inference invariance',
+        tex: r`T_m\left(X_{\text{test}}; \hat{\Theta}_{m, \text{train}}\right) = \phi_m\left(X_{\text{test}}; \hat{\Theta}_{m, \text{train}}\right)`,
+        p: r`Crucially, the learned transformation parameters $\hat{\Theta}_{m, \text{train}}$ remain fixed and immutable when transforming $X_{\text{test}}$, guaranteeing that test set distribution shifts never feed backward into model parameters.`,
+      },
+    ],
+    keyPoints: [
+      r`Pipelines enforce atomic execution of preprocessing and modelling, completely eliminating preprocessing leakage across cross-validation folds.`,
+      r`ColumnTransformer dispatches distinct feature subsets to specialised sub-pipelines, eliminating fragile manual matrix slicing.`,
+      r`Hyperparameter search can simultaneously optimise preprocessing choices (e.g. imputer strategy) and estimator hyperparameters (e.g. regularisation strength) in a single grid search.`,
+    ],
+    pitfalls: [
+      r`Calling fit_transform on validation or test datasets instead of transform, which overwrites learned training statistics with test statistics.`,
+      r`Relying on column integer indices in ColumnTransformer when input dataframes can have columns reordered between development and deployment.`,
+      r`Writing custom transformers that do not adhere to the scikit-learn API contract: missing fit returning self, or transform returning a 2D array.`,
+    ],
+    code: r`import numpy as np
+
+# Pure NumPy implementation of Pipeline and ColumnTransformer pattern
+class ColumnTransformer:
+    def __init__(self, transformers):
+        self.transformers = transformers  # list of (name, transformer, cols)
+    def fit(self, X):
+        for _, t, cols in self.transformers:
+            t.fit(X[:, cols])
+        return self
+    def transform(self, X):
+        transformed = [t.transform(X[:, cols]) for _, t, cols in self.transformers]
+        return np.hstack(transformed)
+
+class ImputeAndScale:
+    def fit(self, X):
+        self.mean_ = np.nanmean(X, axis=0)
+        X_imp = np.where(np.isnan(X), self.mean_, X)
+        self.std_ = np.std(X_imp, axis=0) + 1e-8
+        return self
+    def transform(self, X):
+        X_imp = np.where(np.isnan(X), self.mean_, X)
+        return (X_imp - self.mean_) / self.std_
+
+# Simulated dataset: cols 0-1 continuous with NaNs, col 2 binary indicator
+np.random.seed(42)
+X_train = np.array([[25.0, 50000.0, 1], [np.nan, 80000.0, 0], [45.0, 120000.0, 1], [30.0, np.nan, 0]])
+X_test = np.array([[np.nan, 60000.0, 1], [50.0, 95000.0, 0]])
+
+ct = ColumnTransformer([
+    ('num', ImputeAndScale(), [0, 1]),
+    ('pass', type('Pass', (), {'fit': lambda s, x: s, 'transform': lambda s, x: x})(), [2])
+])
+ct.fit(X_train)
+X_test_trans = ct.transform(X_test)
+
+print(f"Fitted train means: age={ct.transformers[0][1].mean_[0]:.1f}, salary={ct.transformers[0][1].mean_[1]:.1f}")
+print(f"Transformed test shape: {X_test_trans.shape}")
+print(f"Test sample 0 transformed: {np.round(X_test_trans[0], 2)}")`,
+    quiz: [
+      {
+        q: r`When evaluating a composite scikit-learn Pipeline with cross-validation, how does it prevent preprocessing data leakage?`,
+        o: [
+          r`By fitting intermediate transformers strictly on the training fold and applying transform to the validation fold`,
+          r`By removing all non-numeric columns from the dataset before splitting`,
+          r`By doubling the number of cross-validation iterations automatically`,
+          r`By converting all estimators into linear regressions`,
+        ],
+        a: 0,
+        why: r`Because the Pipeline encapsulates transformers and estimators together, cross-validation re-fits the transformers from scratch on each training fold, preventing test fold contamination.`,
+      },
+      {
+        q: r`What critical scikit-learn convention must custom transformer classes adhere to so they integrate smoothly into a Pipeline?`,
+        o: [
+          r`They must define fit(X, y) returning self and transform(X) returning a 2D array or dataframe`,
+          r`They must inherit from torch.nn.Module`,
+          r`They must run asynchronously using Python threading`,
+          r`They must implement backpropagation gradients manually`,
+        ],
+        a: 0,
+        why: r`The standard scikit-learn transformer protocol requires a fit method that estimates parameters and returns self, and a transform method that applies those parameters to transform input arrays.`,
+      },
+      {
+        q: r`What happens if you accidentally call fit_transform instead of transform on a test dataset during production inference?`,
+        o: [
+          r`The code throws an immediate syntax error`,
+          r`The pipeline re-estimates transformation parameters (e.g. mean, variance) from the test batch, discarding learned training baselines and creating distribution shift`,
+          r`The pipeline permanently deletes the trained model weights`,
+          r`The predictions become exactly zero for all inputs`,
+        ],
+        a: 1,
+        why: r`Calling fit_transform on test or production data recalculates statistics from the incoming batch, which corrupts inference if test batch sizes are small or unrepresentative.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['data-leakage', 'train-validation-test-splits-group-and-time-based'],
+    related: ['scaling-and-transforms-standard-robust-box-cox-yeo-johnson', 'missing-data-mcar-mar-mnar-and-imputation', 'encoding-categoricals-one-hot-ordinal-target-woe'],
+    keywords: 'scikit learn pipeline columntransformer feature preprocessing transformer fit transform data leakage cross validation',
+  },
+  {
+    id: 'forecast-metrics-mae-mase-smape-wape',
+    short: 'Forecast metrics: MAE, MASE',
+    title: 'Forecast Metrics: MAE, MASE, sMAPE, WAPE',
+    task: 'concepts',
+    module: 'Forecasting at scale',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Evaluating time-series forecasts across varying demand scales, intermittent zeros, and directional asymmetries without scale distortion.`,
+    lead: r`Evaluating time-series forecasts requires fundamentally different metrics than standard cross-sectional regression. Traditional percentage errors like MAPE explode or divide by zero when demand is intermittent, while scale-dependent metrics like RMSE penalize high-volume series while ignoring slow-moving items. Scale-independent metrics such as MASE, sMAPE, and WAPE provide robust, business-interpretable evaluations across massive forecasting hierarchies.`,
+    intuition: [
+      r`Imagine managing inventory for a national supermarket chain with 50,000 distinct items. For high-velocity goods like two-litre milk bottles, a single store sells 5,000 units weekly; your forecast of 4,800 units is off by 200 units, representing an error of 4%. For slow-moving specialty items like saffron or organic truffle oil, the store sells 1 unit every other week (average 0.5 units). If your model predicts 0 units when 1 unit is sold, the absolute error is just 1 unit, but the classic Mean Absolute Percentage Error (MAPE) is 100%. If actual sales are 0 and the model predicts 1, MAPE divides by zero and becomes mathematically undefined! Averaging MAPE across 50,000 items produces an infinite or completely distorted score dominated by slow movers.`,
+      r`To resolve scale disparities without dividing by zero, Rob Hyndman and Anne Koehler introduced Mean Absolute Scaled Error (MASE). MASE divides the model's test Mean Absolute Error (MAE) by the in-sample MAE of a naive baseline (predicting tomorrow using yesterday's actuals on historical training data). If MASE is less than 1.0, the forecast outperforms a trivial random-walk persistence baseline; if MASE exceeds 1.0, the forecast is literally worse than doing nothing. Because the scaling denominator comes from the training series, MASE never divides by zero on non-constant series and remains directly comparable across high-volume and low-volume products.`,
+      r`For supply chain executives and inventory planners, aggregate financial discrepancies matter more than unweighted item percentages. Weighted Absolute Percentage Error (WAPE) sums the absolute forecast errors across all time steps and items and divides by the total actual sales volume. Unlike unweighted MAPE, WAPE cannot divide by zero at individual item timestamps, and it automatically weights errors in proportion to each product's sales volume.`,
+    ],
+    analogy: r`Scoring a golfer relative to par on different courses (MASE) rather than counting raw strokes, or measuring an entire company's budget accuracy by total revenue discrepancy (WAPE) rather than averaging departmental percentage errors.`,
+    steps: [
+      r`Audit series for zero demand: identify sparsity, intermittency, or zeros that rule out standard percentage metrics like MAPE.`,
+      r`Establish naive baseline benchmark: compute the in-sample Mean Absolute Error of a one-step persistence forecast on training history.`,
+      r`Compute scale-free MASE: divide forecast test MAE by the training naive benchmark MAE to measure relative skill.`,
+      r`Calculate portfolio WAPE: sum absolute errors across all time points and SKUs, dividing by total actual volume to obtain a volume-weighted percentage error.`,
+      r`Inspect directional bias: calculate mean error or sMAPE to ensure the model does not systematically over-forecast or under-forecast demand.`,
+    ],
+    math: [
+      {
+        h: 'Mean Absolute Error (MAE) and Weighted Absolute Percentage Error (WAPE)',
+        tex: r`\text{MAE} = \frac{1}{H} \sum_{t=1}^H |y_t - \hat{y}_t|, \qquad \text{WAPE} = \frac{\sum_{t=1}^H |y_t - \hat{y}_t|}{\sum_{t=1}^H y_t}`,
+        p: r`Where $H$ is the forecast horizon, $y_t$ is actual demand, and $\hat{y}_t$ is the forecast. WAPE aggregates errors across all time points and items before dividing by total volume, avoiding zero-division singularities and weighting errors by volume.`,
+      },
+      {
+        h: 'Mean Absolute Scaled Error (MASE)',
+        tex: r`\text{MASE} = \frac{\frac{1}{H}\sum_{t=1}^H |y_t - \hat{y}_t|}{\frac{1}{T-1} \sum_{t=2}^T |y_t - y_{t-1}|}`,
+        p: r`Where the denominator is the in-sample Mean Absolute Error of the naive persistence forecast computed across training history of length $T$. A value $\text{MASE} < 1$ indicates that the forecast outperforms the trivial persistence baseline.`,
+      },
+      {
+        h: 'Symmetric Mean Absolute Percentage Error (sMAPE)',
+        tex: r`\text{sMAPE} = \frac{100\%}{H} \sum_{t=1}^H \frac{|y_t - \hat{y}_t|}{(|y_t| + |\hat{y}_t|) / 2}`,
+        p: r`sMAPE bounds percentage errors between $0\%$ and $200\%$ by normalising by the average of actual and predicted values, though it penalises under-forecasting more heavily than over-forecasting.`,
+      },
+    ],
+    keyPoints: [
+      r`MASE normalises error by the in-sample naive persistence baseline, enabling unbiased comparisons across series with radically different scales.`,
+      r`WAPE weights errors by volume, providing a robust aggregate percentage metric that never divides by zero on intermittent demand.`,
+      r`Standard MAPE fails on intermittent demand series where actual values equal zero, producing infinities and heavily skewed portfolio summaries.`,
+    ],
+    pitfalls: [
+      r`Using traditional MAPE on datasets with zero actual values, resulting in division by zero or explosive values.`,
+      r`Computing the MASE naive benchmark denominator on the test set instead of the historical training set.`,
+      r`Overlooking sMAPE directional asymmetry: predicting 0 when actual is 100 yields 200% error, whereas predicting 200 when actual is 100 yields only 66.7% error.`,
+    ],
+    code: r`import numpy as np
+
+def mae(actual, pred):
+    return np.mean(np.abs(actual - pred))
+
+def wape(actual, pred):
+    return np.sum(np.abs(actual - pred)) / np.sum(actual)
+
+def mase(actual, pred, train_history):
+    naive_mae = np.mean(np.abs(np.diff(train_history)))
+    return mae(actual, pred) / naive_mae
+
+def smape(actual, pred):
+    denom = (np.abs(actual) + np.abs(pred)) / 2.0
+    return np.mean(np.where(denom == 0, 0, np.abs(actual - pred) / denom)) * 100
+
+# Realistic intermittent retail demand series
+train_history = np.array([12, 15, 11, 14, 0, 8, 10, 13, 16, 12, 14, 15], dtype=float)
+y_actual = np.array([14, 0, 9, 12, 15, 0], dtype=float)
+y_pred = np.array([13, 2, 10, 11, 14, 1], dtype=float)
+
+print(f"MAE:   {mae(y_actual, y_pred):.2f} units")
+print(f"WAPE:  {wape(y_actual, y_pred):.1%} of total volume")
+print(f"MASE:  {mase(y_actual, y_pred, train_history):.3f} (< 1 beats naive baseline)")
+print(f"sMAPE: {smape(y_actual, y_pred):.1f}%")`,
+    quiz: [
+      {
+        q: r`Why is Mean Absolute Scaled Error (MASE) preferred over Mean Absolute Percentage Error (MAPE) when evaluating intermittent demand forecasts with frequent zero sales?`,
+        o: [
+          r`Because MAPE divides by zero whenever actual demand is zero, producing undefined or explosive errors, whereas MASE normalises by the in-sample naive baseline`,
+          r`Because MASE only works on integer values`,
+          r`Because MAPE cannot be computed on more than 10 time periods`,
+          r`Because MASE converts all forecasts into negative probabilities`,
+        ],
+        a: 0,
+        why: r`MAPE has actual demand in its denominator, creating division-by-zero singularities whenever sales are 0. MASE scales by the historical naive baseline error, avoiding zero division on non-trivial series.`,
+      },
+      {
+        q: r`A retail demand forecasting model achieves a MASE of 0.65 on a holdout test horizon. How should an analyst interpret this result?`,
+        o: [
+          r`The model has an error rate of 65%`,
+          r`The model reduces mean absolute error by 35% compared to a naive persistence random-walk baseline`,
+          r`The model fails to beat a trivial persistence forecast`,
+          r`The model predicts negative demand for 65% of products`,
+        ],
+        a: 1,
+        why: r`A MASE below 1.0 indicates superior performance relative to the one-step naive baseline; a score of 0.65 means the model's error is 65% of the naive baseline error (a 35% error reduction).`,
+      },
+      {
+        q: r`In supply chain forecasting across multiple products, why is Weighted Absolute Percentage Error (WAPE) often preferred over unweighted portfolio MAPE?`,
+        o: [
+          r`WAPE squares all errors to heavily penalise outliers`,
+          r`WAPE weights errors proportionally by product sales volume, preventing low-volume items from dominating total business error`,
+          r`WAPE does not require knowing the actual sales values`,
+          r`WAPE is strictly guaranteed to be zero for linear regression models`,
+        ],
+        a: 1,
+        why: r`Unweighted MAPE gives equal importance to an item selling 1 unit and an item selling 10,000 units. WAPE sums errors across all items before dividing by total volume, accurately reflecting overall business impact.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['regression-metrics', 'lag-and-rolling-window-features'],
+    related: ['train-validation-test-splits-group-and-time-based', 'data-leakage', 'outlier-handling'],
+    keywords: 'forecast metrics mae mase smape wape mape time series demand forecasting scale independent hyndman',
+  },
 ];
