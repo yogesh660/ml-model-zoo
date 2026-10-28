@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvshmbk3">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvshmbk3">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -136,6 +136,65 @@ bkm = <span class="f">BisectingKMeans</span>(n_clusters=<span class="n">5</span>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>A random one</span></button><button class="opt" type="button"><b>B</b><span>The one with the largest within-cluster SSE</span></button><button class="opt" type="button"><b>C</b><span>The smallest</span></button><button class="opt" type="button"><b>D</b><span>The newest</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It targets the cluster that explains the most remaining error.</div>
           </div>
+          <div class="q" data-answer="1">
+            <p><span>Q2</span>What is the top-down nature of divisive hierarchical clustering compared to agglomerative clustering?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Divisive starts with every point as a separate cluster and merges them, whereas agglomerative splits</span></button><button class="opt" type="button"><b>B</b><span>Divisive starts with all observations in a single cluster and recursively splits them into smaller clusters</span></button><button class="opt" type="button"><b>C</b><span>Divisive can only produce exactly 2 clusters</span></button><button class="opt" type="button"><b>D</b><span>Divisive requires pre-specifying a neural network architecture</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Divisive (top-down) clustering begins with one root cluster containing the entire dataset and iteratively partitions clusters until $k$ leaves or singletons remain.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>What core algorithm is typically executed at each step of bisecting k-means to partition a selected cluster?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard k-means with $k = 2$ (2-means)</span></button><button class="opt" type="button"><b>B</b><span>DBSCAN with $\varepsilon = 0.5$</span></button><button class="opt" type="button"><b>C</b><span>Principal Component Analysis</span></button><button class="opt" type="button"><b>D</b><span>Hierarchical single linkage</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Bisecting k-means works by running 2-means ($k = 2$) on the selected cluster, splitting it into exactly two sub-clusters at each step.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>In scikit-learn's <code>BisectingKMeans</code>, which two strategies can be specified via the <code>bisecting_strategy</code> parameter to choose the next cluster to split?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>"random" and "sequential"</span></button><button class="opt" type="button"><b>B</b><span>"biggest_inertia" and "largest_cluster"</span></button><button class="opt" type="button"><b>C</b><span>"ward" and "complete"</span></button><button class="opt" type="button"><b>D</b><span>"silhouette" and "calinski"</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> <code>BisectingKMeans</code> offers two splitting strategies: <code>"biggest_inertia"</code> (splits the cluster with largest sum of squared errors) and <code>"largest_cluster"</code> (splits the cluster containing the most data points).</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q5</span>Why does bisecting k-means often scale much better to large datasets than agglomerative hierarchical clustering?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because bisecting k-means does not construct a tree</span></button><button class="opt" type="button"><b>B</b><span>Because it eliminates the need for computing Euclidean distances</span></button><button class="opt" type="button"><b>C</b><span>Because its time complexity is roughly $O(n \cdot k \cdot p)$ instead of $O(n^2)$ or $O(n^3)$ required to compute and update pairwise distance matrices</span></button><button class="opt" type="button"><b>D</b><span>Because it guarantees global optimality in a single iteration</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Agglomerative clustering requires storing and updating an $n \times n$ distance matrix ($O(n^2)$ space, $O(n^2 \log n)$ time). Bisecting k-means only runs fast linear-time 2-means iterations, scaling as $O(n \cdot k \cdot p)$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>What happens when bisecting k-means makes a poor split near the top of the tree?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The algorithm backtracks and undoes the split during the final phase</span></button><button class="opt" type="button"><b>B</b><span>Points trapped on the wrong branch can never be reassigned to the other branch, as splits are permanently locked</span></button><button class="opt" type="button"><b>C</b><span>The algorithm switches to agglomerative linkage</span></button><button class="opt" type="button"><b>D</b><span>The number of clusters automatically doubles</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Like all greedy hierarchical methods, divisive splits are permanent. A point separated into branch A can never be grouped with points in branch B at subsequent levels.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>Why does bisecting k-means often produce more evenly sized clusters than standard Lloyd's k-means?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it enforces a strict constraint that all clusters must have equal cardinality</span></button><button class="opt" type="button"><b>B</b><span>Because splitting the highest-inertia or largest cluster targets sprawling clusters and breaks them down before touching compact groups</span></button><button class="opt" type="button"><b>C</b><span>Because it uses Manhattan distance instead of squared Euclidean distance</span></button><button class="opt" type="button"><b>D</b><span>Because it runs in reverse from leaves to root</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By prioritising clusters with large SSE or large member counts for the next bisection, the algorithm repeatedly breaks down large, dispersed groups while preserving tight, naturally small clusters.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>What is the role of the <code>n_init</code> parameter in <code>BisectingKMeans</code>?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of times 2-means is run with different random seeds for each split, keeping the bisection with the lowest SSE</span></button><button class="opt" type="button"><b>B</b><span>The number of initial clusters to create at the root</span></button><button class="opt" type="button"><b>C</b><span>The maximum tree depth allowed</span></button><button class="opt" type="button"><b>D</b><span>The learning rate for gradient updates</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because standard k-means is sensitive to centroid initialisation, running 2-means multiple times (e.g. <code>n_init=3</code>) at each split ensures a robust, high-quality local bisection.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>In what scenario would you avoid using bisecting k-means?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>When clustering large text document collections into a topical hierarchy</span></button><button class="opt" type="button"><b>B</b><span>When clusters have non-convex, manifold geometries like intertwined rings or crescents</span></button><button class="opt" type="button"><b>C</b><span>When you need a quick hierarchical summary of customer transaction data</span></button><button class="opt" type="button"><b>D</b><span>When the feature space has more than 10 dimensions</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because bisecting k-means uses 2-means at each step, it inherits k-means' linear Voronoi boundary assumption. It cannot trace non-convex shapes like concentric circles or crescents.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>To produce a final clustering with $k = 6$ clusters using bisecting k-means, how many individual 2-means bisection splits must be performed?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>3</span></button><button class="opt" type="button"><b>B</b><span>6</span></button><button class="opt" type="button"><b>C</b><span>5</span></button><button class="opt" type="button"><b>D</b><span>8</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Every binary split adds exactly one net cluster to the pool. Starting from 1 initial root cluster, achieving $k = 6$ clusters requires exactly $k - 1 = 5$ bisections.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Suppose an intermediate step of bisecting k-means has three active clusters with the following properties:
+Cluster 1: $n_1 = 100$, SSE $= 240$
+Cluster 2: $n_2 = 250$, SSE $= 180$
+Cluster 3: $n_3 = 50$, SSE $= 310$
+If <code>bisecting_strategy="biggest_inertia"</code> is used, which cluster is chosen for the next split; and which would be chosen if <code>bisecting_strategy="largest_cluster"</code> were used?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Cluster 1 under both strategies</span></button><button class="opt" type="button"><b>B</b><span>Cluster 3 under biggest_inertia, and Cluster 2 under largest_cluster</span></button><button class="opt" type="button"><b>C</b><span>Cluster 2 under biggest_inertia, and Cluster 3 under largest_cluster</span></button><button class="opt" type="button"><b>D</b><span>Cluster 3 under both strategies</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> <code>biggest_inertia</code> selects the cluster with the highest within-cluster SSE, which is Cluster 3 ($\text{SSE} = 310$). <code>largest_cluster</code> selects the cluster with the largest number of observations, which is Cluster 2 ($n = 250$).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>Consider 6 points on a line: $\{0, 2, 4, 20, 22, 24\}$. In the first bisection of bisecting k-means, a 2-means split partitions the data into $\{0, 2, 4\}$ and $\{20, 22, 24\}$. What is the total sum of squared errors (SSE) of this 2-cluster partition?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>8</span></button><button class="opt" type="button"><b>B</b><span>16</span></button><button class="opt" type="button"><b>C</b><span>32</span></button><button class="opt" type="button"><b>D</b><span>64</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The centroid of the first group is $\mu_1 = 2$, giving $\text{SSE}_1 = (-2)^2 + 0^2 + 2^2 = 8$. The centroid of the second group is $\mu_2 = 22$, giving $\text{SSE}_2 = (-2)^2 + 0^2 + 2^2 = 8$. Total inertia is $8 + 8 = 16$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -171,11 +230,11 @@ bkm = <span class="f">BisectingKMeans</span>(n_clusters=<span class="n">5</span>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvshmbk3" defer></script>
+<script src="../../assets/labs/core.js?v=mvshmbk3" defer></script>
+<script src="../../assets/labs/algos.js?v=mvshmbk3" defer></script>
+<script src="../../assets/labs/models.js?v=mvshmbk3" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvshmbk3" defer></script>
+<script src="../../assets/learn.js?v=mvshmbk3" defer></script>
 </body>
 </html>
