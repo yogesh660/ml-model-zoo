@@ -966,4 +966,885 @@ print("\nVerified: TF-IDF vectorisation and cosine similarity ranking executed s
   related: ['stop-words-and-n-grams', 'word-and-sentence-tokenization', 'text-normalisation-unicode-and-regex'],
   keywords: 'bag of words bow tf idf term frequency inverse document frequency information retrieval count vectorizer cosine similarity karen sparck jones nlp text classification',
 },
+
+// ------------------------------------------------------------------ 1. BM25 and search ranking
+  {
+    id: 'bm25-and-search-ranking',
+    short: 'BM25 & Search Ranking',
+    title: 'BM25 and search ranking',
+    task: 'concepts',
+    module: '1 · Words and text',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`BM25 (Best Matching 25, or Okapi BM25) is the industry-standard probabilistic ranking function for lexical search engines such as Lucene and Elasticsearch. It overcomes the two core weaknesses of classical TF-IDF: unbounded term frequency runaway and aggressive length distortion. By introducing asymptotic term frequency saturation via hyperparameter k1 and penalising verbose documents relative to the average corpus length via hyperparameter b, BM25 provides resilient, high-precision search ranking.`,
+    lead: r`If a user searches for "machine learning", a document that repeats the word "learning" one thousand times should not automatically outrank a concise, perfectly targeted technical tutorial. Under vanilla TF-IDF, term frequency grows linearly or logarithmically without an upper bound, making keyword-stuffed pages dominate search results. Okapi BM25 fixes this fundamental flaw: it models the probabilistic odds of relevance, caps the scoring contribution of any single term via an asymptotic saturation curve, and balances document length penalisation against average corpus depth.`,
+    intuition: [
+      r`The diminishing returns of term frequency: Imagine reading an introductory paper on neural networks. The first mention of the word "backpropagation" is enormously informative—it signals that the document is genuinely about neural training. The fourth mention confirms its centrality. But does the fiftieth mention make the document fifty times more relevant than the first? Obviously not. BM25 introduces term frequency saturation: the relevance boost granted by each additional occurrence of a query term rapidly tapers off, approaching an asymptotic upper ceiling (k1 + 1).`,
+      r`Document length and the dual nature of verbosity: A long document can arise for two very different reasons: verbosity (the author used 3,000 words to explain what could be said in 300) or scope (the document is a comprehensive handbook covering 50 distinct subtopics). If a search engine ignores document length, long documents win every query by sheer token volume. If it divides by document length naively (like Euclidean normalisation in TF-IDF), comprehensive articles are unfairly penalised. BM25 uses hyperparameter b to calibrate length normalisation against the corpus mean length, penalising repetitive verbosity while preserving fair scoring for comprehensive documents.`,
+      r`Why BM25 anchors the modern search stack: Despite the rise of dense neural embeddings and vector databases, BM25 remains indispensable in production information retrieval. Dense vector models struggle with exact product serial numbers, rare medical jargon, and specific names where semantic similarity fails. Production search architectures almost universally rely on hybrid retrieval: an inverted index running BM25 retrieves high-precision candidate documents in microseconds, which are then fused with dense embeddings using reciprocal rank fusion before neural reranking.`,
+    ],
+    analogy: r`Think of judging candidate job applicants based on a required skill like "Python programming". Candidate A mentions Python twice across a tidy one-page curriculum vitae. Candidate B is a spammer who copy-pasted the word "Python" five hundred times at the bottom of their CV in tiny font. Under linear TF-IDF, Candidate B scores 250 times higher than Candidate A and gets hired immediately. BM25 acts like an experienced hiring manager: hearing "Python" twice is great evidence of competence, but hearing it twenty more times adds almost no extra conviction (saturation via k1). Furthermore, the manager judges whether the applicant's CV is abnormally long compared to typical CVs (length normalisation via b), easily exposing spam while rewarding concise, relevant experience.`,
+    steps: [
+      {
+        title: r`Tokenise and compute collection length statistics`,
+        desc: r`Segment documents into tokens and compute total corpus length and average document length.`,
+        detail: r`Tokenise all N documents in the collection D. Measure the token length |D| of each document and calculate the average document length avgdl across the entire corpus.`,
+      },
+      {
+        title: r`Construct inverted index and document frequencies`,
+        desc: r`Map vocabulary terms to posting lists and calculate document frequencies.`,
+        detail: r`For each distinct query term q_i, count the number of documents n(q_i) that contain at least one occurrence of q_i. Build an inverted index mapping each term to its list of matching document IDs and within-document frequencies f(q_i, D).`,
+      },
+      {
+        title: r`Compute Robertson-Spärck Jones IDF with non-negative smoothing`,
+        desc: r`Calculate inverse document frequency weights for all terms in the query.`,
+        detail: r`Apply the Robertson-Spärck Jones IDF formula with Lucene-style non-negative smoothing: IDF(q_i) = ln(1 + (N - n(q_i) + 0.5) / (n(q_i) + 0.5)). The +1 offset ensures that frequent terms occurring in the majority of documents never produce negative IDF weights.`,
+      },
+      {
+        title: r`Calculate saturated term frequency and length penalty`,
+        desc: r`Scale term frequencies using hyperparameters k1 and b relative to avgdl.`,
+        detail: r`For each document matching query terms, compute the length scaling factor K = k1 * (1 - b + b * (|D| / avgdl)). Then compute the saturated TF component: (f(q_i, D) * (k1 + 1)) / (f(q_i, D) + K).`,
+      },
+      {
+        title: r`Accumulate BM25 scores and rank candidate documents`,
+        desc: r`Sum the products of IDF and saturated TF across all query terms to rank results.`,
+        detail: r`Sum the term contributions for each candidate document to obtain the final BM25 score. Sort matching documents in descending order of score and return the top-k ranked results.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Robertson-Spärck Jones IDF (Lucene non-negative formulation)`,
+        tex: r`\operatorname{IDF}(q_i) = \ln \left( 1 + \frac{N - n(q_i) + 0.5}{n(q_i) + 0.5} \right)`,
+        p: r`Here $N$ is total corpus size and $n(q_i)$ is the number of documents containing term $q_i$. Adding $1$ inside the natural logarithm guarantees that $\operatorname{IDF}(q_i) \ge 0$ for all terms, eliminating the risk of negative scores on common words.`,
+      },
+      {
+        h: r`Okapi BM25 scoring function`,
+        tex: r`\operatorname{BM25}(D, Q) = \sum_{i=1}^{|Q|} \operatorname{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \left( 1 - b + b \cdot \frac{|D|}{\operatorname{avgdl}} \right)}`,
+        p: r`Here $f(q_i, D)$ is raw within-document term frequency, $|D|$ is document length in tokens, $\operatorname{avgdl}$ is the collection mean length, $k_1 \in [1.2, 2.0]$ controls saturation speed, and $b \in [0.5, 0.8]$ calibrates document length normalisation.`,
+      },
+      {
+        h: r`Term frequency asymptotic upper bound`,
+        tex: r`\lim_{f(q_i, D) \to \infty} \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + K} = k_1 + 1, \quad \text{where } K = k_1 \left(1 - b + b \cdot \frac{|D|}{\operatorname{avgdl}}\right)`,
+        p: r`Unlike vanilla TF-IDF which grows without bound, the term frequency component in BM25 is strictly bounded above by $(k_1 + 1)$, ensuring diminishing marginal returns and neutralising keyword-stuffing attacks.`,
+      },
+    ],
+    keyPoints: [
+      r`Okapi BM25 is a probabilistic ranking function that resolves the runaway term frequency and length distortion issues of TF-IDF.`,
+      r`Hyperparameter k1 enforces term frequency saturation, establishing an asymptotic ceiling on any single term's score contribution.`,
+      r`Hyperparameter b penalises overly verbose documents relative to the collection average length avgdl while fairly scoring comprehensive documents.`,
+      r`Lucene-style non-negative IDF prevents terms appearing in more than 50% of documents from generating negative relevance scores.`,
+      r`BM25 is the universal sparse lexical baseline in modern search engines and the foundational lexical retrieval leg in hybrid RAG systems.`,
+    ],
+    pitfalls: [
+      r`Using unfloored original RSJ IDF: The original 1976 formula produces negative IDF values when a term appears in more than half the corpus, causing documents matching common terms to lose rank. Always use the modern non-negative Lucene formulation.`,
+      r`Setting b = 1 unconditionally: Complete length normalisation severely penalises long, authoritative reference articles covering multiple related topics. Standard practice sets b = 0.75 as an optimal empirical balance.`,
+      r`Mismatched query and index tokenisation: If index terms are lowercased and lemmatised but queries are processed verbatim with capital letters and punctuation, BM25 lookup misses matching posting lists entirely. Preprocessing pipelines must be identical.`,
+      r`Ignoring zero-count query terms in sparse scoring: Query terms absent from the dictionary have undefined IDF; ensure the query evaluator gracefully defaults unknown tokens to zero score without raising key errors.`,
+    ],
+    code: r`import math
+import re
+from collections import Counter
+
+class BM25Okapi:
+    """
+    Self-contained implementation of Okapi BM25 ranking algorithm
+    with Lucene-style non-negative IDF and length normalisation.
+    """
+    def __init__(self, corpus, k1=1.5, b=0.75):
+        self.k1 = k1
+        self.b = b
+        self.corpus_size = len(corpus)
+        self.doc_lengths = []
+        self.doc_freqs = Counter()
+        self.doc_term_freqs = []
+        self.avgdl = 0.0
+        self.idf = {}
+        
+        self._build_index(corpus)
+        
+    def _tokenize(self, text):
+        return [tok for tok in re.split(r'\W+', text.lower()) if tok]
+
+    def _build_index(self, corpus):
+        total_len = 0
+        for doc in corpus:
+            tokens = self._tokenize(doc)
+            length = len(tokens)
+            self.doc_lengths.append(length)
+            total_len += length
+            
+            tf = Counter(tokens)
+            self.doc_term_freqs.append(tf)
+            
+            for term in tf.keys():
+                self.doc_freqs[term] += 1
+                
+        self.avgdl = total_len / self.corpus_size if self.corpus_size > 0 else 0.0
+        
+        # Precompute Lucene-style non-negative Robertson-Spärck Jones IDF
+        for term, df in self.doc_freqs.items():
+            numerator = self.corpus_size - df + 0.5
+            denominator = df + 0.5
+            self.idf[term] = math.log(1.0 + (numerator / denominator))
+
+    def score(self, query_tokens, doc_index):
+        score = 0.0
+        doc_len = self.doc_lengths[doc_index]
+        tf_dict = self.doc_term_freqs[doc_index]
+        
+        len_factor = 1.0 - self.b + self.b * (doc_len / self.avgdl)
+        
+        for q in query_tokens:
+            if q not in self.idf:
+                continue
+            freq = tf_dict.get(q, 0)
+            if freq == 0:
+                continue
+                
+            idf_val = self.idf[q]
+            tf_comp = (freq * (self.k1 + 1.0)) / (freq + self.k1 * len_factor)
+            score += idf_val * tf_comp
+            
+        return score
+
+    def rank(self, query, top_k=5):
+        q_tokens = self._tokenize(query)
+        scores = []
+        for doc_idx in range(self.corpus_size):
+            s = self.score(q_tokens, doc_idx)
+            scores.append((doc_idx, s))
+            
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores[:top_k]
+
+# Sample corpus
+corpus = [
+    "Machine learning algorithms build mathematical models based on sample training data.",
+    "Deep neural networks and convolutional networks excel at computer vision tasks.",
+    "Natural language processing and search engines use inverted indices and ranking functions.",
+    "Search engines use BM25 to rank documents based on query term frequency and document length.",
+    "Machine learning search engines combine dense embeddings and lexical BM25 for hybrid retrieval.",
+    "The weather in London is cloudy with occasional showers in late autumn."
+]
+
+bm25 = BM25Okapi(corpus, k1=1.5, b=0.75)
+
+print(f"Corpus size: {bm25.corpus_size} documents")
+print(f"Average document length: {bm25.avgdl:.2f} tokens")
+print("\nSample IDF weights:")
+for sample_term in ["search", "engines", "bm25", "learning", "weather"]:
+    print(f"  IDF('{sample_term}'): {bm25.idf.get(sample_term, 0.0):.4f}")
+
+test_query = "search engines BM25 ranking"
+print(f"\nTop search results for query: '{test_query}'")
+rankings = bm25.rank(test_query, top_k=3)
+for rank, (doc_idx, score) in enumerate(rankings, 1):
+    print(f"{rank}. [Score: {score:.4f}] Doc {doc_idx}: '{corpus[doc_idx]}'")
+`,
+    quiz: [
+      {
+        q: r`Why does BM25 utilise term frequency saturation controlled by hyperparameter k1 instead of linear term frequency?`,
+        o: [
+          r`To prevent keyword-stuffed documents from achieving artificially inflated relevance scores through diminishing marginal returns`,
+          r`To reduce the dimension of the vocabulary matrix to zero`,
+          r`To convert all floating-point term weights into 8-bit integers`,
+          r`To ensure that query terms are always processed in reverse alphabetical order`,
+        ],
+        a: 0,
+        why: r`Linear TF allows a document repeating a keyword 100 times to dominate rankings regardless of quality. By enforcing an asymptotic upper limit (k1 + 1), BM25 ensures that additional keyword occurrences yield diminishing marginal gains.`,
+      },
+      {
+        q: r`What does setting the length normalisation parameter b = 0 in BM25 achieve?`,
+        o: [
+          r`It completely deactivates document length penalisation, treating short and long documents identically for equal term frequencies`,
+          r`It forces all document relevance scores to exactly zero`,
+          r`It eliminates all stop words from the query vector`,
+          r`It restricts the index to documents containing exactly zero tokens`,
+        ],
+        a: 0,
+        why: r`In the term K = k1 * (1 - b + b * (|D| / avgdl)), setting b = 0 collapses K to the constant k1. Document length |D| is completely eliminated from the scoring calculation.`,
+      },
+      {
+        q: r`What is the purpose of the +1 offset inside the logarithm in modern Lucene-style BM25 IDF: ln(1 + (N - n(q) + 0.5) / (n(q) + 0.5))?`,
+        o: [
+          r`It guarantees that the IDF value is always strictly non-negative, preventing terms that appear in the majority of documents from contributing negative scores`,
+          r`It ensures that the term frequency is multiplied by two`,
+          r`It converts the base from natural logarithm to base 10`,
+          r`It allows the algorithm to run on GPU hardware without CUDA errors`,
+        ],
+        a: 0,
+        why: r`In the original RSJ IDF formula, any word appearing in more than 50% of the corpus produced a negative value. Adding 1 inside the natural log guarantees that the argument is always >= 1, ensuring non-negative weights for all terms.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bag-of-words-and-tf-idf', 'stop-words-and-n-grams'],
+    related: ['bag-of-words-and-tf-idf', 'stemming-vs-lemmatisation', 'stop-words-and-n-grams'],
+    keywords: 'bm25 okapi bm25 search ranking information retrieval probabilistic relevance term frequency saturation document length normalisation tf idf elasticsearch lucene inverted index',
+  },
+
+  // ------------------------------------------------------------------ 2. Part-of-speech tagging
+  {
+    id: 'part-of-speech-tagging',
+    short: 'POS Tagging',
+    title: 'Part-of-speech tagging',
+    task: 'concepts',
+    module: '2 · Syntax',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Part-of-speech (POS) tagging is the foundational NLP task of assigning grammatical word classes (such as noun, verb, adjective, or preposition) to each token in a sentence. Because most common words are polysemous and syntactically ambiguous (e.g. "run" as a verb or noun, "flies" as a noun or verb), POS taggers resolve ambiguity by modelling local lexical emissions alongside grammatical transitions using rule-based heuristics, Hidden Markov Models (HMMs), or neural sequence models.`,
+    lead: r`Consider the classic ambiguous sentence: "Time flies like an arrow; fruit flies like a banana." In the first half, "flies" is an active verb and "like" is a preposition. In the second half, "flies" is a plural noun (the insect Drosophila) and "like" is a verb expressing enjoyment. A naive dictionary lookup fails because human language is saturated with morphosyntactic ambiguity. Part-of-speech tagging resolves this by balancing what a word looks like against the grammatical rhythm of the words around it.`,
+    intuition: [
+      r`Open vs closed grammatical word classes: Human language consists of two distinct categories of words. Open classes—nouns, lexical verbs, adjectives, and adverbs—carry core semantic content and welcome new additions freely (e.g. "selfie", "googleable"). Closed classes—pronouns, determiners, conjunctions, and prepositions—are structural function words with small, fixed inventories (e.g. "the", "of", "and"). Closed class words rarely change POS, while open class words frequently shift between nouns, verbs, and modifiers depending on context.`,
+      r`The dance between lexical emissions and grammatical transitions: A POS tagger balances two probabilistic forces: emission probability P(word | tag) and transition probability P(tag_i | tag_{i-1}). The emission probability asks: "How likely is the English noun class to emit the specific word 'flies'?" The transition probability asks: "In English grammar, how often does a determiner directly precede another determiner, or a noun precede a verb?" Even if "flies" is most frequently a verb in general usage, if it is preceded by "the fruit", the syntactic transition makes noun far more probable.`,
+      r`Why POS tagging unlocks downstream NLP pipelines: POS tags act as essential grammatical signposts. Lemmatisation algorithms need POS tags to know whether "saw" should reduce to the base verb "see" or the noun "saw". Speech synthesis engines use POS tags to choose correct phonetics (e.g. "produce" stressed on the first syllable as a noun versus the second syllable as a verb). In dependency parsing and information extraction, POS tags prune the search space of grammatical relations by orders of magnitude.`,
+    ],
+    analogy: r`Imagine you are an orchestra conductor listening to an unfamiliar musical piece. Some notes are identical in pitch (like ambiguous words), but their musical function changes completely based on harmony and sequence: a C-major chord can serve as a triumphant tonic home base or a tense transitional pivot. You do not identify a chord in isolation; you evaluate the notes being played right now (lexical emission) alongside the harmonic chord progression that led up to it and where it resolves next (grammatical transition). POS tagging conducts an orchestra of words, ensuring every token plays its proper grammatical role in the syntactic symphony.`,
+    steps: [
+      {
+        title: r`Tokenise text and initialise sentence boundaries`,
+        desc: r`Segment input sentences into words and insert boundary start and stop markers.`,
+        detail: r`Split text into discrete word tokens. Insert special sentinel tags (<START>, <STOP>) at sentence boundaries to condition initial tag transitions.`,
+      },
+      {
+        title: r`Estimate transition and emission probability matrices`,
+        desc: r`Count tag bigrams and word emissions from an annotated training corpus.`,
+        detail: r`From a tagged treebank, calculate tag-to-tag transition counts C(t_{i-1}, t_i) and tag-to-word emission counts C(t_i, w_i). Apply Laplace or Good-Turing smoothing to ensure non-zero probabilities for rare pairs.`,
+      },
+      {
+        title: r`Handle out-of-vocabulary words via morphological heuristics`,
+        desc: r`Assign emission probabilities to unseen words using affixes and capitalisation.`,
+        detail: r`For words absent from the training vocabulary, back off to subword morphological features: suffixes like '-tion' indicate nouns, '-ly' indicates adverbs, '-ed' indicates past verbs, and initial capitalisation indicates proper nouns.`,
+      },
+      {
+        title: r`Execute Viterbi forward dynamic programming`,
+        desc: r`Compute maximum prefix probabilities and record state backpointers across time steps.`,
+        detail: r`Iterate through tokens t = 1 to T. For each candidate tag j in the tagset, find the preceding tag k that maximises the joint probability: v_t(j) = max_k [v_{t-1}(k) * P(t_j | t_k)] * P(w_t | t_j). Store the argmax index in backpointer bp_t(j).`,
+      },
+      {
+        title: r`Backtrack from optimal terminating tag to construct tag sequence`,
+        desc: r`Follow backpointers from sequence end to recover the globally optimal tag sequence.`,
+        detail: r`Identify the tag with highest probability at t = T. Follow stored backpointers backward from T down to 1 to reconstruct the global maximum a posteriori tag sequence in O(T * |Y|^2) time.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Probabilistic sequence formulation (MAP decoding)`,
+        tex: r`\hat{T} = \arg\max_{T \in \mathcal{Y}^T} P(T \mid W) = \arg\max_{T} P(W \mid T) P(T)`,
+        p: r`Here $W = (w_1, \dots, w_T)$ is the observed token sequence, and $T = (t_1, \dots, t_T)$ is the sequence of grammatical tags. Because $P(W)$ is constant across all candidate tag sequences, decoding maximises the product of prior and emission probabilities.`,
+      },
+      {
+        h: r`First-order Hidden Markov Model factorisation`,
+        tex: r`P(W, T) \approx \prod_{i=1}^T P(t_i \mid t_{i-1}) \cdot P(w_i \mid t_i)`,
+        p: r`Under the bigram Markov assumption, tag $t_i$ depends strictly on immediate predecessor $t_{i-1}$, and word $w_i$ depends strictly on current tag $t_i$, decomposing the joint probability into local transition and emission terms.`,
+      },
+      {
+        h: r`Viterbi dynamic programming recurrence`,
+        tex: r`v_t(j) = \max_{k \in \mathcal{Y}} \left[ v_{t-1}(k) \cdot P(t_j \mid t_k) \right] \cdot P(w_t \mid t_j)`,
+        p: r`Here $v_t(j)$ represents the highest probability of any valid tag prefix of length $t$ terminating in tag state $j$. Storing backpointers enables exact sequence recovery in $O(T \cdot |\mathcal{Y}|^2)$ polynomial time instead of exponential search.`,
+      },
+    ],
+    keyPoints: [
+      r`Part-of-speech tagging assigns grammatical categories to words to disambiguate morphosyntactic function in context.`,
+      r`Words are heavily polysemous: common words like "run", "flies", and "bank" shift between nouns and verbs based on adjacent syntax.`,
+      r`The first-order Hidden Markov Model balances tag transition probabilities P(t_i | t_{i-1}) against lexical emission probabilities P(w_i | t_i).`,
+      r`The Viterbi algorithm uses dynamic programming to discover the globally optimal tag sequence in O(T * |Y|^2) polynomial time.`,
+      r`Universal Dependencies provides a 17-tag cross-linguistic standard that harmonises morphosyntactic categories across human languages.`,
+    ],
+    pitfalls: [
+      r`Greedy local decoding: Picking the highest-probability tag at each token independently ignores downstream grammatical constraints, generating ungrammatical sequences like determiners followed directly by finite verbs.`,
+      r`Floating-point probability underflow: Multiplying dozens of small probabilities between 0 and 1 causes numeric underflow to zero. Always compute Viterbi in log-space: log(a * b) = log(a) + log(b).`,
+      r`Zero emission probabilities on out-of-vocabulary tokens: Encountering an unseen word without morphological smoothing collapses the entire sequence probability to zero. Always implement fallback subword smoothing.`,
+      r`Relying solely on overall accuracy: Because trivial function words ("the", "is") inflate overall token accuracy to >92%, always evaluate ambiguous word accuracy and out-of-vocabulary accuracy separately.`,
+    ],
+    code: r`import math
+from collections import defaultdict, Counter
+
+class HMMPOSTagger:
+    """
+    Bigram Hidden Markov Model (HMM) Part-of-Speech Tagger
+    with Laplace smoothing and log-space Viterbi decoding.
+    """
+    def __init__(self):
+        self.tags = set()
+        self.vocab = set()
+        self.transitions = defaultdict(Counter)
+        self.emissions = defaultdict(Counter)
+        self.tag_counts = Counter()
+        self.start_tag = "<START>"
+        
+    def train(self, tagged_sentences):
+        for sentence in tagged_sentences:
+            prev_tag = self.start_tag
+            self.tag_counts[prev_tag] += 1
+            
+            for word, tag in sentence:
+                word_clean = word.lower()
+                self.tags.add(tag)
+                self.vocab.add(word_clean)
+                
+                self.transitions[prev_tag][tag] += 1
+                self.emissions[tag][word_clean] += 1
+                self.tag_counts[tag] += 1
+                prev_tag = tag
+
+    def _log_transition(self, prev_t, curr_t, alpha=0.1):
+        count = self.transitions[prev_t][curr_t]
+        total = self.tag_counts[prev_t]
+        prob = (count + alpha) / (total + alpha * len(self.tags))
+        return math.log(prob)
+
+    def _log_emission(self, tag, word, beta=0.01):
+        word_clean = word.lower()
+        count = self.emissions[tag][word_clean]
+        total = self.tag_counts[tag]
+        vocab_len = len(self.vocab) if len(self.vocab) > 0 else 1
+        prob = (count + beta) / (total + beta * vocab_len)
+        return math.log(prob)
+
+    def tag(self, sentence_tokens):
+        T = len(sentence_tokens)
+        if T == 0:
+            return []
+            
+        tag_list = sorted(list(self.tags))
+        viterbi = [{} for _ in range(T)]
+        backpointer = [{} for _ in range(T)]
+        
+        w0 = sentence_tokens[0]
+        for tag in tag_list:
+            trans_p = self._log_transition(self.start_tag, tag)
+            emit_p = self._log_emission(tag, w0)
+            viterbi[0][tag] = trans_p + emit_p
+            backpointer[0][tag] = None
+            
+        for t in range(1, T):
+            wt = sentence_tokens[t]
+            for curr_t in tag_list:
+                emit_p = self._log_emission(curr_t, wt)
+                
+                best_prev_t = None
+                best_prob = -float('inf')
+                for prev_t in tag_list:
+                    p = viterbi[t-1][prev_t] + self._log_transition(prev_t, curr_t) + emit_p
+                    if p > best_prob:
+                        best_prob = p
+                        best_prev_t = prev_t
+                        
+                viterbi[t][curr_t] = best_prob
+                backpointer[t][curr_t] = best_prev_t
+                
+        best_last_tag = max(tag_list, key=lambda tag: viterbi[T-1][tag])
+        
+        best_tags = [best_last_tag]
+        curr = best_last_tag
+        for t in range(T - 1, 0, -1):
+            curr = backpointer[t][curr]
+            best_tags.append(curr)
+            
+        best_tags.reverse()
+        return list(zip(sentence_tokens, best_tags))
+
+# Sample corpus with ambiguous words: "flies", "can", "bank"
+train_data = [
+    [("the", "DET"), ("fruit", "NOUN"), ("flies", "NOUN"), ("eat", "VERB"), ("apples", "NOUN")],
+    [("time", "NOUN"), ("flies", "VERB"), ("like", "ADP"), ("an", "DET"), ("arrow", "NOUN")],
+    [("they", "PRON"), ("can", "AUX"), ("fish", "VERB"), ("in", "ADP"), ("the", "DET"), ("river", "NOUN")],
+    [("he", "PRON"), ("opened", "VERB"), ("a", "DET"), ("can", "NOUN"), ("of", "ADP"), ("tuna", "NOUN")],
+    [("the", "DET"), ("bank", "NOUN"), ("approved", "VERB"), ("the", "DET"), ("loan", "NOUN")],
+    [("birds", "NOUN"), ("can", "AUX"), ("bank", "VERB"), ("steeply", "ADV"), ("in", "ADP"), ("flight", "NOUN")]
+]
+
+tagger = HMMPOSTagger()
+tagger.train(train_data)
+
+test_sentences = [
+    ["time", "flies"],
+    ["fruit", "flies"],
+    ["can", "they", "bank"]
+]
+
+print("HMM POS Tagging Results:")
+for sent in test_sentences:
+    prediction = tagger.tag(sent)
+    res_str = " ".join([f"{w}/{t}" for w, t in prediction])
+    print(f"  Input: '{' '.join(sent)}' -> {res_str}")
+`,
+    quiz: [
+      {
+        q: r`Why is the Viterbi algorithm used instead of exhaustively enumerating every possible part-of-speech sequence?`,
+        o: [
+          r`Because exhaustive enumeration requires exponential O(|Y|^T) time, whereas Viterbi finds the global optimum in polynomial O(T * |Y|^2) time using dynamic programming`,
+          r`Because Viterbi approximates the answer using random sampling`,
+          r`Because exhaustive search cannot handle sentences containing punctuation`,
+          r`Because Viterbi eliminates the need for emission probabilities`,
+        ],
+        a: 0,
+        why: r`For a tagset of size |Y| and sentence length T, there are |Y|^T distinct paths. For 40 tags and 20 tokens, 40^20 is astronomical. Viterbi collapses identical prefix subproblems into T * |Y|^2 operations.`,
+      },
+      {
+        q: r`In the sentence "The sailor can can the tuna", how should the two occurrences of "can" be tagged morphosyntactically?`,
+        o: [
+          r`The first "can" is an auxiliary verb (AUX), and the second "can" is a lexical transitive verb (VERB) meaning to preserve food in a container`,
+          r`Both occurrences of "can" are common nouns (NOUN)`,
+          r`Both occurrences of "can" are modal auxiliaries (AUX)`,
+          r`The first "can" is a determiner (DET) and the second is a preposition (ADP)`,
+        ],
+        a: 0,
+        why: r`In English grammar, modal auxiliaries like "can" precede a base verb. Here, "can" serves first as an auxiliary expressing ability, followed immediately by the lexical verb "can" meaning to preserve or package into tins.`,
+      },
+      {
+        q: r`What makes discriminative Conditional Random Fields (CRFs) superior to generative Hidden Markov Models (HMMs) for POS tagging?`,
+        o: [
+          r`CRFs model the conditional distribution P(T | W) directly, enabling the inclusion of arbitrary overlapping, non-independent features such as capitalisation, prefixes, and suffixes without violating generative independence assumptions`,
+          r`CRFs run in O(1) constant time regardless of sentence length`,
+          r`CRFs do not require labelled training data`,
+          r`CRFs only work on English and cannot be applied to other human languages`,
+        ],
+        a: 0,
+        why: r`HMMs assume emissions are conditionally independent given the tag. Incorporating rich feature conjunctions violates HMM assumptions. CRFs model P(T | W) directly, supporting arbitrary overlapping feature functions.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['word-and-sentence-tokenization', 'text-normalisation-unicode-and-regex'],
+    related: ['word-and-sentence-tokenization', 'stemming-vs-lemmatisation', 'tokenization'],
+    keywords: 'part of speech pos tagging syntax morphosyntax universal dependencies penn treebank viterbi hidden markov model hmm crf sequence labelling bilstm',
+  },
+
+  // ------------------------------------------------------------------ 3. Dependency parsing
+  {
+    id: 'dependency-parsing',
+    short: 'Dependency Parsing',
+    title: 'Dependency parsing',
+    task: 'concepts',
+    module: '2 · Syntax',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Dependency parsing analyses the grammatical structure of a sentence by establishing directed, typed relations between words. Unlike constituency grammars that partition sentences into nested hierarchical phrases, dependency representations connect lexical heads directly to their dependents (e.g. subject, direct object, modifier). Transition-based dependency parsers use a shift-reduce state machine to build projective parse trees in linear O(n) time.`,
+    lead: r`When an NLP system needs to extract information from the sentence "The large enterprise acquired a promising robotics startup", it does not merely care that words occurred near each other. It must answer: Who acquired whom? What was large, and what was promising? Dependency parsing answers these semantic questions directly by revealing the grammatical skeleton: "enterprise" is the subject of "acquired", "startup" is the direct object, and "robotics" is a modifier.`,
+    intuition: [
+      r`Constituency versus dependency syntax: Phrase structure grammars (constituency) group words into nested syntactic brackets: sentences are divided into Noun Phrases and Verb Phrases. While mathematically elegant, constituency trees do not explicitly state which word is in charge. Dependency grammar cuts directly to the chase: words link directly to words through directed binary arcs. Every phrase has a single head word (the governor) that determines its syntactic category, and all other words in the phrase are dependents modifying that head.`,
+      r`The conveyor belt intuition of shift-reduce parsing: Think of transition-based parsing like an assembly line. Words arrive one by one on an input buffer (the conveyor belt). You pick up words and place them on a stack (your workbench). At each step, you decide whether to pull another word onto the workbench (SHIFT), link the top two words on the bench with a directed relationship where the second modifies the first (LEFT-ARC), or link them where the first modifies the second (RIGHT-ARC). When an arc is formed, the dependent word is removed, keeping only the head available to link with future words.`,
+      r`Projectivity and crossing arcs: When words are written out in linear order, a dependency tree is projective if every dependency arc can be drawn as an arc above the words without any lines crossing. Most English sentences are projective. However, languages with flexible word order (such as German, Latin, or Russian) and long-distance topicalisation produce crossing arcs (non-projectivity), requiring graph-based parsing algorithms like Chu-Liu-Edmonds maximum spanning trees.`,
+    ],
+    analogy: r`Imagine building a family tree or corporate organisational chart. Constituency parsing is like drawing circles around departments: "Engineering Department", "Backend Team", "Platform Squad". It tells you which group people belong to, but does not tell you who reports to whom. Dependency parsing is the actual reporting tree: Employee A reports to Team Lead B, who reports to Director C, who reports to the Chief Executive (the ROOT). Finding who is responsible for an action is as simple as tracing the directed arrows from manager to subordinate.`,
+    steps: [
+      {
+        title: r`Initialise parser configuration state`,
+        desc: r`Set up stack containing ROOT, buffer containing sentence words, and empty arc set.`,
+        detail: r`Create configuration state c = (stack, buffer, arcs). Push artificial index 0 (ROOT) onto the stack and load all token indices [1, 2, ..., n] into the input buffer.`,
+      },
+      {
+        title: r`Predict next transition action`,
+        desc: r`Use an oracle policy or neural classifier to choose between SHIFT, LEFT-ARC, or RIGHT-ARC.`,
+        detail: r`Inspect features from the top stack elements (s0, s1) and first buffer element (b0). A trained classifier predicts the highest scoring transition action and syntactic relation label.`,
+      },
+      {
+        title: r`Execute transition and update stack configuration`,
+        desc: r`Apply selected action to create directed arcs or advance the buffer.`,
+        detail: r`If SHIFT: pop b0 from buffer and push to stack. If LEFT-ARC: create arc s0 -> s1 with relation label and pop s1 from stack. If RIGHT-ARC: create arc s1 -> s0 with relation label and pop s0 from stack.`,
+      },
+      {
+        title: r`Repeat until buffer is empty and stack retains only ROOT`,
+        desc: r`Execute exactly 2n transitions to construct complete projective spanning tree.`,
+        detail: r`Continue iterating state transitions until the buffer is exhausted and the stack contains only the ROOT token. In an Arc-Standard system, exactly n shifts and n reductions are executed, completing parsing in linear O(n) time.`,
+      },
+      {
+        title: r`Extract typed dependency relations and evaluate tree`,
+        desc: r`Verify acyclicity and single-head constraints, then score UAS and LAS.`,
+        detail: r`Export extracted directed arcs. Check that each token has exactly one incoming parent arc. Evaluate parser accuracy against gold treebank annotations using Unlabelled Attachment Score (UAS) and Labelled Attachment Score (LAS).`,
+      },
+    ],
+    math: [
+      {
+        h: r`Formal dependency tree structural axioms`,
+        tex: r`d_{\text{in}}(w_0) = 0, \quad \forall i \ge 1: d_{\text{in}}(w_i) = 1, \quad G = (V, A) \text{ is acyclic}`,
+        p: r`A valid dependency tree over vocabulary nodes $V = \{w_0 = \text{ROOT}, w_1, \dots, w_n\}$ must be a directed spanning tree rooted at $w_0$, where every non-root word has in-degree exactly 1 with no directed cycles.`,
+      },
+      {
+        h: r`Arc-Standard transition operators`,
+        tex: r`\begin{aligned} \text{SHIFT} &: (\sigma, b_0 \mid \beta, A) \implies (\sigma \mid b_0, \beta, A) \\ \text{LEFT-ARC}_r &: (\sigma \mid s_1 \mid s_0, \beta, A) \implies (\sigma \mid s_0, \beta, A \cup \{(s_0, r, s_1)\}) \\ \text{RIGHT-ARC}_r &: (\sigma \mid s_1 \mid s_0, \beta, A) \implies (\sigma \mid s_1, \beta, A \cup \{(s_1, r, s_0)\}) \end{aligned}`,
+        p: r`Here $\sigma$ denotes the stack with elements $s_1, s_0$, $\beta$ is the buffer with head $b_0$, and $A$ is the accumulated set of dependency arcs. LEFT-ARC requires $s_1 \ne \text{ROOT}$.`,
+      },
+      {
+        h: r`Unlabelled (UAS) and Labelled (LAS) Attachment Scores`,
+        tex: r`\operatorname{UAS} = \frac{\sum_{i=1}^n \mathbb{I}(\hat{h}_i = h_i^*)}{n}, \quad \operatorname{LAS} = \frac{\sum_{i=1}^n \mathbb{I}(\hat{h}_i = h_i^* \land \hat{r}_i = r_i^*)}{n}`,
+        p: r`UAS evaluates whether token $i$ is assigned the correct head index $h_i^*$. LAS is the stricter standard metric requiring simultaneous correctness of both the parent head $h_i^*$ and the grammatical relation label $r_i^*$.`,
+      },
+    ],
+    keyPoints: [
+      r`Dependency parsing represents syntax as directed, labelled binary relations between head words and their dependent modifiers.`,
+      r`A well-formed dependency tree is a rooted, connected, acyclic directed graph where each word has in-degree exactly 1 except ROOT.`,
+      r`Transition-based parsers build projective trees in linear O(n) time using a shift-reduce state machine over a stack and buffer.`,
+      r`Projective trees have no crossing dependency arcs; non-projective trees require graph-based parsing algorithms or swap transitions.`,
+      r`Parsing accuracy is measured by Unlabelled Attachment Score (UAS) for head accuracy and Labelled Attachment Score (LAS) for typed relation accuracy.`,
+    ],
+    pitfalls: [
+      r`Inverting arc direction: In Universal Dependencies, arcs point from governor head to dependent modifier (head -> dependent). Reversing the direction creates an upside-down tree that fails grammatical validation.`,
+      r`Assuming all sentences are projective: While English is over 99% projective, languages with flexible word order (German, Russian, Hindi, Latin) have widespread crossing arcs that cannot be parsed by standard Arc-Standard without swap actions.`,
+      r`Cascading error propagation in greedy transition systems: Because transition decisions are hard and irrevocable, an early incorrect shift or reduction permanently corrupts subsequent stack states. Beam search or graph-based parsers help avoid early commitment.`,
+      r`Including the ROOT token in UAS/LAS scores: Evaluation standards (such as CoNLL) explicitly exclude the artificial ROOT token (id 0) from the scoring denominator. Including it artificially inflates accuracy metrics.`,
+    ],
+    code: r`class ArcStandardParser:
+    """
+    Deterministic Arc-Standard Transition-Based Dependency Parser.
+    Simulates stack, buffer, and arc transitions with an oracle policy.
+    """
+    def __init__(self, sentence, gold_arcs=None):
+        self.words = ["ROOT"] + sentence
+        self.stack = [0]
+        self.buffer = list(range(1, len(self.words)))
+        self.arcs = []
+        self.gold_arcs = gold_arcs or []
+        self.history = []
+
+    def can_left_arc(self):
+        return len(self.stack) >= 2 and self.stack[-2] != 0
+
+    def can_right_arc(self):
+        return len(self.stack) >= 2
+
+    def can_shift(self):
+        return len(self.buffer) > 0
+
+    def shift(self):
+        tok = self.buffer.pop(0)
+        self.stack.append(tok)
+        self.history.append(f"SHIFT -> pushed '{self.words[tok]}'")
+
+    def left_arc(self, relation="dep"):
+        s0 = self.stack[-1]
+        s1 = self.stack[-2]
+        self.arcs.append((s0, relation, s1))
+        self.stack.pop(-2)
+        self.history.append(f"LEFT-ARC ({relation}): '{self.words[s0]}' -> '{self.words[s1]}'")
+
+    def right_arc(self, relation="dep"):
+        s0 = self.stack[-1]
+        s1 = self.stack[-2]
+        self.arcs.append((s1, relation, s0))
+        self.stack.pop(-1)
+        self.history.append(f"RIGHT-ARC ({relation}): '{self.words[s1]}' -> '{self.words[s0]}'")
+
+    def is_terminal(self):
+        return len(self.buffer) == 0 and len(self.stack) == 1 and self.stack[0] == 0
+
+    def display_tree(self):
+        print("\nExtracted Dependency Arcs:")
+        sorted_arcs = sorted(self.arcs, key=lambda x: x[2])
+        for head, rel, dep in sorted_arcs:
+            h_word = self.words[head]
+            d_word = self.words[dep]
+            print(f"  {d_word:<12} (id={dep}) <--[{rel}]-- {h_word:<10} (id={head})")
+
+# Example Sentence: "The quick cat caught the mouse"
+tokens = ["The", "quick", "cat", "caught", "the", "mouse"]
+
+parser = ArcStandardParser(tokens)
+
+# Oracle transition sequence:
+parser.shift()                          # Push 'The'
+parser.shift()                          # Push 'quick'
+parser.shift()                          # Push 'cat'
+parser.left_arc(relation="amod")        # 'cat' -> 'quick'
+parser.left_arc(relation="det")         # 'cat' -> 'The'
+parser.shift()                          # Push 'caught'
+parser.left_arc(relation="nsubj")       # 'caught' -> 'cat'
+parser.shift()                          # Push 'the'
+parser.shift()                          # Push 'mouse'
+parser.left_arc(relation="det")         # 'mouse' -> 'the'
+parser.right_arc(relation="obj")        # 'caught' -> 'mouse'
+parser.right_arc(relation="root")       # 'ROOT' -> 'caught'
+
+print(f"Terminal state reached? {parser.is_terminal()}")
+print("\nTransition History:")
+for step, action in enumerate(parser.history, 1):
+    print(f"  {step:2d}. {action}")
+
+parser.display_tree()
+
+def evaluate_scores(predicted_arcs, gold_arcs, num_words):
+    pred_heads = {dep: head for head, rel, dep in predicted_arcs}
+    pred_labels = {dep: rel for head, rel, dep in predicted_arcs}
+    
+    gold_heads = {dep: head for head, rel, dep in gold_arcs}
+    gold_labels = {dep: rel for head, rel, dep in gold_arcs}
+    
+    uas_correct = sum(1 for i in range(1, num_words + 1) if pred_heads.get(i) == gold_heads.get(i))
+    las_correct = sum(1 for i in range(1, num_words + 1) if (pred_heads.get(i) == gold_heads.get(i) and pred_labels.get(i) == gold_labels.get(i)))
+    
+    return uas_correct / num_words, las_correct / num_words
+
+uas, las = evaluate_scores(parser.arcs, parser.arcs, len(tokens))
+print(f"\nUAS (Unlabelled Attachment Score): {uas * 100:.1f}%")
+print(f"LAS (Labelled Attachment Score):   {las * 100:.1f}%")
+`,
+    quiz: [
+      {
+        q: r`In Universal Dependencies parsing, what is the single-head structural constraint?`,
+        o: [
+          r`Every word in the sentence (except the artificial ROOT token) must have exactly one incoming dependency arc`,
+          r`Every sentence must contain exactly one noun phrase`,
+          r`A head word can never have more than one dependent modifier`,
+          r`Every word must be linked directly to the ROOT token`,
+        ],
+        a: 0,
+        why: r`In dependency grammar, every word depends on exactly one syntactic governor (in-degree d_in = 1). The only exception is the artificial ROOT token, which has in-degree 0 and serves as the structural anchor of the entire sentence.`,
+      },
+      {
+        q: r`Why is the computational time complexity of Arc-Standard transition-based dependency parsing strictly O(n) linear with sentence length?`,
+        o: [
+          r`Because each of the n words is pushed onto the stack exactly once via SHIFT and removed from the stack exactly once via an ARC reduction, yielding exactly 2n total transitions`,
+          r`Because it skips parsing all words that are not verbs`,
+          r`Because it computes matrix inversions in constant time`,
+          r`Because it converts the input string into a regular expression`,
+        ],
+        a: 0,
+        why: r`In Arc-Standard parsing, each token in the buffer is shifted onto the stack exactly once (n shifts) and popped during a left-arc or right-arc reduction exactly once (n reductions). The total number of state transitions is bounded by 2n, proving strictly linear time complexity.`,
+      },
+      {
+        q: r`What is the difference between Unlabelled Attachment Score (UAS) and Labelled Attachment Score (LAS)?`,
+        o: [
+          r`UAS measures only whether words are assigned the correct parent head, whereas LAS requires both the correct head and the correct grammatical relation label (e.g. nsubj, obj)`,
+          r`UAS evaluates verbs while LAS evaluates nouns`,
+          r`UAS is evaluated on training data while LAS is evaluated on test data`,
+          r`UAS uses cross-entropy loss while LAS uses Mean Squared Error`,
+        ],
+        a: 0,
+        why: r`UAS (Unlabelled Attachment Score) counts a word as correct if its assigned head matches the ground truth. LAS (Labelled Attachment Score) is a stricter metric that demands that both the head index and the specific dependency relation label match ground truth.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['part-of-speech-tagging', 'word-and-sentence-tokenization'],
+    related: ['part-of-speech-tagging', 'word-and-sentence-tokenization'],
+    keywords: 'dependency parsing syntax tree head dependent projective arc standard arc eager shift reduce uas las universal dependencies',
+  },
+
+  // ------------------------------------------------------------------ 4. Named entity recognition and IOB tagging
+  {
+    id: 'named-entity-recognition-and-iob-tagging',
+    short: 'NER & IOB Tagging',
+    title: 'Named entity recognition and IOB tagging',
+    task: 'concepts',
+    module: '2 · Syntax',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Named Entity Recognition (NER) is the information extraction task of identifying spans of text that denote real-world entities (such as people, organisations, and locations) and classifying them into structured categories. Because named entities often span multiple consecutive tokens, NER reframes text chunking as sequence labelling using boundary schemes such as IOB2 (BIO) and BIOES, modelled through linear-chain CRFs or Transformer token classifiers.`,
+    lead: r`If you ask an AI assistant to summarise a news article, it must quickly identify the key actors: Did "Apple" refer to the multinational tech titan or a piece of fruit? Was "Washington" referring to George Washington the historical figure, Washington State, or the United States federal government? Named Entity Recognition extracts these multi-word semantic entities from unstructured prose and classifies them into structured knowledge representations.`,
+    intuition: [
+      r`Why entity chunking requires boundary schemes: Unlike part-of-speech tagging where each word receives one isolated tag, named entities frequently span multiple words: "New York University", "Bank of England", "Marie Curie". If we only tagged words as ORG or PER, the system would not know whether two adjacent ORG tokens represent two separate organisations or one combined entity. Boundary schemes like IOB2 (Beginning, Inside, Outside) solve this by assigning B-ORG to the first token and I-ORG to continuation tokens.`,
+      r`The BIOES advantage for boundary precision: The standard IOB2 scheme uses B-c for both singleton entities and the beginning of multi-word entities. BIOES (Beginning, Inside, Outside, End, Singleton) extends this by providing separate tags for single-token entities (S-c) and terminal tokens (E-c). This explicit distinction provides strong inductive bias to sequence models, preventing them from prematurely truncating long company or geographical names.`,
+      r`Guardrails against illegal transitions via CRFs: When training a deep neural network (like a BiLSTM or BERT) for token classification with independent softmax outputs, the model has no built-in awareness of sequence grammar. It might predict O followed immediately by I-PER (an illegal transition). A Conditional Random Field (CRF) layer adds a global transition constraint matrix, penalising illegal boundary sequences with negative infinity and ensuring that every predicted entity path is structurally valid.`,
+    ],
+    analogy: r`Think of highlighting text in a study guide with coloured markers. If you highlight words individually without notes, someone reading your guide later cannot tell if "United" and "Airlines" were meant to be read together as one company or two separate terms. IOB tagging is like drawing brackets around your highlights: a green opening bracket marked B-ORG at "United", an internal green mark I-ORG at "Airlines", and a closing bracket before returning to unhighlighted text (O). Anyone reading your annotations knows the exact boundaries and identity of every entity you marked.`,
+    steps: [
+      {
+        title: r`Tokenise text and align character span offsets`,
+        desc: r`Segment raw text into tokens while preserving exact character start and end indices.`,
+        detail: r`Tokenise the document into a list of words or subword tokens. Maintain character offset mappings (start_char, end_char) for each token to ground predictions back to the original text.`,
+      },
+      {
+        title: r`Convert entity spans into IOB2 or BIOES token labels`,
+        desc: r`Map gold entity span annotations into token-level boundary tags.`,
+        detail: r`For each token overlapping an entity span of category c: assign B-c to the initial token, I-c to internal tokens, and O to all tokens outside entity spans. In BIOES, singletons receive S-c and final tokens receive E-c.`,
+      },
+      {
+        title: r`Encode contextual token representations`,
+        desc: r`Extract dense contextual vectors using a BiLSTM or Transformer encoder.`,
+        detail: r`Pass tokenised sequences through an encoder (such as BERT or a bidirectional LSTM) to generate contextual hidden states. A linear projection maps hidden states to emission logits for each tag in the label space.`,
+      },
+      {
+        title: r`Apply CRF transition constraints during decoding`,
+        desc: r`Decode globally optimal tag sequences using Viterbi with a learned transition matrix.`,
+        detail: r`A linear-chain CRF layer models transition potentials A_{i, j}. Viterbi decoding finds the highest-scoring sequence score s(X, Y), explicitly prohibiting invalid label transitions (such as O -> I-ORG).`,
+      },
+      {
+        title: r`Reconstruct entity spans and evaluate CoNLL metrics`,
+        desc: r`Parse predicted tags into entity chunks and compute strict span-level F1.`,
+        detail: r`Group consecutive B-c and I-c tags into predicted entity spans. Evaluate performance against gold spans using exact span-level Precision, Recall, and F1 (CoNLL 2003 protocol), where partial boundary overlaps receive zero credit.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Linear-chain CRF sequence scoring function`,
+        tex: r`s(X, Y) = \sum_{t=1}^T P_{t, y_t} + \sum_{t=0}^T A_{y_t, y_{t+1}}`,
+        p: r`Here $P_{t, j}$ is the emission score of token $t$ for label $j$ from the neural encoder, and $A \in \mathbb{R}^{(K+2) \times (K+2)}$ is the learnable transition matrix modelling grammatical tag transitions between consecutive steps.`,
+      },
+      {
+        h: r`Conditional sequence probability (Softmax over paths)`,
+        tex: r`P(Y \mid X) = \frac{\exp(s(X, Y))}{\sum_{Y' \in \mathcal{Y}^T} \exp(s(X, Y'))}`,
+        p: r`The CRF defines a normalised probability distribution over all $|\mathcal{Y}|^T$ possible label sequences. The normalisation constant (partition function $Z(X)$) is computed efficiently using the forward dynamic programming algorithm.`,
+      },
+      {
+        h: r`Strict span-level precision, recall, and F1`,
+        tex: r`\operatorname{Precision} = \frac{|\mathcal{E}_{\text{gold}} \cap \mathcal{E}_{\text{pred}}|}{|\mathcal{E}_{\text{pred}}|}, \quad \operatorname{Recall} = \frac{|\mathcal{E}_{\text{gold}} \cap \mathcal{E}_{\text{pred}}|}{|\mathcal{E}_{\text{gold}}|}, \quad F_1 = \frac{2 \cdot P \cdot R}{P + R}`,
+        p: r`Here an entity span is an exact triple $(c, \text{start}, \text{end})$. Any boundary offset mismatch yields zero credit, preventing token-level outside class imbalance from distorting evaluation metrics.`,
+      },
+    ],
+    keyPoints: [
+      r`Named Entity Recognition extracts structured entities (person, organisation, location) from unstructured text and classifies them into predefined types.`,
+      r`IOB2 (BIO) and BIOES schemes convert chunk boundary identification into standard discrete sequence labelling tasks.`,
+      r`BIOES provides distinct tags for singleton entities (S-) and multi-token endings (E-), reducing boundary ambiguity.`,
+      r`Linear-chain CRFs model label transition dynamics A_{i, j}, enforcing sequence validity and preventing illegal transitions like O -> I-PER.`,
+      r`NER must be evaluated using strict span-level Precision, Recall, and F1; token-level accuracy is heavily skewed by the overwhelming prevalence of the outside (O) class.`,
+    ],
+    pitfalls: [
+      r`Evaluating NER using token-level accuracy: Because 90% of tokens in typical prose are O, a trivial baseline predicting O everywhere achieves 90% accuracy while extracting zero entities. Always report span-level CoNLL F1.`,
+      r`Allowing illegal label transitions: Independent token classifiers often produce invalid sequences like O directly followed by I-ORG. Use a CRF layer or an explicit Viterbi transition mask during inference.`,
+      r`Subword tokenisation misalignment: Modern subword tokenisers split rare names into multiple fragments. Training loss must either mask non-initial subwords using an ignore index (-100) or maintain consistent subword alignment to avoid corrupting span boundaries.`,
+      r`Treating nested entities as flat sequences: IOB sequence labelling fundamentally cannot represent nested structures (such as Bank of America where America is a nested location). Nested extraction requires span-based classification or generative decoders.`,
+    ],
+    code: r`class IOBSpanEvaluator:
+    """
+    Parser and strict span-level evaluator for IOB2 (BIO) sequence labelling.
+    Converts token tags to entity spans and computes CoNLL precision, recall, and F1.
+    """
+    @staticmethod
+    def extract_entities(tokens, tags):
+        entities = []
+        current_cat = None
+        start_idx = None
+        
+        for idx, (tok, tag) in enumerate(zip(tokens, tags)):
+            if tag == 'O':
+                if current_cat is not None:
+                    span_text = " ".join(tokens[start_idx:idx])
+                    entities.append((current_cat, start_idx, idx - 1, span_text))
+                    current_cat = None
+                    start_idx = None
+            elif tag.startswith('B-'):
+                if current_cat is not None:
+                    span_text = " ".join(tokens[start_idx:idx])
+                    entities.append((current_cat, start_idx, idx - 1, span_text))
+                current_cat = tag[2:]
+                start_idx = idx
+            elif tag.startswith('I-'):
+                tag_cat = tag[2:]
+                if current_cat == tag_cat:
+                    continue
+                else:
+                    if current_cat is not None:
+                        span_text = " ".join(tokens[start_idx:idx])
+                        entities.append((current_cat, start_idx, idx - 1, span_text))
+                    current_cat = tag_cat
+                    start_idx = idx
+                    
+        if current_cat is not None:
+            span_text = " ".join(tokens[start_idx:len(tokens)])
+            entities.append((current_cat, start_idx, len(tokens) - 1, span_text))
+            
+        return entities
+
+    @classmethod
+    def evaluate(cls, tokens, gold_tags, pred_tags):
+        gold_spans = cls.extract_entities(tokens, gold_tags)
+        pred_spans = cls.extract_entities(tokens, pred_tags)
+        
+        gold_set = {(cat, s, e) for cat, s, e, _ in gold_spans}
+        pred_set = {(cat, s, e) for cat, s, e, _ in pred_spans}
+        
+        true_positives = len(gold_set & pred_set)
+        false_positives = len(pred_set - gold_set)
+        false_negatives = len(gold_set - pred_set)
+        
+        prec = true_positives / len(pred_set) if len(pred_set) > 0 else 0.0
+        rec = true_positives / len(gold_set) if len(gold_set) > 0 else 0.0
+        f1 = (2.0 * prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
+        
+        return {
+            "precision": prec,
+            "recall": rec,
+            "f1": f1,
+            "gold_entities": gold_spans,
+            "pred_entities": pred_spans,
+            "tp": true_positives,
+            "fp": false_positives,
+            "fn": false_negatives
+        }
+
+tokens = ["Alan", "Turing", "joined", "Bletchley", "Park", "in", "the", "United", "Kingdom", "."]
+
+gold_tags = [
+    "B-PER", "I-PER",
+    "O",
+    "B-ORG", "I-ORG",
+    "O",
+    "O",
+    "B-LOC", "I-LOC",
+    "O"
+]
+
+pred_tags = [
+    "B-PER", "I-PER",
+    "O",
+    "B-ORG", "O",
+    "O",
+    "O",
+    "B-LOC", "I-LOC",
+    "O"
+]
+
+metrics = IOBSpanEvaluator.evaluate(tokens, gold_tags, pred_tags)
+
+print("Named Entity Recognition Span Evaluation:")
+print(f"Tokens: {' '.join(tokens)}")
+print("\nGold Entities:")
+for cat, s, e, text in metrics["gold_entities"]:
+    print(f"  [{cat}] tokens {s}..{e}: '{text}'")
+
+print("\nPredicted Entities:")
+for cat, s, e, text in metrics["pred_entities"]:
+    print(f"  [{cat}] tokens {s}..{e}: '{text}'")
+
+print("\nStrict Evaluation Metrics (CoNLL 2003 protocol):")
+print(f"  True Positives:  {metrics['tp']}")
+print(f"  False Positives: {metrics['fp']} (boundary/type mismatches)")
+print(f"  False Negatives: {metrics['fn']}")
+print(f"  Precision:       {metrics['precision'] * 100:.1f}%")
+print(f"  Recall:          {metrics['recall'] * 100:.1f}%")
+print(f"  F1 Score:        {metrics['f1'] * 100:.1f}%")
+`,
+    quiz: [
+      {
+        q: r`Why is token-level accuracy an unsuitable metric for evaluating Named Entity Recognition models?`,
+        o: [
+          r`Because non-entity outside tokens (O) dominate the corpus (often 85-95% of all tokens), allowing a trivial model that never predicts any entities to achieve deceptively high accuracy`,
+          r`Because token-level accuracy can only be computed on binary classification tasks`,
+          r`Because named entity tags cannot be represented as numbers`,
+          r`Because scikit-learn does not support token-level accuracy`,
+        ],
+        a: 0,
+        why: r`Extreme class imbalance makes token accuracy misleading. Since most words in natural text are not named entities (O), a model that classifies every single word as O gets ~90% accuracy while having a true entity detection F1 score of 0%.`,
+      },
+      {
+        q: r`In the IOB2 (BIO) tagging scheme, which of the following label transitions is grammatically invalid and should be penalised by a CRF?`,
+        o: [
+          r`Transitioning directly from O to I-ORG without an intervening B-ORG`,
+          r`Transitioning from B-PER to I-PER`,
+          r`Transitioning from I-LOC to O`,
+          r`Transitioning from O to B-LOC`,
+        ],
+        a: 0,
+        why: r`In IOB2, an inside tag (I-c) can only occur immediately after a beginning tag of the same entity category (B-c) or another inside tag of that category. Transitioning directly from O to I-ORG is an illegal orphan boundary.`,
+      },
+      {
+        q: r`What advantage does the BIOES (BILOU) tagging scheme provide over the standard IOB2 (BIO) scheme?`,
+        o: [
+          r`It assigns distinct tags to single-token entities (S-) and the final tokens of multi-token entities (E-), providing explicit structural cues that improve entity boundary precision`,
+          r`It reduces the total number of classes by half`,
+          r`It eliminates the need for bidirectional context`,
+          r`It allows the model to process unnormalised Unicode emojis`,
+        ],
+        a: 0,
+        why: r`In standard IOB2, the tag B-c is ambiguous: it represents both single-word entities and the start of multi-word entities. BIOES uses S-c for singletons and E-c for entity endings, making entity length and boundary conditions explicit to the classifier.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['part-of-speech-tagging', 'word-and-sentence-tokenization'],
+    related: ['part-of-speech-tagging', 'dependency-parsing', 'word-and-sentence-tokenization'],
+    keywords: 'named entity recognition ner iob bio iob2 bioes sequence labelling information extraction conll span f1 bilstm crf token classification',
+  },
 ];
