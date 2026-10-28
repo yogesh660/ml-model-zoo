@@ -114,7 +114,7 @@ module.exports = [
       { title: 'Practical deep learning', lessons: ['the-pytorch-training-loop', 'reading-loss-curves-and-debugging-training', 'transfer-learning-and-fine-tuning', ...X('Data augmentation and mixup', 'Distributed training: DDP and FSDP')] },
       { title: 'Seeing: convolution', lessons: ['convolutional_neural_networks'] },
       { title: 'Sequences', lessons: ['recurrent_neural_networks', 'gru_networks', 'lstm_networks'] },
-      { title: 'Architectures', lessons: ['residual-networks-and-skip-connections', ...C('The attention mechanism', 'Autoencoders', 'Variational autoencoders', 'GANs', 'Diffusion models'), ...X('Graph neural networks: GCN, GAT, GraphSAGE', 'Mixture of experts', 'State-space models and Mamba', 'Normalising flows')] },
+      { title: 'Architectures', lessons: ['residual-networks-and-skip-connections', 'the-attention-mechanism', 'autoencoders', 'variational-autoencoders', 'gans', ...C('Diffusion models'), ...X('Graph neural networks: GCN, GAT, GraphSAGE', 'Mixture of experts', 'State-space models and Mamba', 'Normalising flows')] },
       { title: 'Representation learning', lessons: [...C('Contrastive learning: SimCLR and InfoNCE', 'CLIP and multimodal embeddings'), ...X('Self-supervised learning: BYOL, DINO, MAE', 'Metric learning and triplet loss')] },
       { title: 'Efficiency and scale', lessons: [...C('Quantisation', 'LoRA and parameter-efficient fine-tuning'), ...X('Knowledge distillation', 'Pruning and sparsity', 'Scaling laws')] },
       { title: 'Reliability', lessons: [...X('Uncertainty: MC dropout and deep ensembles', 'Interpretability: saliency, Grad-CAM, probing', 'Adversarial examples')] },

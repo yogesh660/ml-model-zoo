@@ -1521,4 +1521,559 @@ print(f"Residual network backpropagated gradient: {grad_res:.2f} (unbroken gradi
     related: ['normalisation-batch-layer-rms', 'transfer-learning-and-fine-tuning', 'the-pytorch-training-loop'],
     keywords: 'residual networks resnet skip connections identity shortcuts degradation problem gradient highway he et al residual block deep learning architecture',
   },
+
+// ------------------------------------------------------------------ Lesson 1
+  {
+    id: 'the-attention-mechanism',
+    short: 'The attention mechanism',
+    title: 'The Attention Mechanism',
+    task: 'concepts',
+    module: 'Architectures',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Recurrent networks force variable-length sequences through a fixed-size vector bottleneck. Attention lets every position dynamically look up, weight, and aggregate context from all other positions.`,
+    lead: r`The defining constraint of classical sequence models (RNNs and LSTMs) was their sequential information bottleneck: entire sentences had to be compressed into a single hidden vector, causing long-range context to degrade. The attention mechanism—generalised to scaled dot-product self-attention in the Transformer—eliminated this bottleneck by allowing tokens to compute dynamic routing weights over queries, keys, and values.`,
+    intuition: [
+      r`Imagine searching a library for information about planetary motion. Your search query is the **Query** ($Q$). Every book title on the catalogue shelves is a **Key** ($K$), and the text inside each book is the **Value** ($V$). To find answers, you calculate the semantic similarity between your query and every book title (the dot product $Q K^T$). Titles with high relevance receive large attention weights via a softmax distribution, and your final answer is a weighted blend of the retrieved book contents ($A V$).`,
+      r`In **Self-Attention**, queries, keys, and values all originate from the very same sequence. Each token asks: "Which other tokens in this sentence are relevant to resolving my meaning?" In the sentence "The trophy did not fit into the suitcase because it was too large", the pronoun token "it" computes a strong query-key match with "trophy" (its semantic referent) rather than "suitcase", dynamically pulling contextual features across the sequence regardless of physical separation.`,
+      r`Why is the dot product scaled by $1 / \sqrt{d_k}$? When the key dimension $d_k$ is large (such as 64 or 128), taking the dot product of two independent zero-mean unit-variance vectors produces a result whose variance equals $d_k$. Large dot products push the softmax function into saturated tails where local derivatives collapse to zero. Dividing by $\sqrt{d_k}$ scales the variance back to $1.0$, preserving healthy gradient flow during backpropagation. In **Multi-Head Attention**, this operation runs in parallel across $h$ distinct subspaces, allowing the model to simultaneously attend to syntactic relations, coreference, and local phrases.`,
+    ],
+    analogy: r`Like a researcher consulting a comprehensive library index: instead of memorising every book before writing an essay, the researcher pulls relevant passages on demand using targeted title lookups.`,
+    steps: [
+      r`Project input embeddings: map input tensor $X \in \mathbb{R}^{T \times d_{\text{model}}}$ into queries $Q = X W_Q$, keys $K = X W_K$, and values $V = X W_V$ using learned linear projections.`,
+      r`Compute pairwise compatibility: calculate the matrix product $S = Q K^T \in \mathbb{R}^{T \times T}$, measuring the unscaled affinity between every query and every key.`,
+      r`Scale by key dimensionality: divide scores by $\sqrt{d_k}$ to prevent variance explosion and preserve softmax gradients in high dimensions.`,
+      r`Apply causal masking if autoregressive: in decoder language models, mask upper-triangular future entries to $-\infty$ so tokens cannot look ahead to future steps during training.`,
+      r`Compute softmax probabilities and context: apply row-wise softmax to produce attention weights $A = \operatorname{softmax}(S / \sqrt{d_k})$, then compute the context matrix $O = A V$.`,
+      r`Merge multi-head projections: concatenate outputs from all $h$ parallel attention heads and project through linear output matrix $W_O$.`,
+    ],
+    math: [
+      {
+        h: 'Scaled dot-product attention equation',
+        tex: r`$$\operatorname{Attention}(Q, K, V) = \operatorname{softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$`,
+        p: r`$Q \in \mathbb{R}^{T_q \times d_k}$ contains query vectors, $K \in \mathbb{R}^{T_k \times d_k}$ contains key vectors, and $V \in \mathbb{R}^{T_k \times d_v}$ contains values. The softmax normalises across rows of the $T_q \times T_k$ affinity matrix, producing probability distributions that weight the value vectors.`,
+      },
+      {
+        h: 'Dot-product variance scaling derivation',
+        tex: r`$$\text{If } q_i, k_i \sim \mathcal{N}(0, 1) \text{ i.i.d.}, \quad \operatorname{Var}(q^T k) = \sum_{i=1}^{d_k} \operatorname{Var}(q_i k_i) = d_k \implies \operatorname{Var}\left(\frac{q^T k}{\sqrt{d_k}}\right) = 1$$`,
+        p: r`Shows why scaling by $\sqrt{d_k}$ is mathematically necessary. Without division by $\sqrt{d_k}$, large key dimensions inflate dot-product variance to $d_k$, pushing softmax inputs into extreme saturating regimes where gradient magnitudes vanish to zero.`,
+      },
+      {
+        h: 'Multi-head attention formulation',
+        tex: r`$$\operatorname{MultiHead}(Q, K, V) = \operatorname{Concat}(\text{head}_1, \dots, \text{head}_h) W_O, \quad \text{head}_i = \operatorname{Attention}(Q W_i^Q, K W_i^K, V W_i^V)$$`,
+        p: r`$W_i^Q, W_i^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$, $W_i^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$, and $W_O \in \mathbb{R}^{h d_v \times d_{\text{model}}}$. Projecting into $h$ subspaces enables the model to simultaneously attend to information from different representation subspaces at different positions.`,
+      },
+    ],
+    keyPoints: [
+      r`Attention replaces the sequential recurrence bottleneck of RNNs with an $O(1)$ maximum path length between any two tokens in a sequence.`,
+      r`Dividing dot-product scores by $\sqrt{d_k}$ keeps score variance at unit scale, preventing softmax saturation and vanishing gradients.`,
+      r`Multi-head attention allows the model to jointly attend to information from diverse representation subspaces (such as grammar, coreference, and syntax) simultaneously.`,
+    ],
+    pitfalls: [
+      r`Quadratic memory complexity: computing and storing the $T \times T$ attention matrix scales as $O(T^2)$, creating memory bottlenecks for ultra-long context windows.`,
+      r`Omitting the causal mask in generative autoregressive decoders, which leaks future ground-truth tokens during training and ruins next-token generation.`,
+      r`Omitting the $\sqrt{d_k}$ scaling denominator, which causes softmax attention distributions to peak prematurely on a single token early in training.`,
+    ],
+    code: r`import numpy as np
+
+# Scaled dot-product self-attention with causal masking
+np.random.seed(42)
+T, d_k = 3, 4  # 3 tokens, key dimension 4
+Q = np.random.randn(T, d_k)
+K = np.random.randn(T, d_k)
+V = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])  # (3, 2) values
+
+# 1. Scaled dot-product compatibility scores
+scale = np.sqrt(d_k)
+scores = (Q @ K.T) / scale
+
+# 2. Apply causal mask: mask upper triangular future steps to -1e9
+mask = np.triu(np.ones((T, T)), k=1)
+scores = np.where(mask == 1, -1e9, scores)
+
+# 3. Row-wise softmax to calculate attention weights
+exp_scores = np.exp(scores - np.max(scores, axis=-1, keepdims=True))
+weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)
+
+# 4. Weighted combination of value vectors
+context_out = weights @ V
+
+print("Attention weights (row 0: token 0 can only attend to itself):")
+print(np.round(weights[0], 4).tolist())
+print("Attention weights (row 2: token 2 attends across tokens 0, 1, 2):")
+print(np.round(weights[2], 4).tolist())
+print("Output context representation for token 0:")
+print(np.round(context_out[0], 4).tolist())`,
+    quiz: [
+      {
+        q: r`Why is the dot product between queries and keys divided by $\sqrt{d_k}$ before applying softmax?`,
+        o: [
+          r`To normalise key vectors so their Euclidean length equals 1`,
+          r`To prevent dot products from growing excessively large with dimension $d_k$, which pushes softmax into saturated regions with vanishing gradients`,
+          r`To convert negative scores into positive probability values`,
+          r`To invert the attention matrix for faster linear algebra execution`,
+        ],
+        a: 1,
+        why: r`Because the variance of the dot product of two $d_k$-dimensional random vectors is $d_k$, dividing by $\sqrt{d_k}$ scales variance back to 1.0, preventing softmax from saturating where gradients collapse to zero.`,
+      },
+      {
+        q: r`In an autoregressive decoder (such as GPT), what is the function of the causal attention mask?`,
+        o: [
+          r`It sets future token attention weights to zero (by setting pre-softmax logits to $-\infty$) so predictions depend only on past and current tokens`,
+          r`It reduces computation from $O(T^2)$ to $O(T)$`,
+          r`It forces all query and key matrices to be identical`,
+          r`It randomly drops 10% of attention heads during training`,
+        ],
+        a: 0,
+        why: r`Without causal masking, a generative model could simply look ahead at future tokens during training, trivialising next-token prediction and failing during inference.`,
+      },
+      {
+        q: r`How does multi-head attention enhance the representational capacity of a single attention layer?`,
+        o: [
+          r`It doubles the sequence length $T$ that the model can process`,
+          r`It projects queries, keys, and values into multiple lower-dimensional subspaces, allowing the model to attend to different relationship types simultaneously`,
+          r`It removes the need for residual skip connections and layer normalisation`,
+          r`It replaces floating-point multiplications with integer additions`,
+        ],
+        a: 1,
+        why: r`Multi-head attention projects inputs into $h$ distinct subspaces, enabling parallel heads to track distinct syntactic, positional, or semantic relationships independently.`,
+      },
+      {
+        q: r`What is the primary computational bottleneck of standard full self-attention when scaling to very long sequences?`,
+        o: [
+          r`The number of parameters grows cubically with sequence length`,
+          r`Both memory consumption and compute scale quadratically ($O(T^2)$) with sequence length due to the $T \times T$ attention matrix`,
+          r`Backpropagation cannot calculate gradients through softmax operations`,
+          r`Cross-entropy loss diverges when sequence lengths exceed 512 tokens`,
+        ],
+        a: 1,
+        why: r`Pairwise interactions between all $T$ queries and $T$ keys require materialising an intermediate $T \times T$ attention weight matrix, making $O(T^2)$ memory and time expensive for long context windows.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['residual-networks-and-skip-connections', 'the-pytorch-training-loop', 'weight-initialisation-xavier-and-he'],
+    related: ['normalisation-batch-layer-rms', 'transfer-learning-and-fine-tuning', 'autoencoders'],
+    keywords: 'attention mechanism scaled dot product self-attention queries keys values multi-head attention causal mask transformer vaswani context vector',
+  },
+
+  // ------------------------------------------------------------------ Lesson 2
+  {
+    id: 'autoencoders',
+    short: 'Autoencoders',
+    title: 'Autoencoders',
+    task: 'concepts',
+    module: 'Architectures',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Compressing data into a low-dimensional bottleneck and reconstructing it back forces the network to discover the compact generative manifold of the dataset.`,
+    lead: r`How can a neural network learn informative representations without human labels? Autoencoders accomplish unsupervised representation learning by posing an input reconstruction objective: an encoder compresses the input into a low-dimensional latent code, and a decoder attempts to reconstruct the original input from that bottleneck representation.`,
+    intuition: [
+      r`Suppose you want to describe thousands of different face photographs over a radio channel, but bandwidth restricts you to transmitting only 10 numbers per image. You cannot describe individual pixels. To succeed, those 10 numbers must capture the dominant axes of variance across human faces: head shape, eye spacing, skin tone, hair length, and smile width. The sketch artist on the receiving end uses those 10 parameters to recreate the portrait.`,
+      r`An **Autoencoder** builds this compression pipeline with two mirrored networks:
+1. **Encoder** ($z = f_\theta(x)$): Compresses the high-dimensional input $x \in \mathbb{R}^D$ into a lower-dimensional latent bottleneck $z \in \mathbb{R}^d$ ($d \ll D$).
+2. **Decoder** ($\hat{x} = g_\phi(z)$): Expands the latent code $z$ back to reconstruct the original input $\hat{x} \approx x$.
+The network trains by minimising a reconstruction loss (such as Mean Squared Error or Binary Cross-Entropy). If the encoder and decoder were strictly linear, the learned bottleneck would span the exact same subspace as [[pca|Principal Component Analysis (PCA)]]. But with non-linear activation functions, autoencoders learn curved, non-linear manifolds that linear projections cannot capture.`,
+      r`Beyond simple dimensional bottlenecks, regularised autoencoders prevent trivial memorisation. **Denoising Autoencoders (DAEs)** corrupt the input with noise ($\tilde{x} = x + \epsilon$) and train the decoder to recover the clean original $x$, learning an orthogonal projection field that pushes corrupted points back onto the true data manifold. This makes autoencoders exceptionally useful for anomaly detection: inputs that deviate from the normal training distribution cannot be reconstructed accurately, producing telltale spikes in reconstruction error.`,
+    ],
+    analogy: r`Like summarising a 500-page historical treatise into a 5-page brief (encoder) and having a historian reconstruct the full event timeline using only those 5 pages (decoder).`,
+    steps: [
+      r`Choose the bottleneck dimension: select latent dimensionality $d$ reflecting the anticipated intrinsic dimensionality of the data manifold.`,
+      r`Construct the encoder network: stack feedforward or convolutional layers tapering down in width from input dimensionality $D$ to latent code $z$.`,
+      r`Construct the decoder network: mirror the encoder architecture, progressively expanding from latent code $z$ back to input dimensionality $D$.`,
+      r`Define the reconstruction criterion: select Mean Squared Error for continuous real-valued features or Binary Cross-Entropy for normalised pixel intensities.`,
+      r`Train and deploy: train end-to-end with [[the-pytorch-training-loop|the PyTorch training loop]]; detach the decoder and use the encoder as a feature extractor or anomaly detector.`,
+    ],
+    math: [
+      {
+        h: 'Autoencoder reconstruction objective',
+        tex: r`$$\min_{\theta, \phi} \frac{1}{N}\sum_{i=1}^N \mathcal{L}\Big(x_i, g_\phi\big(f_\theta(x_i)\big)\Big), \quad z_i = f_\theta(x_i), \; \hat{x}_i = g_\phi(z_i)$$`,
+        p: r`$f_\theta: \mathbb{R}^D \to \mathbb{R}^d$ is the encoder parameterised by $\theta$, $g_\phi: \mathbb{R}^d \to \mathbb{R}^D$ is the decoder parameterised by $\phi$, and $\mathcal{L}$ is the reconstruction loss. Minimising $\mathcal{L}$ forces $z$ to retain maximum information about $x$.`,
+      },
+      {
+        h: 'Relationship to Principal Component Analysis (linear autoencoders)',
+        tex: r`$$\text{If } f(x) = W_1 x \text{ and } g(z) = W_2 z, \quad \min_{W_1, W_2} \lVert X - W_2 W_1 X \rVert_F^2 \implies \operatorname{Span}(W_2) = \operatorname{Span}(U_d)$$`,
+        p: r`For linear transformations under squared error loss, the global minimum of the autoencoder objective spans the exact same $d$-dimensional subspace as the top $d$ eigenvectors ($U_d$) of PCA. Non-linear activations enable autoencoders to learn non-linear manifolds.`,
+      },
+      {
+        h: 'Denoising autoencoder objective',
+        tex: r`$$\mathcal{L}_{\text{DAE}}(\theta, \phi) = \mathbb{E}_{x \sim p_{\text{data}}, \tilde{x} \sim q(\tilde{x}|x)}\left[ \lVert x - g_\phi(f_\theta(\tilde{x})) \rVert_2^2 \right]$$`,
+        p: r`$q(\tilde{x}|x)$ is a corruption process (such as additive Gaussian noise or random zero-masking). The network learns a vector field that projects corrupted points back onto the true low-dimensional manifold.`,
+      },
+    ],
+    keyPoints: [
+      r`An undercomplete bottleneck ($d \ll D$) forces the network to discard noise and retain only the highest-variance generative factors of the data.`,
+      r`Linear autoencoders under MSE loss span the same subspace as PCA; non-linear activations generalise this to non-linear manifold learning.`,
+      r`Reconstruction error acts as an effective unsupervised anomaly detector: novel or corrupted inputs produce high reconstruction loss because they lie off the learned manifold.`,
+    ],
+    pitfalls: [
+      r`Using an overcomplete bottleneck ($d \ge D$) without regularisation (such as sparsity or denoising), allowing the network to trivially learn the identity mapping without extracting features.`,
+      r`Using standard autoencoders as generative models: their latent space contains empty gaps and holes; sampling random vectors $z$ produces nonsensical decoded outputs.`,
+      r`Minimising Mean Squared Error on complex multimodal image distributions, which encourages decoders to produce blurry, averaged reconstructions.`,
+    ],
+    code: r`import numpy as np
+
+# Synthetic non-linear manifold in 2D: x2 = sin(x1)
+np.random.seed(42)
+x1 = np.linspace(-np.pi, np.pi, 25)
+x2 = np.sin(x1)
+X = np.stack([x1, x2], axis=1)
+
+# Undercomplete autoencoder: 2 inputs -> 1 latent unit -> 2 outputs
+W_enc = np.random.randn(2, 1) * 0.5
+b_enc = np.zeros(1)
+W_dec = np.random.randn(1, 2) * 0.5
+b_dec = np.zeros(2)
+lr = 0.05
+
+for epoch in range(100):
+    # Forward pass: non-linear encoder, linear decoder
+    z = np.tanh(X @ W_enc + b_enc)
+    X_hat = z @ W_dec + b_dec
+    loss = float(np.mean((X - X_hat)**2))
+    # Backward pass
+    d_out = 2.0 * (X_hat - X) / len(X)
+    dW_dec, db_dec = z.T @ d_out, np.sum(d_out, axis=0)
+    dz = (d_out @ W_dec.T) * (1.0 - z**2)
+    dW_enc, db_enc = X.T @ dz, np.sum(dz, axis=0)
+    # Optimiser step
+    W_dec -= lr * dW_dec; b_dec -= lr * db_dec
+    W_enc -= lr * dW_enc; b_enc -= lr * db_enc
+
+# Evaluate reconstruction on normal point vs anomaly
+normal_pt = np.array([[0.0, 0.0]])
+anom_pt = np.array([[0.0, 5.0]])  # Lies completely off the manifold
+
+rec_normal = np.tanh(normal_pt @ W_enc + b_enc) @ W_dec + b_dec
+err_normal = float(np.mean((normal_pt - rec_normal)**2))
+
+rec_anom = np.tanh(anom_pt @ W_enc + b_enc) @ W_dec + b_dec
+err_anom = float(np.mean((anom_pt - rec_anom)**2))
+
+print(f"Final training reconstruction loss: {loss:.4f}")
+print(f"Normal point reconstruction error:  {err_normal:.4f}")
+print(f"Anomaly reconstruction error:       {err_anom:.4f} (anomaly flagged)")`,
+    quiz: [
+      {
+        q: r`What subspace does a linear autoencoder trained with Mean Squared Error loss learn?`,
+        o: [
+          r`The subspace spanned by the top principal components of the data, equivalent to PCA`,
+          r`A random orthogonal projection subspace`,
+          r`The Fourier transform frequency domain`,
+          r`An overcomplete dictionary of wavelets`,
+        ],
+        a: 0,
+        why: r`It is a classical theorem that a linear autoencoder with squared reconstruction error converges to the subspace spanned by the principal components of the training data.`,
+      },
+      {
+        q: r`Why are standard deterministic autoencoders generally ineffective as generative models?`,
+        o: [
+          r`Because they cannot be trained using gradient descent`,
+          r`Because their latent space is unconstrained, leaving empty gaps and discontinuities where arbitrary sampled points decode to nonsensical noise`,
+          r`Because their encoder requires labels during training`,
+          r`Because their decoder parameters are always frozen`,
+        ],
+        a: 1,
+        why: r`Standard autoencoders only organise points they have seen during training. The spaces between clusters are unregularised voids; picking a random vector $z$ yields incoherent outputs.`,
+      },
+      {
+        q: r`How does a Denoising Autoencoder (DAE) differ from a standard undercomplete autoencoder?`,
+        o: [
+          r`It corrupts inputs with noise during training and forces the decoder to reconstruct the original clean input`,
+          r`It removes all non-linear activation functions from the encoder`,
+          r`It uses reinforcement learning rather than backpropagation`,
+          r`It forces the latent bottleneck dimension to be zero`,
+        ],
+        a: 0,
+        why: r`By tasking the network with recovering uncorrupted data from noisy inputs, DAEs learn an orthogonal projection operator that pulls off-manifold points back onto the true data manifold.`,
+      },
+      {
+        q: r`How can an autoencoder be applied to unsupervised anomaly detection?`,
+        o: [
+          r`By training exclusively on anomalous samples`,
+          r`By calculating reconstruction error: novel or anomalous inputs produce high reconstruction error because the network has never learned their manifold`,
+          r`By measuring the learning rate of the optimiser`,
+          r`By counting the number of non-zero parameters in the decoder`,
+        ],
+        a: 1,
+        why: r`Because the autoencoder is trained to reconstruct normal patterns, anomalous observations that deviate from normal data distributions cannot be compressed and reconstructed accurately, resulting in high reconstruction error.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['the-pytorch-training-loop', 'pca', 'backpropagation-and-autodiff'],
+    related: ['variational-autoencoders', 'the-attention-mechanism', 'gans'],
+    keywords: 'autoencoders encoder decoder reconstruction error bottleneck latent space denoising autoencoder anomaly detection manifold learning unsupervised',
+  },
+
+  // ------------------------------------------------------------------ Lesson 3
+  {
+    id: 'variational-autoencoders',
+    short: 'Variational autoencoders',
+    title: 'Variational Autoencoders (VAEs)',
+    task: 'concepts',
+    module: 'Architectures',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Standard autoencoders leave unconstrained voids in latent space that cannot generate new data. Variational autoencoders enforce a smooth Gaussian prior via probabilistic mapping and the reparameterisation trick.`,
+    lead: r`While standard autoencoders compress data effectively, their latent spaces are riddled with discontinuities: sampling random vectors produces garbled outputs. Variational Autoencoders (VAEs, Kingma & Welling 2013) transform autoencoders into principled directed probabilistic generative models by mapping inputs to probability distributions and optimising the Evidence Lower Bound (ELBO).`,
+    intuition: [
+      r`In a deterministic autoencoder, image $A$ maps to point $z = (2.0, 3.0)$ and image $B$ maps to $z = (-4.0, 1.0)$. The optimiser has no reason to smooth the space between them. If you pick a point halfway between them at $(-1.0, 2.0)$, the decoder has never trained on that coordinate and outputs unrecognizable static. The latent space is a constellation of isolated islands surrounded by empty voids.`,
+      r`A **Variational Autoencoder** replaces fixed points with probability distributions. Instead of outputting a single vector $z$, the encoder outputs two vectors: a mean $\mu(x)$ and a log-variance $\log \sigma^2(x)$. The latent representation is then sampled from the Gaussian distribution $\mathcal{N}(\mu, \operatorname{diag}(\sigma^2))$. Two competing forces govern the objective:
+1. **Reconstruction Loss**: Compels the decoder to reconstruct $x$ accurately from sampled codes $z$.
+2. **Kullback-Leibler (KL) Divergence**: Penalises the encoder distribution for deviating from a standard normal prior $p(z) = \mathcal{N}(0, I)$.
+The KL penalty acts like an elastic spring: it pulls all means $\mu$ towards zero and forces variances $\sigma^2$ towards one. This prevents clusters from scattering across isolated regions, turning the latent space into a smooth, continuous manifold where interpolating between two points morphs seamlessly from one valid sample to another.`,
+      r`The central algorithmic hurdle is backpropagation: you cannot pass gradients through a stochastic sampling operation ($z \sim \mathcal{N}(\mu, \sigma^2)$). The **reparameterisation trick** solves this by isolating the randomness into an independent noise variable $\epsilon \sim \mathcal{N}(0, I)$ and computing $z$ deterministically: $z = \mu + \sigma \odot \epsilon$. Gradients now flow freely into $\mu$ and $\sigma$ via standard autodiff, enabling end-to-end training.`,
+    ],
+    analogy: r`Like mapping cities onto an elastic sphere: without constraints, you can scatter cities into disconnected corners of space; the KL penalty pulls all coordinates into an orderly, continuous spherical terrain where every coordinate represents realistic geography.`,
+    steps: [
+      r`Construct the probabilistic encoder: build a network that maps input $x$ to two parallel vectors: mean $\mu_\phi(x) \in \mathbb{R}^d$ and log-variance $\log \sigma^2_\phi(x) \in \mathbb{R}^d$.`,
+      r`Execute the reparameterisation trick: sample standard Gaussian noise $\epsilon \sim \mathcal{N}(0, I)$ and calculate latent sample $z = \mu + \exp(0.5 \log \sigma^2) \odot \epsilon$.`,
+      r`Construct the generative decoder: build a network $g_\theta(z)$ that reconstructs original data parameters from sampled latent vector $z$.`,
+      r`Evaluate the Evidence Lower Bound (ELBO): compute total loss as the sum of reconstruction error and the closed-form analytical KL divergence between $\mathcal{N}(\mu, \sigma^2)$ and $\mathcal{N}(0, I)$.`,
+      r`Backpropagate and train: update encoder and decoder parameters end-to-end with [[optimisers-sgd-momentum-rmsprop-adam-adamw|AdamW]].`,
+      r`Synthesise novel data: discard the encoder, sample fresh noise $z \sim \mathcal{N}(0, I)$, and pass it through the decoder to generate novel, realistic observations.`,
+    ],
+    math: [
+      {
+        h: 'Evidence Lower Bound (ELBO) objective',
+        tex: r`$$\log p_\theta(x) \ge \operatorname{ELBO}(\theta, \phi; x) = \mathbb{E}_{q_\phi(z|x)}\big[\log p_\theta(x|z)\big] - D_{\text{KL}}\big(q_\phi(z|x) \parallel p(z)\big)$$`,
+        p: r`$\log p_\theta(x)$ is the marginal log-likelihood of the data. The first term measures reconstruction quality under the variational posterior $q_\phi(z|x)$; the second term is the KL divergence penalising deviation from the prior $p(z) = \mathcal{N}(0, I)$. Maximising the ELBO guarantees that true data likelihood increases.`,
+      },
+      {
+        h: 'Closed-form KL divergence for diagonal Gaussians',
+        tex: r`$$D_{\text{KL}}\big(\mathcal{N}(\mu, \operatorname{diag}(\sigma^2)) \parallel \mathcal{N}(0, I)\big) = -\frac{1}{2}\sum_{j=1}^d \left( 1 + \log(\sigma_j^2) - \mu_j^2 - \sigma_j^2 \right)$$`,
+        p: r`$d$ is latent dimensionality, $\mu_j$ is the predicted mean, and $\sigma_j^2$ is the predicted variance of component $j$. This analytical formula computes exact KL divergence in a single vectorised pass without Monte Carlo integration. If $\mu_j = 0$ and $\sigma_j^2 = 1$, the penalty evaluates to $0$.`,
+      },
+      {
+        h: 'The reparameterisation trick',
+        tex: r`$$z = \mu(x) + \sigma(x) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I) \implies \frac{\partial z}{\partial \mu} = I, \quad \frac{\partial z}{\partial \sigma} = \operatorname{diag}(\epsilon)$$`,
+        p: r`By rewriting the stochastic variable $z$ as a deterministic transformation of parameters and independent noise $\epsilon$, gradients can backpropagate through $\mu$ and $\sigma$ without encountering non-differentiable sampling nodes.`,
+      },
+    ],
+    keyPoints: [
+      r`The reparameterisation trick ($z = \mu + \sigma \odot \epsilon$) permits gradient backpropagation through stochastic sampling by moving randomness into an external noise input.`,
+      r`The KL divergence term regularises the latent space into an uninterrupted Gaussian manifold, eliminating dead zones and enabling smooth interpolation.`,
+      r`Unlike classical autoencoders, VAEs are true generative models: sampling $z \sim \mathcal{N}(0, I)$ and passing it to the decoder synthesises coherent novel samples.`,
+    ],
+    pitfalls: [
+      r`Posterior collapse: when paired with powerful autoregressive decoders, the decoder learns to generate data unconditionally, ignoring $z$ completely while setting $D_{\text{KL}} \to 0$.`,
+      r`Sampling directly using non-differentiable random generators inside the forward pass, which severs the computational graph and stops the encoder from updating.`,
+      r`Over-weighting the KL penalty early in training without KL annealing, forcing all representations to zero and producing blurry, featureless reconstructions.`,
+    ],
+    code: r`import numpy as np
+
+# Reparameterisation trick and analytical KL divergence
+np.random.seed(42)
+N, d = 2, 2  # 2 samples, 2 latent dimensions
+
+# Encoder outputs: mean and log-variance
+mu = np.array([[0.0, 0.0], [1.5, -2.0]])
+log_var = np.array([[0.0, 0.0], [-0.5, 0.8]])
+std = np.exp(0.5 * log_var)
+
+# 1. Reparameterisation trick: z = mu + std * epsilon
+eps = np.random.randn(N, d)
+z = mu + std * eps
+
+# 2. Analytical KL divergence against standard Gaussian N(0, I)
+kl_divergence = -0.5 * np.sum(1.0 + log_var - mu**2 - np.exp(log_var), axis=1)
+
+print("Sample 0 (ideal prior: mu=0, logvar=0):")
+print(f"  Latent sample z: {np.round(z[0], 4).tolist()}")
+print(f"  KL divergence:   {kl_divergence[0]:.4f} (zero penalty)")
+
+print("Sample 1 (displaced mean, scaled variance):")
+print(f"  Latent sample z: {np.round(z[1], 4).tolist()}")
+print(f"  KL divergence:   {kl_divergence[1]:.4f} (regularisation penalty applied)")`,
+    quiz: [
+      {
+        q: r`What is the fundamental purpose of the reparameterisation trick in Variational Autoencoders?`,
+        o: [
+          r`To convert continuous latent variables into discrete integers`,
+          r`To allow backpropagation through the latent sampling step by expressing $z$ as a deterministic function of parameters and independent noise`,
+          r`To eliminate the need for a decoder network`,
+          r`To speed up matrix multiplication using 16-bit floating point operations`,
+        ],
+        a: 1,
+        why: r`Direct stochastic sampling ($z \sim \mathcal{N}(\mu, \sigma^2)$) has no defined gradient with respect to distribution parameters. Formulating $z = \mu + \sigma \odot \epsilon$ isolates randomness into $\epsilon$, making $z$ fully differentiable with respect to $\mu$ and $\sigma$.`,
+      },
+      {
+        q: r`What failure mode occurs when a VAE experiences "posterior collapse"?`,
+        o: [
+          r`The encoder mean values explode to infinity`,
+          r`The decoder learns to model the data unconditionally, completely ignoring the latent variable $z$ while the KL divergence drops to zero`,
+          r`The reconstruction loss becomes negative`,
+          r`The training process produces NaN values in the learning rate scheduler`,
+        ],
+        a: 1,
+        why: r`Posterior collapse happens when an expressive decoder reconstructs data without using latent information, causing the variational posterior $q(z|x)$ to collapse to the uninformative prior $p(z)$ ($D_{\text{KL}} \to 0$).`,
+      },
+      {
+        q: r`In the Evidence Lower Bound (ELBO), what role does the KL divergence term play?`,
+        o: [
+          r`It measures classification accuracy on the validation split`,
+          r`It regularises the encoder's posterior distribution to match a standard normal prior $\mathcal{N}(0, I)$, ensuring a smooth, continuous latent space`,
+          r`It doubles the learning rate whenever loss plateaus`,
+          r`It enforces orthogonality between weight matrices in the decoder`,
+        ],
+        a: 1,
+        why: r`The KL divergence acts as a regulariser that pulls encoded representations toward a zero-centred unit Gaussian distribution, preventing disconnected clusters and guaranteeing that random sampling yields realistic data.`,
+      },
+      {
+        q: r`How does generation of new samples occur in a trained VAE?`,
+        o: [
+          r`By passing real images through the encoder and discarding the decoder`,
+          r`By sampling a latent vector $z$ directly from the standard normal prior $\mathcal{N}(0, I)$ and passing it through the decoder`,
+          r`By calculating the gradient of the training loss with respect to pixels`,
+          r`By running k-means clustering on the training dataset`,
+        ],
+        a: 1,
+        why: r`Because the KL divergence trained the latent space to approximate $\mathcal{N}(0, I)$, sampling $z \sim \mathcal{N}(0, I)$ and evaluating $g_\theta(z)$ synthesises novel, realistic data without needing an input image.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['autoencoders', 'backpropagation-and-autodiff', 'maximum-likelihood-estimation'],
+    related: ['gans', 'the-attention-mechanism', 'residual-networks-and-skip-connections'],
+    keywords: 'variational autoencoder vae elbo kl divergence reparameterisation trick generative model posterior collapse latent space continuous manifold kingma welling',
+  },
+
+  // ------------------------------------------------------------------ Lesson 4
+  {
+    id: 'gans',
+    short: 'GANs',
+    title: 'Generative Adversarial Networks (GANs)',
+    task: 'concepts',
+    module: 'Architectures',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Pitting two neural networks against each other in a zero-sum minimax game: a generator creates synthetic counterfeits while a discriminator learns to detect them.`,
+    lead: r`Rather than relying on hand-crafted pixel reconstruction metrics that encourage blurry outputs, Generative Adversarial Networks (GANs, Goodfellow et al. 2014) cast generative modelling as an adversarial game. A generator learns to synthesize realistic data from random noise, while a discriminator acts as an adaptive loss function, continually learning to distinguish genuine training examples from synthetic fakes.`,
+    intuition: [
+      r`Consider an art counterfeiter and an art detective:
+- The **Generator** ($G$) is the counterfeiter: it accepts random Gaussian noise $z \sim \mathcal{N}(0, I)$ and attempts to paint a convincing fake artwork $G(z)$.
+- The **Discriminator** ($D$) is the detective: it receives an image $x$ (which is either an authentic museum masterpiece or a counterfeit from the generator) and outputs a probability score $D(x) \in [0, 1]$ indicating whether the image is authentic.
+At the beginning, both networks are unskilled: the generator outputs random static noise, and the discriminator guesses at chance levels.`,
+      r`Training proceeds as a competitive two-player alternating game:
+1. **Train the Discriminator**: Present it with a batch of authentic images (labelled 1) and a batch of generator fakes (labelled 0). Update discriminator weights to maximise classification accuracy.
+2. **Train the Generator**: Feed noise through the generator, pass the generated fakes to the discriminator, and update generator weights to fool the discriminator into classifying fakes as authentic ($D(G(z)) \to 1$).
+As the discriminator learns to detect increasingly subtle visual flaws, the generator is forced to eliminate those flaws, producing sharper textures, higher fidelity, and convincing spatial details.`,
+      r`At theoretical equilibrium (the **Nash equilibrium**), the generator captures the true underlying data distribution ($p_g = p_{\text{data}}$), and the discriminator can do no better than guessing with probability $D(x) = 0.5$ for every candidate image. Because the generator is guided by a learned discriminator rather than an inflexible pixel-wise distance metric like Mean Squared Error, GANs avoid the blurriness typical of standard autoencoders and produce crisp, photorealistic imagery.`,
+    ],
+    analogy: r`Like a currency counterfeiter and a bank teller: as the counterfeiter refines their printing techniques, the teller learns new counterfeit-detection checks, perpetually driving both to higher levels of mastery.`,
+    steps: [
+      r`Design dual architectures: construct Generator $G_\theta: \mathbb{R}^{d_z} \to \mathbb{R}^D$ and Discriminator $D_\phi: \mathbb{R}^D \to [0, 1]$ using convolutional or dense layers with LeakyReLU activations.`,
+      r`Train the discriminator on real and fake batches: freeze generator parameters, evaluate $D(x_{\text{real}})$ and $D(G(z))$, and update discriminator weights using binary cross-entropy loss.`,
+      r`Train the generator with non-saturating loss: freeze discriminator parameters, sample fresh noise $z$, and update generator weights to maximise $\log D(G(z))$ (minimising $-\log D(G(z))$).`,
+      r`Alternate training updates: execute one or more discriminator steps per generator step to ensure the discriminator provides informative gradients.`,
+      r`Monitor adversarial equilibrium: verify that discriminator loss does not collapse to zero (which eliminates generator gradients) or diverge uncontrollably.`,
+    ],
+    math: [
+      {
+        h: 'The minimax zero-sum game objective',
+        tex: r`$$\min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{\text{data}}}\big[\log D(x)\big] + \mathbb{E}_{z \sim p_z}\big[\log\big(1 - D(G(z))\big)\big]$$`,
+        p: r`$D(x)$ is the discriminator's predicted probability that $x$ is real, and $G(z)$ is the generator's synthesized sample from noise prior $p_z$. The discriminator seeks to maximise $V(D, G)$ by correctly classifying real and fake inputs; the generator seeks to minimise it by producing fakes that drive $D(G(z)) \to 1$.`,
+      },
+      {
+        h: 'Optimal discriminator and Jensen-Shannon Divergence',
+        tex: r`$$D^*(x) = \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + p_g(x)} \implies V(D^*, G) = -\log(4) + 2 \cdot D_{\text{JS}}(p_{\text{data}} \parallel p_g)$$`,
+        p: r`For any fixed generator $G$, the optimal discriminator is the density ratio of real data to combined data. When substituted into the objective, minimising $V(D^*, G)$ is mathematically equivalent to minimising the Jensen-Shannon divergence between real data distribution $p_{\text{data}}$ and generated distribution $p_g$.`,
+      },
+      {
+        h: 'Non-saturating generator loss (practical implementation)',
+        tex: r`$$\mathcal{L}_G = -\mathbb{E}_{z \sim p_z}\big[\log D(G(z))\big] \quad \text{instead of} \quad \mathcal{L}_G^{\text{orig}} = \mathbb{E}_{z \sim p_z}\big[\log(1 - D(G(z)))\big]$$`,
+        p: r`Early in training when the generator is weak, the discriminator easily identifies fakes ($D(G(z)) \approx 0$). In this regime, the original minimax loss $\log(1 - D(G(z)))$ has flat gradients. Maximising $\log D(G(z))$ provides steep, non-zero gradients early on, dramatically accelerating generator learning.`,
+      },
+    ],
+    keyPoints: [
+      r`GANs replace hand-crafted loss functions with an adaptive discriminator network that dynamically discovers the criteria for realism.`,
+      r`The non-saturating generator loss ($-\log D(G(z))$) overcomes vanishing gradients early in training when the discriminator easily outmatches the generator.`,
+      r`Theoretical Nash equilibrium is reached when the generator reproduces the true data distribution ($p_g = p_{\text{data}}$) and the discriminator predicts $0.5$ for all samples.`,
+    ],
+    pitfalls: [
+      r`Mode collapse: the generator discovers a narrow subset of convincing samples (or a single class) that reliably fools the discriminator, ignoring the rest of the target distribution.`,
+      r`Discriminator overpowering: if the discriminator learns too fast and achieves 100% accuracy, generator gradients vanish to zero, freezing training.`,
+      r`Using training loss curves to judge visual quality: GAN loss curves fluctuate and do not correlate monotonically with sample fidelity; use metrics like FID (Fréchet Inception Distance) instead.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate one step of GAN training on 1D Gaussian target N(4.0, 0.5^2)
+np.random.seed(42)
+N = 20
+w_g, b_g = 1.0, 1.0  # Generator: G(z) = w_g * z + b_g
+w_d, b_d = 0.5, 0.0  # Discriminator: D(x) = sigmoid(w_d * x + b_d)
+
+# 1. Evaluate Discriminator on real data vs generated fakes
+z_noise = np.random.randn(N)
+x_fake = w_g * z_noise + b_g
+x_real = np.random.normal(4.0, 0.5, size=N)
+
+d_real = 1.0 / (1.0 + np.exp(-(w_d * x_real + b_d)))
+d_fake = 1.0 / (1.0 + np.exp(-(w_d * x_fake + b_d)))
+
+loss_d = -float(np.mean(np.log(d_real + 1e-8) + np.log(1.0 - d_fake + 1e-8)))
+
+# 2. Evaluate Generator using non-saturating loss: -log(D(G(z)))
+z_fresh = np.random.randn(N)
+x_gen = w_g * z_fresh + b_g
+d_gen = 1.0 / (1.0 + np.exp(-(w_d * x_gen + b_d)))
+loss_g = -float(np.mean(np.log(d_gen + 1e-8)))
+
+print(f"Discriminator loss on mixed batch: {loss_d:.4f}")
+print(f"Generator non-saturating loss:     {loss_g:.4f}")
+print(f"Avg discriminator score on real data: {float(np.mean(d_real)):.4f}")
+print(f"Avg discriminator score on fake data: {float(np.mean(d_fake)):.4f}")`,
+    quiz: [
+      {
+        q: r`What is "mode collapse" in Generative Adversarial Networks?`,
+        o: [
+          r`The discriminator learning rate drops to zero during training`,
+          r`The generator produces only a limited variety of outputs (or a single sample) that fools the discriminator, ignoring the diversity of the true distribution`,
+          r`The model runs out of GPU memory during backward passes`,
+          r`The generator weights collapse to zero due to excessive weight decay`,
+        ],
+        a: 1,
+        why: r`Mode collapse occurs when the generator finds a small region of the data space that consistently fools the discriminator, repeatedly producing that single pattern rather than learning the entire multimodal distribution.`,
+      },
+      {
+        q: r`Why is the non-saturating generator loss $-\log D(G(z))$ preferred over the original minimax formulation $\log(1 - D(G(z)))$?`,
+        o: [
+          r`Because it provides strong, non-vanishing gradients early in training when the discriminator easily rejects poor generator fakes`,
+          r`Because it eliminates the discriminator network entirely`,
+          r`Because it guarantees that the generator converges in exactly one epoch`,
+          r`Because it forces the discriminator to predict negative probabilities`,
+        ],
+        a: 0,
+        why: r`Early in training, $D(G(z)) \approx 0$. The slope of $\log(1 - D(G(z)))$ is near zero in this regime, causing vanishing gradients. In contrast, $-\log D(G(z))$ has a steep slope near zero, providing large initial gradient updates.`,
+      },
+      {
+        q: r`What is the theoretical Nash equilibrium state of the ideal GAN minimax game?`,
+        o: [
+          r`The generator produces zero loss and the discriminator achieves 100% accuracy`,
+          r`The generated distribution matches the real data distribution ($p_g = p_{\text{data}}$) and the discriminator predicts 0.5 for all samples`,
+          r`The discriminator loss diverges to infinity`,
+          r`The generator outputs only negative numbers`,
+        ],
+        a: 1,
+        why: r`At Nash equilibrium, the generator perfectly replicates the true data distribution ($p_g = p_{\text{data}}$), leaving the discriminator unable to distinguish real from fake and forcing its optimal prediction to be chance ($D(x) = 0.5$).`,
+      },
+      {
+        q: r`Why are training loss curves often uninformative for assessing the quality of a GAN?`,
+        o: [
+          r`Because GAN loss curves do not record floating-point numbers`,
+          r`Because the discriminator and generator improve adversarially against each other; an equilibrium game can exhibit oscillating or static losses while visual quality steadily improves`,
+          r`Because binary cross-entropy cannot be computed on images`,
+          r`Because the generator does not use backpropagation`,
+        ],
+        a: 1,
+        why: r`In a zero-sum game, as the generator gets better, the discriminator also adapts. Both losses can remain roughly constant even as sample realism improves dramatically, necessitating sample-based metrics like Fréchet Inception Distance (FID).`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['variational-autoencoders', 'the-pytorch-training-loop', 'backpropagation-and-autodiff'],
+    related: ['autoencoders', 'residual-networks-and-skip-connections', 'the-attention-mechanism'],
+    keywords: 'gans generative adversarial networks generator discriminator minimax game jensen-shannon divergence mode collapse non-saturating loss nash equilibrium goodfellow',
+  },
 ];
