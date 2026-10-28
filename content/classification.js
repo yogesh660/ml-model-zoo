@@ -192,7 +192,7 @@ calibrated = CalibratedClassifierCV(GaussianNB(), method="isotonic", cv=5).fit(X
     pros: ['Very fast to train and predict, even with huge vocabularies.', 'Strong text baseline with little data.', 'Easy to inspect: the most indicative words per class.'],
     cons: ['Independence between words is clearly false.', 'Probabilities are overconfident.', 'Beaten by linear SVMs or transformers when data is plentiful.'],
     use: r`Text classification baselines: spam, topic tagging, sentiment, especially with little labelled data.`,
-    avoid: r`When word order and context matter; see [[transformers_rnn_classifier]].`,
+    avoid: r`When word order and context matter; see [[lstm_networks|LSTMs]] and [[transformer_networks|Transformers]].`,
     complexity: [r`$O(\text{non-zeros})$`, r`$O(\text{words in doc})$`],
     glance: { learns: 'Word probabilities per class', family: 'Generative, discrete' },
     code: r`from sklearn.pipeline import make_pipeline
@@ -211,7 +211,7 @@ print(mnb.predict_proba(["free lunch meeting"]), bnb.predict_proba(["free lunch 
       { q: r`Why is Laplace smoothing needed?`, o: [r`To speed up training`, r`An unseen word would give probability 0 and veto the class`, r`To balance the classes`, r`To normalise document length`], a: 1, why: r`A single zero in a product makes the whole product zero.` },
       { q: r`What does Bernoulli NB use that Multinomial NB ignores?`, o: [r`Word counts`, r`The absence of words`, r`Word order`, r`Document length`], a: 1, why: r`Bernoulli multiplies in $1 - \theta$ for every vocabulary word that does not appear.` },
     ],
-    related: ['gaussian_naive_bayes', 'logistic_regression', 'transformers_rnn_classifier'],
+    related: ['gaussian_naive_bayes', 'logistic_regression', 'transformer_networks'],
     prereq: ['gaussian_naive_bayes'],
     concepts: ['log-odds', 'maximum-likelihood-estimation'],
     labIntro: r`A tiny spam filter trained on 16 short messages. Type your own message to see how each word votes.`,

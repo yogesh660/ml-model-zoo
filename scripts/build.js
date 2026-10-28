@@ -15,6 +15,7 @@ const LESSONS = [
   ...require('../content/classification'),
   ...require('../content/clustering'),
   ...require('../content/neural'),
+  ...require('../content/sequences'),
 ];
 
 const SITE = 'https://yogesh660.github.io/';
@@ -117,7 +118,10 @@ function apiName(l) {
   if (l.id === 'xgboost_regressor') return 'xgboost.XGBRegressor';
   if (l.id === 'lightgbm_regressor') return 'lightgbm.LGBMRegressor';
   if (l.id === 'convolutional_neural_networks') return 'torch.nn.Conv2d';
-  if (l.id === 'transformers_rnn_classifier') return 'transformers.AutoModelForSequenceClassification';
+  if (l.id === 'recurrent_neural_networks') return 'torch.nn.RNN';
+  if (l.id === 'gru_networks') return 'torch.nn.GRU';
+  if (l.id === 'lstm_networks') return 'torch.nn.LSTM';
+  if (l.id === 'transformer_networks') return 'torch.nn.TransformerEncoder';
   return cands.length ? `${cands[0].mod}.${cands[0].name}` : '';
 }
 
@@ -441,6 +445,9 @@ function lessonPage(l) {
         ${l.analogy ? `<div class="analogy"><small class="kicker">In everyday terms</small><p>${R(l.analogy)}</p></div>` : ''}`);
   add('how', isModel ? 'How it works' : 'Step by step', `
         <ol class="steps">${(l.steps || []).map(s => `<li>${R(s)}</li>`).join('')}</ol>`);
+  if (l.explainer) add('watch', 'Watch it work', `
+        <p>Press play, or step through at your own pace. Each step adds one idea.</p>
+        <div class="explainer" data-explainer="${l.explainer}" style="margin-top:18px"><noscript><p class="lab-noscript">The animation needs JavaScript.</p></noscript></div>`);
   add('lab', 'Try it', `
         <p>${R(l.labIntro || 'Change the settings and watch the model respond.')}</p>
         <div class="lab" data-lab="${l.id}" data-kind="${l.kind}" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
@@ -550,7 +557,7 @@ function lessonPage(l) {
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 `;
-  const labScripts = ['core', 'algos', 'models', ...(l.kind === 'concepts' ? ['concepts'] : [])].map(f => `<script src="${rootRel}assets/labs/${f}.js?v=${VERSION}" defer></script>\n`).join('');
+  const labScripts = ['core', 'algos', 'models', ...(l.kind === 'concepts' ? ['concepts'] : ['sequences']), ...(l.explainer ? ['explainers'] : [])].map(f => `<script src="${rootRel}assets/labs/${f}.js?v=${VERSION}" defer></script>\n`).join('');
 
   return shell({
     rootRel, bodyClass: 'page-lesson', lessonId: l.id,
@@ -563,6 +570,8 @@ function lessonPage(l) {
 // ------------------------------------------------------------------ write everything
 write('index.html', hub());
 ORDER.forEach(l => write(`${l.kind}/${l.id}/index.html`, lessonPage(l)));
+// the combined sequences lesson was split in four; send old links to the first of them
+write('models/transformers_rnn_classifier/index.html', `<!doctype html><meta charset="utf-8"><title>Sequences · Learn</title><meta http-equiv="refresh" content="0; url=../recurrent_neural_networks/"><link rel="canonical" href="../recurrent_neural_networks/"><a href="../recurrent_neural_networks/">Recurrent neural networks</a>`);
 // the concepts folder had its own index page; keep the URL working
 write('concepts/index.html', `<!doctype html><meta charset="utf-8"><title>Foundations · Learn</title><meta http-equiv="refresh" content="0; url=../#path-foundations"><link rel="canonical" href="../#path-foundations"><a href="../#path-foundations">Foundations</a>`);
 console.log(`built index.html + ${ORDER.length} lessons (${N_MODELS} models, ${N_CONCEPTS} concepts), ${Math.round(totalMinutes / 60)} h of material`);

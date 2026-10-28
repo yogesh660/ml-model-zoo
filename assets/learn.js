@@ -248,6 +248,19 @@
       if (navigator.clipboard) navigator.clipboard.writeText(pre.innerText).then(ok, () => {});
     }));
 
+    // explainers: start them as they approach the viewport too
+    document.querySelectorAll('[data-explainer]').forEach(el => {
+      const start = () => {
+        const fn = window.Labs && window.Labs.explainers && window.Labs.explainers[el.dataset.explainer];
+        if (!fn) { el.innerHTML = '<p class="lab-noscript">This animation could not load.</p>'; return; }
+        try { fn(el); } catch (e) { console.error(e); }
+      };
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); start(); } }, { rootMargin: '300px 0px' });
+        io.observe(el);
+      } else start();
+    });
+
     // labs start when they come near the viewport, so a long page stays light
     document.querySelectorAll('[data-lab]').forEach(el => {
       const start = () => {

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070709">
+<title>Long Short-Term Memory Networks (LSTMs) · Learn · Yogesh Awate</title>
+<meta name="description" content="An RNN with a separate memory cell and three gates (forget, input, output) that decide what to store, keep and reveal.">
+<meta property="og:title" content="Long Short-Term Memory Networks (LSTMs) · Learn · Yogesh Awate">
+<meta property="og:description" content="An RNN with a separate memory cell and three gates (forget, input, output) that decide what to store, keep and reveal.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css?v=mvrw8qg8">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvrw8qg8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="page-lesson" data-lesson="lstm_networks">
+<a class="skip" href="#main">Skip to content</a>
+
+<nav id="nav">
+  <div class="brand"><a class="mark" href="https://yogesh660.github.io/" aria-label="Yogesh Awate, home">YA<span>.</span></a><a class="brand-sub" href="../../">Learn</a></div>
+  <div class="navlinks" id="navlinks">
+    <a href="../../#paths">Paths</a>
+    <a href="../../#curriculum">Curriculum</a>
+    <a href="../../#datasets">Datasets</a>
+    <a href="https://yogesh660.github.io/about/">About</a>
+    <a class="pill" href="https://yogesh660.github.io/">Portfolio <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </div>
+  <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</nav>
+
+<main id="main">
+
+<div class="progress" aria-hidden="true"></div>
+<article class="case-page">
+  <header class="page-head lesson-head">
+    <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
+    <span class="tag rise" style="--d:2"><a href="../../#path-neural">Path 05 · Neural networks</a> / Sequences / Lesson 6 of 7</span>
+    <h1 class="case-title">Long Short-Term Memory Networks (LSTMs)</h1>
+    <p class="lede rise" style="--d:3">An RNN with a separate memory cell and three gates (forget, input, output) that decide what to store, keep and reveal.</p>
+    <div class="lesson-meta rise" style="--d:4">
+      <span class="tagline"><span class="lvl" data-l="3"><i><b></b></i>Advanced</span></span>
+      <span class="tagline">22 min</span>
+      <span class="tagline lab">Live lab</span>
+      <span class="prereq">Before this: <a href="../../models/gru_networks/">GRUs</a></span>
+    </div>
+  </header>
+
+  <div class="case-body lesson-body">
+    <aside class="glance reveal">
+      <h4>At a glance</h4>
+      <dl>
+          <dt>Task</dt><dd>Classification</dd>
+          <dt>Family</dt><dd>Gated recurrent network</dd>
+          <dt>What it learns</dt><dd>Weights for three gates and the candidate</dd>
+          <dt>Training cost</dt><dd>$O(T\,d^2)$, about 4× an RNN</dd>
+          <dt>Prediction cost</dt><dd>$O(d^2)$ per step</dd>
+          <dt>In code</dt><dd><code class="no-math">torch.<wbr>nn.<wbr>LSTM</code></dd>
+      </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>How it works</a></li><li><a href="#watch"><span>03</span>Watch it work</a></li><li><a href="#lab"><span>04</span>Try it</a></li><li><a href="#maths"><span>05</span>The maths</a></li><li><a href="#tuning"><span>06</span>Hyperparameters</a></li><li><a href="#when"><span>07</span>When to use it</a></li><li><a href="#code"><span>08</span>In code</a></li><li><a href="#quiz"><span>09</span>Check yourself</a></li><li><a href="#related"><span>10</span>Related lessons</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
+    </aside>
+
+    <div class="story">
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">An LSTM keeps two things per step: a <strong>cell state</strong> $c_t$, a long-term memory that is only changed by small, gated additions, and a <strong>hidden state</strong> $h_t$, the part it shows to the rest of the network. Three gates control the flow: forget, input and output.</p>
+        <p>Picture the cell state as a conveyor belt running through time. At each step the <strong>forget gate</strong> $f_t$ decides how much of what is on the belt to keep, the <strong>input gate</strong> $i_t$ decides how much new information to place on it, and the <strong>output gate</strong> $o_t$ decides how much of the belt to reveal as $h_t$. Because the belt is updated by addition rather than repeated squashing, information (and gradient) can travel hundreds of steps.</p>
+        <p>The classic test is "remember something, ignore distractions, recall it later": a value appears at the start, then many irrelevant inputs follow, then the network must report the value. A vanilla RNN smears the value with every distractor. An LSTM opens its input gate once, closes it, holds the forget gate near 1, and opens the output gate at the end. The lab runs exactly this task.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>A safe with three doors: one to throw old things out, one to put new things in, one to show what is inside. Most of the time all three stay shut and the contents are kept intact.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> How it works</h2>
+        <ol class="steps"><li>Compute three gates from $x_t$ and $h_{t-1}$: forget $f_t$, input $i_t$, output $o_t$ (each a sigmoid, 0 to 1).</li><li>Propose new content $\tilde c_t = \tanh(W_c x_t + U_c h_{t-1})$.</li><li>Update the cell: $c_t = f_t \odot c_{t-1} + i_t \odot \tilde c_t$ (keep some old, add some new).</li><li>Reveal part of it: $h_t = o_t \odot \tanh(c_t)$.</li><li>Initialise the forget-gate bias to about 1 so the network starts by remembering.</li></ol>
+      </section>
+      <section class="reveal" id="watch">
+        <h2 class="h3"><span>03</span> Watch it work</h2>
+        <p>Press play, or step through at your own pace. Each step adds one idea.</p>
+        <div class="explainer" data-explainer="lstm" style="margin-top:18px"><noscript><p class="lab-noscript">The animation needs JavaScript.</p></noscript></div>
+      </section>
+      <section class="reveal" id="lab">
+        <h2 class="h3"><span>04</span> Try it</h2>
+        <p>The memory task: a value arrives at step 1, then 20 distractor inputs, then the network must recall the value. Watch the cell state (the conveyor belt) and the three gates step by step, and compare with a plain RNN trying the same thing.</p>
+        <div class="lab" data-lab="lstm_networks" data-kind="models" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
+        <div class="try"><small class="kicker">Things to try</small><ol><li>Press <em>Play</em> with the defaults: the input gate opens once, the forget gate holds, and the value is recalled almost exactly.</li><li>Switch the input gate to "always open": distractors pour into the cell and recall falls apart.</li><li>Lower the forget gate to 0.8: the stored value leaks away, just like the RNN.</li></ol></div>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>05</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Gates</h3><div class="formula">$$f_t = \sigma(W_f x_t + U_f h_{t-1} + b_f), \quad i_t = \sigma(W_i x_t + U_i h_{t-1} + b_i), \quad o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$</div><p>Each gate is a vector the same size as the memory, so different units can keep or forget independently.</p></li>
+          <li><h3>Cell and hidden state</h3><div class="formula">$$c_t = f_t\odot c_{t-1} + i_t\odot\tilde c_t, \qquad h_t = o_t\odot\tanh(c_t)$$</div><p>The cell state is updated additively: the key difference from an RNN.</p></li>
+          <li><h3>The gradient highway</h3><div class="formula">$$\frac{\partial c_t}{\partial c_{k}} = \prod_{s=k+1}^{t} \operatorname{diag}(f_s)$$</div><p>Along the cell path, gradients are only scaled by forget gates. With $f_s \approx 1$, they reach far into the past without vanishing.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="tuning">
+        <h2 class="h3"><span>06</span> Hyperparameters</h2>
+        <div class="table-wrap"><table class="kv">
+          <thead><tr><th>Setting</th><th>What it does</th><th>Typical choice</th></tr></thead>
+          <tbody><tr><td><span class="hp">hidden_size</span></td><td>Size of $c_t$ and $h_t$.</td><td>64–512.</td></tr><tr><td><span class="hp">num_layers</span></td><td>Stacked LSTMs.</td><td>1–3.</td></tr><tr><td><span class="hp">forget-gate bias</span></td><td>Initial tendency to remember.</td><td>1.0 (a common trick).</td></tr><tr><td><span class="hp">dropout / bidirectional</span></td><td>Regularisation and backward reading.</td><td>0.1–0.3; bidirectional for classification.</td></tr></tbody>
+        </table></div>
+      </section>
+      <section class="reveal" id="when">
+        <h2 class="h3"><span>07</span> When to use it</h2>
+        <div class="split2">
+          <div class="box good"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Strengths</h3><ul><li>Long memory through the additive cell path.</li><li>Robust and well understood; strong on time series and speech.</li><li>Explicit gates are somewhat interpretable.</li></ul></div>
+          <div class="box bad"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg> Limitations</h3><ul><li>About 4× the parameters of an RNN of the same width.</li><li>Sequential computation limits training speed.</li><li>Transformers usually win on large text datasets.</li></ul></div>
+          <div class="box use"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> Reach for it when</h3><p>Time-series forecasting, speech, handwriting, and text tasks with moderate data where long memory matters.</p></div>
+          <div class="box avoid"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Think twice when</h3><p>Very long contexts with lots of data and GPUs available: Transformers train faster and attend directly.</p></div>
+        </div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>08</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> torch, torch.nn <span class="k">as</span> nn
+<span class="k">from</span> sklearn.datasets <span class="k">import</span> load_digits
+
+<span class="c"># read each 8x8 digit image as a sequence: 8 time steps, 8 pixels per step</span>
+digits = <span class="f">load_digits</span>()
+X = torch.<span class="f">tensor</span>(digits.images / <span class="n">16.0</span>, dtype=torch.float32)    <span class="c"># (n, 8, 8)</span>
+y = torch.<span class="f">tensor</span>(digits.target)
+
+<span class="k">class</span> <span class="f">LSTMClassifier</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(<span class="k">self</span>, hidden=<span class="n">64</span>):
+        <span class="k">super</span>().<span class="f">__init__</span>()
+        <span class="k">self</span>.lstm = nn.<span class="f">LSTM</span>(input_size=<span class="n">8</span>, hidden_size=hidden, batch_first=<span class="k">True</span>)
+        <span class="k">self</span>.out = nn.<span class="f">Linear</span>(hidden, <span class="n">10</span>)
+        <span class="c"># start by remembering: forget-gate biases (second quarter of each bias vector) set to 1</span>
+        <span class="k">for</span> name, b <span class="k">in</span> <span class="k">self</span>.lstm.<span class="f">named_parameters</span>():
+            <span class="k">if</span> <span class="s">&quot;bias&quot;</span> <span class="k">in</span> name:
+                b.data[hidden:<span class="n">2</span> * hidden].<span class="f">fill_</span>(<span class="n">1.0</span>)
+
+    <span class="k">def</span> <span class="f">forward</span>(<span class="k">self</span>, x):
+        _, (h_last, c_last) = <span class="k">self</span>.<span class="f">lstm</span>(x)
+        <span class="k">return</span> <span class="k">self</span>.<span class="f">out</span>(h_last[-<span class="n">1</span>])</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Leaving the forget-gate bias at 0, which makes the network forget by default early in training.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Confusing $h_t$ (what the LSTM shows) with $c_t$ (what it remembers).</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Using an LSTM for tabular data with no meaningful order.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>09</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>Which gate decides how much of the old cell state to keep?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Input gate</span></button><button class="opt" type="button"><b>B</b><span>Forget gate</span></button><button class="opt" type="button"><b>C</b><span>Output gate</span></button><button class="opt" type="button"><b>D</b><span>Reset gate</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $c_t = f_t \odot c_{t-1} + \dots$</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q2</span>Why do gradients survive longer in an LSTM than in a vanilla RNN?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses ReLU</span></button><button class="opt" type="button"><b>B</b><span>The cell state is updated by addition and only scaled by the forget gate</span></button><button class="opt" type="button"><b>C</b><span>It has more layers</span></button><button class="opt" type="button"><b>D</b><span>It uses attention</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Along the cell path the Jacobian is $\operatorname{diag}(f_t)$, close to the identity when $f_t \approx 1$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q3</span>To remember a value and ignore 20 distractors, an LSTM ideally keeps:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Input gate open, forget gate near 0</span></button><button class="opt" type="button"><b>B</b><span>Input gate open once, then closed; forget gate near 1</span></button><button class="opt" type="button"><b>C</b><span>All gates at 0.5</span></button><button class="opt" type="button"><b>D</b><span>Output gate always open</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Write once, then hold; the output gate opens when the value is needed.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>10</span> Related lessons</h2>
+        <div class="related"><a href="../../models/gru_networks/"><small class="kicker">Neural networks</small><b>GRUs</b></a><a href="../../models/recurrent_neural_networks/"><small class="kicker">Neural networks</small><b>RNNs</b></a><a href="../../models/transformer_networks/"><small class="kicker">Neural networks</small><b>Transformers</b></a><a href="../../concepts/sigmoid-and-link-functions/"><small class="kicker">Concept</small><b>Sigmoid &amp; link functions</b></a><a href="../../concepts/gradient-descent/"><small class="kicker">Concept</small><b>Gradient descent</b></a></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="pager" role="navigation" aria-label="Previous and next lesson">
+    <a href="../../models/gru_networks/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Neural networks</small><b>GRUs</b></a>
+    <a class="pager-next" href="../../models/transformer_networks/"><small>Next · Neural networks <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>Transformers</b></a>
+  </div>
+</article>
+</main>
+
+<section id="contact" class="contact">
+  <span class="tag reveal">Let's connect</span>
+  <h2 class="reveal">Have a hard problem?<br><span>Let's make it simple.</span></h2>
+  <a class="email reveal" href="mailto:awateyogeshs@gmail.com">awateyogeshs@gmail.com <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  <div class="socials reveal">
+    <a href="https://www.linkedin.com/in/yogesh-s-awate/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+    <a href="https://github.com/yogesh660" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.2-.3-2.5-1-3.5.3-1.1.3-2.4 0-3.5 0 0-1 0-3 1.5a10.5 10.5 0 0 0-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.4 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg> GitHub</a>
+    <a href="https://medium.com/@yogeshinawate" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Medium</a>
+    <a href="https://twitter.com/YogeshSAwate1" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg> X / Twitter</a>
+  </div>
+</section>
+
+<footer>
+  <a class="mark" href="https://yogesh660.github.io/">YA<span>.</span></a>
+  <div class="footlinks"><a href="../../">Learn</a><a href="https://yogesh660.github.io/work/">Work</a><a href="https://yogesh660.github.io/projects/">Open source</a><a href="https://yogesh660.github.io/about/">About</a></div>
+  <span>© 2026 YOGESH AWATE</span>
+</footer>
+
+<script src="../../assets/site.js?v=mvrw8qg8" defer></script>
+<script src="../../assets/labs/core.js?v=mvrw8qg8" defer></script>
+<script src="../../assets/labs/algos.js?v=mvrw8qg8" defer></script>
+<script src="../../assets/labs/models.js?v=mvrw8qg8" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvrw8qg8" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvrw8qg8" defer></script>
+<script src="../../assets/learn.js?v=mvrw8qg8" defer></script>
+</body>
+</html>

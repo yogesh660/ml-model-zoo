@@ -359,3 +359,35 @@
 @media (max-width: 760px) { .cnn-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 16px; } }
 .story, .story > section { min-width: 0; }
 .syl-path > *, .modules, .module { min-width: 0; }
+
+/* ---------- animated explainers ---------- */
+.explainer { border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); overflow: hidden; }
+.ex-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.ex-head small { display: inline-flex; align-items: center; gap: 9px; font-size: 11px; color: var(--violet-2); }
+.ex-head small i { width: 7px; height: 7px; border-radius: 50%; background: var(--violet); box-shadow: 0 0 12px var(--violet); animation: pulse 2.4s ease-in-out infinite; }
+.ex-count { font: 400 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.ex-stage { background: radial-gradient(circle at 50% 40%, #16142a, #0b0b10 70%); }
+.ex-stage canvas { display: block; width: 100%; }
+.ex-cap { padding: 18px 22px 6px; border-top: 1px solid var(--line); min-height: 112px; }
+.ex-cap b { display: block; font-weight: 500; font-size: 18px; letter-spacing: -.02em; color: var(--ink); margin-bottom: 6px; }
+.ex-cap p { font-size: 15px !important; line-height: 1.7 !important; color: var(--muted) !important; margin: 0; }
+.ex-ctl { display: flex; align-items: center; gap: 8px; padding: 12px 20px 18px; }
+.ex-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line-2); background: none; color: var(--ink); cursor: pointer; transition: border-color .2s, background .2s; }
+.ex-btn:hover { border-color: #ffffff45; background: #ffffff08; }
+.ex-btn .i { width: 16px; height: 16px; }
+.ex-play { background: var(--ink); color: #09090b; border-color: var(--ink); }
+.ex-play:hover { background: #fff; }
+.ex-dots { display: flex; flex: 1; gap: 5px; margin-left: 10px; }
+.ex-dots button { flex: 1; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; display: flex; align-items: center; }
+.ex-dots button i { display: block; width: 100%; height: 3px; border-radius: 3px; background: #ffffff1c; transition: background .3s; }
+.ex-dots button.done i { background: #8c7cff88; }
+.ex-dots button.on i { background: linear-gradient(90deg, var(--violet), var(--cyan)); }
+.ex-dots button:hover i { background: #ffffff55; }
+@media (max-width: 760px) { .ex-cap { min-height: 150px; padding: 16px 18px 4px; } .ex-cap b { font-size: 16px; } .ex-ctl { padding: 10px 16px 16px; } }
+.ex-right { display: inline-flex; align-items: center; gap: 12px; }
+.explainer:fullscreen { display: flex; flex-direction: column; border-radius: 0; border: 0; background: var(--bg); }
+.explainer:fullscreen .ex-stage { flex: 1; display: grid; place-items: center; min-height: 0; }
+.explainer:-webkit-full-screen { display: flex; flex-direction: column; background: var(--bg); }
+.explainer:-webkit-full-screen .ex-stage { flex: 1; display: grid; place-items: center; min-height: 0; }
+.explainer:fullscreen .ex-cap { min-height: 0; }
+@media (max-width: 760px) { .ex-count { display: none; } }
