@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsh8416">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsh8416">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -134,6 +134,54 @@ chi2_stat, p_val, dof, expected = stats.<span class="f">chi2_contingency</span>(
             <div class="opts"><button class="opt" type="button"><b>A</b><span>One categorical variable directly causes the other</span></button><button class="opt" type="button"><b>B</b><span>The two categorical variables are statistically dependent in the sampled population</span></button><button class="opt" type="button"><b>C</b><span>All categories have identical frequencies</span></button><button class="opt" type="button"><b>D</b><span>The expected cell counts are all greater than 5</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Rejecting the null hypothesis of independence indicates that the row and column classifications are statistically dependent, though it does not imply causal direction.</div>
           </div>
+          <div class="q" data-answer="3">
+            <p><span>Q5</span>In a customer survey of $N = 200$ people, 80 are mobile users and 120 are desktop users. Overall, 50 users prefer dark mode. Under the null hypothesis that UI preference is independent of device, what is the expected count of mobile users who prefer dark mode?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>10.0</span></button><button class="opt" type="button"><b>B</b><span>25.0</span></button><button class="opt" type="button"><b>C</b><span>40.0</span></button><button class="opt" type="button"><b>D</b><span>20.0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Under the null hypothesis of independence, $E_{ij} = (R_i \times C_j) / N$. Here $E = (80 \times 50) / 200 = 4000 / 200 = 20.0$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>What is Cochran's standard criterion for determining whether sample sizes are sufficient for the asymptotic chi-square approximation in an $R \times C$ contingency table?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>All expected frequencies $E_{ij}$ must be at least 1, and at least 80% of cells must have $E_{ij} \ge 5$</span></button><button class="opt" type="button"><b>B</b><span>Every observed cell count $O_{ij}$ must exceed 30</span></button><button class="opt" type="button"><b>C</b><span>The total sample size $N$ must exceed 10,000</span></button><button class="opt" type="button"><b>D</b><span>The degrees of freedom must be greater than 10</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Cochran (1954) established that the continuous chi-square distribution accurately approximates multinomial cell probabilities when no expected cell frequency is less than 1 and at least 80% of cells have expected frequencies of 5 or more.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>100 users are surveyed on whether they like a software interface before and after a major redesign (producing binary Yes/No responses for each user at both time points). Why is Pearson's standard chi-square test of independence invalid for this table?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the data is continuous rather than categorical</span></button><button class="opt" type="button"><b>B</b><span>Because a $2 \times 2$ table has zero degrees of freedom</span></button><button class="opt" type="button"><b>C</b><span>Because the before and after observations come from the same individuals, violating the assumption of independent observations</span></button><button class="opt" type="button"><b>D</b><span>Because binary data cannot be analysed with hypothesis tests</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Pearson's chi-square test requires mutually independent observations. When the same users are evaluated before and after an update, the data is paired (repeated measures); McNemar's test must be used instead.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>After obtaining a statistically significant chi-square test of independence in a $3 \times 3$ table, how can an analyst identify which specific combinations of categories deviate most strongly from independence?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By recalculating the table with percentages</span></button><button class="opt" type="button"><b>B</b><span>By examining the standardised (Pearson) residuals $r_{ij} = (O_{ij} - E_{ij}) / \sqrt{E_{ij}}$, where values with $|r_{ij}| &gt; 2$ or $3$ indicate substantial divergence</span></button><button class="opt" type="button"><b>C</b><span>By summing the row marginals</span></button><button class="opt" type="button"><b>D</b><span>By running a one-sample z-test on the grand total $N$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Standardised residuals $r_{ij} = (O_{ij} - E_{ij}) / \sqrt{E_{ij}}$ quantify the direction and magnitude of departure in each individual cell. Under $H_0$, they approximate standard normal variates, so values outside $[-2, +2]$ highlight cells that drive the overall significance.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>Consider the following code:
+<code>table = [ [50, 30], [20, 60] ]
+chi2, p, dof, expected = stats.chi2_contingency(table, correction=False)</code>
+What does the parameter <code>correction=False</code> control in this test?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It disables Yates' continuity correction, which subtracts $0.5$ from $|O_{ij} - E_{ij}|$ in $2 \times 2$ tables</span></button><button class="opt" type="button"><b>B</b><span>It skips calculating expected cell frequencies</span></button><button class="opt" type="button"><b>C</b><span>It converts the test from a two-sided test to a one-sided test</span></button><button class="opt" type="button"><b>D</b><span>It forces degrees of freedom to equal 1</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $2 \times 2$ contingency tables, Yates' continuity correction adjusts for approximating discrete counts with a continuous distribution by subtracting 0.5 from each absolute difference $|O - E|$. Setting <code>correction=False</code> computes the uncorrected Pearson chi-square statistic.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>Consider the following $2 \times 2$ observed table:
+Row 1: [30, 10] (Total = 40)
+Row 2: [10, 30] (Total = 40)
+Column totals are 40 and 40, with grand total $N = 80$.
+Under $H_0$, all four expected counts are $E_{ij} = (40 \times 40) / 80 = 20$.
+What is the uncorrected Pearson chi-square statistic $\chi^2 = \sum (O - E)^2 / E$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>5.0</span></button><button class="opt" type="button"><b>B</b><span>10.0</span></button><button class="opt" type="button"><b>C</b><span>20.0</span></button><button class="opt" type="button"><b>D</b><span>40.0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For each of the 4 cells, $|O - E| = 10$, so $(O - E)^2 = 100$. Dividing by $E = 20$ yields $100 / 20 = 5.0$ per cell. Summing over all 4 cells gives $\chi^2 = 4 \times 5.0 = 20.0$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>An auditor rolls a 6-sided die 60 times to test if it is fair ($p_k = 1/6$, expected count $E_k = 10$ for each face). The observed counts are: Face 1: 15, Face 2: 5, Face 3: 10, Face 4: 10, Face 5: 10, Face 6: 10. What is the chi-square goodness-of-fit statistic $\chi^2$ and its degrees of freedom?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\chi^2 = 5.0$ with $\nu = 5$ degrees of freedom</span></button><button class="opt" type="button"><b>B</b><span>$\chi^2 = 5.0$ with $\nu = 6$ degrees of freedom</span></button><button class="opt" type="button"><b>C</b><span>$\chi^2 = 10.0$ with $\nu = 5$ degrees of freedom</span></button><button class="opt" type="button"><b>D</b><span>$\chi^2 = 2.5$ with $\nu = 1$ degree of freedom</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The discrepancy comes entirely from Face 1 ($25/10 = 2.5$) and Face 2 ($25/10 = 2.5$), summing to $\chi^2 = 5.0$. For goodness-of-fit with $K = 6$ categories and no estimated parameters, degrees of freedom are $K - 1 = 6 - 1 = 5$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>A data scientist fits a Poisson distribution to website server crash counts grouped into $K = 8$ discrete frequency bins. The Poisson rate parameter $\lambda$ is not known in advance and must be estimated from the sample data. What are the degrees of freedom for the chi-square goodness-of-fit test?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>7</span></button><button class="opt" type="button"><b>B</b><span>8</span></button><button class="opt" type="button"><b>C</b><span>6</span></button><button class="opt" type="button"><b>D</b><span>5</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For a chi-square goodness-of-fit test, estimating $m$ parameters from the data imposes $m$ additional linear constraints on the expected counts. The degrees of freedom are $\nu = K - 1 - m$. With $K = 8$ bins and $m = 1$ parameter ($\lambda$), $\nu = 8 - 1 - 1 = 6$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -169,11 +217,11 @@ chi2_stat, p_val, dof, expected = stats.<span class="f">chi2_contingency</span>(
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/core.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/models.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvsh8416" defer></script>
+<script src="../../assets/learn.js?v=mvsh8416" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsh8416">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsh8416">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -141,6 +141,54 @@ empirical_power = <span class="f">float</span>(np.<span class="f">mean</span>(p_
             <div class="opts"><button class="opt" type="button"><b>A</b><span>It improves statistical power without affecting Type I error</span></button><button class="opt" type="button"><b>B</b><span>It drastically inflates the actual Type I error rate far above the nominal 5% level</span></button><button class="opt" type="button"><b>C</b><span>It reduces the required sample size with zero statistical penalty</span></button><button class="opt" type="button"><b>D</b><span>It converts a two-sided test into a paired t-test</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Repeatedly testing accumulating data provides multiple opportunities for random noise to cross the threshold, inflating false positive rates well beyond nominal $\alpha$.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q5</span>What is a Type I error ($\alpha$) in statistical hypothesis testing?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Failing to reject the null hypothesis when there is a true effect</span></button><button class="opt" type="button"><b>B</b><span>Miscalculating the sample variance during exploratory analysis</span></button><button class="opt" type="button"><b>C</b><span>Rejecting the null hypothesis when the null hypothesis is true (a false alarm)</span></button><button class="opt" type="button"><b>D</b><span>Failing to collect enough sample observations to reach target power</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A Type I error is a false positive: rejecting the null hypothesis when no true effect exists in the population.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>How is statistical power defined in terms of the error probabilities $\alpha$ and $\beta$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1 - \alpha$</span></button><button class="opt" type="button"><b>B</b><span>$1 - \beta$</span></button><button class="opt" type="button"><b>C</b><span>$\alpha / \beta$</span></button><button class="opt" type="button"><b>D</b><span>$\alpha + \beta$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Statistical power is the probability of correctly rejecting a false null hypothesis, defined as $1 - \beta$, where $\beta$ is the Type II error rate.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>What does Cohen's $d$ measure in a comparison between two group means $\mu_1$ and $\mu_2$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The p-value of the two-sample test</span></button><button class="opt" type="button"><b>B</b><span>The sample size ratio between group 1 and group 2</span></button><button class="opt" type="button"><b>C</b><span>The standardised difference between means expressed in units of pooled standard deviation ($|\mu_1 - \mu_2| / \sigma$)</span></button><button class="opt" type="button"><b>D</b><span>The degrees of freedom of the Welch t-test</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Cohen's $d = |\mu_1 - \mu_2| / \sigma$ is a standardised effect size that expresses the difference between means in standard deviation units, allowing comparisons across different metrics and studies.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>In a study with a fixed sample size $n$, what happens to the Type II error rate ($\beta$) if the experimenter decreases the significance threshold $\alpha$ from $0.05$ to $0.001$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\beta$ decreases, increasing power</span></button><button class="opt" type="button"><b>B</b><span>$\beta$ increases, reducing power</span></button><button class="opt" type="button"><b>C</b><span>$\beta$ remains unchanged because $\alpha$ and $\beta$ are mathematically independent</span></button><button class="opt" type="button"><b>D</b><span>$\beta$ drops to zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Tightening the significance threshold $\alpha$ makes the test more conservative to reduce false alarms. With a fixed sample size, this requires stronger evidence to reject $H_0$, inevitably increasing the risk of missing genuine effects ($\beta$ rises, power falls).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>Why do statistical authorities strongly advise against computing "retrospective" or "post-hoc" power using the observed effect size from a completed experiment?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because retrospective power requires at least $10,000$ observations to compute</span></button><button class="opt" type="button"><b>B</b><span>Because post-hoc power can only be computed for one-tailed tests</span></button><button class="opt" type="button"><b>C</b><span>Because post-hoc power always evaluates to exactly $0.50$</span></button><button class="opt" type="button"><b>D</b><span>Because retrospective power is mathematically a one-to-one transformation of the observed p-value, providing zero new information beyond the p-value itself</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Post-hoc power computed from observed data is a monotonic transformation of the p-value: non-significant results will always yield low observed power and significant results high power. Power is a planning tool before collecting data, not a post-hoc diagnostic.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>An A/B testing team wants to detect an effect size of Cohen's $d = 0.50$ with $80\%$ power ($z_{0.80} \approx 0.84$) at a two-sided significance level $\alpha = 0.05$ ($z_{0.975} \approx 1.96$). Using the standard formula $n \approx 2(z_{1 - \alpha/2} + z_{1 - \beta})^2 / d^2$, what is the required sample size per group?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>32</span></button><button class="opt" type="button"><b>B</b><span>63</span></button><button class="opt" type="button"><b>C</b><span>126</span></button><button class="opt" type="button"><b>D</b><span>250</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Substituting the values: $n \approx 2 \times (1.96 + 0.84)^2 / (0.50)^2 = 2 \times (2.80)^2 / 0.25 = 2 \times 7.84 / 0.25 = 15.68 \times 4 = 62.72$. Rounding up gives $n = 63$ observations per group.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>When sizing an experiment, an engineer assumes the standard deviation of latency is $\sigma = 10\text{ ms}$ and sizes the test for $n = 100$ per group to achieve 80% power for a $4\text{ ms}$ difference. In reality, the true standard deviation in production is $\sigma = 20\text{ ms}$ (twice as large). How does this affect the true Cohen's $d$ and the required sample size for the planned power?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>True $d$ is halved ($0.40 \to 0.20$), so the required sample size quadruples to $n = 400$</span></button><button class="opt" type="button"><b>B</b><span>True $d$ is doubled ($0.40 \to 0.80$), so the required sample size halves to $n = 50$</span></button><button class="opt" type="button"><b>C</b><span>True $d$ remains unchanged because the mean difference is still $4\text{ ms}$</span></button><button class="opt" type="button"><b>D</b><span>Statistical power increases from 80% to 95%</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Cohen's $d = \delta / \sigma$. When $\sigma$ doubles from 10 to 20, $d$ drops from $4/10 = 0.40$ to $4/20 = 0.20$. Because required sample size scales inversely with $d^2$, halving $d$ quadruples the required sample size from 100 to 400 per group.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>Consider this Python simulation estimating empirical power for an experiment:
+<code>n_sims = 1000
+n_per_group = 50
+d = 0.20
+group_a = rng.normal(0, 1, size=(n_sims, n_per_group))
+group_b = rng.normal(d, 1, size=(n_sims, n_per_group))
+_, p_vals = stats.ttest_ind(group_a, group_b, axis=1)
+power = np.mean(p_vals < 0.05)</code>
+Given that detecting $d = 0.20$ with 80% power at $\alpha = 0.05$ requires approximately $n \approx 393$ observations per group, what approximate value will this script obtain for <code>power</code>?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Approximately 0.80</span></button><button class="opt" type="button"><b>B</b><span>Approximately 0.05</span></button><button class="opt" type="button"><b>C</b><span>Approximately 0.17</span></button><button class="opt" type="button"><b>D</b><span>Exactly 1.00</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With $n = 50$ per group, $\operatorname{SE}(\bar{X}_B - \bar{X}_A) = \sqrt{2/50} = 0.20$. The non-centrality parameter is $d / \operatorname{SE} = 0.20 / 0.20 = 1.0$. The probability of exceeding the two-sided critical value $z = 1.96$ is approximately $\Phi(1.0 - 1.96) = \Phi(-0.96) \approx 0.1685$ (or roughly 17%), showing the severe risk of missed detections in underpowered studies.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -176,11 +224,11 @@ empirical_power = <span class="f">float</span>(np.<span class="f">mean</span>(p_
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/core.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/models.js?v=mvsh8416" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvsh8416" defer></script>
+<script src="../../assets/learn.js?v=mvsh8416" defer></script>
 </body>
 </html>
