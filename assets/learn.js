@@ -102,14 +102,16 @@
     };
 
     const go = fn => () => { if (document.startViewTransition && !reduced) document.startViewTransition(fn); else fn(); };
-    document.querySelectorAll('[data-task]').forEach(b => b.addEventListener('click', go(() => {
+    // only the filter buttons: syllabus rows carry data-task / data-level too
+    const taskBtns = [...document.querySelectorAll('button[data-task]')], levelBtns = [...document.querySelectorAll('button[data-level]')];
+    taskBtns.forEach(b => b.addEventListener('click', go(() => {
       task = b.dataset.task;
-      document.querySelectorAll('[data-task]').forEach(x => x.classList.toggle('on', x === b));
+      taskBtns.forEach(x => x.classList.toggle('on', x === b));
       apply();
     })));
-    document.querySelectorAll('[data-level]').forEach(b => b.addEventListener('click', go(() => {
+    levelBtns.forEach(b => b.addEventListener('click', go(() => {
       level = b.dataset.level === level ? 'all' : b.dataset.level;
-      document.querySelectorAll('[data-level]').forEach(x => x.classList.toggle('on', x.dataset.level === level));
+      levelBtns.forEach(x => x.classList.toggle('on', x.dataset.level === level));
       apply();
     })));
     let t;

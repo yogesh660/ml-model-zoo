@@ -83,7 +83,7 @@
 .lesson-row .ttl { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .lesson-row .ttl b { font-weight: 500; font-size: 15.5px; color: var(--ink); line-height: 1.35; }
 .lesson-row .ttl em { font-style: normal; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.lesson-row .ttl b::after { content: ""; position: absolute; inset: 0; }
+.lesson-row .ttl a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .lesson-row .meta { display: flex; align-items: center; gap: 10px; font: 400 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
 .lesson-row .done { display: none; color: var(--green); }
 .lesson-row.is-done .done { display: inline-flex; }
