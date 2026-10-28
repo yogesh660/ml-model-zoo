@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsjxqls">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsjxqls">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -142,6 +142,56 @@ imp = <span class="f">permutation_importance</span>(rf, X_te, y_te, n_repeats=<s
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Causes overfitting</span></button><button class="opt" type="button"><b>B</b><span>Stabilises predictions; test error plateaus</span></button><button class="opt" type="button"><b>C</b><span>Increases bias</span></button><button class="opt" type="button"><b>D</b><span>Lowers training time</span></button></div>
             <div class="why" hidden><strong>Why:</strong> More trees means the average converges; it does not add flexibility to each tree.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What is the Out-of-Bag (OOB) score in Random Forest Regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The test score on an independent external dataset</span></button><button class="opt" type="button"><b>B</b><span>The variance explained by discarded features</span></button><button class="opt" type="button"><b>C</b><span>An evaluation score computed for each training row using only the subset of trees that did not include that row in their bootstrap training sample</span></button><button class="opt" type="button"><b>D</b><span>The percentage of rows containing missing values</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because each bootstrap draw samples with replacement, about 36.8% of rows are left out of any given tree. Evaluating each row against the trees that never saw it gives a built-in cross-validation estimate with zero data leakage.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>In scikit-learn's RandomForestRegressor, what is the default value of max_features (unless specified otherwise)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>1.0 (all $p$ features considered at every split)</span></button><button class="opt" type="button"><b>B</b><span>$\sqrt{p}$</span></button><button class="opt" type="button"><b>C</b><span>$p / 3$</span></button><button class="opt" type="button"><b>D</b><span>$\log_2(p)$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> While RandomForestClassifier defaults to max_features='sqrt', scikit-learn's RandomForestRegressor historically defaults to max_features=1.0 (all features), though setting max_features=1.0/3 often yields better decorrelation.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>Why can a Random Forest Regressor NOT extrapolate continuous linear trends outside the range of targets observed in the training set?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because scikit-learn scales targets to $[0, 1]$ internally</span></button><button class="opt" type="button"><b>B</b><span>Because every tree in the forest outputs a weighted average of training target values; an average of numbers bounded in $[y_{\min}, y_{\max}]$ can never exceed $y_{\max}$ or fall below $y_{\min}$</span></button><button class="opt" type="button"><b>C</b><span>Because random forests cannot model non-linear functions</span></button><button class="opt" type="button"><b>D</b><span>Because bootstrap sampling removes the highest and lowest 10% of rows</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> An ensemble of regression trees is still fundamentally a piecewise constant estimator. For inputs beyond the training envelope, instances route to boundary leaves whose predictions cannot exceed the maximum training leaf mean.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q6</span>Why does increasing the number of trees (n_estimators) in a Random Forest from 100 to 1,000 NOT cause overfitting?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because scikit-learn automatically increases regularisation as n_estimators increases</span></button><button class="opt" type="button"><b>B</b><span>Because trees added later in training have shallower depth</span></button><button class="opt" type="button"><b>C</b><span>Because the learning rate decays to zero after 100 trees</span></button><button class="opt" type="button"><b>D</b><span>Adding more trees simply computes the sample mean of more independent bootstrap estimates, which converges by the Law of Large Numbers without expanding individual model capacity</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Unlike gradient boosting where each tree fits previous errors (and can overfit), random forest trees are trained independently. Increasing $B$ reduces Monte Carlo sampling variance until test error plateaus.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>When evaluating feature importance in Random Forest Regressor, why is permutation importance on held-out data preferred over default MDI (Mean Decrease in Impurity)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>MDI is computed on training splits and artificially favours continuous or high-cardinality features that provide many split opportunities, whereas permutation importance measures genuine generalisation drop</span></button><button class="opt" type="button"><b>B</b><span>Permutation importance is 10 times faster to compute than MDI</span></button><button class="opt" type="button"><b>C</b><span>MDI only works for classification tasks</span></button><button class="opt" type="button"><b>D</b><span>Permutation importance guarantees all feature scores sum to 0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Impurity-based importance evaluates variance reduction on training data. High-cardinality features can split on idiosyncratic training noise, receiving high MDI despite having zero predictive value on unseen data.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>If you reduce max_features from 1.0 (all features) down to 0.33 in a Random Forest Regressor, what is the expected impact on individual trees and the ensemble as a whole?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Individual trees become more correlated, increasing ensemble variance</span></button><button class="opt" type="button"><b>B</b><span>Individual tree bias decreases, but variance increases</span></button><button class="opt" type="button"><b>C</b><span>Individual trees become weaker (higher bias), but their predictions become less correlated (lower $\rho$), allowing ensemble averaging to achieve a larger overall variance reduction</span></button><button class="opt" type="button"><b>D</b><span>The forest requires 10 times fewer trees to converge</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Subsetting features forces trees to explore alternative predictive signals. Each tree has slightly higher bias, but the pairwise correlation $\rho$ between trees drops sharply, leading to lower total ensemble variance.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>How does setting bootstrap=False in RandomForestRegressor alter the algorithm?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It trains every tree on the entire training dataset without replacement, relying solely on random feature subsampling at splits (similar to Extra-Trees)</span></button><button class="opt" type="button"><b>B</b><span>It disables random feature subsampling entirely</span></button><button class="opt" type="button"><b>C</b><span>It causes the forest to train using gradient boosting</span></button><button class="opt" type="button"><b>D</b><span>It enables out-of-bag scoring on 50% of the data</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With bootstrap=False, row subsampling is disabled. Every tree sees all $n$ training instances, so the only source of tree diversity is the random selection of max_features at each split node.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>In a dataset of $n = 5$ observations $\{A, B, C, D, E\}$, what is the exact probability that observation $A$ is NOT included in a bootstrap sample of size 5 drawn with replacement?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1/5 = 20.00\%$</span></button><button class="opt" type="button"><b>B</b><span>$(4/5)^5 = 1{,}024 / 3{,}125 \approx 32.77\%$</span></button><button class="opt" type="button"><b>C</b><span>$(1/5)^5 = 0.032\%$</span></button><button class="opt" type="button"><b>D</b><span>$1 - (4/5)^5 \approx 67.23\%$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> On each draw, the probability of selecting an observation other than $A$ is $4/5 = 0.80$. Across 5 independent draws with replacement, the probability that $A$ is never drawn is $(4/5)^5 = 0.80^5 = 0.32768 \approx 32.77\%$. As $n \to \infty$, this approaches $(1 - 1/n)^n \to e^{-1} \approx 36.79\%$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>Individual trees in a Random Forest Regressor have variance $\sigma^2 = 9.0$ and pairwise correlation $\rho = 0.20$. What are the ensemble variances when the forest has $B = 4$ trees and in the theoretical limit as $B \to \infty$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>For $B = 4$: $\operatorname{Var} = 3.60$; as $B \to \infty$: $\operatorname{Var} = 1.80$</span></button><button class="opt" type="button"><b>B</b><span>For $B = 4$: $\operatorname{Var} = 2.25$; as $B \to \infty$: $\operatorname{Var} = 0.00$</span></button><button class="opt" type="button"><b>C</b><span>For $B = 4$: $\operatorname{Var} = 4.50$; as $B \to \infty$: $\operatorname{Var} = 2.00$</span></button><button class="opt" type="button"><b>D</b><span>For $B = 4$: $\operatorname{Var} = 7.20$; as $B \to \infty$: $\operatorname{Var} = 3.60$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Ensemble variance is $\operatorname{Var}(\bar{T}) = \rho \sigma^2 + \frac{1 - \rho}{B}\sigma^2$. For $B = 4$: $0.20(9.0) + \frac{0.80}{4}(9.0) = 1.80 + 0.20(9.0) = 1.80 + 1.80 = 3.60$. As $B \to \infty$: the second term vanishes, leaving $\rho \sigma^2 = 0.20 \times 9.0 = 1.80$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q12</span>A Random Forest of 5 trees is evaluated on a row with true target $y = 50.0$. In training, this row was included in the bootstrap samples for Trees 1, 2, and 4, but was out-of-bag for Trees 3 and 5. The five trees predict: Tree 1 ($48.0$), Tree 2 ($52.0$), Tree 3 ($44.0$), Tree 4 ($50.0$), Tree 5 ($46.0$). What are the standard ensemble prediction and the Out-of-Bag (OOB) prediction for this row?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard prediction $= 50.0$; OOB prediction $= 48.0$</span></button><button class="opt" type="button"><b>B</b><span>Standard prediction $= 48.0$; OOB prediction $= 50.0$</span></button><button class="opt" type="button"><b>C</b><span>Standard prediction $= 46.0$; OOB prediction $= 44.0$</span></button><button class="opt" type="button"><b>D</b><span>Standard prediction $= 48.0$; OOB prediction $= 45.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Standard prediction averages all 5 trees: $(48 + 52 + 44 + 50 + 46) / 5 = 240 / 5 = 48.0$. OOB prediction averages only the trees that did NOT see this row during training (Trees 3 and 5): $(44 + 46) / 2 = 90 / 2 = 45.0$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -177,11 +227,11 @@ imp = <span class="f">permutation_importance</span>(rf, X_te, y_te, n_repeats=<s
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/core.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/models.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsjxqls" defer></script>
+<script src="../../assets/learn.js?v=mvsjxqls" defer></script>
 </body>
 </html>

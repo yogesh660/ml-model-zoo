@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsjxqls">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsjxqls">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -133,6 +133,56 @@ model.<span class="f">fit</span>(X_tr, y_tr, eval_set=[(X_te, y_te)], callbacks=
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Nothing</span></button><button class="opt" type="button"><b>B</b><span>A little split precision for a large speed-up</span></button><button class="opt" type="button"><b>C</b><span>Support for missing values</span></button><button class="opt" type="button"><b>D</b><span>Regularisation</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Thresholds can only fall on bin edges, which rarely matters in practice.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What is the "histogram subtraction trick" used by LightGBM to speed up split evaluation?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It subtracts the mean of the histogram to centre all gradients at zero</span></button><button class="opt" type="button"><b>B</b><span>It subtracts test set histograms from training histograms to detect covariate shift</span></button><button class="opt" type="button"><b>C</b><span>Once the parent histogram and one child's histogram are computed, the sibling child's histogram is obtained instantly by subtracting the first child from the parent ($O(\text{bins})$), cutting compute time in half</span></button><button class="opt" type="button"><b>D</b><span>It zeroes out bins whose sample counts fall below 5</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because parent bin statistics equal the sum of left and right children ($H_P = H_L + H_R$), LightGBM only builds the histogram for the smaller child, obtaining the sibling's histogram via simple subtraction at $O(\text{bins})$ cost.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>What is Exclusive Feature Bundling (EFB) in LightGBM?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>An algorithm that merges mutually exclusive sparse features (features that rarely take non-zero values simultaneously) into a single dense feature, reducing the effective number of features without losing information</span></button><button class="opt" type="button"><b>B</b><span>A technique that bundles multiple trees into a single neural network layer</span></button><button class="opt" type="button"><b>C</b><span>A method for encrypting features during distributed model training</span></button><button class="opt" type="button"><b>D</b><span>A clustering algorithm used to impute missing categorical levels</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In sparse high-dimensional data (e.g. one-hot encoded text), many features are mutually exclusive. EFB safely combines their non-zero values into separate bin ranges of a single bundled feature, sharply reducing the number of features scanned.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>How does Gradient-based One-Side Sampling (GOSS) retain gradient estimation accuracy while training on only a subset of data?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It randomly drops 50% of all rows regardless of gradient size</span></button><button class="opt" type="button"><b>B</b><span>It retains 100% of samples with the largest gradients (top fraction $a$), randomly samples a fraction $b$ of the small-gradient samples, and multiplies the sampled small-gradient instances by $\frac{1 - a}{b}$ to maintain an unbiased gradient estimate</span></button><button class="opt" type="button"><b>C</b><span>It scales all small gradients to zero and doubles large gradients</span></button><button class="opt" type="button"><b>D</b><span>It replaces small gradients with the average gradient of the validation fold</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Instances with small gradients are already well-trained and contribute little to learning new directions. GOSS keeps all large-gradient instances and downsamples small-gradient instances, applying an exact mathematical scaling factor $\frac{1-a}{b}$ to preserve the true gradient sum.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q6</span>Why can setting num_leaves = 64 with no max_depth limit in LightGBM lead to severe overfitting compared to depth-6 level-wise growth in XGBoost?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Leaf-wise growth cannot compute regularisation penalties</span></button><button class="opt" type="button"><b>B</b><span>64 leaves require 100 times more memory in LightGBM</span></button><button class="opt" type="button"><b>C</b><span>Level-wise growth trains trees using random feature selection while leaf-wise does not</span></button><button class="opt" type="button"><b>D</b><span>Leaf-wise growth splits whichever leaf achieves the highest gain, which can create very deep, highly asymmetric branches (depth 20+) focused on tiny subsets of data, whereas level-wise growth strictly caps depth at 6 everywhere</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A balanced depth-6 tree has 64 leaves. But with leaf-wise growth, 64 leaves can be arranged into a lopsided tree where a single branch plunges 25 levels deep to fit a handful of noisy points. Restricting min_data_in_leaf or setting max_depth prevents this.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>How does LightGBM natively find splits for categorical features without requiring manual one-hot encoding?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It sorts the categorical categories by the ratio of their accumulated gradients to Hessians ($G/H$) and evaluates optimal contiguous threshold partitions in $O(K \log K)$ time instead of checking all $O(2^K)$ subsets</span></button><button class="opt" type="button"><b>B</b><span>It converts each category into a random float between 0 and 1</span></button><button class="opt" type="button"><b>C</b><span>It replaces categorical values with their frequency rank in the dataset</span></button><button class="opt" type="button"><b>D</b><span>It trains an autoencoder to embed categories into 2 dimensions</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Testing all binary partitions of $K$ categories requires $O(2^K)$ checks. LightGBM orders categories by their gradient statistics on the current residual, reducing the search to finding an optimal cut point along the sorted array in $O(K \log K)$ operations.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>What is the main advantage of LightGBM's default max_bin=255 setting regarding memory and hardware architecture?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>255 bins matches the number of threads on standard NVIDIA GPUs</span></button><button class="opt" type="button"><b>B</b><span>It eliminates the need for computing Hessian derivatives</span></button><button class="opt" type="button"><b>C</b><span>Each feature value can be stored in memory as an unsigned 8-bit integer (uint8), reducing dataset RAM usage four-fold compared to 32-bit floats and fitting histograms directly into CPU L1/L2 cache</span></button><button class="opt" type="button"><b>D</b><span>It prevents decision trees from growing past depth 8</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By restricting continuous variables to 255 discrete bins, each value fits into a single byte (uint8). Storing datasets as bytes slashes memory traffic by 75% and ensures histogram tables fit inside fast CPU cache.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>What is the primary role of the min_data_in_leaf (or min_child_samples) hyperparameter in LightGBM?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It sets a minimum threshold on the number of training observations allowed in any terminal leaf, providing a critical safeguard against leaf-wise growth creating single-sample leaves</span></button><button class="opt" type="button"><b>B</b><span>It sets the minimum number of rows required in the entire dataset</span></button><button class="opt" type="button"><b>C</b><span>It defines the mini-batch size used for gradient descent</span></button><button class="opt" type="button"><b>D</b><span>It determines how many histograms are cached in memory</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because leaf-wise growth greedily pursues maximum gain, it will happily isolate 1 or 2 outlier rows into a deep leaf. Setting min_data_in_leaf (default 20) forces leaves to generalise across meaningful sample clusters.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>In GOSS sampling, a dataset of 1,000 instances has $a = 0.10$ (top 10% large gradients kept, $n_A = 100$) and $b = 0.20$ (20% sampled from the remaining 900 small gradients, $n_B = 180$). Total sampled instances is $280$. What is the weight multiplier $\frac{1 - a}{b}$ applied to the 180 small-gradient instances?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.50$</span></button><button class="opt" type="button"><b>B</b><span>$4.50$</span></button><button class="opt" type="button"><b>C</b><span>$2.00$</span></button><button class="opt" type="button"><b>D</b><span>$9.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\frac{1 - a}{b} = \frac{1 - 0.10}{0.20} = \frac{0.90}{0.20} = 4.50$. Because only 180 of the 900 small-gradient instances are sampled (a 1-in-5 or $0.20$ fraction of the 0.90 remainder), scaling their gradients by $4.50$ ($180 \times 4.50 = 810$, and $810/0.90 = 900$) ensures an unbiased estimator of the total gradient.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>A parent node has accumulated gradient sum $G_P = 50.0$ and Hessian sum $H_P = 20.0$ across its data points. After a split, its left child contains gradient sum $G_L = 32.0$ and Hessian sum $H_L = 14.0$. Using the histogram subtraction trick, what are the gradient sum $G_R$ and Hessian sum $H_R$ for the right child?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$G_R = 18.0$ and $H_R = 6.0$</span></button><button class="opt" type="button"><b>B</b><span>$G_R = 82.0$ and $H_R = 34.0$</span></button><button class="opt" type="button"><b>C</b><span>$G_R = 16.0$ and $H_R = 10.0$</span></button><button class="opt" type="button"><b>D</b><span>$G_R = -18.0$ and $H_R = -6.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By conservation of statistics: $G_R = G_P - G_L = 50.0 - 32.0 = 18.0$. $H_R = H_P - H_L = 20.0 - 14.0 = 6.0$. This subtraction requires zero iterations over the right child's data rows.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q12</span>A continuous feature with 10,000 rows is binned into 200 histogram bins. Scanning all thresholds by sorting 10,000 raw floats costs $O(n \log n) \approx 10{,}000 \times 13.29 \approx 132{,}900$ operations. How many cumulative sum operations does LightGBM execute to evaluate all 200 candidate split thresholds once the histogram is built?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$10{,}000$ operations</span></button><button class="opt" type="button"><b>B</b><span>$2{,}000{,}000$ operations</span></button><button class="opt" type="button"><b>C</b><span>$132{,}900$ operations</span></button><button class="opt" type="button"><b>D</b><span>$200$ operations</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Once the 200 bins are populated with $(G_b, H_b)$, finding the best split only requires a single linear pass computing prefix cumulative sums across the 200 bins: $G_{\le b} = G_{\le b-1} + G_b$, which takes exactly 200 operations—a nearly 700-fold speed-up over sorting.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -168,11 +218,11 @@ model.<span class="f">fit</span>(X_tr, y_tr, eval_set=[(X_te, y_te)], callbacks=
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/core.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/models.js?v=mvsjxqls" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsjxqls" defer></script>
+<script src="../../assets/learn.js?v=mvsjxqls" defer></script>
 </body>
 </html>
