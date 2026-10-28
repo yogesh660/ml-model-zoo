@@ -2076,4 +2076,538 @@ print(f"Avg discriminator score on fake data: {float(np.mean(d_fake)):.4f}")`,
     related: ['autoencoders', 'residual-networks-and-skip-connections', 'the-attention-mechanism'],
     keywords: 'gans generative adversarial networks generator discriminator minimax game jensen-shannon divergence mode collapse non-saturating loss nash equilibrium goodfellow',
   },
+
+  // ------------------------------------------------------------------ Lesson 1
+  {
+    id: 'diffusion-models',
+    short: 'Diffusion models',
+    title: 'Denoising Diffusion Probabilistic Models (DDPMs)',
+    task: 'concepts',
+    module: 'Architectures',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Destroying data structure with forward Gaussian noise, then training a neural network to reverse entropy step by step to synthesize photorealistic images from pure white noise.`,
+    lead: r`Unlike GANs that suffer from delicate adversarial balance and mode collapse, Denoising Diffusion Probabilistic Models (DDPMs, Sohl-Dickstein et al. 2015, Ho et al. 2020) formulate generative modelling as an iterative denoising process. A forward Markov chain adds Gaussian noise over hundreds of timesteps until an image dissolves into pure noise, and a neural network learns to predict and subtract that noise at each step to generate novel samples.`,
+    intuition: [
+      r`Imagine a single drop of blue food dye suspended in a glass of water. At time $t=0$, the dye is a concentrated, well-structured droplet (the original data image). As time progresses, thermodynamic diffusion causes the dye molecules to disperse randomly until the water becomes a completely uniform, pale blue haze (pure Gaussian noise). This forward process destroys information systematically and requires zero learned parameters.`,
+      r`Generative diffusion asks whether we can reverse the video: starting from an unorganised glass of hazy water ($x_T \sim \mathcal{N}(0, I)$), can we trace the molecules backward step by step until the concentrated droplet reforms? A neural network (typically a U-Net equipped with self-attention) inspects the noisy image at step $t$ and predicts the noise component $\epsilon_\theta(x_t, t)$ that was added. Subtracting this predicted noise steps the state backward from $t$ to $t-1$. Repeating this reverse denoising procedure over dozens or hundreds of steps transforms pure random static into an exquisite, coherent image.`,
+      r`The fundamental mathematical breakthrough of modern diffusion is the **closed-form forward jump**: you do not need to simulate the forward diffusion step by step during training! By defining the cumulative noise factor $\bar{\alpha}_t = \prod_{s=1}^t (1 - \beta_s)$, you can calculate the noisy image $x_t$ at any arbitrary timestep $t$ directly from the clean image $x_0$ in a single equation: $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon$. Training then collapses into a clean Mean Squared Error regression problem where the network simply predicts the injected noise vector $\epsilon$.`,
+    ],
+    analogy: r`Like sculpting a statue in reverse: sandblasting a marble masterpiece into a shapeless pile of dust (forward process), then training an artisan to brush away microscopic grains of dust step by step until the statue re-emerges (reverse process).`,
+    steps: [
+      r`Define the forward variance schedule: select hyperparameter bounds $\beta_1, \dots, \beta_T$ (e.g. linear schedule from $10^{-4}$ to $0.02$) and precompute cumulative products $\bar{\alpha}_t = \prod_{s=1}^t (1 - \beta_s)$.`,
+      r`Sample random training batches: select clean data points $x_0$, sample random discrete timesteps $t \sim \operatorname{Uniform}(1, T)$, and sample standard Gaussian noise $\epsilon \sim \mathcal{N}(0, I)$.`,
+      r`Calculate the noisy latent in closed form: compute $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon$ directly without simulating preceding timesteps.`,
+      r`Predict injected noise with a U-Net: pass noisy input $x_t$ alongside a sinusoidal timestep embedding $t$ through the network to predict noise estimate $\hat{\epsilon} = \epsilon_\theta(x_t, t)$.`,
+      r`Optimise with Mean Squared Error: update network weights using the simplified loss $\lVert \epsilon - \epsilon_\theta(x_t, t) \rVert_2^2$ via [[optimisers-sgd-momentum-rmsprop-adam-adamw|AdamW]].`,
+      r`Generate samples via reverse denoising: initialise at $x_T \sim \mathcal{N}(0, I)$ and iteratively subtract predicted noise according to the reverse Markov transition formula until reaching clean sample $x_0$.`,
+    ],
+    math: [
+      {
+        h: 'Closed-form forward diffusion distribution',
+        tex: r`$$q(x_t | x_0) = \mathcal{N}\left(x_t; \, \sqrt{\bar{\alpha}_t} x_0, \, (1 - \bar{\alpha}_t) I\right), \qquad \alpha_t = 1 - \beta_t, \quad \bar{\alpha}_t = \prod_{s=1}^t \alpha_s$$`,
+        p: r`$x_0$ is the clean image, $\beta_t \in (0, 1)$ is the variance schedule at step $t$, and $\bar{\alpha}_t$ is the cumulative variance scale. As $t \to T$, $\bar{\alpha}_t \to 0$, causing $x_T$ to converge to standard isotropic Gaussian noise $\mathcal{N}(0, I)$.`,
+      },
+      {
+        h: 'Simplified noise prediction training objective',
+        tex: r`$$\mathcal{L}_{\text{simple}}(\theta) = \mathbb{E}_{t, x_0, \epsilon}\left[ \left\lVert \epsilon - \epsilon_\theta\left(\sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon, \, t\right) \right\rVert_2^2 \right]$$`,
+        p: r`$\epsilon \sim \mathcal{N}(0, I)$ is the ground-truth noise sampled during the forward jump, and $\epsilon_\theta$ is the neural network. Ho et al. showed that training on unweighted noise regression outperforms optimising the full variational lower bound, yielding sharper perceptual details.`,
+      },
+      {
+        h: 'Reverse Markov transition step (DDPM sampling)',
+        tex: r`$$x_{t-1} = \frac{1}{\sqrt{\alpha_t}}\left( x_t - \frac{\beta_t}{\sqrt{1 - \bar{\alpha}_t}} \epsilon_\theta(x_t, t) \right) + \sigma_t z, \quad z \sim \mathcal{N}(0, I) \text{ for } t > 1$$`,
+        p: r`$x_t$ is the noisy state at step $t$, $\epsilon_\theta(x_t, t)$ is the predicted noise, and $\sigma_t^2 = \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t} \beta_t$ controls stochastic injection. Repeating this step from $t=T$ down to $t=1$ synthesizes clean image $x_0$.`,
+      },
+    ],
+    keyPoints: [
+      r`The forward diffusion process progressively destroys structure with Gaussian noise; the reverse process creates data by learning to subtract predicted noise.`,
+      r`The closed-form forward jump equation ($x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t}\epsilon$) allows training at arbitrary timesteps in $O(1)$ time without simulating intermediate steps.`,
+      r`Diffusion models eliminate adversarial minimax instability and mode collapse, providing higher sample diversity and visual fidelity than classical GANs.`,
+    ],
+    pitfalls: [
+      r`Slow ancestral sampling: generating an image with vanilla DDPM requires 50 to 1,000 sequential neural forward passes; accelerated non-Markovian samplers (DDIM, DPM-Solver) are required for interactive latency.`,
+      r`Omitting timestep conditioning: the denoising network must receive an explicit embedding of timestep $t$ because removing faint noise at $t=5$ requires entirely different operations than hallucinating shapes from near-pure noise at $t=900$.`,
+      r`Using linear noise schedules on high-resolution images, where noise increases too abruptly early in the forward process and destroys structural low-frequency composition.`,
+    ],
+    code: r`import numpy as np
+
+# Forward diffusion noise schedule simulation (T = 100 timesteps)
+np.random.seed(42)
+T = 100
+beta = np.linspace(1e-4, 0.02, T)
+alpha = 1.0 - beta
+alpha_bar = np.cumprod(alpha)
+
+# Clean synthetic 1D signal and random noise
+x0 = 3.0
+eps = float(np.random.randn())
+
+timesteps = [10, 50, 99]
+print("Forward diffusion closed-form evaluation (clean x0 = 3.0):")
+for t in timesteps:
+    ab = float(alpha_bar[t])
+    xt = np.sqrt(ab) * x0 + np.sqrt(1.0 - ab) * eps
+    signal_ratio = np.sqrt(ab) * x0
+    noise_ratio = np.sqrt(1.0 - ab) * eps
+    print(f"Step {t+1:3d}: alpha_bar={ab:.4f} | x_t={xt:.4f} (signal={signal_ratio:.4f}, noise={noise_ratio:.4f})")`,
+    quiz: [
+      {
+        q: r`Why does modern diffusion model training not require simulating the forward process step by step from $t=1$ to $t$?`,
+        o: [
+          r`Because diffusion models only train on the final timestep $t=T$`,
+          r`Because cumulative properties of Gaussian distributions permit sampling $x_t$ directly from $x_0$ in closed form: $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t}\epsilon$`,
+          r`Because the forward process uses an autoregressive language model`,
+          r`Because all intermediate images are pre-computed and stored on disk`,
+        ],
+        a: 1,
+        why: r`Because the sum of independent Gaussians is itself Gaussian, the chain of noise additions compounds into a single closed-form distribution with mean $\sqrt{\bar{\alpha}_t} x_0$ and variance $(1 - \bar{\alpha}_t) I$.`,
+      },
+      {
+        q: r`What is the primary operational disadvantage of DDPM compared to Generative Adversarial Networks (GANs)?`,
+        o: [
+          r`Diffusion models suffer from catastrophic mode collapse`,
+          r`Inference generation is computationally slow because it requires dozens or hundreds of sequential neural network evaluations to denoise an image`,
+          r`Diffusion models cannot be trained with the Adam optimiser`,
+          r`Diffusion models can only generate black-and-white images`,
+        ],
+        a: 1,
+        why: r`While GANs produce a synthetic image in a single forward pass ($G(z)$), DDPMs must iteratively evaluate the denoising U-Net at every reverse timestep, requiring substantial compute per generated sample.`,
+      },
+      {
+        q: r`In the simplified DDPM training objective $\mathcal{L}_{\text{simple}}$, what target does the neural network attempt to predict?`,
+        o: [
+          r`The classification label of the image`,
+          r`The exact unscaled clean image $x_0$ directly`,
+          r`The Gaussian noise vector $\epsilon$ that was added to create $x_t$`,
+          r`The optimal learning rate for the backward pass`,
+        ],
+        a: 2,
+        why: r`Ho et al. showed that training the network $\epsilon_\theta(x_t, t)$ to predict the injected noise vector $\epsilon$ with standard MSE loss yields superior sample quality and simpler optimisation than predicting $x_0$ directly.`,
+      },
+      {
+        q: r`What role does the sinusoidal timestep embedding play in the denoising U-Net?`,
+        o: [
+          r`It informs the network of the current noise level $t$, enabling it to calibrate whether to perform subtle refinement or coarse structural synthesis`,
+          r`It normalises the image pixels to zero mean and unit variance`,
+          r`It prevents the learning rate from decaying to zero`,
+          r`It applies causal masking across the spatial grid`,
+        ],
+        a: 0,
+        why: r`The task of removing faint noise near $t=0$ requires vastly different spatial operations than guessing global layouts from heavy noise near $t=T$; timestep embeddings condition the network on the current noise scale.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['variational-autoencoders', 'the-pytorch-training-loop', 'gans'],
+    related: ['residual-networks-and-skip-connections', 'the-attention-mechanism', 'autoencoders'],
+    keywords: 'diffusion models ddpm denoising u-net reverse process forward process noise schedule score based generative models stable diffusion ho et al',
+  },
+
+  // ------------------------------------------------------------------ Lesson 2
+  {
+    id: 'contrastive-learning-simclr-and-infonce',
+    short: 'SimCLR and InfoNCE',
+    title: 'Contrastive Learning: SimCLR and InfoNCE',
+    task: 'concepts',
+    module: 'Representation learning',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Extracting rich visual representations without human annotations by pulling augmented views of the same image together while repelling distinct images in embedding space.`,
+    lead: r`Supervised visual models require millions of manually annotated labels, which are costly, labour-intensive, and prone to annotator bias. Contrastive self-supervised learning—epitomised by SimCLR (Chen et al. 2020) and the InfoNCE loss—trains neural backbones to learn invariant semantic representations by pulling differently augmented views of the same image together while pushing representations of different images apart.`,
+    intuition: [
+      r`If you show a child a photograph of a dog, and then show them a cropped, colour-distorted version of that same dog, they instantly recognize it as the same animal. If you then show them a photograph of a bicycle, they immediately recognize it as distinct. Human visual perception relies on learning representations that remain invariant to trivial changes in viewpoint, lighting, and framing while remaining sensitive to genuine semantic differences.`,
+      r`**Contrastive Learning** operationalises this principle without any human labels:
+1. Sample an unlabelled mini-batch of $N$ images.
+2. For each image, apply two stochastic data augmentations (such as random cropping, colour jittering, and Gaussian blur) to create two distinct views. These two views form a **positive pair**.
+3. All other $2(N-1)$ augmented images in the mini-batch serve as **negative pairs**.
+4. Pass both views through an encoder backbone (such as a ResNet) to produce representation $h$, and then through a small non-linear projection head (a 2-layer MLP) to produce latent vector $z$.
+5. The **InfoNCE loss** (Information Noise-Contrastive Estimation) treats the positive view as the target class in a multi-class softmax classification task, pulling positive views together while driving negative views apart.`,
+      r`A critical empirical discovery in SimCLR was the role of the non-linear projection head $g(h) = z$. Because the contrastive objective forces $z$ to be completely invariant to transformations, $z$ actively discards information like orientation, cropping bounds, and colour palette. However, downstream tasks often benefit from knowing colour or spatial layout! By throwing away the projection head $g$ after pre-training and using the intermediate representation $h$, practitioners retain richer, more generalisable features for linear probing and transfer learning.`,
+    ],
+    analogy: r`Like training a facial recognition algorithm with identical twins in different outfits: the model learns that photos of the same twin under different lighting and angles must map to the same identity, while photos of different people must never overlap.`,
+    steps: [
+      r`Generate stochastic augmented pairs: for each image $x_i$ in mini-batch of size $N$, apply two distinct data augmentations to produce $2N$ views.`,
+      r`Extract representations with an encoder: pass each view through backbone network $f(\cdot)$ to extract representation vectors $h_i = f(\tilde{x}_i)$.`,
+      r`Map through a projection head: project representations into lower-dimensional space using 2-layer MLP $z_i = g(h_i)$ and $L_2$-normalise each vector ($\lVert z_i \rVert_2 = 1$).`,
+      r`Calculate pairwise cosine similarities: compute scaled dot-product matrix $S_{i,j} = z_i^T z_j / \tau$, where $\tau$ is the temperature hyperparameter.`,
+      r`Evaluate InfoNCE contrastive loss: for each anchor, compute cross-entropy classifying its positive partner against all $2(N-1)$ negative candidates in the batch.`,
+      r`Discard projection head for downstream tasks: detach $g(\cdot)$ and use backbone representations $h$ for downstream linear classification or fine-tuning.`,
+    ],
+    math: [
+      {
+        h: 'The InfoNCE loss (NT-Xent in SimCLR)',
+        tex: r`$$\ell_{i,j} = -\log \frac{\exp\big(\operatorname{sim}(z_i, z_j) / \tau\big)}{\sum_{k=1}^{2N} \mathbb{I}_{[k \ne i]} \exp\big(\operatorname{sim}(z_i, z_k) / \tau\big)}, \qquad \operatorname{sim}(u, v) = \frac{u^T v}{\lVert u \rVert_2 \lVert v \rVert_2}$$`,
+        p: r`$z_i$ and $z_j$ are $L_2$-normalised latent projections of positive views of the same image, $\tau$ is the temperature parameter (typically $0.07$ to $0.1$), and $2N$ is the total number of augmented views in the batch. The loss is symmetric across both views in each pair.`,
+      },
+      {
+        h: 'Mutual information lower bound connection',
+        tex: r`$$I(X_1; X_2) \ge \log(K) - \mathcal{L}_{\text{InfoNCE}}, \qquad K = 2N - 1$$`,
+        p: r`$K$ is the number of negative samples. Minimising InfoNCE loss directly maximises a lower bound on the mutual information between the representations of two views of the same data sample.`,
+      },
+    ],
+    keyPoints: [
+      r`SimCLR learns representations by maximising agreement between differently augmented views of the same image while minimising agreement with negative batch samples.`,
+      r`The temperature parameter $\tau$ modulates penalty sharpness: smaller $\tau$ penalises hard negatives with high cosine similarity more aggressively.`,
+      r`Discarding the projection head $g(h)$ after pre-training preserves rich semantic features in $h$ that would otherwise be discarded due to forced augmentation invariance.`,
+    ],
+    pitfalls: [
+      r`Using small mini-batch sizes: contrastive learning relies on large numbers of negative pairs to prevent representation collapse; SimCLR requires batch sizes of 2,048 to 4,096 (or memory queues like MoCo).`,
+      r`Weak data augmentations: without aggressive colour jittering, the network cheats by simply matching colour histograms between crops rather than learning shape and structure.`,
+      r`Deploying projection vectors $z$ instead of representations $h$ for downstream tasks, which reduces transfer accuracy because $z$ has stripped away useful task-specific details.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate InfoNCE loss on 2 positive pairs (4 views total), embedding dimension D = 3
+np.random.seed(42)
+# Pair 0: views 0 & 1 (similar); Pair 1: views 2 & 3 (similar)
+z = np.array([
+    [1.0, 0.1, 0.0],
+    [0.95, 0.15, 0.0],
+    [0.0, 0.9, 0.1],
+    [0.0, 0.95, 0.15]
+])
+
+# L2-normalise embeddings
+z = z / np.linalg.norm(z, axis=1, keepdims=True)
+
+tau = 0.1  # Temperature parameter
+sim_matrix = (z @ z.T) / tau
+np.fill_diagonal(sim_matrix, -1e9)  # Mask self-similarity
+
+# Compute InfoNCE loss for anchor 0 (positive partner is view 1)
+exp_sim = np.exp(sim_matrix)
+loss_anchor_0 = -float(np.log(exp_sim[0, 1] / np.sum(exp_sim[0])))
+
+pos_sim = float(np.dot(z[0], z[1]))
+neg_sim = float(np.dot(z[0], z[2]))
+
+print(f"Cosine similarity - positive pair (0, 1): {pos_sim:.4f}")
+print(f"Cosine similarity - negative pair (0, 2): {neg_sim:.4f}")
+print(f"InfoNCE contrastive loss for anchor 0:   {loss_anchor_0:.4f}")`,
+    quiz: [
+      {
+        q: r`Why does SimCLR discard the projection head $g(h)$ and use the pre-projection representation $h$ for downstream evaluation?`,
+        o: [
+          r`Because the projection head has too many parameters to run on GPU hardware`,
+          r`Because the contrastive loss forces $z$ to be invariant to data augmentations, discarding information like colour and pose that downstream tasks need`,
+          r`Because $h$ contains non-normalised probabilities`,
+          r`Because the projection head weights are erased after pre-training`,
+        ],
+        a: 1,
+        why: r`Chen et al. showed that forcing representations to be fully invariant to augmentations removes fine-grained spatial and chromatic information from $z$; intermediate representation $h$ retains this information, yielding higher linear probe accuracy.`,
+      },
+      {
+        q: r`What role does the temperature hyperparameter $\tau$ play in the InfoNCE loss?`,
+        o: [
+          r`It scales the learning rate of the optimiser`,
+          r`It controls the penalty sensitivity to hard negative examples: smaller $\tau$ exponentially amplifies penalties for negatives with high cosine similarity`,
+          r`It limits the maximum number of layers in the encoder`,
+          r`It converts negative cosine similarities into positive numbers`,
+        ],
+        a: 1,
+        why: r`Because similarities are divided by $\tau$ inside the exponential, a small $\tau$ creates sharp probability distributions, heavily penalising any negative sample that lies close to the anchor.`,
+      },
+      {
+        q: r`Why is aggressive colour jittering essential when creating augmented views for contrastive learning?`,
+        o: [
+          r`To make images look aesthetically pleasing`,
+          r`Because without colour distortion, the model exploits an unintended shortcut: matching global colour histograms between crops rather than learning semantic shapes`,
+          r`To convert RGB images into greyscale tensors`,
+          r`To satisfy requirements of the InfoNCE mutual information bound`,
+        ],
+        a: 1,
+        why: r`If two random crops come from the same photo, they share identical colour palettes. Without colour jittering, the network trivially matches colour distributions without learning object semantics.`,
+      },
+      {
+        q: r`Why does standard SimCLR require exceptionally large batch sizes (e.g. 2,048 to 4,096)?`,
+        o: [
+          r`Because larger batch sizes provide a rich pool of negative candidates per positive pair, preventing representation collapse`,
+          r`Because small batches cannot be processed by GPUs`,
+          r`Because cosine similarity cannot be computed with fewer than 1,000 samples`,
+          r`Because large batches automatically eliminate the need for data augmentations`,
+        ],
+        a: 0,
+        why: r`Contrastive learning relies on negative examples to push the representation space outwards. With too few negatives, the encoder can collapse representations into a narrow subspace.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['transfer-learning-and-fine-tuning', 'the-pytorch-training-loop', 'residual-networks-and-skip-connections'],
+    related: ['clip-and-multimodal-embeddings', 'the-attention-mechanism', 'autoencoders'],
+    keywords: 'contrastive learning simclr infonce self supervised representation learning nt-xent temperature projection head data augmentation mutual information',
+  },
+
+  // ------------------------------------------------------------------ Lesson 3
+  {
+    id: 'clip-and-multimodal-embeddings',
+    short: 'CLIP & multimodal embeddings',
+    title: 'CLIP and Multimodal Embeddings',
+    task: 'concepts',
+    module: 'Representation learning',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Projecting visual images and natural language text into a shared embedding space. Contrastive language-image pre-training unlocks zero-shot classification and open-vocabulary understanding.`,
+    lead: r`Classical computer vision models are constrained to a fixed, closed set of pre-determined target categories, requiring costly retraining whenever a new concept is introduced. CLIP (Contrastive Language-Image Pre-training, Radford et al. 2021) overturned this paradigm by training image and text encoders jointly on 400 million internet image-caption pairs, projecting visual and linguistic tokens into a shared semantic space that enables zero-shot classification on arbitrary natural language prompts.`,
+    intuition: [
+      r`Imagine two independent experts: one inspects photographs (Image Encoder), and the other reads descriptive text captions (Text Encoder). Both experts are tasked with translating their respective inputs into a universal conceptual coordinate system: a 512-dimensional embedding vector on the unit hypersphere.`,
+      r`If the first expert is shown a photograph of a red panda munching on bamboo, and the second reads the caption "A fluffy red panda eating fresh green leaves", their output vectors should point in virtually the exact same direction (exhibiting high cosine similarity near 1.0). Conversely, if the second expert reads "A container ship docked in a busy industrial port", the two vectors should be orthogonal (cosine similarity near 0.0).`,
+      r`**The Dual-Encoder Pipeline**:
+- Take a mini-batch of $N$ paired images and captions $(I_1, T_1), \dots, (I_N, T_N)$.
+- Pass images through a vision backbone (such as a ResNet or Vision Transformer) and text through a Transformer language model, $L_2$-normalising both output vectors.
+- Compute the $N \times N$ cosine similarity matrix $S_{i,j} = v_i^T u_j \cdot e^\tau$.
+- The $N$ diagonal elements represent matched ground-truth pairs; the $N^2 - N$ off-diagonal elements represent mismatched negative pairings.
+- A symmetric cross-entropy loss optimises both encoders simultaneously: rows classify the correct text for each image, and columns classify the correct image for each caption.`,
+      r`**Zero-Shot Transfer**: How do you classify a new dataset (like CIFAR-10) without training a single new parameter? You turn class labels into full prompt sentences: "A photo of a {dog}", "A photo of a {cat}", "A photo of a {truck}". Pass all 10 candidate prompts through the text encoder to obtain 10 reference target vectors. Pass an unlabelled image through the image encoder. The predicted class is simply the prompt whose text embedding achieves the highest cosine similarity with the image embedding!`,
+    ],
+    analogy: r`Like building a universal bilingual dictionary: photographs of objects and their textual descriptions are catalogued under the exact same conceptual library reference number.`,
+    steps: [
+      r`Assemble large-scale paired multimodal data: collect paired images and raw descriptive captions $(I_i, T_i)$ from web-scale sources.`,
+      r`Encode across separate modality backbones: compute image feature vector $v_i = f_{\text{img}}(I_i) \in \mathbb{R}^D$ and text feature vector $u_i = f_{\text{txt}}(T_i) \in \mathbb{R}^D$.`,
+      r`Apply $L_2$ normalisation: project both embeddings onto the unit hypersphere ($\lVert v_i \rVert_2 = 1, \lVert u_i \rVert_2 = 1$).`,
+      r`Compute pairwise multimodal affinity matrix: calculate scaled dot-product matrix $S = (V U^T) \cdot \exp(\tau)$, where $\tau$ is a learnable log-temperature parameter.`,
+      r`Minimise symmetric contrastive cross-entropy: compute cross-entropy along the image dimension (rows) and text dimension (columns), averaging both losses.`,
+      r`Execute zero-shot inference: synthesize prompt embeddings for all target candidate classes, evaluate the unlabelled image vector, and select the class with maximal cosine similarity.`,
+    ],
+    math: [
+      {
+        h: 'Symmetric multimodal contrastive loss',
+        tex: r`$$\mathcal{L}_{\text{CLIP}} = \frac{1}{2}\left( \mathcal{L}_{\text{img}\to\text{txt}} + \mathcal{L}_{\text{txt}\to\text{img}} \right)$$`,
+        p: r`The global loss is the unweighted average of two symmetric cross-entropy terms: one classifying the correct caption for each image, and one classifying the correct image for each caption across the $N \times N$ batch matrix.`,
+      },
+      {
+        h: 'Directional cross-entropy formulations',
+        tex: r`$$\mathcal{L}_{\text{img}\to\text{txt}} = -\frac{1}{N}\sum_{i=1}^N \log \frac{\exp(v_i^T u_i \cdot e^\tau)}{\sum_{j=1}^N \exp(v_i^T u_j \cdot e^\tau)}, \quad \mathcal{L}_{\text{txt}\to\text{img}} = -\frac{1}{N}\sum_{j=1}^N \log \frac{\exp(v_j^T u_j \cdot e^\tau)}{\sum_{i=1}^N \exp(v_i^T u_j \cdot e^\tau)}$$`,
+        p: r`$v_i$ is the $L_2$-normalised image representation, $u_j$ is the $L_2$-normalised text representation, and $e^\tau$ is the learned temperature scale. The diagonal elements $v_i^T u_i$ are maximised against all off-diagonal negative candidates.`,
+      },
+      {
+        h: 'Zero-shot classification probability',
+        tex: r`$$p(y = c | I) = \frac{\exp\big(v_I^T u_c \cdot e^\tau\big)}{\sum_{k=1}^C \exp\big(v_I^T u_k \cdot e^\tau\big)}$$`,
+        p: r`Candidate class names $c \in \{1, \dots, C\}$ are wrapped in prompt templates ("A photo of a {class}") and encoded into text vectors $u_c$. Softmax over scaled cosine similarities produces zero-shot posterior class probabilities without task-specific training.`,
+      },
+    ],
+    keyPoints: [
+      r`CLIP projects visual images and descriptive text into a shared, metric-aligned embedding space where cosine distance reflects semantic affinity.`,
+      r`Zero-shot classification operates by treating candidate labels as natural language prompts, removing the need for task-specific classification heads.`,
+      r`Prompt engineering (using contextual templates like "A photo of a {label}, a type of pet") substantially improves zero-shot accuracy compared to bare class names.`,
+    ],
+    pitfalls: [
+      r`Sensitivity to prompt formulation: evaluating bare single-word labels often underperforms contextual templates ("a photo of a {label}") by 5% to 10% in zero-shot accuracy.`,
+      r`Fine-grained spatial or abstract visual tasks: CLIP struggles with counting objects (e.g. "three apples vs four apples"), depth estimation, or reading small text in images.`,
+      r`Polysemous label ambiguity: homonyms (such as "crane" the bird vs "crane" the construction equipment) require clarifying context in prompt templates to avoid misclassification.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate zero-shot multimodal classification with CLIP
+np.random.seed(42)
+D = 4  # Embedding dimensionality
+
+# 3 synthetic candidate text embeddings: Dog, Car, House
+text_prompts = ["A photo of a dog", "A photo of a car", "A photo of a house"]
+U = np.array([
+    [0.9, 0.2, 0.0, 0.1],   # Dog
+    [0.1, 0.9, 0.2, 0.0],   # Car
+    [0.0, 0.1, 0.9, 0.3]    # House
+])
+U = U / np.linalg.norm(U, axis=1, keepdims=True)
+
+# Query image embedding (synthetically generated to resemble a dog)
+V_img = np.array([[0.85, 0.25, 0.05, 0.1]])
+V_img = V_img / np.linalg.norm(V_img, axis=1, keepdims=True)
+
+# Evaluate cosine similarities scaled by temperature scale exp(tau) = 5.0
+scale = 5.0
+logits = (V_img @ U.T) * scale
+probs = np.exp(logits[0]) / np.sum(np.exp(logits[0]))
+pred_idx = int(np.argmax(probs))
+
+print(f"Zero-shot classification prediction: '{text_prompts[pred_idx]}'")
+print(f"Class probabilities: Dog={probs[0]*100:.1f}%, Car={probs[1]*100:.1f}%, House={probs[2]*100:.1f}%")`,
+    quiz: [
+      {
+        q: r`How does CLIP perform zero-shot image classification without fine-tuning on downstream datasets?`,
+        o: [
+          r`By generating a caption with an autoregressive language model and parsing the output`,
+          r`By embedding candidate class names as natural language prompt sentences and selecting the class whose text embedding has the highest cosine similarity with the query image embedding`,
+          r`By retraining the image encoder using k-nearest neighbours on test images`,
+          r`By computing the pixel-level Mean Squared Error between the test image and training templates`,
+        ],
+        a: 1,
+        why: r`Because CLIP aligns vision and language in a shared metric space, candidate classes can be converted to text embeddings ($u_c$) and matched directly against the image embedding ($v_I$) via cosine similarity.`,
+      },
+      {
+        q: r`Why does prompt engineering (e.g. using "A photo of a {label}" instead of just "{label}") improve CLIP's zero-shot performance?`,
+        o: [
+          r`Because single words cannot be tokenised by byte-pair encoding`,
+          r`Because the model was pre-trained on full natural language captions; contextual prompt templates align test inputs with the pre-training text distribution and resolve polysemy`,
+          r`Because longer prompts reduce the dimensionality of the text embedding`,
+          r`Because prompt templates disable dropout in the text encoder`,
+        ],
+        a: 1,
+        why: r`Web captions are full descriptive sentences rather than isolated words. A prompt template like "A photo of a dog" provides context and matches the natural language statistics of web pre-training data.`,
+      },
+      {
+        q: r`What loss function is used to train CLIP's dual encoders?`,
+        o: [
+          r`Mean Squared Error between image pixels and text embeddings`,
+          r`A symmetric contrastive cross-entropy loss that maximises diagonal image-text cosine similarities while minimising off-diagonal pairings across the batch`,
+          r`Wasserstein adversarial loss with a gradient penalty`,
+          r`Reinforcement learning with human feedback (RLHF)`,
+        ],
+        a: 1,
+        why: r`CLIP evaluates cross-entropy in two directions: classifying the matching caption among batch alternatives for each image, and classifying the matching image for each caption.`,
+      },
+      {
+        q: r`On which of the following tasks does standard CLIP typically struggle without task-specific fine-tuning?`,
+        o: [
+          r`Broad zero-shot object classification on natural photographs`,
+          r`Visual tasks requiring precise spatial counting or geometric depth estimation`,
+          r`Matching natural language captions to relevant photos`,
+          r`Open-vocabulary visual search`,
+        ],
+        a: 1,
+        why: r`Dual-encoder contrastive training captures global semantic correspondence effectively, but lacks fine-grained spatial and geometric mechanisms required for counting objects or estimating metric depth.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['contrastive-learning-simclr-and-infonce', 'the-attention-mechanism', 'transfer-learning-and-fine-tuning'],
+    related: ['diffusion-models', 'autoencoders', 'residual-networks-and-skip-connections'],
+    keywords: 'clip multimodal embeddings zero shot classification contrastive learning text encoder image encoder prompt engineering radford openai',
+  },
+
+  // ------------------------------------------------------------------ Lesson 4
+  {
+    id: 'quantisation',
+    short: 'Model quantisation',
+    title: 'Model Quantisation: FP16, INT8, and INT4',
+    task: 'concepts',
+    module: 'Efficiency and scale',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Slashing model memory and accelerating inference by converting 32-bit floating-point weights and activations into compact 8-bit or 4-bit integers with minimal loss in accuracy.`,
+    lead: r`Modern deep neural networks and large language models contain billions of parameters, demanding tens of gigabytes of expensive high-bandwidth GPU memory (VRAM). Model quantisation compresses 32-bit floating-point numbers (` + '`FP32`' + r`) into compact lower-precision representations—such as 16-bit floats (` + '`FP16`' + r`/` + '`BF16`' + r`), 8-bit integers (` + '`INT8`' + r`), or 4-bit formats (` + '`INT4`' + r`)—reducing memory footprints by up to 75% and multiplying inference throughput on commodity hardware.`,
+    intuition: [
+      r`In standard deep learning, every single weight and activation is stored as a 32-bit IEEE 754 float: 1 sign bit, 8 exponent bits, and 23 mantissa bits. A 7-billion parameter language model in FP32 consumes $7 \times 10^9 \times 4 \text{ bytes} \approx 28 \text{ GB}$ of VRAM just to store parameter weights! Loading this enormous volume of weights from memory into GPU compute cores during autoregressive generation becomes an acute memory-bandwidth bottleneck.`,
+      r`Fortunately, neural networks are remarkably robust to minor numerical perturbations. The exact value of a weight being $0.18374921$ rather than $0.18$ almost never alters the model's final prediction. **Uniform Quantisation** maps a continuous floating-point range $[x_{\text{min}}, x_{\text{max}}]$ into discrete integer buckets:
+1. **Scale factor** ($S$): the real-valued step size represented by each integer increment ($S = \frac{\max(x) - \min(x)}{2^b - 1}$).
+2. **Zero-point** ($Z$): the integer corresponding to real-valued zero ($0.0$).
+3. **Quantise**: $q = \operatorname{clip}(\operatorname{round}(x / S) + Z, q_{\text{min}}, q_{\text{max}})$.
+4. **Dequantise**: $\hat{x} = S \cdot (q - Z)$.
+In symmetric quantisation, the range is centred around zero ($x_{\text{max}} = -x_{\text{min}}$), setting $Z = 0$ and drastically simplifying integer matrix multiplication kernels.`,
+      r`Two primary methodologies govern deployment: **Post-Training Quantisation (PTQ)** quantises an already trained FP32 model directly using a small calibration dataset without retraining. For aggressive compressions (like 4-bit weights in GPTQ and AWQ), **Quantisation-Aware Training (QAT)** simulates low-precision integer rounding in the forward pass during training. Because rounding has a derivative of zero almost everywhere, QAT employs the **Straight-Through Estimator (STE)** to pass gradients directly through the rounding operator during backpropagation, allowing weights to adapt naturally to low-precision boundaries.`,
+    ],
+    analogy: r`Like converting a high-resolution 24-bit colour photograph to an 8-bit 256-colour indexed palette: while colour gradients become discrete steps, the visual composition remains indistinguishable to the human eye while cutting file size to a fraction.`,
+    steps: [
+      r`Select precision and target format: choose FP16/BF16 (2 bytes/param) for general GPU acceleration; INT8 (1 byte/param) for edge or CPU deployment; or INT4 (0.5 bytes/param) for hosting large language models in consumer VRAM.`,
+      r`Gather calibration data: run 100 to 512 representative domain inputs through the network to record the dynamic activation ranges ($x_{\text{min}}, x_{\text{max}}$) across layers.`,
+      r`Compute scale and zero-point parameters: calculate scale $S = \frac{\max(x) - \min(x)}{2^b - 1}$ and zero-point $Z$ per tensor, per channel, or per group.`,
+      r`Quantise parameters and activations: map continuous values to discrete integers using $q = \operatorname{clip}(\operatorname{round}(x / S) + Z, q_{\text{min}}, q_{\text{max}})$.`,
+      r`Deploy accelerated integer matrix kernels: execute matrix operations using native INT8/INT4 Tensor Core instructions, accumulating sums in 32-bit integer registers before dequantising outputs back to float.`,
+      r`Validate accuracy against baseline: measure validation perplexity or task accuracy to ensure the quantised model remains within acceptable tolerances (typically $< 0.5\%$ accuracy loss for INT8).`,
+    ],
+    math: [
+      {
+        h: 'Uniform affine quantisation and dequantisation',
+        tex: r`$$q = \operatorname{clip}\left(\left\lfloor \frac{x}{S} \right\rceil + Z, \, q_{\text{min}}, \, q_{\text{max}}\right), \qquad \hat{x} = S \cdot (q - Z)$$`,
+        p: r`$x \in \mathbb{R}$ is the original continuous floating-point value, $S \in \mathbb{R}^+$ is the scale factor, $Z \in \mathbb{Z}$ is the zero-point offset, $\lfloor \cdot \rceil$ denotes round-to-nearest-integer, and $[q_{\text{min}}, q_{\text{max}}]$ are integer bounds (e.g. $[-128, 127]$ for signed INT8).`,
+      },
+      {
+        h: 'Scale calculation from dynamic tensor range',
+        tex: r`$$S = \frac{\alpha - \beta}{q_{\text{max}} - q_{\text{min}}}, \qquad Z = \left\lfloor \frac{-\beta}{S} \right\rceil + q_{\text{min}}$$`,
+        p: r`$[\beta, \alpha]$ is the dynamic range of the tensor (often calibrated using percentiles to mitigate outlier distortion). In symmetric quantisation, $\beta = -\alpha$, which enforces $Z = 0$, simplifying integer dot-product computations.`,
+      },
+      {
+        h: 'Straight-Through Estimator (STE) for Quantisation-Aware Training',
+        tex: r`$$\frac{\partial \hat{x}}{\partial x} = \begin{cases} 1 & \text{if } x \in [\beta, \alpha] \\ 0 & \text{otherwise} \end{cases}$$`,
+        p: r`Because the derivative of the rounding function $\lfloor \cdot \rceil$ is zero almost everywhere, standard gradient descent cannot update parameters. The STE replaces the zero derivative with the identity pass-through ($1.0$) within the valid dynamic range.`,
+      },
+    ],
+    keyPoints: [
+      r`Quantisation reduces memory footprint by $2\times$ (FP16), $4\times$ (INT8), or $8\times$ (INT4), enabling large models to fit into consumer GPU VRAM.`,
+      r`Symmetric quantisation sets zero-point $Z = 0$, eliminating zero-point offset arithmetic during high-throughput matrix multiplications.`,
+      r`Quantisation-Aware Training (QAT) uses the Straight-Through Estimator to adapt neural weights to low-precision discrete grids, preserving accuracy where post-training quantisation degrades.`,
+    ],
+    pitfalls: [
+      r`Activation outlier collapse: large language models exhibit extreme outlier features in specific channels ($100\times$ larger than average); naive per-tensor quantisation destroys accuracy unless per-channel or group-wise scaling is applied.`,
+      r`Benchmarking latency on unsupported hardware: executing INT8 models on hardware without native integer compute instructions requires dequantising to float before every multiplication, resulting in slower execution.`,
+      r`Quantising sensitive layers: aggressively quantising initial convolutional embeddings, attention softmax denominators, or final classification logits to 4-bit often causes severe divergence; keep sensitive operations in FP16.`,
+    ],
+    code: r`import numpy as np
+
+# Demonstrate symmetric 8-bit quantisation on synthetic weight tensor
+np.random.seed(42)
+N = 100
+# Generate FP32 weights (mean 0, std 0.5)
+W_fp32 = (np.random.randn(N) * 0.5).astype(np.float32)
+
+# 1. Symmetric INT8 scale: map [-max_val, max_val] to [-127, 127]
+max_abs = float(np.max(np.abs(W_fp32)))
+scale = max_abs / 127.0
+
+# 2. Quantise to signed 8-bit integers
+W_int8 = np.clip(np.round(W_fp32 / scale), -127, 127).astype(np.int8)
+
+# 3. Dequantise back to floating-point representation
+W_reconstructed = W_int8.astype(np.float32) * scale
+
+mse_noise = float(np.mean((W_fp32 - W_reconstructed)**2))
+bytes_fp32 = W_fp32.nbytes
+bytes_int8 = W_int8.nbytes
+
+print(f"FP32 memory footprint: {bytes_fp32} bytes")
+print(f"INT8 memory footprint: {bytes_int8} bytes ({bytes_fp32 / bytes_int8:.1f}x compression)")
+print(f"Quantisation Mean Squared Error: {mse_noise:.6f}")
+print(f"Sample weight 0: original = {W_fp32[0]:.4f} -> dequantised = {W_reconstructed[0]:.4f}")`,
+    quiz: [
+      {
+        q: r`Why does symmetric quantisation ($Z = 0$) provide computational advantages over asymmetric affine quantisation?`,
+        o: [
+          r`It eliminates zero-point offset subtraction during matrix multiplication, enabling direct integer dot products on hardware Tensor Cores`,
+          r`It guarantees zero loss of numerical accuracy`,
+          r`It doubles the dynamic range from 8 bits to 16 bits`,
+          r`It eliminates the need for a scale factor $S$`,
+        ],
+        a: 0,
+        why: r`When $Z=0$, dequantisation simplifies to $\hat{x} = S \cdot q$. The product of two matrices becomes $S_1 S_2 (Q_1 Q_2)$, allowing hardware to perform pure integer GEMM without accumulating zero-point cross-terms.`,
+      },
+      {
+        q: r`What is the function of the Straight-Through Estimator (STE) in Quantisation-Aware Training?`,
+        o: [
+          r`It converts integer weights into complex numbers`,
+          r`It replaces the zero derivative of the non-differentiable rounding operator with the identity function (1.0), allowing gradients to update weights during backpropagation`,
+          r`It automatically selects the optimal batch size`,
+          r`It prunes zero weights from the model`,
+        ],
+        a: 1,
+        why: r`Rounding $\lfloor x \rceil$ has derivative zero everywhere (and undefined at half-integers). Without STE, backpropagation would produce zero gradients, preventing the optimiser from adjusting weights.`,
+      },
+      {
+        q: r`Why do Large Language Models (LLMs) suffer severe accuracy degradation under naive per-tensor INT8 quantisation?`,
+        o: [
+          r`Because LLMs cannot run on GPUs`,
+          r`Because LLMs develop extreme outlier feature activations in specific channels that compress normal-magnitude weights into a single integer bucket if scaled globally`,
+          r`Because cross-entropy loss cannot be computed on integers`,
+          r`Because Transformers do not have activation functions`,
+        ],
+        a: 1,
+        why: r`Research (such as LLM.int8()) showed that Transformers develop emergent outlier activation dimensions with values $100\times$ larger than average. A global scale factor stretches the bucket width, collapsing normal features to zero unless per-channel or group-wise scaling is used.`,
+      },
+      {
+        q: r`How does 4-bit weight quantisation (INT4) reduce inference latency in large language model text generation?`,
+        o: [
+          r`By reducing the volume of weight data transferred from GPU VRAM across memory buses into compute registers, alleviating memory bandwidth bottlenecks`,
+          r`By increasing the context window size by $4\times$`,
+          r`By eliminating the need for tokenisation`,
+          r`By running 4 times as many training epochs per second`,
+        ],
+        a: 0,
+        why: r`Autoregressive text generation is memory-bandwidth bound: the GPU spends most of its time fetching weights from VRAM to compute a single token. Shrinking weights to 4 bits cuts bytes read by $4\times$ compared to FP16, speeding up generation.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['the-pytorch-training-loop', 'weight-initialisation-xavier-and-he', 'backpropagation-and-autodiff'],
+    related: ['normalisation-batch-layer-rms', 'residual-networks-and-skip-connections', 'the-attention-mechanism'],
+    keywords: 'quantisation int8 fp16 int4 post training quantisation quantisation aware training straight through estimator scale zero point ptq qat compression',
+  },
 ];
