@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvskce3d">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvskce3d">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -156,6 +156,51 @@ model = <span class="f">GRUClassifier</span>()
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Has more gates</span></button><button class="opt" type="button"><b>B</b><span>Has no separate cell state and fewer parameters</span></button><button class="opt" type="button"><b>C</b><span>Cannot be trained with backpropagation</span></button><button class="opt" type="button"><b>D</b><span>Is a Transformer</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Two gates and one state vector instead of three gates plus a cell.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>Why do the update gate $z_t$ and reset gate $r_t$ in a GRU use the sigmoid activation function $\sigma(\cdot)$ instead of $\tanh(\cdot)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Sigmoid maps outputs strictly to the range $(0, 1)$, acting naturally as a continuous soft switch or interpolation percentage</span></button><button class="opt" type="button"><b>B</b><span>Sigmoid has a non-zero derivative everywhere from $-\infty$ to $+\infty$</span></button><button class="opt" type="button"><b>C</b><span>Sigmoid is computationally faster to evaluate on GPUs than $\tanh$</span></button><button class="opt" type="button"><b>D</b><span>Sigmoid prevents the candidate state from becoming negative</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Gates represent proportions or probabilities of keeping/filtering information. The sigmoid function maps real-valued linear projections onto $(0, 1)$, where 0 corresponds to fully closed and 1 corresponds to fully open.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q5</span>In the interpolation equation $h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde h_t$, what happens when the update gate vector is close to 1 ($z_t \approx 1$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The network halts sequence processing immediately</span></button><button class="opt" type="button"><b>B</b><span>The previous hidden state $h_{t-1}$ is preserved perfectly and the new candidate $\tilde h_t$ is ignored</span></button><button class="opt" type="button"><b>C</b><span>The cell completely overwrites the old hidden state with the newly proposed candidate state $\tilde h_t$</span></button><button class="opt" type="button"><b>D</b><span>The hidden state is reset to a vector of exact zeros</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When $z_t \approx 1$, the retention term $(1 - z_t) \odot h_{t-1} \approx 0$, while the update term $z_t \odot \tilde h_t \approx \tilde h_t$, so the hidden state is almost entirely replaced by the new candidate.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>A GRU cell has a previous hidden state $h_{t-1} = 0.80$. For the current time step, the network computes an update gate value of $z_t = 0.25$ and a candidate state of $\tilde h_t = -0.40$. Using the formula $h_t = (1 - z_t)h_{t-1} + z_t \tilde h_t$, what is the new hidden state $h_t$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.35$</span></button><button class="opt" type="button"><b>B</b><span>$0.50$</span></button><button class="opt" type="button"><b>C</b><span>$0.60$</span></button><button class="opt" type="button"><b>D</b><span>$0.70$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Retention of previous state is $(1 - 0.25) \times 0.80 = 0.75 \times 0.80 = 0.60$. Contribution of candidate is $0.25 \times (-0.40) = -0.10$. Blending them yields $h_t = 0.60 + (-0.10) = 0.50$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>When the reset gate $r_t$ in a GRU evaluates to 0 for all units, what does the candidate state $\tilde h_t = \tanh(W x_t + U(r_t \odot h_{t-1}) + b)$ represent?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A pure representation of the current input $x_t$ alone ($\tanh(W x_t + b)$), completely ignoring historical context</span></button><button class="opt" type="button"><b>B</b><span>A copy of the previous hidden state $h_{t-1}$</span></button><button class="opt" type="button"><b>C</b><span>A vector of zeros</span></button><button class="opt" type="button"><b>D</b><span>The linear derivative of the update gate</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When $r_t = 0$, the historical context $r_t \odot h_{t-1} = 0$, so $\tilde h_t = \tanh(W x_t + b)$. This allows the GRU to discard irrelevant past history when starting a new sequence segment (such as the beginning of a sentence).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>For the same input dimension $d_{\text{in}}$ and hidden size $d_{\text{hid}}$, roughly what is the ratio of trainable parameters in a GRU compared with a standard LSTM?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1 : 2$ (GRU has half the parameters of an LSTM)</span></button><button class="opt" type="button"><b>B</b><span>$3 : 4$ (GRU has 3 sets of matrix operations per step, while LSTM has 4)</span></button><button class="opt" type="button"><b>C</b><span>$1 : 1$ (they have identical parameter counts)</span></button><button class="opt" type="button"><b>D</b><span>$2 : 3$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A GRU computes 3 sets of projections (update gate $z_t$, reset gate $r_t$, and candidate $\tilde h_t$). A standard LSTM computes 4 sets of projections (forget gate $f_t$, input gate $i_t$, output gate $o_t$, and candidate $\tilde c_t$). Therefore, a GRU has approximately $\frac{3}{4} = 75\%$ of the parameters of an LSTM of identical width.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>According to the GRU gradient relation $\frac{\partial h_t}{\partial h_{t-1}} \approx \operatorname{diag}(1 - z_t)$ (when $z_t$ is small), how does the GRU prevent the vanishing gradient problem across many time steps?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By setting the learning rate to a value greater than 1.0</span></button><button class="opt" type="button"><b>B</b><span>By replacing the chain rule with forward-mode automatic differentiation</span></button><button class="opt" type="button"><b>C</b><span>When $z_t$ remains close to 0, $(1 - z_t) \approx 1$, meaning the recurrent Jacobian acts close to the identity matrix so gradients flow back through time without decaying</span></button><button class="opt" type="button"><b>D</b><span>By forcing all weight matrices to be orthogonal</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> If the network chooses not to update its memory ($z_t \approx 0$), the Jacobian $\frac{\partial h_t}{\partial h_{t-1}} \approx I$. Gradients backpropagated through time are multiplied by values close to 1, creating an effective shortcut across dozens or hundreds of steps.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q10</span>A 1-unit GRU computes its candidate state as $\tilde h_t = \tanh(W x_t + U(r_t \cdot h_{t-1}) + b)$. Given $W = 0.5$, $U = -0.5$, bias $b = -0.3$, input $x_t = 1.0$, previous state $h_{t-1} = 0.80$, and reset gate $r_t = 0.50$, what is the candidate state $\tilde h_t$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.00$</span></button><button class="opt" type="button"><b>B</b><span>$-0.20$</span></button><button class="opt" type="button"><b>C</b><span>$0.25$</span></button><button class="opt" type="button"><b>D</b><span>$0.50$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> First scale the historical state by the reset gate: $r_t \cdot h_{t-1} = 0.50 \times 0.80 = 0.40$. Next, compute the linear pre-activation: $W x_t + U(0.40) + b = (0.5 \times 1.0) + (-0.5 \times 0.40) - 0.3 = 0.50 - 0.20 - 0.30 = 0.00$. Finally, $\tanh(0.00) = 0.00$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>The lesson defines the GRU update as $h_t = (1 - z_t)\odot h_{t-1} + z_t\odot\tilde h_t$. However, PyTorch's official nn.GRU documentation defines it as $h_t = (1 - z_t)\odot n_t + z_t\odot h_{t-1}$ (where $n_t$ is the candidate). Under PyTorch's convention, what does a gate value of $z_t \approx 1$ indicate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The network completely replaces the state with the candidate $n_t$</span></button><button class="opt" type="button"><b>B</b><span>The network acts as a pass-through, carrying forward the previous hidden state $h_{t-1}$ almost unchanged</span></button><button class="opt" type="button"><b>C</b><span>The network forces all outputs to be non-negative</span></button><button class="opt" type="button"><b>D</b><span>The gradient is set to zero for all previous time steps</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In PyTorch's notation, $z_t$ multiplies $h_{t-1}$ directly while $(1 - z_t)$ multiplies candidate $n_t$. Thus when $z_t \approx 1$, $(1 - z_t) \approx 0$, so $h_t \approx h_{t-1}$, retaining the old memory. The lesson highlights this notation swap as a common pitfall when reading papers versus codebase implementations.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>A GRU unit receives zero inputs ($x_t = 0, \tilde h_t = 0$) while its update gate stays fixed at $z_t = 0.10$. Starting from $h_0 = 1.0$, what is the value of the hidden state $h_3$ after 3 time steps?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.700$</span></button><button class="opt" type="button"><b>B</b><span>$0.810$</span></button><button class="opt" type="button"><b>C</b><span>$0.729$</span></button><button class="opt" type="button"><b>D</b><span>$0.900$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With $\tilde h_t = 0$, $h_t = (1 - z_t) h_{t-1} = 0.90 \times h_{t-1}$. Over 3 steps, $h_3 = 0.90^3 \times h_0 = 0.729 \times 1.0 = 0.729$. Assuming a linear reduction of $0.10 \times 3 = 0.30 \implies 0.70$ is a common pitfall that overlooks geometric decay.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -191,12 +236,12 @@ model = <span class="f">GRUClassifier</span>()
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/core.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/algos.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/models.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvskce3d" defer></script>
+<script src="../../assets/learn.js?v=mvskce3d" defer></script>
 </body>
 </html>

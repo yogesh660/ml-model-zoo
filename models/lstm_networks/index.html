@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvskce3d">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvskce3d">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -157,6 +157,51 @@ y = torch.<span class="f">tensor</span>(digits.target)
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Input gate open, forget gate near 0</span></button><button class="opt" type="button"><b>B</b><span>Input gate open once, then closed; forget gate near 1</span></button><button class="opt" type="button"><b>C</b><span>All gates at 0.5</span></button><button class="opt" type="button"><b>D</b><span>Output gate always open</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Write once, then hold; the output gate opens when the value is needed.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>What is the fundamental conceptual difference between the cell state $c_t$ and the hidden state $h_t$ in an LSTM?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$c_t$ is the internal long-term memory modified only by additive gated updates, while $h_t$ is the filtered exposure of that memory passed to the next layer and output</span></button><button class="opt" type="button"><b>B</b><span>$c_t$ is computed using convolution while $h_t$ is computed using self-attention</span></button><button class="opt" type="button"><b>C</b><span>$c_t$ is reset to zero at every time step while $h_t$ is persistent</span></button><button class="opt" type="button"><b>D</b><span>$c_t$ contains gradients while $h_t$ contains inputs</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The cell state $c_t$ acts as a linear conveyor belt running through time. The hidden state $h_t = o_t \odot \tanh(c_t)$ is the gated, squashed view of the cell state that the network reveals to upper layers and the next step.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>Why is it standard practice (recommended by Gers et al. and built into PyTorch architectures) to initialise the forget-gate bias $b_f$ to $+1.0$ instead of $0.0$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To prevent division by zero in the softmax classifier head</span></button><button class="opt" type="button"><b>B</b><span>To ensure that $\sigma(b_f) \approx 0.73$, so the network defaults to remembering past information early in training rather than aggressively forgetting</span></button><button class="opt" type="button"><b>C</b><span>To force the cell state to remain strictly positive</span></button><button class="opt" type="button"><b>D</b><span>To make the backward pass completely linear</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Setting $b_f = 1.0$ makes the initial forget gate output $\sigma(1.0) \approx 0.73$ (or higher), biasing the network to retain history at the start of training before it has learned what to forget. With $b_f = 0$, $\sigma(0) = 0.5$, which causes memory to decay exponentially by $0.5^t$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q6</span>An LSTM cell has previous cell state $c_{t-1} = 4.0$. At the current time step, its gates and candidate evaluate to: forget gate $f_t = 0.75$, input gate $i_t = 0.50$, and candidate state $\tilde c_t = -2.0$. What is the updated cell state $c_t$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1.0$</span></button><button class="opt" type="button"><b>B</b><span>$3.0$</span></button><button class="opt" type="button"><b>C</b><span>$2.0$</span></button><button class="opt" type="button"><b>D</b><span>$4.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By the cell update equation $c_t = f_t c_{t-1} + i_t \tilde c_t$: $c_t = (0.75 \times 4.0) + (0.50 \times -2.0) = 3.0 - 1.0 = 2.0$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>In an LSTM, the updated cell state satisfies $\tanh(c_t) = 0.50$. The output gate evaluates to $o_t = 0.40$. What is the resulting hidden state $h_t$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.20$</span></button><button class="opt" type="button"><b>B</b><span>$0.40$</span></button><button class="opt" type="button"><b>C</b><span>$0.50$</span></button><button class="opt" type="button"><b>D</b><span>$0.90$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The hidden state is computed as $h_t = o_t \odot \tanh(c_t) = 0.40 \times 0.50 = 0.20$. The output gate acts as a valve scaling the saturated cell state before exposing it.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>Why does the LSTM use $\tanh$ for the candidate cell content $\tilde c_t$ and for cell squashing $\tanh(c_t)$, while using $\sigma$ for the gates?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\tanh$ can be both positive and negative (centred at 0 with range $(-1, 1)$), allowing the network to either add or subtract information from the cell, whereas gates act as non-negative scaling percentages in $(0, 1)$</span></button><button class="opt" type="button"><b>B</b><span>$\tanh$ prevents gradients from vanishing over long sequences</span></button><button class="opt" type="button"><b>C</b><span>$\sigma$ requires more parameters to compute than $\tanh$</span></button><button class="opt" type="button"><b>D</b><span>$\tanh$ is required because input features must be non-negative</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The cell state needs to be able to increment (positive values) or decrement (negative values) based on new evidence, making the zero-centred $(-1, 1)$ range of $\tanh$ ideal. Gates, on the other hand, are control valves that determine what fraction of a signal to pass, requiring the $(0, 1)$ range of $\sigma$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>A standard LSTM layer has input dimension $d_{\text{in}} = 10$ and hidden size $d_{\text{hid}} = 20$. Considering the 4 internal operations (forget, input, output gates, and candidate state), each with input weights, recurrent weights, and a single bias vector, how many total learnable parameters are in this LSTM layer?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>620</span></button><button class="opt" type="button"><b>B</b><span>1,240</span></button><button class="opt" type="button"><b>C</b><span>2,480</span></button><button class="opt" type="button"><b>D</b><span>4,960</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Each of the 4 components has $W \in \mathbb{R}^{20 \times 10}$ ($200$), $U \in \mathbb{R}^{20 \times 20}$ ($400$), and $b \in \mathbb{R}^{20}$ ($20$), totalling $620$ parameters each. Across the 3 gates plus candidate state, $4 \times 620 = 2,480$ parameters.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>In Hochreiter and Schmidhuber's LSTM formulation, along the cell state path the gradient is given by $\frac{\partial c_t}{\partial c_k} = \prod_{s=k+1}^t \operatorname{diag}(f_s)$. If the network maintains $f_s = 1.0$ across 100 intermediate time steps, what happens to the backpropagated error along this path?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It decays exponentially by $0.5^{100}$</span></button><button class="opt" type="button"><b>B</b><span>It flows backward completely unattenuated with an exact multiplier of 1.0, preserving long-range gradient signals without vanishing</span></button><button class="opt" type="button"><b>C</b><span>It explodes exponentially due to accumulated matrix powers</span></button><button class="opt" type="button"><b>D</b><span>It is converted into attention scores</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When the forget gate is saturated open ($f_s = 1.0$), the local Jacobian $\frac{\partial c_s}{\partial c_{s-1}} = \operatorname{diag}(1.0) = I$. Multiplying the identity matrix across 100 steps leaves the gradient magnitude unchanged, creating the constant error carousel that solves vanishing gradients.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>An initial value is stored in an LSTM cell, giving $c_1 = 6.0$. During the next two time steps ($t=2$ and $t=3$), the input gate is shut ($i_2 = i_3 = 0$), but the forget gate drops to $f_2 = f_3 = 0.50$. What is the cell state $c_3$ at the end of step 3?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.0$</span></button><button class="opt" type="button"><b>B</b><span>$1.5$</span></button><button class="opt" type="button"><b>C</b><span>$3.0$</span></button><button class="opt" type="button"><b>D</b><span>$4.5$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> At step 2, $c_2 = f_2 c_1 + i_2 \tilde c_2 = 0.50 \times 6.0 + 0 = 3.0$. At step 3, $c_3 = f_3 c_2 + i_3 \tilde c_3 = 0.50 \times 3.0 + 0 = 1.5$. When the forget gate falls below 1, stored memories leak away geometrically.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>When using a bidirectional LSTM (bidirectional=True) with hidden size $d_{\text{hid}} = 64$ for sequence classification, what is the dimension of the concatenated output hidden state vector for a single time step?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>64</span></button><button class="opt" type="button"><b>B</b><span>32</span></button><button class="opt" type="button"><b>C</b><span>128</span></button><button class="opt" type="button"><b>D</b><span>256</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A bidirectional LSTM runs two independent recurrent passes: one forward from $t=1 \to T$, and one backward from $t=T \to 1$. At each step, their hidden states are concatenated ($[h_t^{\to}; h_t^{\leftarrow}]$), resulting in a combined feature vector of size $64 + 64 = 128$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -192,12 +237,12 @@ y = torch.<span class="f">tensor</span>(digits.target)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/core.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/algos.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/models.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvskce3d" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvskce3d" defer></script>
+<script src="../../assets/learn.js?v=mvskce3d" defer></script>
 </body>
 </html>
