@@ -77,8 +77,8 @@ module.exports = [
     blurb: 'Dimensionality reduction, anomaly detection, optimisation, tuning, interpretability, recommenders and the theory that explains why learning works.',
     tasks: ['ml'],
     modules: [
-      { title: 'Dimensionality reduction', lessons: [...C('PCA', 't-SNE', 'UMAP'), ...X('SVD and truncated SVD', 'Kernel PCA', 'Independent component analysis', 'Non-negative matrix factorisation', 'MDS and Isomap', 'Random projections and Johnson–Lindenstrauss')] },
-      { title: 'Anomaly detection', lessons: [...C('Isolation Forest', 'Local Outlier Factor'), ...X('One-class SVM', 'Mahalanobis distance and robust covariance')] },
+      { title: 'Dimensionality reduction', lessons: ['pca', 't-sne', 'umap', ...X('SVD and truncated SVD', 'Kernel PCA', 'Independent component analysis', 'Non-negative matrix factorisation', 'MDS and Isomap', 'Random projections and Johnson–Lindenstrauss')] },
+      { title: 'Anomaly detection', lessons: ['isolation-forest', ...C('Local Outlier Factor'), ...X('One-class SVM', 'Mahalanobis distance and robust covariance')] },
       { title: 'Probabilistic models', lessons: [...C('EM algorithm'), ...X('Bayesian networks', 'Markov random fields', 'Gaussian process classifier')] },
       { title: 'Optimisation', lessons: [...C('Convex optimisation and duality', 'Lagrange multipliers and KKT conditions'), ...X('Coordinate descent', 'Newton\'s method', 'Proximal gradient methods')] },
       { title: 'Model selection', lessons: [...C('Hyperparameter search: grid, random, successive halving', 'Bayesian optimisation and Optuna', 'Learning curves and diagnosing fit', 'Nested cross-validation'), ...X('Ensemble theory: bagging, boosting, stacking compared', 'Conformal prediction')] },

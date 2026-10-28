@@ -879,4 +879,554 @@ print("Platt Calibrated ECE:", round(float(ece_cal), 3), "Brier Score:", round(f
     related: ['class-imbalance-weights-smote-threshold-moving', 'loss-functions', 'cross-validation'],
     keywords: 'probability calibration platt scaling isotonic regression reliability curves brier score expected calibration error ece',
   },
+  {
+    id: 'pca',
+    short: 'PCA',
+    title: 'Principal Component Analysis',
+    task: 'concepts',
+    module: 'Dimensionality reduction',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Linear dimensionality reduction projecting data onto orthogonal axes of maximal variance using singular value decomposition, compressing features while preserving global geometric variance.`,
+    lead: r`High-dimensional feature spaces suffer from multicollinearity, redundant measurements, and computational overhead. Principal Component Analysis (PCA) identifies an orthogonal sequence of linear projections that sequentially maximise variance, transforming correlated features into mutually uncorrelated principal components and compressing data with minimal reconstruction error.`,
+    intuition: [
+      r`Imagine holding a complex three-dimensional object—such as a teapot or a sculpture—in front of a blank wall under a single spotlight. If you align the light from a random angle, the cast shadow collapses into an unrecognisable blob where handles and spouts overlap. But as you rotate the object to its broadest, most characteristic orientation, the 2D shadow captures virtually all the defining contours of the 3D shape. PCA is the mathematical equivalent of finding that optimal orientation: it rotates high-dimensional coordinate axes until the projected shadow of the data exhibits the widest possible spread.`,
+      r`The fundamental premise of PCA is that directions exhibiting large variance convey the most informative differences between data points, whereas directions with negligible variance correspond to redundant noise or flat dimensions. When two sensors measure closely coupled phenomena (such as indoor temperature in Celsius and Fahrenheit), the data forms an elongated ellipse in 2D space. Instead of keeping both redundant features, PCA aligns the first principal axis along the major axis of the ellipse (capturing the shared thermal trend) and the second principal axis along the minor axis (capturing minor sensor noise).`,
+      r`Crucially, each consecutive principal component is constrained to be strictly orthogonal (perpendicular) to all preceding components. This guarantees that the newly created coordinates are completely decorrelated—their sample covariance is exactly zero. By selecting the top $k$ components that account for 90% or 95% of total variance, analysts dramatically compress datasets, eliminate multicollinearity for downstream linear models, and enable two- and three-dimensional exploratory scatter plots without discarding the primary patterns of variability.`,
+    ],
+    analogy: r`Rotating a 3D architectural model under a camera until you capture the single elevation angle that reveals the maximum building perimeter and room layout in a single 2D photograph.`,
+    steps: [
+      r`Centre the dataset by subtracting feature means: $X_c = X - \mathbf{1}\mu^T$, ensuring the origin lies at the geometric centroid. Optionally standardise features to unit variance if variables have unequal measurement scales.`,
+      r`Compute the sample covariance matrix $\Sigma = \frac{1}{n-1} X_c^T X_c$, or apply Singular Value Decomposition directly to the centred matrix $X_c = U S V^T$ to avoid numerical squaring of condition numbers.`,
+      r`Extract the right singular vectors $V$ (or eigenvectors of $\Sigma$) and their corresponding singular values $S$ (where eigenvalues $\lambda_j = S_j^2 / (n - 1)$).`,
+      r`Sort eigenvalues and singular vectors in descending order of explained variance $\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_d$.`,
+      r`Select the top $k$ principal axes $V_k \in \mathbb{R}^{d \times k}$ based on cumulative explained variance ratio criteria (e.g. 95% threshold or scree plot elbow).`,
+      r`Project the centred data onto the selected subspace to obtain lower-dimensional coordinates $Z = X_c V_k \in \mathbb{R}^{n \times k}$.`,
+      r`Quantify information retention via reconstruction error $\|X_c - Z V_k^T\|_F^2$, which equals the sum of discarded eigenvalues $\sum_{j=k+1}^d \lambda_j$.`,
+    ],
+    math: [
+      {
+        h: 'Covariance matrix and principal axis objective',
+        tex: r`$$\max_{w} \operatorname{Var}(X_c w) = \max_{w} \frac{1}{n-1} w^T X_c^T X_c w \quad \text{subject to} \quad w^T w = 1$$`,
+        p: r`Formulating the Lagrangian $\mathcal{L}(w, \lambda) = w^T \Sigma w - \lambda(w^T w - 1)$ and differentiating yields $\Sigma w = \lambda w$. The principal direction $w$ is the eigenvector of covariance matrix $\Sigma$ corresponding to the largest eigenvalue $\lambda_1 = \operatorname{Var}(X_c w_1)$. Subsequent orthogonal components correspond to eigenvectors ordered by descending eigenvalues.`,
+      },
+      {
+        h: 'SVD connection and computational efficiency',
+        tex: r`$$X_c = U S V^T, \qquad \Sigma = \frac{1}{n-1} X_c^T X_c = \frac{1}{n-1} V S^2 V^T$$`,
+        p: r`$U \in \mathbb{R}^{n \times d}$ and $V \in \mathbb{R}^{d \times d}$ are orthogonal matrices containing left and right singular vectors, and $S$ contains singular values $s_j$. Computing SVD directly on $X_c$ requires $O(n d \min(n, d))$ operations and preserves double-precision floating-point accuracy without forming the condition-squared product $X_c^T X_c$.`,
+      },
+      {
+        h: 'Explained variance ratio and optimal reconstruction',
+        tex: r`$$\operatorname{EVR}_k = \frac{\lambda_k}{\sum_{j=1}^d \lambda_j} = \frac{s_k^2}{\sum_{j=1}^d s_j^2}, \qquad \min_{\operatorname{rank}(\hat{X})=k} \|X_c - \hat{X}\|_F^2 = \sum_{j=k+1}^d \lambda_j$$`,
+        p: r`By the Eckart-Young-Mirsky theorem, the truncated projection $\hat{X} = Z V_k^T = X_c V_k V_k^T$ provides the optimal rank-$k$ approximation of centred matrix $X_c$ under both Frobenius and spectral matrix norms.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Generate synthetic 3D data with correlated features
+rng = np.random.default_rng(42)
+n_samples = 150
+z_true = rng.normal(0, 2, size=(n_samples, 1))
+noise = rng.normal(0, 0.3, size=(n_samples, 3))
+X = np.hstack([z_true * 2.0, z_true * -1.5, z_true * 0.5]) + noise
+
+# 1. Centre the data (zero mean)
+mu = np.mean(X, axis=0)
+X_c = X - mu
+
+# 2. Compute SVD: X_c = U * S * Vt
+U, S, Vt = np.linalg.svd(X_c, full_matrices=False)
+eigenvalues = (S ** 2) / (n_samples - 1)
+evr = eigenvalues / np.sum(eigenvalues)
+
+# 3. Project onto top k=2 principal components
+k = 2
+V_k = Vt[:k, :].T
+Z = X_c @ V_k
+
+# 4. Reconstruct and calculate reconstruction error
+X_reconstructed = Z @ V_k.T + mu
+rec_error = np.mean(np.sum((X - X_reconstructed) ** 2, axis=1))
+
+print(f"Explained variance ratio: {evr[:k].round(4)}")
+print(f"Total variance explained: {np.sum(evr[:k]) * 100:.2f}%")
+print(f"Mean squared reconstruction error: {rec_error:.4f}")`,
+    pitfalls: [
+      r`Scale sensitivity: Features measured in large units (e.g. annual salary in pounds) dominate total variance over smaller features (e.g. age in years). Without standardisation, PCA simply projects onto the largest arbitrary units rather than meaningful patterns.`,
+      r`Linearity restriction: PCA can only discover linear planar subspaces. Data arranged along non-linear manifolds (such as a Swiss roll, concentric rings, or helical curves) gets squashed and entangled.`,
+      r`Assuming high variance equals relevance: PCA is unsupervised and blind to target labels. The direction of maximum variance might represent uninformative measurement noise or illumination differences rather than the target classification signal.`,
+      r`Orthogonality constraint: Enforcing mutual orthogonality can force later principal components to blend distinct physical processes together, making individual components difficult to interpret as pure physical entities.`,
+    ],
+    keyPoints: [
+      r`Maximises projected variance while simultaneously minimising mean squared orthogonal reconstruction error.`,
+      r`Transforms correlated features into mutually orthogonal, linearly uncorrelated components.`,
+      r`Direct SVD of centred data $X_c = U S V^T$ is numerically superior to explicit eigendecomposition of the covariance matrix $\Sigma$.`,
+      r`Requires standardisation whenever input features carry differing units or non-comparable variance scales.`,
+    ],
+    quiz: [
+      {
+        q: r`Why must features usually be standardised before applying PCA?`,
+        o: [
+          r`Because PCA cannot run on negative numbers`,
+          r`Features with larger numerical scales artificially dominate the covariance matrix and principal axes`,
+          r`Because standardisation transforms non-linear relationships into linear ones`,
+          r`Standardisation guarantees that the total explained variance reaches exactly 100%`,
+        ],
+        a: 1,
+        why: r`Variance depends on the choice of units. If one feature is measured in millimetres and another in metres, the millimetre feature will display a million-fold greater variance and dominate the top principal component regardless of information content.`,
+      },
+      {
+        q: r`If the eigenvalues of the sample covariance matrix for a 4D dataset are $\lambda = [6.0, 2.5, 1.0, 0.5]$, what percentage of total variance is explained by the first two principal components?`,
+        o: [
+          r`60.0%`,
+          r`75.0%`,
+          r`85.0%`,
+          r`92.5%`,
+        ],
+        a: 2,
+        why: r`Total variance is the sum of all eigenvalues: $6.0 + 2.5 + 1.0 + 0.5 = 10.0$. The sum of the top two is $6.0 + 2.5 = 8.5$. The explained variance ratio is $8.5 / 10.0 = 0.85$ (or 85%).`,
+      },
+      {
+        q: r`How does Singular Value Decomposition ($X_c = U S V^T$) relate to the eigenvectors of the covariance matrix $\Sigma = \frac{1}{n-1}X_c^T X_c$?`,
+        o: [
+          r`The right singular vectors $V$ are the eigenvectors of $\Sigma$, and the eigenvalues are $\lambda_j = s_j^2 / (n-1)$`,
+          r`The left singular vectors $U$ are the eigenvectors of $\Sigma$, and the singular values $S$ are the eigenvalues`,
+          r`$V$ contains the principal scores, while $U$ contains the principal axes`,
+          r`SVD cannot be used for PCA unless $X$ is a square matrix`,
+        ],
+        a: 0,
+        why: r`Substituting $X_c = U S V^T$ into $\Sigma$ gives $\frac{1}{n-1} V S U^T U S V^T = \frac{1}{n-1} V S^2 V^T$ because $U^T U = I$. This proves $V$ are the orthonormal eigenvectors of $\Sigma$ with eigenvalues $\lambda_j = s_j^2 / (n-1)$.`,
+      },
+      {
+        q: r`What does the Eckart-Young-Mirsky theorem guarantee about the PCA rank-$k$ reconstruction $\hat{X} = X_c V_k V_k^T$?`,
+        o: [
+          r`It proves the reconstructed data has zero residual noise`,
+          r`It ensures the transformed components follow a multivariate normal distribution`,
+          r`It guarantees that all out-of-sample test samples have zero reconstruction error`,
+          r`It proves $\hat{X}$ is the optimal rank-$k$ approximation of $X_c$ minimising Frobenius reconstruction error`,
+        ],
+        a: 3,
+        why: r`The Eckart-Young-Mirsky theorem establishes that the truncated SVD reconstruction minimises the Frobenius distance $\|X_c - \hat{X}\|_F$ among all matrices of rank at most $k$.`,
+      },
+    ],
+    usedBy: ['linear_discriminant_analysis', 'logistic_regression'],
+    prereq: ['expectation-variance-and-covariance', 'ols_linear_regression'],
+    related: ['t-sne', 'umap', 'spectral_clustering'],
+    keywords: 'pca principal component analysis dimensionality reduction svd singular value decomposition covariance eigenvalues eigenvectors explained variance',
+  },
+  {
+    id: 't-sne',
+    short: 't-SNE',
+    title: 't-Distributed Stochastic Neighbour Embedding',
+    task: 'concepts',
+    module: 'Dimensionality reduction',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Non-linear dimensionality reduction that maps pairwise Euclidean distances to conditional probabilities, matching high-dimensional Gaussians to low-dimensional Student-t distributions via KL divergence.`,
+    lead: r`Linear projections like PCA inevitably collapse curved or clustered non-linear manifolds because they prioritise preserving large pairwise distances over local neighbourhood relationships. t-Distributed Stochastic Neighbour Embedding (t-SNE) converts pairwise distances into probabilities of neighbourhood co-occurrence, matching high-dimensional Gaussian affinities with heavy-tailed low-dimensional Student-t distributions to resolve the crowding problem and reveal clustered structures.`,
+    intuition: [
+      r`In high-dimensional spaces, geometry behaves counter-intuitively: the volume of a sphere grows exponentially with dimension $d$. Points distributed uniformly across a high-dimensional manifold have ample room to stay mutually equidistant from their neighbours. When attempting to project such data onto a two-dimensional sheet, geometry encounters the crowding problem: there simply is not enough area in 2D to accommodate all the moderate-distance neighbours without crushing distinct clusters on top of each other.`,
+      r`t-SNE solves this crowding problem through an elegant distribution mismatch. In the original high-dimensional space, pairwise proximity is modelled using a Gaussian distribution, which decays exponentially fast ($e^{-d^2}$). In the low-dimensional embedding space, t-SNE models proximity using a heavy-tailed Student-t distribution with 1 degree of freedom (the Cauchy distribution, decaying as $(1 + d^2)^{-1}$). Because the Student-t distribution has much heavier tails than the Gaussian, moderate-distance points must be pushed much further apart in 2D to yield the same probability match. This creates repulsive breathing room, allowing distinct clusters to separate cleanly.`,
+      r`Instead of preserving rigid metric distances, t-SNE preserves neighbourhood topology. The perplexity parameter specifies the effective number of nearest neighbours each point considers when establishing its local bandwidth $\sigma_i$. Dense regions automatically adopt a narrow $\sigma_i$ while sparse regions broaden $\sigma_i$. The algorithm then minimises the Kullback-Leibler (KL) divergence between high-dimensional affinities $P$ and low-dimensional affinities $Q$ using gradient descent. Points that are close neighbours in high dimensions exert strong attractive forces, while low-dimensional normalisation creates global repulsion.`,
+    ],
+    analogy: r`Unravelling a tangled ball of wool onto a flat tabletop: short threads between neighbouring fibres act as elastic bands pulling nearby loops together, while an overall outward pressure forces separate skeins of yarn to unfurl into isolated clusters.`,
+    steps: [
+      r`Calculate pairwise Euclidean distances $\|x_i - x_j\|$ between all sample pairs in the original high-dimensional feature space.`,
+      r`For each data point $x_i$, perform binary search to determine a unique Gaussian bandwidth $\sigma_i$ such that the Shannon entropy of its conditional probability distribution matches the user-defined perplexity: $\operatorname{Perp}(P_i) = 2^{H(P_i)}$.`,
+      r`Compute asymmetric conditional probabilities $p_{j|i}$ and symmetrise them into joint probabilities $p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}$, setting diagonal self-affinities $p_{ii} = 0$.`,
+      r`Initialise low-dimensional coordinates $y_i \in \mathbb{R}^2$ randomly from a Gaussian distribution with small variance (or using the first two PCA components for stable global layout).`,
+      r`Compute low-dimensional affinities $q_{ij}$ using the Cauchy / Student-t kernel $(1 + \|y_i - y_j\|^2)^{-1}$, normalised over all pairs.`,
+      r`Compute the analytical gradient of the KL divergence $\frac{\partial \mathcal{L}}{\partial y_i} = 4 \sum_j (p_{ij} - q_{ij})(y_i - y_j)(1 + \|y_i - y_j\|^2)^{-1}$.`,
+      r`Update coordinates $y_i$ via gradient descent with momentum and early exaggeration (multiplying high-dimensional probabilities $p_{ij}$ by a factor of 4 to 12 during initial iterations to encourage compact cluster formation).`,
+    ],
+    math: [
+      {
+        h: 'High-dimensional conditional probabilities and perplexity',
+        tex: r`$$p_{j \mid i} = \frac{\exp\left(-\frac{\|x_i - x_j\|^2}{2\sigma_i^2}\right)}{\sum_{k \ne i} \exp\left(-\frac{\|x_i - x_k\|^2}{2\sigma_i^2}\right)}, \qquad \operatorname{Perp}(P_i) = 2^{-\sum_{j} p_{j \mid i} \log_2 p_{j \mid i}}$$`,
+        p: r`The variance $\sigma_i^2$ is determined independently for each sample via binary search so that the perplexity matches the user specification (typically between 5 and 50). This adapts to varying local data density.`,
+      },
+      {
+        h: 'Symmetrisation and low-dimensional Student-t kernel',
+        tex: r`$$p_{ij} = \frac{p_{j \mid i} + p_{i \mid j}}{2n}, \qquad q_{ij} = \frac{\left(1 + \|y_i - y_j\|^2\right)^{-1}}{\sum_{k} \sum_{l \ne k} \left(1 + \|y_k - y_l\|^2\right)^{-1}}$$`,
+        p: r`Symmetrisation ensures that outliers (which have tiny $p_{j|i}$ for all $j$) still exert meaningful gradients. The low-dimensional Cauchy distribution decays as the inverse square of distance, preventing crowding.`,
+      },
+      {
+        h: 'Cost function and analytical gradient',
+        tex: r`$$\mathcal{L}_{KL} = \sum_{i} \sum_{j \ne i} p_{ij} \log \frac{p_{ij}}{q_{ij}}, \qquad \frac{\partial \mathcal{L}}{\partial y_i} = 4 \sum_{j} (p_{ij} - q_{ij})(y_i - y_j)\left(1 + \|y_i - y_j\|^2\right)^{-1}$$`,
+        p: r`The asymmetry of KL divergence heavily penalises false negatives (large $p_{ij}$ modelled by small $q_{ij}$), which pulls high-dimensional neighbours together. False positives (small $p_{ij}$ with moderate $q_{ij}$) receive very mild penalties, allowing distant clusters to position themselves freely.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic dataset: two well-separated clusters in 4D space
+rng = np.random.default_rng(42)
+X = np.vstack([rng.normal(-3, 0.5, (20, 4)), rng.normal(3, 0.5, (20, 4))])
+n = len(X)
+
+# 1. High-dimensional pairwise Gaussian affinities and symmetrisation
+D2 = np.sum((X[:, None, :] - X[None, :, :]) ** 2, axis=-1)
+np.fill_diagonal(D2, np.inf)
+P_cond = np.exp(-D2 / 2.0)
+P_cond = P_cond / P_cond.sum(axis=1, keepdims=True)
+P = np.maximum((P_cond + P_cond.T) / (2 * n), 1e-12)
+
+# 2. Initialise low-dimensional embedding coordinates
+Y = rng.normal(0, 1e-4, (n, 2))
+lr, n_iter = 50.0, 120
+
+# 3. Minimise KL divergence via gradient descent
+for _ in range(n_iter):
+    dist_y = np.sum((Y[:, None, :] - Y[None, :, :]) ** 2, axis=-1)
+    inv = 1.0 / (1.0 + dist_y)
+    np.fill_diagonal(inv, 0.0)
+    Q = np.maximum(inv / np.sum(inv), 1e-12)
+    grad = 4 * np.sum((P - Q)[:, :, None] * inv[:, :, None] * (Y[:, None, :] - Y[None, :, :]), axis=1)
+    Y -= lr * grad
+
+kl_div = np.sum(P * np.log(P / Q))
+print(f"Final KL divergence: {kl_div:.4f}")
+print(f"Cluster 1 centre in 2D: {Y[:20].mean(axis=0).round(2)}")
+print(f"Cluster 2 centre in 2D: {Y[20:].mean(axis=0).round(2)}")`,
+    pitfalls: [
+      r`Inter-cluster distances are meaningless: t-SNE prioritises local neighbourhood preservation; the distance between two distant cluster centres in the 2D plot does not reflect true metric separation in high dimensions.`,
+      r`Cluster sizes and densities reflect perplexity: t-SNE expands dense clusters and contracts sparse clusters so they appear to have similar spread in 2D. Apparent cluster radius cannot be interpreted as geometric variance.`,
+      r`Non-parametric and non-inductive: Standard t-SNE does not learn a functional mapping $f(x) \to y$. New test samples cannot be projected without rerunning the entire optimisation from scratch.`,
+      r`Stochastic non-convex optimisation: The KL divergence objective has many local minima. Different random initialisations and perplexity values can yield visually distinct layouts.`,
+    ],
+    keyPoints: [
+      r`Replaces metric distance preservation with probability distribution matching via Kullback-Leibler divergence.`,
+      r`Heavy-tailed Student-t kernel in low-dimensional space resolves the high-dimensional crowding problem.`,
+      r`Adaptive Gaussian bandwidth $\sigma_i$ dynamically scales to match local density via the perplexity hyperparameter.`,
+      r`Designed primarily as an exploratory visualisation technique rather than a feature extraction pipeline for downstream models.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does t-SNE use a Student-t distribution in the low-dimensional space instead of a Gaussian distribution?`,
+        o: [
+          r`Because Student-t distributions are faster to evaluate computationally`,
+          r`Because Student-t distributions ensure global linear orthogonality`,
+          r`Because high-dimensional data always follows a Student-t distribution`,
+          r`Because the heavy tails of the Student-t distribution alleviate the crowding problem by pushing moderate-distance points apart`,
+        ],
+        a: 3,
+        why: r`In low dimensions, area is constrained. The heavy inverse-square tails of the Student-t distribution ($1/(1+d^2)$) require points with small to moderate affinities to be mapped further apart than a Gaussian would, preventing separate clusters from collapsing into a dense central clump.`,
+      },
+      {
+        q: r`What is the primary role of the perplexity hyperparameter in t-SNE?`,
+        o: [
+          r`It sets the effective number of nearest neighbours used to adapt the local Gaussian bandwidth $\sigma_i$ for each point`,
+          r`It determines the final number of clusters displayed in the 2D plot`,
+          r`It specifies the learning rate of the gradient descent optimiser`,
+          r`It controls the number of principal components retained during initialisation`,
+        ],
+        a: 0,
+        why: r`Perplexity represents the effective continuous degrees of freedom or target neighbourhood size $2^{H(P_i)}$. Binary search tunes $\sigma_i$ per point so its conditional entropy matches $\log_2(\text{perplexity})$.`,
+      },
+      {
+        q: r`Why can the distance between two widely separated clusters in a t-SNE plot NOT be interpreted as true high-dimensional geometric distance?`,
+        o: [
+          r`Because t-SNE strictly preserves metric distances using geodesic shortest paths`,
+          r`Because t-SNE normalises all cluster centroids to lie on the unit circle`,
+          r`Because the KL divergence penalty focuses almost entirely on preserving local neighbours, leaving distant clusters free to settle anywhere`,
+          r`Because t-SNE introduces artificial random Gaussian jitter to cluster centroids at every iteration`,
+        ],
+        a: 2,
+        why: r`The asymmetric term $p_{ij} \log(p_{ij}/q_{ij})$ approaches zero whenever $p_{ij} \approx 0$. When points belong to different clusters, their $p_{ij}$ is virtually zero, meaning the loss exerts negligible attractive or metric constraints on their relative positions.`,
+      },
+      {
+        q: r`Why can standard t-SNE not directly transform a single new, unseen test sample into 2D coordinates?`,
+        o: [
+          r`Because t-SNE is a supervised algorithm requiring ground truth labels for transformation`,
+          r`Because t-SNE is a non-parametric embedding that optimises sample coordinates directly rather than learning a parametric mapping function`,
+          r`Because t-SNE coordinates are only valid when sample count is an exact power of two`,
+          r`Because the Student-t distribution cannot be evaluated on individual points`,
+        ],
+        a: 1,
+        why: r`t-SNE does not learn an encoder or projection matrix $W$; it directly optimises the array of 2D coordinates $Y \in \mathbb{R}^{n \times 2}$ via gradient descent over all pairs. Projecting a new point requires rerunning optimisation or using parametric extensions.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['pca', 'kl-divergence'],
+    related: ['pca', 'umap', 'spectral_clustering'],
+    keywords: 'tsne t-sne t-distributed stochastic neighbour embedding dimensionality reduction manifold learning perplexity kl divergence student-t',
+  },
+  {
+    id: 'umap',
+    short: 'UMAP',
+    title: 'Uniform Manifold Approximation and Projection',
+    task: 'concepts',
+    module: 'Dimensionality reduction',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Non-linear manifold dimensionality reduction rooted in Riemannian geometry and algebraic topology, preserving both local and global structure with faster SGD optimisation.`,
+    lead: r`While t-SNE produces compelling cluster visualisations, it suffers from quadratic computational scaling, loses broad global continuum arrangements, and cannot readily project out-of-sample observations. Uniform Manifold Approximation and Projection (UMAP) combines theoretical foundations in Riemannian geometry and fuzzy simplicial sets with negative-sampling stochastic gradient descent, delivering faster execution and superior preservation of global trajectory structures.`,
+    intuition: [
+      r`UMAP begins with three mathematical assumptions: first, that data lies on an underlying Riemannian manifold; second, that the Riemannian metric is locally constant (meaning space stretches or compresses depending on point density); and third, that the manifold is locally connected. Under these assumptions, the metric space around every point can be rescaled such that the distance to its first nearest neighbour is normalised to a baseline value. This ensures that even in extremely sparse regions of the dataset, no point is left isolated from the neighbourhood graph.`,
+      r`In high dimensions, UMAP represents neighbourhood relationships as a fuzzy simplicial set—a topological structure where edges, triangles, and higher-order simplices have probabilistic degrees of membership. The fuzzy membership between two points reflects the probability that an edge exists between them. By computing the fuzzy set union across all points, UMAP creates a robust topological graph that models both tight local clusters and bridging corridors across distant groups.`,
+      r`In low dimensions, UMAP places points to recreate the high-dimensional fuzzy simplicial set as closely as possible. Instead of using KL divergence (which only penalises false negatives), UMAP optimises the fuzzy set cross-entropy loss. This objective function includes both an attractive term (drawing high-probability neighbours together) and a repulsive term (pushing non-neighbours apart globally). Optimised via stochastic gradient descent with negative sampling (similar to Word2Vec), UMAP runs orders of magnitude faster than t-SNE and preserves broad global continuums.`,
+    ],
+    analogy: r`Constructing a flexible wire-mesh net over the folds and contours of an origami sculpture, then laying the mesh down flat by pulling interconnected wires taut while gentle repellers keep unrelated folds from tangling.`,
+    steps: [
+      r`Construct a $k$-nearest neighbour graph across the input dataset using approximate nearest neighbours (such as nearest neighbour descent).`,
+      r`For each point $x_i$, compute the local distance $\rho_i$ to its immediate nearest neighbour, establishing the local connectivity constraint.`,
+      r`Perform a binary search to find the local scale $\sigma_i$ such that the sum of directed fuzzy memberships satisfies $\sum_{j} \exp(-\max(0, d(x_i, x_j) - \rho_i)/\sigma_i) = \log_2(k)$.`,
+      r`Symmetrise the directed affinities using the fuzzy set union formula: $p_{ij} = p_{j|i} + p_{i|j} - p_{j|i} p_{i|j}$.`,
+      r`Formulate the low-dimensional affinity kernel $q_{ij} = (1 + a \|y_i - y_j\|^{2b})^{-1}$, fitting parameters $a$ and $b$ to match the chosen minimum distance hyperparameter min_dist.`,
+      r`Initialise the low-dimensional layout using spectral embedding (the eigenvectors of the normalised Laplacian of the fuzzy graph) to preserve global macro-structure.`,
+      r`Optimise the low-dimensional coordinates using stochastic gradient descent (SGD) on the fuzzy cross-entropy loss, alternating between attractive edge updates and negative-sampled repulsive updates.`,
+    ],
+    math: [
+      {
+        h: 'Local metric scaling and directed fuzzy membership',
+        tex: r`$$p_{j \mid i} = \exp\left(-\frac{\max(0, d(x_i, x_j) - \rho_i)}{\sigma_i}\right), \qquad \sum_{j=1}^k \exp\left(-\frac{\max(0, d(x_i, x_j) - \rho_i)}{\sigma_i}\right) = \log_2(k)$$`,
+        p: r`$\rho_i = \min_{j \ne i} d(x_i, x_j)$ represents the distance to $x_i$'s nearest neighbour. Subtracting $\rho_i$ ensures that $p_{j|i} = 1$ for the closest neighbour, guaranteeing local graph connectivity.`,
+      },
+      {
+        h: 'Fuzzy set algebraic union',
+        tex: r`$$p_{ij} = p_{j \mid i} + p_{i \mid j} - p_{j \mid i} p_{i \mid j}$$`,
+        p: r`Because the local metrics defined by $\sigma_i$ and $\sigma_j$ differ, $p_{j|i} \ne p_{i|j}$. UMAP treats directed memberships as fuzzy probabilities and applies the standard algebraic t-conorm for fuzzy union to produce a symmetric graph.`,
+      },
+      {
+        h: 'Fuzzy set cross-entropy and low-dimensional gradient',
+        tex: r`$$\mathcal{L}_{CE} = \sum_{i \ne j} \left( p_{ij} \log \frac{p_{ij}}{q_{ij}} + (1 - p_{ij}) \log \frac{1 - p_{ij}}{1 - q_{ij}} \right), \quad q_{ij} = \frac{1}{1 + a \|y_i - y_j\|^{2b}}$$`,
+        p: r`The first term exerts attractive forces along high-probability edges ($p_{ij} \to 1$). The second term exerts repulsive forces across non-connected pairs ($p_{ij} \to 0$), preserving global separation without requiring low-dimensional partition functions.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic 3D points forming two separate groups
+rng = np.random.default_rng(42)
+X = np.vstack([rng.normal(-4, 0.5, (15, 3)), rng.normal(4, 0.5, (15, 3))])
+n = len(X)
+
+# 1. High-dimensional distances, local connectivity rho, and scale sigma
+D = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=-1)
+np.fill_diagonal(D, np.inf)
+rho = np.min(D, axis=1)
+sigma = np.mean(np.sort(D, axis=1)[:, :5], axis=1)
+np.fill_diagonal(D, 0.0)
+
+# 2. Fuzzy simplicial set: directed affinities and symmetric fuzzy union
+P_cond = np.exp(-np.maximum(0.0, D - rho[:, None]) / sigma[:, None])
+np.fill_diagonal(P_cond, 0.0)
+P = P_cond + P_cond.T - P_cond * P_cond.T
+
+# 3. Optimise low-dimensional coordinates via fuzzy cross-entropy gradient
+Y = rng.normal(0, 1.0, (n, 2))
+lr, a, b = 0.2, 1.0, 1.0
+for _ in range(80):
+    dist_sq = np.sum((Y[:, None, :] - Y[None, :, :]) ** 2, axis=-1)
+    np.fill_diagonal(dist_sq, np.inf)
+    inv = 1.0 / (1.0 + a * (dist_sq ** b))
+    np.fill_diagonal(inv, 0.0)
+    diff = Y[:, None, :] - Y[None, :, :]
+    attract = -2.0 * b * (P * inv)[:, :, None] * diff
+    repel = 2.0 * b * ((1.0 - P) * (1.0 - inv) * inv)[:, :, None] * diff
+    Y += lr * np.sum(attract + repel, axis=1)
+
+print(f"Cluster 1 centre in 2D: {Y[:15].mean(axis=0).round(2)}")
+print(f"Cluster 2 centre in 2D: {Y[15:].mean(axis=0).round(2)}")`,
+    pitfalls: [
+      r`Hyperparameter sensitivity: The n_neighbours parameter dictates the scale of focus (small values highlight micro-structure, while large values capture global trajectories). The min_dist parameter controls how tightly clustered points pack together.`,
+      r`Distances are not linear metrics: While UMAP preserves global relative arrangements substantially better than t-SNE, the Euclidean distance between distant clusters in the embedding cannot be interpreted as a calibrated metric.`,
+      r`Stochastic layout variation: Although spectral initialisation provides deterministic macro-positioning, subsequent stochastic gradient descent with negative sampling introduces minor run-to-run variations unless a fixed random seed is set.`,
+      r`Non-uniform density assumption: The fundamental premise that data is uniformly distributed on the manifold means UMAP actively normalises away differences in local cluster density.`,
+    ],
+    keyPoints: [
+      r`Preserves both local neighbourhood clustering and global continuum trajectories more effectively than t-SNE.`,
+      r`Uses fuzzy simplicial sets and fuzzy cross-entropy, eliminating the $O(n^2)$ partition function normalisation.`,
+      r`Spectral graph Laplacian initialisation anchors global layout before stochastic gradient descent refinement.`,
+      r`Supports inductive projection: new unseen samples can be embedded into an existing layout using local fuzzy set transforms.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the primary purpose of the local connectivity parameter $\rho_i$ in UMAP?`,
+        o: [
+          r`It sets the learning rate for gradient descent`,
+          r`It forces all points to lie on a hypersphere of radius $\rho_i$`,
+          r`It ensures that the distance to the nearest neighbour is zero in the local metric, guaranteeing graph connectivity`,
+          r`It controls the number of negative samples per edge update`,
+        ],
+        a: 2,
+        why: r`By subtracting $\rho_i = \min_{j \ne i} d(x_i, x_j)$ inside the exponential kernel, the affinity to the immediate nearest neighbour evaluates to $\exp(0) = 1$. This ensures that every point connects to at least one neighbour with 100% fuzzy certainty.`,
+      },
+      {
+        q: r`Why does UMAP's optimisation scale to millions of data points much faster than standard t-SNE?`,
+        o: [
+          r`UMAP only evaluates every tenth data point`,
+          r`UMAP solves a closed-form matrix inversion instead of using iterative gradient descent`,
+          r`UMAP computes exact Voronoi diagrams on CPU cores`,
+          r`UMAP replaces the global $O(n^2)$ denominator normalisation with edge-wise stochastic gradient descent and negative sampling`,
+        ],
+        a: 3,
+        why: r`t-SNE's denominator $\sum_{k \ne l} (1 + \|y_k - y_l\|^2)^{-1}$ couples all $n^2$ pairs. UMAP's fuzzy cross-entropy optimises individual graph edges with negative sampling, scaling as $O(n \log n)$ or $O(n)$ with approximate nearest neighbours.`,
+      },
+      {
+        q: r`How does UMAP's objective function differ fundamentally from t-SNE's Kullback-Leibler divergence?`,
+        o: [
+          r`UMAP uses fuzzy cross-entropy, which includes an explicit repulsive term $(1 - p_{ij})\log(1 - q_{ij})$ for non-neighbours`,
+          r`UMAP uses mean squared error between pairwise Euclidean distance matrices`,
+          r`UMAP minimises the Wasserstein-1 (Earth Mover's) distance between point clouds`,
+          r`UMAP has no objective function and relies solely on spectral decomposition`,
+        ],
+        a: 0,
+        why: r`t-SNE's KL divergence only penalises large $p_{ij}$ with small $q_{ij}$. UMAP's fuzzy cross-entropy has two terms: $p_{ij}\log(p_{ij}/q_{ij})$ pulls neighbours together, and $(1 - p_{ij})\log((1 - p_{ij})/(1 - q_{ij}))$ pushes non-connected pairs apart.`,
+      },
+      {
+        q: r`Which hyperparameter in UMAP directly controls how tightly packed embedded points appear within their clusters?`,
+        o: [
+          r`n_neighbours`,
+          r`min_dist`,
+          r`metric`,
+          r`learning_rate`,
+        ],
+        a: 1,
+        why: r`min_dist specifies the minimum allowable distance between points in the low-dimensional space, fitting the parameters $a$ and $b$ of the low-dimensional kernel. Lower values create densely packed clumps, while higher values preserve broader dispersion.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['pca', 't-sne'],
+    related: ['t-sne', 'pca', 'spectral_clustering'],
+    keywords: 'umap uniform manifold approximation projection dimensionality reduction fuzzy simplicial sets manifold learning topology sgd',
+  },
+  {
+    id: 'isolation-forest',
+    short: 'Isolation Forest',
+    title: 'Isolation Forest',
+    task: 'concepts',
+    module: 'Anomaly detection',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Tree-based anomaly detection that isolates anomalies through random recursive partitioning, exploiting the fact that outliers require fewer random cuts to separate.`,
+    lead: r`Traditional anomaly detection algorithms model the normal data profile using density estimation, distance clustering, or convex hulls, which causes quadratic computational bottlenecks and degrades in high dimensions. Isolation Forest inverts this paradigm: instead of constructing an expensive model of normality, it explicitly isolates anomalies by building an ensemble of completely randomised binary decision trees, isolating outliers near the root with linear time complexity.`,
+    intuition: [
+      r`Consider a large group of people gathered closely in the centre of a town square, with a solitary pedestrian wandering 50 metres away on the empty perimeter. If an observer draws random straight lines across the square, how many cuts will it take to isolate the solitary pedestrian from everyone else? A single random cut that falls between the wanderer and the square isolates them immediately. In contrast, isolating an individual standing shoulder-to-shoulder inside the central crowd requires dozens of precise, finely placed cuts.`,
+      r`This geometric property forms the core intuition of Isolation Forest. Anomalies are "few and different": they occur in sparse regions of feature space far from normal data clusters. When a binary tree recursively chooses a feature at random and cuts it at a uniform random value between that feature's minimum and maximum, anomalies are isolated into individual leaf nodes after very few splits (short path length). Normal instances, packed together in high-density regions, require many recursive splits (long path length) to isolate.`,
+      r`Because the algorithm relies solely on relative path lengths rather than pairwise Euclidean distances or probability densities, it eliminates the curse of dimensionality and distance distortion. Subsampling data into small subsets (typically 256 instances per tree) prevents two classic anomaly detection pathologies: swamping (falsely labelling inliers as anomalies because they sit near outlier clusters) and masking (clusters of outliers masking each other by appearing locally dense).`,
+    ],
+    analogy: r`Slicing through a wooden board with random saw cuts: a knothole protruding off the outer edge gets severed in one or two quick passes, whereas isolating a single wood grain deep within the centre requires countless cuts.`,
+    steps: [
+      r`Subsample the training dataset without replacement into small bags of size $\psi$ (typically $\psi = 256$), mitigating masking and swamping while dramatically accelerating tree construction.`,
+      r`Build an ensemble of $t$ completely randomised isolation trees (iTrees), setting the maximum tree depth to $\lceil \log_2(\psi) \rceil$.`,
+      r`At each tree node, randomly choose a feature $q$ uniformly from the available feature columns.`,
+      r`Select a split value $p$ uniformly at random between the minimum and maximum values of feature $q$ in the current node's data subset.`,
+      r`Partition the data into left ($x_q < p$) and right ($x_q \ge p$) child nodes, recursing until instances are isolated ($|X| \le 1$), all feature values are identical, or max depth is reached.`,
+      r`Pass each evaluation sample $x$ through all $t$ trees, recording the path length $h_i(x)$ (edges traversed plus the average path length correction $c(n)$ if terminated at an un-isolated node).`,
+      r`Compute the normalised anomaly score $s(x, \psi) = 2^{-\mathbb{E}[h(x)] / c(\psi)}$; flag instances with $s(x, \psi) > 0.6$ as anomalies.`,
+    ],
+    math: [
+      {
+        h: 'Recursive partitioning and path length h(x)',
+        tex: r`$$h(x) = e + c(|X_{\text{leaf}}|)$$`,
+        p: r`An isolation tree (iTree) is a proper binary tree where every node has either zero or two children. The path length $h(x)$ of sample $x$ is the number of edges $e$ traversed from the root node to a terminating leaf node, augmented by the unbuilt tree correction $c(|X_{\text{leaf}}|)$ if early stopping was reached.`,
+      },
+      {
+        h: 'Average path length of unsuccessful search in a BST',
+        tex: r`$$c(n) = 2 \left( \ln(n - 1) + \gamma \right) - \frac{2(n - 1)}{n}$$`,
+        p: r`where $\gamma \approx 0.5772156649$ is Euler's constant. Because iTrees share the exact mathematical structure of random binary search trees, $c(n)$ provides the theoretical average path length of an instance across $n$ randomly inserted items, serving as an exact normalisation constant.`,
+      },
+      {
+        h: 'Normalised anomaly score formulation',
+        tex: r`$$s(x, n) = 2^{-\frac{\mathbb{E}[h(x)]}{c(n)}}$$`,
+        p: r`where $\mathbb{E}[h(x)]$ is the average path length across all trees in the forest. When $\mathbb{E}[h(x)] \to 0$, $s \to 1$, indicating an unambiguous anomaly isolated in very few splits. When $\mathbb{E}[h(x)] \to c(n)$, $s \to 0.5$, representing an ordinary instance indistinguishable from random data. When $\mathbb{E}[h(x)] \to n - 1$, $s \to 0$, signifying a deeply embedded inlier.`,
+      },
+    ],
+    code: r`import numpy as np
+
+def c_factor(n):
+    return 2.0 * (np.log(n - 1) + 0.5772156649) - 2.0 * (n - 1) / n if n > 2 else (1.0 if n == 2 else 0.0)
+
+def build_tree(X, depth, max_depth, rng):
+    if len(X) <= 1 or depth >= max_depth:
+        return {'size': len(X)}
+    feat = rng.integers(0, X.shape[1])
+    f_min, f_max = X[:, feat].min(), X[:, feat].max()
+    if f_min == f_max:
+        return {'size': len(X)}
+    split = rng.uniform(f_min, f_max)
+    left = build_tree(X[X[:, feat] < split], depth + 1, max_depth, rng)
+    right = build_tree(X[X[:, feat] >= split], depth + 1, max_depth, rng)
+    return {'feat': feat, 'split': split, 'left': left, 'right': right}
+
+def path_length(x, node, depth):
+    if 'size' in node:
+        return depth + c_factor(node['size'])
+    return path_length(x, node['left'], depth + 1) if x[node['feat']] < node['split'] else path_length(x, node['right'], depth + 1)
+
+rng = np.random.default_rng(42)
+X_train = rng.normal(0, 1, size=(200, 2))
+trees = [build_tree(X_train[rng.choice(len(X_train), 64, replace=False)], 0, 6, rng) for _ in range(50)]
+
+test_pts = np.array([[0.1, 0.1], [4.5, 4.5]])
+for pt, label in zip(test_pts, ['Normal inlier', 'Extreme outlier']):
+    avg_path = np.mean([path_length(pt, t, 0) for t in trees])
+    score = 2.0 ** (-avg_path / c_factor(64))
+    print(f"{label} path: {avg_path:.2f} | score: {score:.3f}")`,
+    pitfalls: [
+      r`Axis-aligned partition bias: Standard iTrees use axis-parallel orthogonal cuts. Anomalies that reside in empty corners between correlated features (such as diagonal bands) may require more splits to isolate, though extended isolation forests address this with hyperplanes.`,
+      r`Over-subsampling vs under-subsampling: Setting subsample size $\psi$ too large causes swamping and masking, whereas setting $\psi$ too small fails to capture the true multivariate structure. The default $\psi = 256$ is empirically proven optimal across diverse domains.`,
+      r`Noise features: If a dataset contains hundreds of irrelevant, completely random features, uniformly selecting features at each split introduces noise and dilutes the path length separation of true anomalies.`,
+      r`Global score interpretation: Anomaly scores are relative to the dataset; a fixed threshold like 0.5 or 0.6 must be calibrated against business requirements and false alarm tolerances.`,
+    ],
+    keyPoints: [
+      r`Directly isolates anomalies instead of profiling normal instances, achieving linear $O(t \cdot \psi \log \psi)$ computational complexity.`,
+      r`Employs subsampling ($\psi = 256$) to eliminate swamping and masking while keeping memory consumption negligible.`,
+      r`Uses the average path length of a binary search tree $c(n)$ to normalise scores objectively between 0 and 1.`,
+      r`Operates effectively without distance metrics, avoiding distance concentration in high-dimensional spaces.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does Isolation Forest deliberately use small subsamples (such as $\psi = 256$) instead of training trees on the entire dataset?`,
+        o: [
+          r`Because decision trees cannot process more than 256 rows in memory`,
+          r`To eliminate swamping and masking while dramatically speeding up tree construction`,
+          r`To ensure all isolation trees have identical depth`,
+          r`Because small samples guarantee zero false negative classifications`,
+        ],
+        a: 1,
+        why: r`Subsampling prevents "swamping" (normal instances surrounded by outliers being falsely flagged) and "masking" (dense clusters of outliers hiding each other). It also makes tree training extraordinarily fast.`,
+      },
+      {
+        q: r`If an instance $x$ yields an anomaly score $s(x, n) = 0.5$, what does this score indicate?`,
+        o: [
+          r`The instance is definitely a catastrophic anomaly`,
+          r`The instance has an average path length of zero`,
+          r`The instance's average path length equals the expected path length $c(n)$ of a random binary search tree, showing no anomalous characteristics`,
+          r`The algorithm failed to converge and must be retrained`,
+        ],
+        a: 2,
+        why: r`When $\mathbb{E}[h(x)] = c(n)$, the exponent is $-1$, yielding $s = 2^{-1} = 0.5$. This indicates the instance's path length is indistinguishable from that of an average sample in a random BST.`,
+      },
+      {
+        q: r`What role does Euler's constant $\gamma \approx 0.5772$ play in the Isolation Forest algorithm?`,
+        o: [
+          r`It serves as the default learning rate for split threshold selection`,
+          r`It determines the maximum number of trees to construct`,
+          r`It specifies the random seed for NumPy's random number generator`,
+          r`It appears in the formula $c(n)$ for the expected path length of unsuccessful searches in a random binary search tree`,
+        ],
+        a: 3,
+        why: r`The harmonic number approximation $H_{n-1} = \ln(n-1) + \gamma$ yields the expected path length $c(n) = 2(\ln(n-1) + \gamma) - \frac{2(n-1)}{n}$ for binary search trees, which acts as the normalising denominator.`,
+      },
+      {
+        q: r`How does an anomaly differ geometrically from an inlier during Isolation Forest recursive splitting?`,
+        o: [
+          r`Anomalies reside in low-density sparse regions and are isolated near the root with short path lengths $h(x)$`,
+          r`Anomalies always fall into the left child node of every split`,
+          r`Anomalies require significantly more recursive cuts to separate than dense inliers`,
+          r`Anomalies have zero variance across all feature dimensions`,
+        ],
+        a: 0,
+        why: r`Anomalies are few and topologically isolated. Random cuts readily separate them from the rest of the dataset within few splits, resulting in small path lengths $h(x) \ll c(n)$.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['decision_tree_classifier', 'random_forest_classifier'],
+    related: ['bagging-and-extra-trees', 'random_forest_classifier'],
+    keywords: 'isolation forest anomaly detection outlier detection itree path length recursive partitioning unsupervised learning',
+  },
 ];
