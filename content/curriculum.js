@@ -46,7 +46,7 @@ module.exports = [
       { title: 'Kernel and instance-based', lessons: ['knn_regressor', 'support_vector_regression', 'gaussian_process_regressor'] },
       { title: 'Trees and ensembles', lessons: ['decision_tree_regressor', 'random_forest_regressor', 'gradient_boosting_regressor', 'xgboost_regressor', 'lightgbm_regressor', 'catboost_regressor'] },
       { title: 'Neural networks', lessons: ['mlp_regressor'] },
-      { title: 'Beyond the basics', lessons: [...C('Quantile regression', 'GAMs and splines'), ...X('Poisson and Tweedie regression', 'Isotonic regression', 'PLS and principal component regression', 'MARS')] },
+      { title: 'Beyond the basics', lessons: ['quantile-regression', 'gams-and-splines', ...X('Poisson and Tweedie regression', 'Isotonic regression', 'PLS and principal component regression', 'MARS')] },
     ],
   },
   {
