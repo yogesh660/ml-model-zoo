@@ -27,7 +27,8 @@ Live: https://yogesh660.github.io/ml-model-zoo/
 ## Planned lessons
 - `content/curriculum.js` modules mix live ids (strings) with planned lessons (`['Title', 'Core'|'Extended'|'Capstone']`; a trailing ` ⚙` means a live lab is planned). Helpers `C()`, `X()`, `K()` build those arrays.
 - Each planned lesson gets a stub page at `concepts/<slug(title)>/` (`plannedPage` in `scripts/build.js`); it is in the hub syllabus and search but not in progress counts.
-- To write one: add the lesson to `content/*.js` with `id` = that slug, then replace the array with the id in the curriculum. Stubs for algorithm-style lessons live under `concepts/`, so add a redirect if the real lesson is a `models/` page.
+- To write one: add the lesson to the track's file (`statistics, datascience, mltoolbox, deeplearning, vision, nlp, ai` in `content/`) with `task: 'concepts'` and `id` = that slug, then replace the array in the curriculum with the id. Using `task: 'concepts'` keeps the URL the stub already had.
+- `noLab: true` skips the lab section (and the "Live lab" tag) for lessons without one; otherwise `labIntro` and `tryThis` are required. The build validates required lesson fields and warns about US spellings.
 - Paths carry a `track` (stats, ml, ds, dl, cv, nlp, ai) that drives the hub filter buttons.
 
 ## Lesson object (content/*.js)

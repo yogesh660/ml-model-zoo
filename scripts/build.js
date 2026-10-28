@@ -17,6 +17,13 @@ const LESSONS = [
   ...require('../content/neural'),
   ...require('../content/sequences'),
   ...require('../content/language'),
+  ...require('../content/statistics'),
+  ...require('../content/datascience'),
+  ...require('../content/mltoolbox'),
+  ...require('../content/deeplearning'),
+  ...require('../content/vision'),
+  ...require('../content/nlp'),
+  ...require('../content/ai'),
 ];
 
 const SITE = 'https://yogesh660.github.io/';
