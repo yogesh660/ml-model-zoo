@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsie1ye">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsie1ye">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -149,6 +149,56 @@ inliers = models[<span class="s">&quot;RANSAC&quot;</span>].inlier_mask_   <span
             <div class="opts"><button class="opt" type="button"><b>A</b><span>All points</span></button><button class="opt" type="button"><b>B</b><span>The largest consensus set of inliers</span></button><button class="opt" type="button"><b>C</b><span>A random subset</span></button><button class="opt" type="button"><b>D</b><span>Only the outliers</span></button></div>
             <div class="why" hidden><strong>Why:</strong> After finding the best minimal sample, RANSAC refits on all points within the residual threshold of it.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>How does the Theil–Sen estimator compute the slope for a simple univariate regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By computing the median of the slopes between all pairs of distinct data points</span></button><button class="opt" type="button"><b>B</b><span>By minimising the sum of squared distances to the median target value</span></button><button class="opt" type="button"><b>C</b><span>By averaging the gradients of the first and last observations</span></button><button class="opt" type="button"><b>D</b><span>By running coordinate descent with an L1 regularisation penalty</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Theil–Sen calculates pairwise slopes $s_{ij} = (y_j - y_i) / (x_j - x_i)$ for all $i &lt; j$ and takes their median, making it highly robust against outliers in the dependent variable.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>What is the breakdown point of an estimator in robust statistics?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of iterations required before gradient descent diverges</span></button><button class="opt" type="button"><b>B</b><span>The fraction of arbitrary bad data (outliers) an estimator can tolerate before its estimate can be forced to infinity</span></button><button class="opt" type="button"><b>C</b><span>The threshold where a linear model transitions to a piecewise polynomial spline</span></button><button class="opt" type="button"><b>D</b><span>The proportion of variance unexplained ($1 - R^2$) on held-out test data</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The breakdown point measures resistance to data corruption; OLS has a breakdown point of $0\%$ (a single outlier can corrupt the slope arbitrarily), whereas Theil–Sen reaches $\approx 29.3\%$ for simple regression and RANSAC can tolerate over $50\%$ contamination.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>Why does Ordinary Least Squares (OLS) have a breakdown point of 0%, whereas Huber regression is more robust?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>OLS loss grows quadratically ($\frac{1}{2}r^2$), so a single extreme residual creates an arbitrarily large derivative that dominates the fit, whereas Huber's derivative is bounded by $\pm\delta$</span></button><button class="opt" type="button"><b>B</b><span>OLS requires the data to follow a Cauchy distribution, which has infinite variance</span></button><button class="opt" type="button"><b>C</b><span>Huber regression completely ignores all residuals less than $\delta$</span></button><button class="opt" type="button"><b>D</b><span>OLS is an unsupervised learning algorithm that does not use target labels</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In OLS, the gradient is proportional to the residual $r$; as $|r| \to \infty$, the gradient pulls with unbounded force. Huber's loss transitions to linear growth for $|r| &gt; \delta$, capping its influence at $\pm\delta$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>What is a key vulnerability of Huber regression when dealing with leverage points (outliers in the feature space $X$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Huber loss cannot compute gradients when features are negative</span></button><button class="opt" type="button"><b>B</b><span>While Huber is robust to target outliers, leverage points with extreme $x_i$ can still exert unbounded influence because the weight gradient is $x_i \cdot \operatorname{clip}(r_i, -\delta, \delta)$</span></button><button class="opt" type="button"><b>C</b><span>Huber regression automatically deletes all leverage points regardless of residual size</span></button><button class="opt" type="button"><b>D</b><span>Huber regression requires the sample size $n$ to be smaller than the number of features $p$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The loss gradient with respect to weight $\beta$ is $\sum x_i L_\delta'(r_i)$. Even though $L_\delta'(r_i)$ is bounded by $\delta$, extreme $x_i$ can make the product arbitrarily large. High-breakdown estimators like RANSAC handle high-leverage points much more effectively.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>Why must residuals be scaled properly before setting the parameter $\epsilon$ (or $\delta$) in Huber regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\delta$ represents a physical residual threshold; if targets are unscaled or measured in thousands, a fixed threshold like 1.35 will treat almost every normal residual as an outlier</span></button><button class="opt" type="button"><b>B</b><span>Scikit-learn's HuberRegressor crashes if features are not strictly between 0 and 1</span></button><button class="opt" type="button"><b>C</b><span>Feature scaling guarantees that the residuals follow a uniform distribution</span></button><button class="opt" type="button"><b>D</b><span>Unscaled features convert Huber loss into an L1 lasso penalty</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The threshold $\delta$ defines where the loss switches from quadratic to linear. In HuberRegressor(epsilon=1.35), $\delta = 1.35 \times \hat{\sigma}$; if residual scale $\hat{\sigma}$ is misestimated, the threshold cannot distinguish normal noise from genuine outliers.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>In RANSAC, what is the role of the residual threshold parameter?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It decides the maximum number of iterations the algorithm will execute</span></button><button class="opt" type="button"><b>B</b><span>It specifies the minimum number of features required to train the model</span></button><button class="opt" type="button"><b>C</b><span>It sets the learning rate for the iterative refitting step</span></button><button class="opt" type="button"><b>D</b><span>It determines the maximum residual distance a data point can have from the candidate model to be classified as an inlier</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> RANSAC classifies any point with residual $|y_i - \hat{y}_i| \le \text{threshold}$ as an inlier supporting the candidate model. A threshold set too tight rejects true inliers; set too loose, it admits outliers into the consensus set.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>How does Iteratively Reweighted Least Squares (IRLS) solve the Huber regression problem?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By randomly sampling subsets until the consensus set size exceeds 90%</span></button><button class="opt" type="button"><b>B</b><span>By repeatedly solving a weighted least squares problem where points with residual $|r_i| &gt; \delta$ receive weights $w_i = \delta / |r_i|$, down-weighting outliers at each step</span></button><button class="opt" type="button"><b>C</b><span>By sorting pairwise slopes and updating coefficients using the median</span></button><button class="opt" type="button"><b>D</b><span>By adding an L1 penalty to all weights and applying coordinate descent</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The Huber loss can be viewed as weighted least squares where the effective weight is $w_i = 1$ when $|r_i| \le \delta$ and $w_i = \delta / |r_i|$ when $|r_i| &gt; \delta$. Iteratively updating weights and refitting weighted least squares converges to the Huber minimum.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>A Huber loss function uses threshold $\delta = 2.0$. For an observation with true target $y = 15.0$ and prediction $\hat{y} = 9.0$, what is the exact Huber loss $L_\delta(r)$ and the magnitude of its derivative $|L'_\delta(r)|$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Loss $= 18.0$, derivative magnitude $= 6.0$</span></button><button class="opt" type="button"><b>B</b><span>Loss $= 10.0$, derivative magnitude $= 2.0$</span></button><button class="opt" type="button"><b>C</b><span>Loss $= 8.0$, derivative magnitude $= 2.0$</span></button><button class="opt" type="button"><b>D</b><span>Loss $= 16.0$, derivative magnitude $= 4.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The residual is $r = 15.0 - 9.0 = 6.0$. Since $|r| = 6.0 &gt; \delta = 2.0$, we use the linear branch: $L_\delta(r) = \delta(|r| - \frac{1}{2}\delta) = 2.0 \times (6.0 - 1.0) = 10.0$. The derivative magnitude is capped at $\delta = 2.0$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>You are fitting a line (minimal sample size $s = 2$ points) using RANSAC. Outliers make up 40% of the dataset (inlier ratio $w = 0.60$). What is the minimum number of iterations $N = \frac{\log(1 - p)}{\log(1 - w^s)}$ needed to guarantee finding at least one outlier-free sample with probability $p = 0.99$? (Use $\log(0.01) \approx -4.605$ and $\log(1 - 0.60^2) = \log(0.64) \approx -0.446$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$N = 5$</span></button><button class="opt" type="button"><b>B</b><span>$N = 8$</span></button><button class="opt" type="button"><b>C</b><span>$N = 11$</span></button><button class="opt" type="button"><b>D</b><span>$N = 25$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The probability of picking two inliers is $w^2 = 0.60^2 = 0.36$. The probability of picking at least one contaminated point is $1 - 0.36 = 0.64$. To ensure $(0.64)^N \le 0.01$, $N \ge \frac{-4.605}{-0.446} \approx 10.32$. Rounding up gives $N = 11$ iterations.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>Consider 5 data points: $(1, 2), (2, 4), (3, 6), (4, 8)$ and an outlier $(5, 50)$. What is the Theil–Sen slope estimate $\hat{\beta}_1$, and what is the OLS slope?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Theil–Sen slope $= 10.0$, OLS slope $= 2.0$</span></button><button class="opt" type="button"><b>B</b><span>Theil–Sen slope $= 2.0$, OLS slope $= 10.0$</span></button><button class="opt" type="button"><b>C</b><span>Both estimators produce slope $= 6.0$</span></button><button class="opt" type="button"><b>D</b><span>Theil–Sen slope $= 4.0$, OLS slope $= 8.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> There are $\binom{5}{2} = 10$ pairs. The 4 inliers form $\binom{4}{2} = 6$ pairs that all have slope $(y_j - y_i)/(x_j - x_i) = 2.0$. In the sorted list of 10 slopes, positions 1 through 6 are all $2.0$, giving a median of $2.0$. In contrast, OLS minimises squared error and yields slope $\frac{\sum(x - \bar{x})(y - \bar{y})}{\sum(x - \bar{x})^2} = \frac{100}{10} = 10.0$, heavily corrupted by the single outlier.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -184,11 +234,11 @@ inliers = models[<span class="s">&quot;RANSAC&quot;</span>].inlier_mask_   <span
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/core.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/models.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsie1ye" defer></script>
+<script src="../../assets/learn.js?v=mvsie1ye" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsie1ye">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsie1ye">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -143,6 +143,56 @@ mean, std = gp.<span class="f">predict</span>(X_te, return_std=<span class="k">T
             <div class="opts"><button class="opt" type="button"><b>A</b><span>They need an $n \times n$ matrix factorisation, $O(n^3)$</span></button><button class="opt" type="button"><b>B</b><span>They use gradient descent</span></button><button class="opt" type="button"><b>C</b><span>They need categorical features</span></button><button class="opt" type="button"><b>D</b><span>They store only support vectors</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Inverting (or factorising) $K + \sigma^2 I$ is cubic in $n$ and quadratic in memory.</div>
           </div>
+          <div class="q" data-answer="1">
+            <p><span>Q3</span>What is the formal definition of a Gaussian Process (GP)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A neural network with infinitely many hidden layers trained using RMSprop</span></button><button class="opt" type="button"><b>B</b><span>A collection of random variables, any finite subset of which has a joint multivariate Gaussian distribution</span></button><button class="opt" type="button"><b>C</b><span>An iterative clustering algorithm that fits multivariate normal distributions</span></button><button class="opt" type="button"><b>D</b><span>A linear regression model whose input features are guaranteed to be normally distributed</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By definition, a Gaussian Process is a collection of infinitely many random variables such that any finite sub-collection $(f(x_1), \dots, f(x_k))$ has a joint Gaussian distribution fully specified by a mean function $m(x)$ and covariance function $k(x, x')$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>What is the effect of adding a WhiteKernel to an RBF kernel in Gaussian Process Regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It models independent, identically distributed observation noise $\sigma_n^2$, adding $\sigma_n^2$ to the diagonal of the covariance matrix</span></button><button class="opt" type="button"><b>B</b><span>It forces the mean prediction function to be strictly linear</span></button><button class="opt" type="button"><b>C</b><span>It restricts the kernel output to black-and-white image pixels</span></button><button class="opt" type="button"><b>D</b><span>It reduces the computational complexity from $\mathcal{O}(n^3)$ to $\mathcal{O}(n)$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A white-noise kernel models observation error $\epsilon \sim \mathcal{N}(0, \sigma_n^2)$. Adding it modifies the covariance to $K(x, x') + \sigma_n^2 \delta_{x, x'}$, allowing the GP mean function to smoothly approximate noisy points rather than being forced to interpolate through every noise spike.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>What happens to the posterior predictive uncertainty (variance $\sigma_*^2$) of a noise-free GP at an exact training location $x_* = x_i$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It equals the prior variance $\sigma_f^2$</span></button><button class="opt" type="button"><b>B</b><span>It drops to zero, because the true function value is known with absolute certainty</span></button><button class="opt" type="button"><b>C</b><span>It expands to infinity due to division by zero</span></button><button class="opt" type="button"><b>D</b><span>It oscillates between $-1$ and $+1$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Without observation noise, observing $y_i = f(x_i)$ pins down the function completely at that coordinate, collapsing posterior uncertainty at $x_i$ to 0.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q6</span>How does Gaussian Process Regression learn its kernel hyperparameters (such as length scale $\ell$ and signal variance $\sigma_f^2$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By running 5-fold cross-validation on a grid of fixed values</span></button><button class="opt" type="button"><b>B</b><span>By setting $\ell$ to the average Euclidean distance between all points</span></button><button class="opt" type="button"><b>C</b><span>By maximising the log marginal likelihood $\log p(y \mid X)$, which naturally balances data fit against model complexity</span></button><button class="opt" type="button"><b>D</b><span>By training a separate random forest to predict the hyperparameters</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The log marginal likelihood decomposes into a data-fit term ($-\frac{1}{2}y^\top K_y^{-1}y$), a complexity penalty term ($-\frac{1}{2}\log|K_y|$), and a normalisation constant. Maximising it via gradient-based optimisers finds optimal hyperparameters without cross-validation.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>Suppose you train a GP with an RBF kernel where the learned length scale $\ell$ is extremely small relative to the spacing between data points. How will the predictive mean behave between training points?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It quickly reverts to the prior mean (usually 0), creating isolated bumps at data points rather than smooth interpolation</span></button><button class="opt" type="button"><b>B</b><span>It connects all points with a global straight line</span></button><button class="opt" type="button"><b>C</b><span>It diverges towards positive infinity</span></button><button class="opt" type="button"><b>D</b><span>It oscillates with infinite frequency</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When $\ell$ is much smaller than the distance between points, covariance $k(x_i, x_*)$ vanishes as soon as $x_*$ moves slightly away from a training point. As cross-correlations vanish, the predictive mean reverts to the prior mean ($0$), and variance returns to prior variance $\sigma_f^2$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>Why does scikit-learn's GaussianProcessRegressor provide an n_restarts_optimizer parameter?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the kernel matrix must be inverted multiple times to prevent roundoff errors</span></button><button class="opt" type="button"><b>B</b><span>Because the log marginal likelihood surface can have multiple local optima, so restarting the optimiser from different initial hyperparameter points helps find a better solution</span></button><button class="opt" type="button"><b>C</b><span>Because scikit-learn trains an ensemble of independent GPs and averages their predictions</span></button><button class="opt" type="button"><b>D</b><span>Because gradient descent fails to terminate unless restarted every 10 iterations</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The marginal likelihood objective function is typically non-convex in kernel hyperparameters, often containing multiple local maxima (e.g. one representing short-scale noisy variations and another representing long-scale smooth trends). Random restarts help escape poor local optima.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>Why are Gaussian Processes widely used as surrogate models in Bayesian optimisation for hyperparameter tuning?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because GPs can train in less than a millisecond on millions of rows</span></button><button class="opt" type="button"><b>B</b><span>Because GPs are non-probabilistic models that ignore noisy evaluations</span></button><button class="opt" type="button"><b>C</b><span>Because GPs convert black-box optimisation problems into convex linear programs</span></button><button class="opt" type="button"><b>D</b><span>Because GPs provide both a predictive mean and an exact analytic predictive variance, enabling acquisition functions (like Expected Improvement) to trade off exploration and exploitation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In Bayesian optimisation, evaluating the objective function is expensive. GPs provide full posterior predictive distributions $\mathcal{N}(\mu(x), \sigma^2(x))$, allowing acquisition functions to mathematically quantify both where the objective is expected to be good (exploitation) and where uncertainty is large (exploration).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>You have a single training point $(x_1 = 0.0, y_1 = 4.0)$ and a GP with zero prior mean, RBF kernel $k(x, x') = \exp(-\frac{1}{2}(x - x')^2)$, and observation noise variance $\sigma_n^2 = 1.0$. What is the posterior predictive mean $\mu_*$ at $x_* = 1.0$? (Note: $e^{-0.5} \approx 0.607$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu_* = 4.000$</span></button><button class="opt" type="button"><b>B</b><span>$\mu_* = 1.213$</span></button><button class="opt" type="button"><b>C</b><span>$\mu_* = 2.426$</span></button><button class="opt" type="button"><b>D</b><span>$\mu_* = 0.607$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The training covariance scalar is $K = k(0, 0) + \sigma_n^2 = 1.0 + 1.0 = 2.0$. The cross-covariance is $k_* = k(1, 0) = \exp(-0.5) \approx 0.607$. The predictive mean is $\mu_* = k_* K^{-1} y = 0.607 \times (1 / 2.0) \times 4.0 = 0.607 \times 2.0 \approx 1.214$ (or $1.213$).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>For the same single-observation GP setup ($x_1 = 0.0, y_1 = 4.0, k(x, x') = \exp(-\frac{1}{2}(x - x')^2), \sigma_n^2 = 1.0$), what is the posterior predictive variance $\sigma_*^2$ at $x_* = 1.0$? (Using $e^{-0.5} \approx 0.607$, so $(e^{-0.5})^2 = e^{-1.0} \approx 0.368$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\sigma_*^2 = 0.816$</span></button><button class="opt" type="button"><b>B</b><span>$\sigma_*^2 = 0.632$</span></button><button class="opt" type="button"><b>C</b><span>$\sigma_*^2 = 1.000$</span></button><button class="opt" type="button"><b>D</b><span>$\sigma_*^2 = 0.448$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Prior variance at $x_*$ is $k(1, 1) = 1.0$. The variance reduction term is $k_*^2 / (k(0, 0) + \sigma_n^2) = (e^{-0.5})^2 / (1.0 + 1.0) = e^{-1.0} / 2.0 \approx 0.3679 / 2.0 \approx 0.1840$. Thus $\sigma_*^2 = 1.0 - 0.184 = 0.816$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>In the log marginal likelihood formula $\log p(y \mid X) = -\frac{1}{2}y^\top K_y^{-1}y - \frac{1}{2}\log|K_y| - \frac{n}{2}\log 2\pi$, what happens if a model becomes overly complex by choosing an excessively tiny length scale $\ell \to 0$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The data fit term drops to $-\infty$ while the complexity term approaches zero</span></button><button class="opt" type="button"><b>B</b><span>The covariance matrix $K_y \to \sigma_n^2 I$, causing the model to treat all data points as uncorrelated noise, which severely penalises the complexity penalty $-\frac{1}{2}\log|K_y|$ and fails to explain data covariance</span></button><button class="opt" type="button"><b>C</b><span>The determinant $|K_y|$ diverges to infinity, making log marginal likelihood positive</span></button><button class="opt" type="button"><b>D</b><span>The constant term drops to zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> As $\ell \to 0$, all off-diagonal correlations vanish and $K_y \to \sigma_n^2 I$. The model loses all capacity to generalise or predict across points. Because it treats structured data as pure uncorrelated white noise, its marginal likelihood is substantially lower than that of a properly tuned length scale.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -178,11 +228,11 @@ mean, std = gp.<span class="f">predict</span>(X_te, return_std=<span class="k">T
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/core.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/models.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsie1ye" defer></script>
+<script src="../../assets/learn.js?v=mvsie1ye" defer></script>
 </body>
 </html>

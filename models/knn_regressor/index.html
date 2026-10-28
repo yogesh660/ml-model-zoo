@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsie1ye">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsie1ye">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -144,6 +144,56 @@ search = <span class="f">GridSearchCV</span>(pipe, grid, cv=<span class="n">5</s
             <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses squared loss</span></button><button class="opt" type="button"><b>B</b><span>A prediction is an average of training targets, so it can never leave their range</span></button><button class="opt" type="button"><b>C</b><span>It needs scaling</span></button><button class="opt" type="button"><b>D</b><span>It overfits</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Averages of observed targets are bounded by the observed targets.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What is the training time complexity of a standard brute-force k-Nearest Neighbours regressor?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathcal{O}(n^3)$ due to covariance matrix inversion</span></button><button class="opt" type="button"><b>B</b><span>$\mathcal{O}(\text{epochs} \cdot n \cdot p)$ via backpropagation</span></button><button class="opt" type="button"><b>C</b><span>$\mathcal{O}(1)$ or $\mathcal{O}(n \cdot p)$ to merely store the data, as it has no parameter training phase</span></button><button class="opt" type="button"><b>D</b><span>$\mathcal{O}(n \log n)$ to sort all trees</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> k-NN is an instance-based lazy learner; training consists solely of memorising or storing the $n$ training instances with $p$ features, so there is no parameter optimisation phase.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>If you train a 1-Nearest Neighbour regressor ($k = 1$) on a dataset with unique input points, what is its training Mean Squared Error (MSE)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Exactly 0, because every training point is its own nearest neighbour with distance 0</span></button><button class="opt" type="button"><b>B</b><span>Equal to the empirical variance of the target variable $y$</span></button><button class="opt" type="button"><b>C</b><span>Half of the test set error</span></button><button class="opt" type="button"><b>D</b><span>Undefined, because at least 2 neighbours are required for MSE</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $k = 1$, each training point queries itself as its closest neighbour, perfectly predicting its own exact target value $y_i$, yielding zero training residuals.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>Why does distance weighting (weights='distance') modify the behaviour of k-NN regression compared to uniform weighting?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It assigns larger weights to neighbours that are closer to the query point, usually proportional to $1/d(x, x_i)$</span></button><button class="opt" type="button"><b>B</b><span>It discards all neighbours whose distance exceeds 1.0</span></button><button class="opt" type="button"><b>C</b><span>It forces the model to fit a globally linear plane</span></button><button class="opt" type="button"><b>D</b><span>It converts k-NN into an unsupervised dimensionality reduction method</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Under inverse-distance weighting, neighbours immediately adjacent to the query point have much greater influence on the predicted average than distant neighbours on the outer edge of the neighbourhood.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>Suppose feature 1 is annual income in pounds (£20,000 to £150,000) and feature 2 is age in years (18 to 70). What happens if k-NN regression is fitted without feature scaling?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Age completely dominates the Euclidean distance calculations because its values are smaller</span></button><button class="opt" type="button"><b>B</b><span>Income completely dominates Euclidean distances because differences in thousands overwhelm differences of a few years, making age practically irrelevant</span></button><button class="opt" type="button"><b>C</b><span>The KD-tree algorithm fails to build and raises an exception</span></button><button class="opt" type="button"><b>D</b><span>Predictions become identical to uniform random guesses</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Euclidean distance squares coordinate differences. A difference of £5,000 income produces $(5000)^2 = 25,000,000$, which completely dwarfs a 40-year age gap $(40)^2 = 1,600$. Features must be standardised so each dimension contributes fairly.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>How does the curse of dimensionality impact k-NN regression in high-dimensional spaces?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Data points become sparsely distributed and almost equidistant from one another, so nearest neighbours are no longer locally close</span></button><button class="opt" type="button"><b>B</b><span>The number of neighbours $k$ must be multiplied by the number of dimensions $p$</span></button><button class="opt" type="button"><b>C</b><span>The model always predicts 0 for any query point</span></button><button class="opt" type="button"><b>D</b><span>KD-trees become infinitely fast at locating nearest neighbours</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In high dimensions, the volume of the space grows exponentially ($r^{1/p}$). To capture even a small fraction of data, the neighbourhood must span almost the entire range of every feature, destroying locality.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>When does using a KD-tree or Ball tree provide substantial speedups over brute-force search during k-NN inference?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>When feature dimensionality $p$ is very high ($p &gt; 100$)</span></button><button class="opt" type="button"><b>B</b><span>When sample size $n$ is large and feature dimensionality $p$ is low to moderate ($p \le 20$)</span></button><button class="opt" type="button"><b>C</b><span>Only when $k$ equals the total number of training rows $n$</span></button><button class="opt" type="button"><b>D</b><span>Only when the target variable is binary</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Spatial partitioning trees achieve $\mathcal{O}(p \log n)$ query time for low dimensions, but their performance degrades to brute-force $\mathcal{O}(n \cdot p)$ as dimension $p$ exceeds roughly 20 because almost all branches must be inspected.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>How does the choice of $k$ affect the bias-variance tradeoff in k-NN regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Small $k$ has high bias and low variance; large $k$ has low bias and high variance</span></button><button class="opt" type="button"><b>B</b><span>Small $k$ has low bias and high variance; large $k$ has high bias and low variance</span></button><button class="opt" type="button"><b>C</b><span>The bias and variance of k-NN are both completely independent of $k$</span></button><button class="opt" type="button"><b>D</b><span>Increasing $k$ always increases both bias and variance simultaneously</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A small $k$ (e.g. $k=1$) adapts sharply to every local wiggle and noise point (low bias, high variance). A large $k$ averages over a vast region, smoothing out local peaks and valleys towards the global mean (high bias, low variance).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q10</span>You have training data points on a 1D line: $(1.0, 3.0)$, $(2.0, 5.0)$, $(4.0, 9.0)$, $(7.0, 15.0)$. For a query point at $x_* = 3.0$, what is the prediction of a uniform $k$-NN regressor with $k = 3$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\hat{y} = 5.67$</span></button><button class="opt" type="button"><b>B</b><span>$\hat{y} = 6.33$</span></button><button class="opt" type="button"><b>C</b><span>$\hat{y} = 7.00$</span></button><button class="opt" type="button"><b>D</b><span>$\hat{y} = 8.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Distances from $x_* = 3.0$ are: $|3-2|=1.0$ (target 5.0), $|3-4|=1.0$ (target 9.0), and $|3-1|=2.0$ (target 3.0). The 3 closest points have targets $5.0, 9.0, 3.0$. Their uniform mean is $(5.0 + 9.0 + 3.0) / 3 = 17.0 / 3 \approx 5.67$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>For the same query point at $x_* = 3.0$ and training points $(1.0, 3.0)$, $(2.0, 5.0)$, $(4.0, 9.0)$, $(7.0, 15.0)$ with $k = 3$, what is the prediction using inverse distance weighting $w_i = 1 / d(x_*, x_i)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\hat{y} = 5.67$</span></button><button class="opt" type="button"><b>B</b><span>$\hat{y} = 7.00$</span></button><button class="opt" type="button"><b>C</b><span>$\hat{y} = 6.20$</span></button><button class="opt" type="button"><b>D</b><span>$\hat{y} = 7.60$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Distances are $d_1 = 1.0$ ($y=5.0$), $d_2 = 1.0$ ($y=9.0$), and $d_3 = 2.0$ ($y=3.0$). Weights are $w_1 = 1.0, w_2 = 1.0, w_3 = 0.5$, summing to $2.5$. Weighted target sum is $1.0(5.0) + 1.0(9.0) + 0.5(3.0) = 15.5$. Prediction is $15.5 / 2.5 = 6.20$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>In a $p$-dimensional unit hypercube $[0, 1]^p$ with uniformly distributed points, what must the edge length $e$ of a sub-cube be to capture a fraction $r = 0.10$ (10%) of the data when $p = 10$? (Given $0.10^{0.1} \approx 0.794$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$e = 0.010$</span></button><button class="opt" type="button"><b>B</b><span>$e = 0.100$</span></button><button class="opt" type="button"><b>C</b><span>$e = 0.794$</span></button><button class="opt" type="button"><b>D</b><span>$e = 0.990$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The volume of a hypercube of edge length $e$ in $p$ dimensions is $e^p$. To capture a fraction $r$ of the uniform volume, $e^p = r \implies e = r^{1/p}$. For $r = 0.10$ and $p = 10$, $e = 0.10^{1/10} \approx 0.794$, showing that the neighbourhood must span nearly $80\%$ of each coordinate range.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -179,11 +229,11 @@ search = <span class="f">GridSearchCV</span>(pipe, grid, cv=<span class="n">5</s
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/core.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/models.js?v=mvsie1ye" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsie1ye" defer></script>
+<script src="../../assets/learn.js?v=mvsie1ye" defer></script>
 </body>
 </html>
