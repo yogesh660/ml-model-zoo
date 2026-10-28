@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsjm8r3">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsjm8r3">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -122,6 +122,56 @@ rng = np.random.<span class="f">default_rng</span>(<span class="n">0</span>); x_
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Deeper trees</span></button><button class="opt" type="button"><b>B</b><span>Bagging (averaging many models)</span></button><button class="opt" type="button"><b>C</b><span>Lowering regularisation</span></button><button class="opt" type="button"><b>D</b><span>Adding polynomial features</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Averaging reduces the spread of predictions across training samples.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What is "irreducible error" ($\sigma^2$) in the bias–variance decomposition?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The variance introduced when features are not standardised before training</span></button><button class="opt" type="button"><b>B</b><span>The training error of a fully grown decision tree</span></button><button class="opt" type="button"><b>C</b><span>The inherent noise in the data-generating process or measurement that no model, regardless of complexity or training data size, can predict</span></button><button class="opt" type="button"><b>D</b><span>The error caused by choosing gradient descent instead of Newton's method</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Irreducible error represents unobserved variables, inherent randomness, and measurement noise in the true system. It represents the absolute theoretical lower bound on expected test loss.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>If both training error and validation error are high and close to each other (e.g. 35% and 36%), which diagnosis and remedy are most appropriate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>High bias (underfitting); increase model capacity, add relevant features, or decrease regularisation</span></button><button class="opt" type="button"><b>B</b><span>High variance (overfitting); collect more training data or increase regularisation</span></button><button class="opt" type="button"><b>C</b><span>Data leakage; remove the most predictive feature</span></button><button class="opt" type="button"><b>D</b><span>Label noise; drop 50% of the training rows</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When training error is high, the model lacks the expressiveness or features to capture the underlying pattern. This is high bias (underfitting). Collecting more data will not help a model that cannot fit the training data.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>Why does collecting more training data help resolve high variance, but fail to resolve high bias?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>More data automatically adds non-linear polynomial features to the model</span></button><button class="opt" type="button"><b>B</b><span>More data averages out sample-specific noise and pins down parameters firmly, but it cannot expand the representational capacity of an overly rigid model (e.g. a linear model fitting a cubic curve)</span></button><button class="opt" type="button"><b>C</b><span>More data shrinks the irreducible noise term $\sigma^2$ to zero</span></button><button class="opt" type="button"><b>D</b><span>Collecting more data is only effective when using deep neural networks</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Variance stems from estimating parameters on a finite sample; larger datasets make parameter estimates more stable. Bias stems from structural model assumptions: a straight line cannot bend to fit a parabola regardless of whether you train on 100 points or 10 million points.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q6</span>How does changing the number of neighbours $k$ in a $k$-Nearest Neighbours ($k$-NN) classifier alter the bias–variance trade-off?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Small $k$ has high bias and low variance; large $k$ has low bias and high variance</span></button><button class="opt" type="button"><b>B</b><span>Changing $k$ only changes the irreducible error $\sigma^2$</span></button><button class="opt" type="button"><b>C</b><span>$k$-NN has constant bias and variance regardless of $k$</span></button><button class="opt" type="button"><b>D</b><span>Small $k$ (e.g. $k = 1$) creates complex, jagged decision boundaries with low bias and high variance; large $k$ smooths predictions by averaging over large neighbourhoods, increasing bias and reducing variance</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> At $k = 1$, the decision boundary tightly wraps around every individual training point (100% training accuracy, extreme variance). As $k$ grows, the boundary becomes smoother and simpler, trading flexibility (higher bias) for stability (lower variance).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>In ensemble learning, what is the fundamental difference in how Bagging (e.g. Random Forest) and Boosting (e.g. AdaBoost) affect the bias–variance trade-off?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Bagging primarily reduces variance by averaging decorrelated, high-variance trees; Boosting primarily reduces bias by sequentially training weak learners to correct previous residuals</span></button><button class="opt" type="button"><b>B</b><span>Bagging reduces bias, whereas Boosting reduces variance</span></button><button class="opt" type="button"><b>C</b><span>Both Bagging and Boosting only reduce the irreducible noise $\sigma^2$</span></button><button class="opt" type="button"><b>D</b><span>Bagging increases both bias and variance simultaneously</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Bagging trains independent deep trees and averages their predictions, which cancels out random sample noise (variance reduction). Boosting fits sequential shallow trees to unexplained errors, progressively lowering bias.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>When increasing the regularisation hyperparameter $\lambda$ from $0.001$ to $1{,}000$ in Ridge regression, how do bias and variance behave?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Bias decreases while variance increases</span></button><button class="opt" type="button"><b>B</b><span>Both bias and variance increase simultaneously</span></button><button class="opt" type="button"><b>C</b><span>Bias increases while variance decreases</span></button><button class="opt" type="button"><b>D</b><span>Both bias and variance decrease simultaneously</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Stronger regularisation constrains weights towards zero, restricting model flexibility. This makes predictions more stable across training sets (lower variance) at the cost of being less capable of fitting the true relationship (higher bias).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>What is the phenomenon of "double descent" observed in modern over-parameterised machine learning models?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>As model capacity increases past the interpolation threshold (where training error reaches zero), test error can peak and then decrease again as regularisation or inductive bias kicks in</span></button><button class="opt" type="button"><b>B</b><span>Test error decreases twice during training before diverging to infinity</span></button><button class="opt" type="button"><b>C</b><span>Both training and validation error drop to zero simultaneously in two epochs</span></button><button class="opt" type="button"><b>D</b><span>A model requires exactly two gradient descent passes over the dataset</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Classically, increasing capacity past the point of zero training error causes explosive variance. In modern deep learning and kernel methods, extreme over-parameterisation can lead to an implicit minimum-norm fit that smooths predictions, causing test error to decrease again after the interpolation peak.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>Suppose the true function is $f(x) = 10.0$ and irreducible noise is $\sigma^2 = 2.0$. An estimator evaluated at $x$ across many training sets has expected prediction $\mathbb{E}[\hat{f}(x)] = 8.0$ and variance $\operatorname{Var}(\hat{f}(x)) = 5.0$. What is the expected test Mean Squared Error $\mathbb{E}[(y - \hat{f}(x))^2]$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$7.0$</span></button><button class="opt" type="button"><b>B</b><span>$11.0$</span></button><button class="opt" type="button"><b>C</b><span>$15.0$</span></button><button class="opt" type="button"><b>D</b><span>$29.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\text{Bias} = \mathbb{E}[\hat{f}(x)] - f(x) = 8.0 - 10.0 = -2.0$. Squared bias $= (-2.0)^2 = 4.0$. By the bias–variance decomposition: $\mathbb{E}[(y - \hat{f}(x))^2] = \text{Bias}^2 + \text{Variance} + \sigma^2 = 4.0 + 5.0 + 2.0 = 11.0$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>An ensemble averages the predictions of $B = 4$ identical, unbiased estimators $\hat{f}_1, \dots, \hat{f}_4$. Each individual estimator has variance $\operatorname{Var}(\hat{f}_i) = 12.0$, and the pairwise correlation between estimators is $\rho = 0.25$. Using $\operatorname{Var}(\bar{f}) = \rho \sigma^2 + \frac{1 - \rho}{B}\sigma^2$, what is the ensemble variance?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$3.0$</span></button><button class="opt" type="button"><b>B</b><span>$5.25$</span></button><button class="opt" type="button"><b>C</b><span>$6.0$</span></button><button class="opt" type="button"><b>D</b><span>$12.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\operatorname{Var}(\bar{f}) = \rho \sigma^2 + \frac{1 - \rho}{B}\sigma^2 = 0.25(12.0) + \frac{1 - 0.25}{4}(12.0) = 3.0 + \frac{0.75}{4}(12.0) = 3.0 + 0.1875(12.0) = 3.0 + 2.25 = 5.25$. Averaging reduces variance from $12.0$ down to $5.25$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q12</span>You evaluate a model on a training set of 500 rows and a validation set of 100 rows. With degree 1 (linear), training MSE is 45 and validation MSE is 46. With degree 10, training MSE is 4 and validation MSE is 120. With degree 3 with L2 regularisation, training MSE is 18 and validation MSE is 22. What are the dominant error sources for degrees 1 and 10?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Degree 1 is dominated by variance; degree 10 is dominated by bias</span></button><button class="opt" type="button"><b>B</b><span>Both degrees 1 and 10 are dominated by irreducible noise</span></button><button class="opt" type="button"><b>C</b><span>Both degrees 1 and 10 suffer from data leakage</span></button><button class="opt" type="button"><b>D</b><span>Degree 1 is dominated by bias; degree 10 is dominated by variance; degree 3 achieves the best trade-off</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For degree 1, training error is high and matches validation error (45 vs 46), characteristic of underfitting (high bias). For degree 10, training error drops to 4 while validation explodes to 120 (gap of 116), characteristic of overfitting (high variance). Regularised degree 3 strikes the optimal compromise.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -157,11 +207,11 @@ rng = np.random.<span class="f">default_rng</span>(<span class="n">0</span>); x_
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsjm8r3" defer></script>
+<script src="../../assets/labs/core.js?v=mvsjm8r3" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsjm8r3" defer></script>
+<script src="../../assets/labs/models.js?v=mvsjm8r3" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvsjm8r3" defer></script>
+<script src="../../assets/learn.js?v=mvsjm8r3" defer></script>
 </body>
 </html>
