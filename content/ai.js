@@ -1236,4 +1236,764 @@ print(json.dumps(tool_role_message, indent=2))
     related: ['prompting-and-in-context-learning', 'gpt-and-decoder-only-models'],
     keywords: 'tool use function calling json schema apis agents toolformer tool augmented language models execution runtime pydantic',
   },
+
+// ------------------------------------------------------------------ 1. Evaluating LLMs: benchmarks and judges (ai)
+  {
+    id: 'evaluating-llms-benchmarks-and-judges',
+    short: 'Evaluating LLMs',
+    title: 'Evaluating LLMs: benchmarks and judges',
+    task: 'concepts',
+    module: 'LLM foundations',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Evaluating Large Language Models requires rigorous, multi-faceted methodologies to assess reasoning, domain knowledge, coding competence, and conversational alignment. The evaluation ecosystem balances automated standardised benchmarks (MMLU for multidisciplinary knowledge, GSM8K for multi-step arithmetic, HumanEval for code synthesis via pass@k) with model-based LLM-as-a-judge frameworks and crowdsourced pairwise Elo arenas (LMSYS Chatbot Arena). Addressing benchmark contamination, position bias, and verbosity bias is essential for trustworthy assessment.`,
+    lead: r`How do you measure the intelligence of an artificial intelligence? When models were simple classifiers, accuracy or F1 was sufficient. Today, Large Language Models write code, compose poetry, diagnose medical symptoms, and negotiate contracts. Evaluating these open-ended capabilities demands navigating a complex landscape of standardised examination benchmarks, functional execution sandboxes, and automated LLM judge panels while guarding against benchmark memorisation and evaluator bias.`,
+    intuition: [
+      r`The Standardised Benchmark Suite: Different benchmarks probe distinct cognitive dimensions:
+- MMLU (Massive Multitask Language Understanding): 57 subjects across humanities, social sciences, and STEM tested via 5-shot multiple-choice questions.
+- GSM8K: 8,500 grade-school math word problems testing multi-step arithmetic reasoning with strict numerical answer matching.
+- HumanEval: 164 hand-crafted Python programming problems evaluated by executing generated code against unit tests in a secure sandbox.
+- Chatbot Arena: Crowdsourced human blind pairwise comparisons evaluated via the Elo rating system to reflect real-world conversational preference.`,
+      r`Benchmark contamination and test set leakage: When pre-training datasets span trillions of tokens scraped from the open web, evaluation test sets are frequently ingested into training corpora. If a model has already memorised the exact solutions to benchmark questions, high test scores reflect rote memorisation rather than generalisation. Rigorous evaluation requires 8-gram or 13-gram decontamination checks and regularly rotating private evaluation splits.`,
+      r`The pass@k metric for generative code evaluation: Evaluating generated code via simple sampling accuracy is biased: generating 100 samples and checking if any passed gives an inflated, high-variance estimate. The pass@k metric computes the unbiased probability that at least one of k generated samples passes all unit tests, calculated combinatorially from n total samples (where n >= k).`,
+    ],
+    analogy: r`Think of evaluating candidate physicians graduating from medical school. MMLU is the written medical board exam: hundreds of multiple-choice questions assessing textbook clinical knowledge. GSM8K is the pharmaceutical dosing exam: exact arithmetic calculations where a minor decimal error is disastrous. HumanEval is the surgical simulator: you do not evaluate the beauty of the surgeon's handwriting; you run the code in a sandbox to see if the patient survives. Chatbot Arena is bedside manner evaluated by real patients in clinical trials. A trustworthy assessment requires passing all four criteria, not just acing the multiple-choice exam.`,
+    steps: [
+      {
+        title: r`Select target capability benchmarks`,
+        desc: r`Align evaluation suites with required downstream tasks (reasoning, coding, or dialogue).`,
+        detail: r`Determine whether the application demands multi-hop reasoning (GSM8K, MATH), functional code execution (HumanEval), domain knowledge (MMLU), or conversational helpfulness (AlpacaEval, MT-Bench).`,
+      },
+      {
+        title: r`Execute contamination screening on training splits`,
+        desc: r`Detect and remove benchmark test set leaks from pre-training and fine-tuning data.`,
+        detail: r`Run string matching and n-gram overlap scans (e.g. 13-gram matching) between evaluation questions and training corpora. Flag and remove overlapping documents to prevent rote test memorisation.`,
+      },
+      {
+        title: r`Evaluate functional capabilities in secure execution sandboxes`,
+        desc: r`Execute generated code against unit tests and compute unbiased pass@k metrics.`,
+        detail: r`For coding benchmarks, execute generated functions within isolated Docker or WebAssembly sandboxes against comprehensive test assertions. Compute pass@1 and pass@10 using the unbiased hypergeometric formula.`,
+      },
+      {
+        title: r`Deploy LLM-as-a-Judge panels with multi-criteria rubrics`,
+        desc: r`Prompt a reference judge model with explicit grading criteria and chain-of-thought instructions.`,
+        detail: r`Use high-capacity models (such as GPT-4) to grade open-ended outputs. Provide detailed rubrics defining scores 1 to 5 for factual accuracy, relevance, and tone, requiring the judge to generate step-by-step reasoning before outputting final grades.`,
+      },
+      {
+        title: r`Debias judge evaluations and calculate Elo ratings`,
+        desc: r`Apply position-swap debiasing and compute dynamic tournament Elo ratings.`,
+        detail: r`In pairwise evaluations, evaluate candidate pairs in both orderings (A-B and B-A). Update tournament Elo ratings using win-loss outcomes: R_A = R_A + K * (S_A - E_A), tracking statistical significance.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Unbiased pass@k estimator for functional code evaluation`,
+        tex: r`\operatorname{pass}@k = \mathbb{E}_{\text{problems}} \left[ 1 - \frac{\binom{n - c}{k}}{\binom{n}{k}} \right]`,
+        p: r`Here $n$ is total samples generated per problem ($n \ge k$), and $c$ is the number of samples that pass all unit test assertions ($c \le n$). This combinatorial formula prevents sample variance from biasing pass estimates.`,
+      },
+      {
+        h: r`Elo rating system expected outcome and score update`,
+        tex: r`E_A = \frac{1}{1 + 10^{(R_B - R_A) / 400}}, \quad R_A \leftarrow R_A + K \left( S_A - E_A \right)`,
+        p: r`Here $R_A, R_B$ are current Elo ratings for models $A$ and $B$, $E_A$ is the expected win probability for $A$, $S_A \in \{1, 0.5, 0\}$ is the actual outcome (win, tie, loss), and $K$ is the update scaling factor.`,
+      },
+      {
+        h: r`G-Eval multi-criteria weighted expectation`,
+        tex: r`\operatorname{Score}(y) = \sum_{s=1}^5 s \cdot P(\text{score} = s \mid x, y, \mathcal{R})`,
+        p: r`Instead of taking a single greedy token rating, G-Eval computes the expected score across the top score token probabilities under rubric $\mathcal{R}$, yielding continuous, lower-variance human alignment.`,
+      },
+    ],
+    keyPoints: [
+      r`LLM evaluation combines standardised benchmarks (MMLU, GSM8K), functional code execution (HumanEval), and human/LLM pairwise judging.`,
+      r`Benchmark contamination must be actively monitored using n-gram decontamination scans to distinguish true reasoning from training memorisation.`,
+      r`The pass@k metric computes unbiased functional code execution probabilities without sampling distortion.`,
+      r`LLM-as-a-judge provides scalable open-ended evaluation, but requires position swapping and length controls to neutralise cognitive biases.`,
+      r`Crowdsourced blind arena evaluations (like Chatbot Arena) quantify real-world conversational utility using the Elo rating system.`,
+    ],
+    pitfalls: [
+      r`Evaluating code synthesis by string matching: Using BLEU or exact match to evaluate code fails because variable names and formatting differ widely; always evaluate code by executing unit tests in an isolated sandbox.`,
+      r`Over-interpreting MMLU benchmark gains: Multiple-choice benchmarks are susceptible to guessing artifacts, prompt formatting sensitivities, and test set contamination. Do not rely on MMLU alone as an indicator of general intelligence.`,
+      r`Ignoring verbosity bias in LLM evaluators: Judge models systematically prefer longer responses even when extra sentences contain repetitive fluff or subtle hallucinations. Enforce strict word count parity or explicitly penalise verbosity in rubrics.`,
+      r`Evaluating on public benchmark test sets without rotation: As soon as a benchmark becomes popular, its questions appear in training web scrapes. Maintain held-out, privately curated evaluation sets for reliable internal benchmarking.`,
+    ],
+    code: r`import math
+import numpy as np
+
+def compute_pass_at_k(n, c, k):
+    """
+    Unbiased pass@k estimator (Chen et al., 2021).
+    n: total samples generated per problem
+    c: number of samples that passed all unit tests
+    k: k-threshold to evaluate
+    """
+    if n - c < k:
+        return 1.0
+    return 1.0 - (math.comb(n - c, k) / math.comb(n, k))
+
+def update_elo(rating_a, rating_b, score_a, k_factor=32):
+    """
+    Compute Elo rating update for Model A and Model B.
+    score_a: 1.0 for A win, 0.5 for tie, 0.0 for B win.
+    """
+    # Expected outcome for A
+    expected_a = 1.0 / (1.0 + 10.0 ** ((rating_b - rating_a) / 400.0))
+    expected_b = 1.0 - expected_a
+    
+    score_b = 1.0 - score_a
+    new_rating_a = rating_a + k_factor * (score_a - expected_a)
+    new_rating_b = rating_b + k_factor * (score_b - expected_b)
+    
+    return round(new_rating_a, 1), round(new_rating_b, 1)
+
+# 1. Evaluate pass@k on a mock coding problem
+n_samples = 20
+c_passed = 6   # 6 of 20 samples passed unit tests
+
+print("1. Functional Code Evaluation (pass@k):")
+print(f"  Total samples generated (n): {n_samples}")
+print(f"  Passed unit tests (c):       {c_passed}")
+for k in [1, 5, 10]:
+    pass_k = compute_pass_at_k(n_samples, c_passed, k)
+    print(f"  pass@{k:2d}: {pass_k * 100:.2f}%")
+
+# 2. Simulate LMSYS Chatbot Arena Elo updates
+print("\n2. LMSYS Pairwise Tournament Elo Ratings:")
+model_ratings = {"Model_Alpha": 1000.0, "Model_Beta": 1000.0}
+
+# Match 1: Alpha beats Beta
+r_a, r_b = update_elo(model_ratings["Model_Alpha"], model_ratings["Model_Beta"], score_a=1.0)
+model_ratings["Model_Alpha"] = r_a
+model_ratings["Model_Beta"] = r_b
+print(f"  After Round 1 (Alpha wins): Alpha={r_a}, Beta={r_b}")
+
+# Match 2: Alpha beats Beta again
+r_a, r_b = update_elo(model_ratings["Model_Alpha"], model_ratings["Model_Beta"], score_a=1.0)
+model_ratings["Model_Alpha"] = r_a
+model_ratings["Model_Beta"] = r_b
+print(f"  After Round 2 (Alpha wins): Alpha={r_a}, Beta={r_b}")
+
+# Match 3: Beta wins Round 3
+r_a, r_b = update_elo(model_ratings["Model_Alpha"], model_ratings["Model_Beta"], score_a=0.0)
+model_ratings["Model_Alpha"] = r_a
+model_ratings["Model_Beta"] = r_b
+print(f"  After Round 3 (Beta wins):  Alpha={r_a}, Beta={r_b}")
+`,
+    quiz: [
+      {
+        q: r`Why is the combinatorial pass@k formula used to evaluate code generation benchmarks rather than taking simple sample averages?`,
+        o: [
+          r`Because generating k samples directly suffers from high variance; generating n >= k samples and computing the combinatorial expectation provides an unbiased estimator with significantly lower variance`,
+          r`Because computers cannot evaluate code without combinations`,
+          r`Because pass@k removes the need for unit tests`,
+          r`Because python unit tests can only run in batches of 100`,
+        ],
+        a: 0,
+        why: r`Evaluating pass@k by generating only k samples requires thousands of trials to obtain low variance. Generating n samples (e.g. n=100) and calculating the analytical expectation of drawing at least one passing sample out of k yields an unbiased, low-variance estimate.`,
+      },
+      {
+        q: r`What is test set contamination in the context of Large Language Model pre-training?`,
+        o: [
+          r`When questions and solutions from evaluation benchmarks inadvertently leak into the massive web-crawled pre-training dataset, allowing models to memorise answers rather than reasoning`,
+          r`When an evaluation server crashes due to out-of-memory errors`,
+          r`When unit tests contain infinite loops`,
+          r`When a model is fine-tuned on multiple GPUs simultaneously`,
+        ],
+        a: 0,
+        why: r`Because pre-training crawls billions of web pages (including GitHub repos, exam cheat sheets, and research papers), benchmark problems frequently leak into training data. High scores then reflect training memorisation rather than authentic problem-solving.`,
+      },
+      {
+        q: r`How does the LMSYS Chatbot Arena evaluate model alignment and conversational quality?`,
+        o: [
+          r`By collecting blind pairwise preference judgments from human users in real-world dialogue and computing dynamic model rankings using the Elo rating system`,
+          r`By counting the number of punctuation marks in model responses`,
+          r`By evaluating models on 10,000 multiple-choice questions`,
+          r`By measuring the GPU temperature during generation`,
+        ],
+        a: 0,
+        why: r`Chatbot Arena presents users with two anonymous models answering the same user prompt side by side. Users vote on which response is better, and match results are aggregated using Elo rating mathematics, mirroring competitive chess rankings.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['prompting-and-in-context-learning', 'evaluation-bleu-rouge-bertscore-llm-as-judge'],
+    related: ['prompting-and-in-context-learning', 'evaluation-bleu-rouge-bertscore-llm-as-judge'],
+    keywords: 'evaluating llms mmlu gsm8k humaneval pass at k chatbot arena lmsys elo rating contamination g-eval benchmark judge',
+  },
+
+  // ------------------------------------------------------------------ 2. Hallucination and grounding (ai)
+  {
+    id: 'hallucination-and-grounding',
+    short: 'Hallucination & Grounding',
+    title: 'Hallucination and grounding',
+    task: 'concepts',
+    module: 'LLM foundations',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Hallucination in Large Language Models refers to the generation of fluent, syntactically convincing text that is factually false, unfaithful to provided source material, or entirely fabricated. Rooted in the disconnect between autoregressive next-token probability maximisation and objective truth, hallucinations pose critical safety and reliability hazards in legal, medical, and technical domains. Grounding techniques—such as Retrieval-Augmented Generation (RAG), Chain-of-Verification (CoVe), and consistency sampling—mitigate ungrounded fabrications.`,
+    lead: r`In 2023, two lawyers submitted a legal brief to a federal judge in New York citing over half a dozen precedent cases complete with detailed quotes, docket numbers, and judicial opinions. The judge discovered that none of the cases existed: they had been completely fabricated by a generative AI assistant. The prose was immaculate, the legal terminology was flawless, but the facts were entirely imaginary. Why do Large Language Models hallucinate, and how do we anchor them to verifiable reality?`,
+    intuition: [
+      r`Likelihood versus Truth: The root cause of hallucination: An autoregressive language model is trained to minimise cross-entropy loss: predicting which token is most statistically likely to follow preceding tokens across web text. It has no built-in database of verified facts, no concept of physical reality, and no internal truth sensor. If a hallucinated fact sounds grammatically plausible and statistically aligns with common phrasing patterns, the model will output it with supreme confidence.`,
+      r`Factuality vs Faithfulness hallucinations:
+- Factuality Hallucination: The model generates claims that contradict real-world objective facts (e.g. claiming Neil Armstrong walked on Mars in 1975).
+- Faithfulness (Ungrounded) Hallucination: In summarisation or RAG setups where a reference document is provided, the model generates statements that contradict the source or introduces extraneous claims unsupported by the text.`,
+      r`The Mechanisms of Grounding: Grounding anchors language generation to external, verifiable sources of truth:
+1. RAG Grounding: Forcing the model to condition its answers strictly on retrieved passages provided in the prompt context.
+2. Chain-of-Verification (CoVe): A four-step self-correction pipeline: generate baseline response, draft independent factual verification questions, answer questions factually without seeing the baseline, and rewrite the final response reconciling discrepancies.
+3. SelfCheckGPT: Measuring self-consistency across stochastic generations: if a fact is firmly grounded in the model's knowledge, multiple sampled generations will agree; if it is hallucinated, alternative samples will contradict each other.`,
+    ],
+    analogy: r`Think of a brilliant, charismatic storyteller at a dinner party who has read thousands of books but suffers from slight memory gaps. If you ask them about the history of Antarctic exploration, they tell a gripping, cinematic story about Captain Robert Scott. But when their memory reaches a minor factual blank—like the name of a specific supply ship—they do not pause to say "I do not know". Because their primary instinct is to maintain a seamless, entertaining narrative, their brain effortlessly invents a believable ship name on the fly without breaking conversational stride. Grounding is like putting an encyclopedic history book in front of the storyteller and making them point to the exact printed sentence before speaking.`,
+    steps: [
+      {
+        title: r`Identify and classify hallucination failure modes`,
+        desc: r`Distinguish between external factual inaccuracies and ungrounded reference contradictions.`,
+        detail: r`Determine whether hallucinations stem from training data cutoffs, unfaithful summarisation, sycophancy, or mathematical miscalculation.`,
+      },
+      {
+        title: r`Ground generation with verified contextual evidence (RAG)`,
+        desc: r`Retrieve authoritative domain passages and inject them into prompt context.`,
+        detail: r`Retrieve top-k relevant document chunks. Instruct the model using strict system constraints: 'Answer strictly using the provided context. If the context does not contain the answer, state that you do not know.'`,
+      },
+      {
+        title: r`Execute Chain-of-Verification (CoVe) protocol`,
+        desc: r`Generate verification questions, verify facts independently, and revise output.`,
+        detail: r`Prompt the model to: (1) Generate initial response; (2) Plan verification questions targeting factual assertions; (3) Execute answers to verification questions independently; (4) Generate final verified response correcting errors.`,
+      },
+      {
+        title: r`Deploy SelfCheckGPT consistency detection`,
+        desc: r`Sample multiple stochastic generations and evaluate cross-sentence contradiction.`,
+        detail: r`Sample 5 to 10 stochastic generations at temperature tau = 0.7. Check if assertions in the primary generation are supported or contradicted by the sampled variants using NLI classifiers or token log-probability scoring.`,
+      },
+      {
+        title: r`Enforce citation and attribution links`,
+        desc: r`Require the model to ground assertions with bracketed citation markers.`,
+        detail: r`Instruct the model to cite specific context source IDs (e.g. [Doc 1, Section 2]) for every factual sentence. Use post-generation validators to verify that cited spans strictly entail the asserted claims.`,
+      },
+    ],
+    math: [
+      {
+        h: r`SelfCheckGPT sampling consistency score`,
+        tex: r`\mathcal{S}_{\text{hallucination}}(s_i) = 1 - \frac{1}{N} \sum_{k=1}^N \mathbb{I}\left( R_k \models s_i \right)`,
+        p: r`Here $s_i$ is a sentence from the primary generation, $R_1, \dots, R_N$ are independently sampled stochastic response variants, and $\models$ denotes semantic entailment evaluated by a natural language inference model. High scores indicate factual inconsistency across samples.`,
+      },
+      {
+        h: r`Attribution fidelity ratio`,
+        tex: r`\operatorname{Fidelity}(Y, \mathcal{C}) = \frac{\sum_{s \in Y} \mathbb{I}(s \text{ is fully entailed by } \mathcal{C}_{c(s)})}{|Y|}`,
+        p: r`Here $Y$ is the set of generated sentences, $\mathcal{C}_{c(s)}$ is the specific context chunk cited by sentence $s$. Full fidelity requires that every asserted claim is strictly entailed by its cited source, penalising ungrounded extrapolation.`,
+      },
+      {
+        h: r`Calibration error across factual confidence`,
+        tex: r`\operatorname{ECE} = \sum_{m=1}^M \frac{|B_m|}{N} \left| \operatorname{acc}(B_m) - \operatorname{conf}(B_m) \right|`,
+        p: r`Expected Calibration Error measures the gap between the model's linguistic confidence $\operatorname{conf}(B_m)$ and its actual factual accuracy $\operatorname{acc}(B_m)$ across probability bins $B_m$. Poorly calibrated models exhibit high confidence on false assertions.`,
+      },
+    ],
+    keyPoints: [
+      r`Hallucination is the generation of fluent, syntactically coherent text that is factually false or unfaithful to source context.`,
+      r`Hallucinations stem from the fundamental divergence between probabilistic next-token prediction and verified real-world truth.`,
+      r`Factuality hallucinations contradict objective world facts; faithfulness hallucinations introduce ungrounded claims in contextual tasks.`,
+      r`Grounding techniques anchor model generations to retrieved context documents using strict prompt constraints and citation checks.`,
+      r`Chain-of-Verification (CoVe) and SelfCheckGPT use multi-turn verification and sample consistency to detect and correct fabrications.`,
+    ],
+    pitfalls: [
+      r`Assuming high linguistic confidence implies factual accuracy: Large language models use authoritative, confident tone regardless of whether they are stating historical truth or complete fantasy. Never treat confident phrasing as proof of truth.`,
+      r`Sycophancy and user bias confirmation: When a user asks a leading question containing a false premise (e.g. 'Why did Thomas Jefferson invent the telephone?'), models often confirm the false premise rather than correcting the user.`,
+      r`Contextual hallucination in long documents (Lost in the Middle): When relevant grounding facts are buried deep in the middle of long multi-thousand-token prompts, models often overlook them and default to parametric hallucination.`,
+      r`Fabricated citations: Models prompted to provide references frequently hallucinate fictitious academic papers with believable authors and fabricated DOI links. Always verify citations using external search tools.`,
+    ],
+    code: r`class GroundingValidator:
+    """
+    Simulation of grounding validation and factual consistency
+    checking between source context and generated claims.
+    """
+    @staticmethod
+    def check_lexical_grounding(context, claim_sentence):
+        """
+        Evaluate token grounding overlap ratio between source context
+        and generated claim sentence.
+        """
+        import re
+        ctx_words = set(re.findall(r'\b[a-zA-Z]+\b', context.lower()))
+        claim_words = re.findall(r'\b[a-zA-Z]+\b', claim_sentence.lower())
+        
+        # Stop words to ignore in grounding ratio
+        stop_words = {"the", "a", "an", "is", "was", "in", "on", "at", "to", "and", "of"}
+        content_words = [w for w in claim_words if w not in stop_words]
+        
+        if not content_words:
+            return 1.0, []
+            
+        grounded_count = sum(1 for w in content_words if w in ctx_words)
+        ungrounded = [w for w in content_words if w not in ctx_words]
+        ratio = grounded_count / len(content_words)
+        return ratio, ungrounded
+
+# Grounding reference document
+context_doc = (
+    "Apollo 11 was the American spaceflight that first landed humans on the Moon. "
+    "Commander Neil Armstrong and Lunar Module Pilot Buzz Aldrin landed the Apollo Lunar Module Eagle "
+    "on July 20, 1969. Armstrong became the first person to step onto the lunar surface six hours later."
+)
+
+# Test generated claims
+claims = [
+    "Neil Armstrong stepped onto the lunar surface in July 1969.",
+    "Buzz Aldrin landed the Apollo Lunar Module Eagle on the Moon.",
+    "Neil Armstrong and Buzz Aldrin explored Martian craters in 1975."  # Hallucinated!
+]
+
+print("Grounding Reference Context:")
+print(" ", context_doc)
+print("\nEvaluating Generated Claims:")
+
+validator = GroundingValidator()
+for i, claim in enumerate(claims, 1):
+    ratio, ungrounded_tokens = validator.check_lexical_grounding(context_doc, claim)
+    is_grounded = ratio >= 0.85
+    status = "GROUNDED" if is_grounded else "HALLUCINATION DETECTED"
+    
+    print(f"\nClaim {i}: '{claim}'")
+    print(f"  Status: {status} (Grounding Score: {ratio * 100:.1f}%)")
+    if ungrounded_tokens:
+        print(f"  Ungrounded entities/tokens: {ungrounded_tokens}")
+`,
+    quiz: [
+      {
+        q: r`What is the foundational theoretical reason why autoregressive Large Language Models produce hallucinations?`,
+        o: [
+          r`Because models are trained to maximise statistical next-token likelihood across web text rather than verifying factual truth against an external world model`,
+          r`Because GPUs can only process floating point numbers between 0 and 1`,
+          r`Because tokenisers delete all factual knowledge from text`,
+          r`Because models are trained with learning rates that are always too high`,
+        ],
+        a: 0,
+        why: r`Language models predict tokens based on statistical likelihood in training data. A hallucinated fact that uses common grammatical phrasing and high-probability idioms has high likelihood under the cross-entropy objective, despite being completely false.`,
+      },
+      {
+        q: r`How does the Chain-of-Verification (CoVe) framework reduce hallucinated claims in generated responses?`,
+        o: [
+          r`It generates an initial response, formulates targeted factual verification questions, answers them independently without seeing the draft, and rewrites the final output resolving discrepancies`,
+          r`It deletes all sentences longer than twenty words`,
+          r`It translates the response into French and back into English`,
+          r`It forces the model to run on an optical quantum processor`,
+        ],
+        a: 0,
+        why: r`Dhuliawala et al. designed CoVe to break generation into four steps: draft generation, verification question planning, independent fact-checking, and final revision. Answering verification questions independently prevents the model from defending its own initial mistakes.`,
+      },
+      {
+        q: r`What does a high score in the SelfCheckGPT consistency metric indicate regarding a generated sentence?`,
+        o: [
+          r`It indicates high factual inconsistency and potential hallucination, as multiple independently sampled response variants contradict the claim`,
+          r`It indicates that the sentence is 100% verified by Wikipedia`,
+          r`It indicates that the sentence contains zero adjectives`,
+          r`It indicates that the sentence was generated in less than one millisecond`,
+        ],
+        a: 0,
+        why: r`SelfCheckGPT operates on the principle of self-consistency: when a model generates true knowledge, alternative stochastic samples agree. When a model hallucinates, alternative random generations produce conflicting, divergent facts, signaling hallucination.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['evaluating-llms-benchmarks-and-judges', 'prompting-and-in-context-learning'],
+    related: ['evaluating-llms-benchmarks-and-judges', 'prompting-and-in-context-learning'],
+    keywords: 'hallucination grounding rag factuality faithfulness chain-of-verification cove selfcheckgpt calibration attribution sycophancy',
+  },
+
+  // ------------------------------------------------------------------ 3. Chunking and embeddings for retrieval (ai)
+  {
+    id: 'chunking-and-embeddings-for-retrieval',
+    short: 'Chunking & Embeddings for RAG',
+    title: 'Chunking and embeddings for retrieval',
+    task: 'concepts',
+    module: 'Retrieval and RAG',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Chunking and embedding represent the foundational ingestion stage of Retrieval-Augmented Generation (RAG) architectures. Because raw documents are too extensive to embed as monolithic vectors, text must be partitioned into granular passages that balance semantic coherence against retrieval specificity. From fixed-length token windows with sliding overlaps to recursive syntactic splitting, semantic clustering, and hierarchical parent-document indexing, chunking strategies directly determine retrieval recall and downstream LLM generation quality.`,
+    lead: r`If you feed an entire 200-page corporate financial report into an embedding model as a single vector, the resulting embedding averages together revenue numbers, legal disclaimers, executive biographies, and supply chain updates into an uninformative semantic soup. Conversely, if you chop the report into single-sentence fragments, a search for "Q3 revenue" finds a sentence saying "It increased by 14%" without knowing what "It" refers to. The art and science of chunking solves this Goldilocks dilemma: partitioning text into chunks that are small enough for precise retrieval, yet rich enough to be self-contained.`,
+    intuition: [
+      r`The Granularity vs Context Trade-off:
+- Small Chunks (50 to 150 tokens): High retrieval precision. The embedding vector reflects a specific, tightly focused idea. However, small chunks lack surrounding context, resulting in pronoun ambiguity and missing qualifiers.
+- Large Chunks (500 to 1,000 tokens): High contextual completeness. The passage contains necessary background and surrounding facts. However, the vector embedding averages multiple topics, reducing cosine similarity with targeted search queries.`,
+      r`The Evolution of Chunking Strategies:
+1. Fixed-Size Token Chunking: Splitting text every N tokens with an overlap of M tokens (e.g. 512 tokens with 64 overlap). Fast and simple, but frequently slices mid-sentence or breaks tabular data.
+2. Recursive Character / Syntactic Chunking: Recursively splitting on natural boundaries: first paragraph breaks (\n\n), then sentence breaks (\n, full stops), then word boundaries. Preserves grammatical paragraphs.
+3. Semantic Chunking: Computing cosine similarity between consecutive sentence embeddings and creating a split only when semantic similarity drops below a percentile threshold.
+4. Hierarchical / Parent-Document Retrieval: Decoupling the chunk you search from the chunk you read: index small, focused child chunks (100 tokens) for search, but return their larger parent section (1,000 tokens) to the LLM generator.`,
+      r`Embedding Dimension and Matryoshka Representation Learning (MRL): Modern embedding models (like OpenAI text-embedding-3 or voyage-ai) produce dense vectors of 1,536 or 3,072 dimensions. Matryoshka Representation Learning (MRL) trains models such that the first 256 or 512 dimensions contain the vast majority of semantic information, allowing developers to truncate embeddings by 75% to save memory and vector database costs with negligible accuracy loss.`,
+    ],
+    analogy: r`Think of packing a shipping container with household goods. If you pack an entire house into one gigantic wooden crate, no forklift can lift it, and finding your car keys requires unpacking the entire crate (document-level embedding). If you put every single pencil, fork, and bolt into its own individual tiny envelope (sentence-level chunking), you have two million envelopes, lose the context of which room they belong to, and drown in shipping labels. Effective chunking packs items into neatly labelled, themed boxes (kitchen utensils, bedroom books) with packing slips (metadata) so you can retrieve exactly what you need in seconds.`,
+    steps: [
+      {
+        title: r`Extract clean text and document metadata`,
+        desc: r`Strip PDF/HTML artifacts and extract document titles, section headers, and timestamps.`,
+        detail: r`Clean input text of formatting artifacts. Preserve structural hierarchies: document title, section headers (#, ##), page numbers, and author metadata to inject into downstream chunks.`,
+      },
+      {
+        title: r`Apply recursive syntactic text splitting`,
+        desc: r`Partition text on paragraph boundaries, falling back to sentences and words.`,
+        detail: r`Use separators ['\n\n', '\n', '. ', ' ']. Split text into passages of target size N (e.g. 300 tokens) with a sliding overlap of M tokens (e.g. 50 tokens) to prevent clipping context across boundaries.`,
+      },
+      {
+        title: r`Prepend contextual metadata headers to chunks`,
+        desc: r`Inject document titles and section context to prevent isolated ambiguity.`,
+        detail: r`Prepend breadcrumbs: 'Document: [Title] > Section: [Header]\n\n' to each chunk before embedding. This grounds pronouns ('it', 'this policy') and boosts retrieval similarity.`,
+      },
+      {
+        title: r`Generate dense vector embeddings`,
+        desc: r`Pass chunks through an embedding model and apply L2 normalisation.`,
+        detail: r`Encode prepared text chunks using pre-trained embedding models (e.g. BGE, Voyage, or text-embedding-3). Normalise vectors to unit length for fast cosine inner product retrieval.`,
+      },
+      {
+        title: r`Index into vector store with parent-child linkage`,
+        desc: r`Store small child vectors for search and link them to parent documents for generation.`,
+        detail: r`In hierarchical setups, index child chunk embeddings in a vector database (e.g. Qdrant, Chroma, Milvus) while storing parent chunk text in a document store. On match, retrieve the rich parent context for generation.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Sliding window token chunking with stride`,
+        tex: r`C_k = [w_{k \cdot (L - O)}, \, w_{k \cdot (L - O) + 1}, \, \dots, \, w_{k \cdot (L - O) + L - 1}]`,
+        p: r`Here $L$ is chunk window length in tokens, $O$ is overlap length ($O < L$), and the stride is $S = L - O$. Overlap ensures that entities and facts positioned at chunk boundaries are represented continuously in at least one window.`,
+      },
+      {
+        h: r`Semantic chunking split threshold condition`,
+        tex: r`\operatorname{Split}(i) \iff \cos\left( E(s_i), E(s_{i+1}) \right) < \mu_{\text{sim}} - k \cdot \sigma_{\text{sim}}`,
+        p: r`A semantic boundary is triggered between consecutive sentences $s_i$ and $s_{i+1}$ when their embedding cosine similarity drops significantly below the running mean $\mu_{\text{sim}}$ by $k$ standard deviations $\sigma_{\text{sim}}$, detecting topical transitions.`,
+      },
+      {
+        h: r`Matryoshka Representation Learning (MRL) loss`,
+        tex: r`\mathcal{L}_{\text{MRL}} = \sum_{m \in \{d_1, d_2, \dots, D\}} \mathcal{L}_{\text{contrastive}}\left( \mathbf{z}_{1:m}, \mathbf{z}^+_{1:m} \right)`,
+        p: r`MRL optimises contrastive loss across nested vector prefixes $d_1 < d_2 < \dots < D$. The top dimensions capture high-level semantic clusters, allowing vector truncation to $d_1 = 256$ dimensions with minimal loss in retrieval accuracy.`,
+      },
+    ],
+    keyPoints: [
+      r`Chunking balances retrieval precision (small chunks) against contextual completeness (large chunks).`,
+      r`Recursive character splitting respects natural linguistic boundaries: paragraphs, sentences, and clauses.`,
+      r`Sliding window overlap (typically 10-20% of chunk size) prevents facts positioned at boundaries from being cleaved in half.`,
+      r`Hierarchical parent-document retrieval indexes granular child chunks for search while supplying full parent passages to the LLM.`,
+      r`Prepending document titles and section breadcrumbs to chunks resolves ambiguous pronouns and boosts retrieval recall.`,
+    ],
+    pitfalls: [
+      r`Splitting blindly by character count: Slicing text every 500 characters breaks words in half and severs sentences midway, creating broken token embeddings. Always split by tokens or natural linguistic boundaries.`,
+      r`Zero overlap in sliding windows: With zero overlap, a key answer spanning the boundary between chunk A and chunk B is split across two vectors, causing both chunks to score poorly. Always maintain 10-20% overlap.`,
+      r`Shredding tables and structured data: Naively chunking markdown or HTML tables into linear text turns structured rows and columns into incomprehensible gibberish. Use dedicated table parsers or serialize rows as key-value pairs.`,
+      r`Neglecting chunk metadata: When a retrieved chunk reads 'The fee is £50' without document metadata, the LLM cannot know whether the fee applies to parking, checking accounts, or visa processing. Always attach document titles and headers.`,
+    ],
+    code: r`class RecursiveTextSplitter:
+    """
+    Recursive syntactic text splitter that respects paragraph and sentence
+    boundaries while enforcing maximum chunk size and sliding overlap.
+    """
+    def __init__(self, chunk_size=100, chunk_overlap=20):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.separators = ["\n\n", "\n", ". ", " "]
+
+    def split_text(self, text):
+        return self._split(text, self.separators)
+
+    def _split(self, text, separators):
+        final_chunks = []
+        if not separators:
+            return [text] if text else []
+            
+        sep = separators[0]
+        splits = text.split(sep)
+        
+        current_chunk = ""
+        for s in splits:
+            s_clean = s.strip()
+            if not s_clean:
+                continue
+                
+            candidate = f"{current_chunk}{sep}{s_clean}" if current_chunk else s_clean
+            if len(candidate) <= self.chunk_size:
+                current_chunk = candidate
+            else:
+                if current_chunk:
+                    final_chunks.append(current_chunk)
+                    # Create overlap from end of current chunk
+                    overlap_start = max(0, len(current_chunk) - self.chunk_overlap)
+                    overlap_text = current_chunk[overlap_start:]
+                    current_chunk = f"{overlap_text} {s_clean}".strip()
+                else:
+                    # Current piece itself exceeds chunk size, recurse on next separator
+                    deeper = self._split(s_clean, separators[1:])
+                    final_chunks.extend(deeper)
+                    current_chunk = ""
+                    
+        if current_chunk:
+            final_chunks.append(current_chunk)
+        return final_chunks
+
+# Sample document demonstrating paragraph, sentence, and section boundaries
+raw_document = (
+    "Overview of Neural Architecture Search.\n\n"
+    "Neural Architecture Search (NAS) automates the design of artificial neural networks. "
+    "Rather than hand-crafting layer topologies, algorithms explore vast discrete search spaces. "
+    "Common exploration techniques include reinforcement learning, evolutionary algorithms, and gradient-based continuous relaxation.\n\n"
+    "Computational Costs and Efficiency.\n\n"
+    "Early NAS methods required thousands of GPU hours on CIFAR-10. "
+    "Modern one-shot NAS architectures share weights across sub-networks, reducing training time to a single day on modest hardware."
+)
+
+splitter = RecursiveTextSplitter(chunk_size=160, chunk_overlap=30)
+chunks = splitter.split_text(raw_document)
+
+print(f"Original Document Length: {len(raw_document)} characters")
+print(f"Generated {len(chunks)} Chunks (Target size: 160 chars, Overlap: 30 chars):\n")
+for i, c in enumerate(chunks, 1):
+    print(f"--- Chunk {i} ({len(c)} chars) ---")
+    print(f"'{c}'\n")
+`,
+    quiz: [
+      {
+        q: r`Why does Hierarchical Parent-Document retrieval offer superior performance over single-scale chunking in RAG pipelines?`,
+        o: [
+          r`It decouples search from generation: small child chunks are indexed for high-precision vector search, while larger parent chunks provide rich surrounding context to the LLM generator`,
+          r`It eliminates the need for vector databases`,
+          r`It compresses all documents onto a single GPU core`,
+          r`It translates all English text into SQL queries`,
+        ],
+        a: 0,
+        why: r`Small chunks have high vector specificity for finding exact matches, but lack context. Large chunks contain complete context, but blur vector similarity. Hierarchical retrieval indexes small child chunks for search and passes the full parent context to the generator.`,
+      },
+      {
+        q: r`What failure mode occurs when sliding window chunking is performed with zero overlap (overlap = 0)?`,
+        o: [
+          r`Key facts, entities, and answers that span the boundary between two adjacent chunks are split in half, causing both chunks to fail semantic retrieval`,
+          r`The vector store runs out of memory`,
+          r`The embedding model outputs complex imaginary numbers`,
+          r`The document text is automatically reversed`,
+        ],
+        a: 0,
+        why: r`If a critical answer spans words 510 to 515 and the chunk splits at word 512 with zero overlap, half the concept is in chunk 1 and half in chunk 2. Neither chunk contains the complete fact. Maintaining 10-20% overlap ensures the fact appears intact in at least one chunk.`,
+      },
+      {
+        q: r`How does Semantic Chunking decide where to partition a document?`,
+        o: [
+          r`By computing cosine similarity between consecutive sentence embeddings and creating a split where the similarity score drops significantly below the average, signaling a shift in topic`,
+          r`By inserting a split after every ten vowels`,
+          r`By dividing the text into equal thirds`,
+          r`By splitting only when an exclamation point is detected`,
+        ],
+        a: 0,
+        why: r`Semantic chunking calculates the vector similarity between adjacent sentences. When the topic transitions, the cosine similarity between consecutive sentences drops sharply, providing an adaptive, content-aware boundary marker.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['semantic-search-and-dense-retrieval'],
+    related: ['semantic-search-and-dense-retrieval', 'sentence-embeddings-and-sbert'],
+    keywords: 'chunking embeddings rag retrieval-augmented generation recursive splitter parent document semantic chunking mrl matryoshka',
+  },
+
+  // ------------------------------------------------------------------ 4. Hybrid search and reranking (ai)
+  {
+    id: 'hybrid-search-and-reranking',
+    short: 'Hybrid Search & Reranking',
+    title: 'Hybrid search and reranking',
+    task: 'concepts',
+    module: 'Retrieval and RAG',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Hybrid search and neural reranking combine the complementary strengths of lexical keyword matching and dense semantic retrieval to deliver state-of-the-art information retrieval. While dense bi-encoders excel at conceptual paraphrasing and sparse BM25 excels at exact keyword and entity lookups, neither is sufficient alone. Modern multi-stage search pipelines deploy hybrid retrieval fused via Reciprocal Rank Fusion (RRF), followed by high-capacity cross-encoder rerankers that evaluate deep query-document cross-attention to maximise precision.`,
+    lead: r`Search for "Error code 0x80070005 access denied" in a pure dense semantic vector database, and it will return general articles about Windows permissions, completely missing the specific support thread for that exact hexadecimal code. Search for "how to fix a flickering screen" in a pure BM25 index, and it misses articles titled "troubleshooting monitor refresh stutter". Real-world search demands hybrid capabilities: combining sparse lexical inverted indexes with dense neural vectors, refined by cross-encoder rerankers.`,
+    intuition: [
+      r`The complementary strengths of sparse and dense retrieval:
+- Sparse Retrieval (BM25): Fast inverted index lookups based on term frequency and document length. Excels at exact matches, rare acronyms, product serial numbers, and specialized jargon. Fails on vocabulary mismatch and synonyms.
+- Dense Retrieval (Bi-Encoders): Continuous vector matching based on cosine similarity. Excels at conceptual paraphrasing, high-level intent, and multilingual cross-linguality. Fails on rare out-of-vocabulary entities and exact alphanumeric codes.
+Hybrid retrieval fuses both search paradigms to ensure no relevant document is missed.`,
+      r`Reciprocal Rank Fusion (RRF) vs Score Normalisation: How do you combine BM25 scores (ranging from 0 to 45+) with cosine similarities (ranging from -1 to +1)?
+- Score Normalisation (Min-Max): Maps scores to [0, 1] and computes a weighted sum alpha * S_dense + (1 - alpha) * S_sparse. However, score distributions vary wildly across queries, requiring constant calibration.
+- Reciprocal Rank Fusion (RRF): Ignores raw scores entirely and operates strictly on ordinal ranks: RRF(d) = sum_m 1 / (k + r_m(d)), where k = 60 is a smoothing constant. RRF is scale-invariant, robust, and consistently outperforms score normalisation across diverse benchmark suites.`,
+      r`The Two-Stage Retrieval Paradigm:
+1. First Stage (Retrieval): Low-latency, high-recall candidate generation. Sparse and dense search run in parallel across millions of documents, retrieving the top 50 to 100 candidate documents in sub-10ms time.
+2. Second Stage (Reranking): High-precision cross-encoder scoring. The top candidates are passed through a cross-encoder that evaluates full cross-attention between every query token and document token, reordering the candidates to place the most accurate answers in the top 3 positions.`,
+    ],
+    analogy: r`Think of recruiting a specialised aerospace engineer. Stage 1 (Hybrid Retrieval) is an automated resume filter: it runs a keyword scan for mandatory certifications like "FAA Part 21" (sparse BM25) while simultaneously running a semantic match for "propulsion systems engineering experience" (dense retrieval). This narrows 50,000 applicants down to 50 top candidates. Stage 2 (Cross-Encoder Reranking) is bringing those 50 candidates into an in-person technical interview with the Chief Engineer, who spends twenty minutes probing their actual problem-solving depth to pick the top 3 final hires.`,
+    steps: [
+      {
+        title: r`Execute parallel sparse and dense candidate retrieval`,
+        desc: r`Query BM25 inverted index and vector database simultaneously.`,
+        detail: r`In the first stage, dispatch user query to BM25 (e.g. Elasticsearch) to retrieve top K_sparse candidates, and simultaneously dispatch to vector index (e.g. HNSW) to retrieve top K_dense candidates (typically K = 50 to 100).`,
+      },
+      {
+        title: r`Merge candidate pools using Reciprocal Rank Fusion (RRF)`,
+        desc: r`Combine ranked lists based on ordinal positions using smoothing constant k = 60.`,
+        detail: r`For every unique document appearing in either result list, compute RRF score: Score(d) = 1 / (60 + rank_bm25(d)) + 1 / (60 + rank_dense(d)). Sort union of candidates in descending RRF order.`,
+      },
+      {
+        title: r`Prepare candidate pairs for cross-encoder reranking`,
+        desc: r`Concatenate query with top candidate passages into [q; d] token pairs.`,
+        detail: r`Take the top N candidates (e.g. N = 25 to 50) from RRF. Format each candidate into a pair: '[CLS] Query [SEP] Passage Document [SEP]' for cross-encoder evaluation.`,
+      },
+      {
+        title: r`Evaluate full cross-attention reranker scores`,
+        desc: r`Compute deep cross-attention relevance logits using a pre-trained reranker model.`,
+        detail: r`Pass pairs through a cross-encoder model (such as BGE-Reranker or Cohere Rerank). Unconstrained cross-attention between query and document tokens captures subtle negations, exact matches, and semantic relevance.`,
+      },
+      {
+        title: r`Return top-k precision results to user or LLM generator`,
+        desc: r`Sort documents by cross-encoder logit scores and return top 3 to 5 passages.`,
+        detail: r`Sort the reranked passages in descending order of cross-encoder confidence. Serve the top k passages to the downstream LLM generator for grounded answer synthesis.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Reciprocal Rank Fusion (RRF) formulation`,
+        tex: r`\operatorname{RRF}(d) = \sum_{m \in \mathcal{M}} \frac{1}{k + r_m(d)}`,
+        p: r`Here $\mathcal{M} = \{\text{BM25}, \, \text{Dense}\}$ is the set of retrieval models, $r_m(d) \in \{1, 2, \dots, K\}$ is the ordinal rank of document $d$ in system $m$, and $k$ (typically $k = 60$) is a rank smoothing constant that prevents top-ranked items from drowning out lower-ranked consensus items.`,
+      },
+      {
+        h: r`Cross-encoder relevance scoring function`,
+        tex: r`s(q, d) = \mathbf{w}^\top \operatorname{Encoder}\left( [\operatorname{CLS}] \, q \, [\operatorname{SEP}] \, d \, [\operatorname{SEP}] \right) + b`,
+        p: r`Unlike bi-encoders which compute independent vectors, the cross-encoder computes full all-to-all cross-attention between every query token and document token, capturing fine-grained token alignments at the cost of $O(N \cdot (L_q + L_d)^2)$ compute.`,
+      },
+      {
+        h: r`Normalised Discounted Cumulative Gain (NDCG@K)`,
+        tex: r`\operatorname{NDCG}@K = \frac{\operatorname{DCG}@K}{\operatorname{IDCG}@K}, \quad \operatorname{DCG}@K = \sum_{i=1}^K \frac{2^{rel_i} - 1}{\log_2(i + 1)}`,
+        p: r`NDCG measures ranking quality by rewarding relevant documents positioned near the top of the search result list with logarithmic position discounting, normalised by the ideal ranking $\operatorname{IDCG}@K$.`,
+      },
+    ],
+    keyPoints: [
+      r`Hybrid search combines the exact keyword precision of BM25 with the conceptual semantics of dense vector search.`,
+      r`Reciprocal Rank Fusion (RRF) merges disparate retrieval rankings using ordinal positions without requiring delicate score calibration.`,
+      r`Two-stage retrieval architectures balance latency and accuracy: fast first-stage hybrid retrieval followed by deep cross-encoder reranking.`,
+      r`Cross-encoders evaluate full cross-attention over [query; document] pairs, resolving false positives produced by bi-encoders.`,
+      r`Ranking quality is evaluated using Normalised Discounted Cumulative Gain (NDCG) and Mean Reciprocal Rank (MRR).`,
+    ],
+    pitfalls: [
+      r`Reranking the entire corpus with a cross-encoder: Evaluating millions of documents with a cross-encoder takes minutes or hours per query. Only evaluate cross-encoders on the top 50 to 100 candidates retrieved by the first stage.`,
+      r`Convex combination without score normalisation: Simply adding BM25 scores (0 to 50) and cosine similarities (0 to 1) allows BM25 to completely overpower dense retrieval. Always use RRF or robust min-max normalisation.`,
+      r`Setting RRF constant k too small: Setting k = 1 causes rank 1 to receive a score of 1.0 while rank 2 receives 0.5 (a massive 50% penalty). Standard practice uses k = 60 to soften rank discrepancies and reward consensus across both retrieval systems.`,
+      r`Discarding BM25 on code or legal documents: Dense vectors frequently fail on exact variable names, error codes, and statutory section numbers. Never abandon lexical retrieval on technical or legal corpora.`,
+    ],
+    code: r`class HybridSearchEngine:
+    """
+    Two-stage hybrid retrieval simulation:
+    Stage 1: BM25 sparse + Dense vector search combined via Reciprocal Rank Fusion (RRF).
+    Stage 2: Cross-encoder reranking simulation.
+    """
+    def __init__(self, rrf_k=60):
+        self.rrf_k = rrf_k
+        self.documents = []
+
+    def load_documents(self, docs):
+        self.documents = list(docs)
+
+    def reciprocal_rank_fusion(self, sparse_rankings, dense_rankings):
+        """
+        Combine sparse and dense rankings using RRF.
+        sparse_rankings, dense_rankings: lists of doc_idx in rank order.
+        """
+        rrf_scores = {}
+        
+        # Process sparse rankings
+        for rank, doc_idx in enumerate(sparse_rankings, 1):
+            rrf_scores[doc_idx] = rrf_scores.get(doc_idx, 0.0) + 1.0 / (self.rrf_k + rank)
+            
+        # Process dense rankings
+        for rank, doc_idx in enumerate(dense_rankings, 1):
+            rrf_scores[doc_idx] = rrf_scores.get(doc_idx, 0.0) + 1.0 / (self.rrf_k + rank)
+            
+        # Sort descending by RRF score
+        sorted_candidates = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+        return sorted_candidates
+
+    def cross_encoder_rerank(self, query, candidate_pairs):
+        """
+        Simulate deep cross-encoder re-scoring of top candidates.
+        """
+        reranked = []
+        for doc_idx, rrf_score in candidate_pairs:
+            doc_text = self.documents[doc_idx]
+            # Mock cross-encoder score combining keyword alignment and semantics
+            has_error_code = "0x80070005" in query and "0x80070005" in doc_text
+            has_permission = "access denied" in query.lower() and "permission" in doc_text.lower()
+            
+            score = 0.5 * rrf_score
+            if has_error_code:
+                score += 5.0  # Exact match boost
+            if has_permission:
+                score += 2.0  # Semantic relevance boost
+                
+            reranked.append((doc_idx, doc_text, score))
+            
+        reranked.sort(key=lambda x: x[2], reverse=True)
+        return reranked
+
+# Sample corpus
+corpus = [
+    "Troubleshooting Windows update failure with error code 0x80070005 access denied.",
+    "General security guidelines for managing administrator permissions on corporate networks.",
+    "How to resolve display panel flickering and graphics driver crashes on laptops.",
+    "Windows activation errors and software license key verification procedures."
+]
+
+engine = HybridSearchEngine(rrf_k=60)
+engine.load_documents(corpus)
+
+# Simulated Query: "0x80070005 access denied error"
+query = "0x80070005 access denied error"
+
+# Simulated Stage 1 Rankings:
+# BM25 finds Doc 0 first (exact keyword 0x80070005)
+sparse_ranks = [0, 3, 1, 2]
+# Dense vector model finds Doc 1 first (semantic concept of access denied/permissions)
+dense_ranks = [1, 0, 3, 2]
+
+# Step 1: Reciprocal Rank Fusion
+fused_candidates = engine.reciprocal_rank_fusion(sparse_ranks, dense_ranks)
+
+print(f"Query: '{query}'")
+print("\n--- Stage 1: Reciprocal Rank Fusion (RRF) Candidates ---")
+for rank, (doc_idx, rrf_score) in enumerate(fused_candidates, 1):
+    print(f"  Rank {rank} (Score: {rrf_score:.5f}) -> Doc {doc_idx}: '{corpus[doc_idx]}'")
+
+# Step 2: Cross-Encoder Reranking
+final_results = engine.cross_encoder_rerank(query, fused_candidates[:3])
+
+print("\n--- Stage 2: Cross-Encoder Reranked Top Results ---")
+for rank, (doc_idx, text, ce_score) in enumerate(final_results, 1):
+    print(f"  Rank {rank} [Score: {ce_score:.4f}] -> Doc {doc_idx}: '{text}'")
+`,
+    quiz: [
+      {
+        q: r`Why does Reciprocal Rank Fusion (RRF) outperform naive linear score combination in hybrid search pipelines?`,
+        o: [
+          r`Because RRF operates purely on ordinal ranks, making it immune to disparate, incompatible score scales between BM25 and vector cosine similarities without requiring calibration`,
+          r`Because RRF runs on GPU tensor cores without CPU usage`,
+          r`Because RRF eliminates the need for inverted indexes`,
+          r`Because RRF guarantees that search results are always less than ten words`,
+        ],
+        a: 0,
+        why: r`BM25 scores are unbounded positive numbers (e.g. 0 to 45), while cosine similarities range from -1 to 1. Normalising and combining them linearly requires constant query-specific tuning. RRF uses ordinal rank positions 1/(k + rank), providing scale-invariant robustness.`,
+      },
+      {
+        q: r`What is the primary role of a cross-encoder reranker in a two-stage retrieval architecture?`,
+        o: [
+          r`To compute all-to-all cross-attention between query and document tokens for the top 50-100 candidates, capturing fine-grained semantic nuances and filtering out bi-encoder false positives`,
+          r`To encode the entire multi-million document database offline`,
+          r`To compress embeddings from 32-bit floating point to 1-bit integers`,
+          r`To translate search queries into regular expressions`,
+        ],
+        a: 0,
+        why: r`Bi-encoders evaluate queries and documents as isolated vectors, missing fine-grained token-level interactions. A cross-encoder computes full attention across concatenated [query; document] pairs, achieving superior precision on the top candidate subset.`,
+      },
+      {
+        q: r`What is Normalised Discounted Cumulative Gain (NDCG) designed to measure in information retrieval systems?`,
+        o: [
+          r`Ranking quality: assessing whether highly relevant documents are placed near the top of the search result list, using logarithmic position discounting to penalise relevant items ranked lower down`,
+          r`The physical network latency of the search server`,
+          r`The number of misspelled words in the query`,
+          r`The total storage size of the inverted index on disk`,
+        ],
+        a: 0,
+        why: r`NDCG rewards search engines for placing highly relevant documents at top ranks. The logarithmic discount 1/log2(rank + 1) penalises engines that retrieve relevant documents down at position 10 or 20, normalised by the ideal ranking IDCG.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['chunking-and-embeddings-for-retrieval', 'semantic-search-and-dense-retrieval'],
+    related: ['chunking-and-embeddings-for-retrieval', 'semantic-search-and-dense-retrieval', 'bm25-and-search-ranking'],
+    keywords: 'hybrid search reranking reciprocal rank fusion rrf cross-encoder bi-encoder ndcg bm25 dense retrieval two-stage retrieval',
+  },
 ];
