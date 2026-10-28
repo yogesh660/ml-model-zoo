@@ -1861,4 +1861,516 @@ print(f"Discoveries at alpha={alpha} -> Unadjusted: {np.sum(p_vals <= alpha)}, "
     related: ['anova-and-post-hoc-tests', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling', 'cross-validation'],
     keywords: 'multiple testing bonferroni holm benjamini hochberg fdr fwer false discovery rate family wise error p-value adjustment',
   },
+  {
+    id: 'effect-sizes-cohens-d-cramers-v',
+    short: 'Effect Sizes: Cohen\'s d & V',
+    title: r`Effect Sizes: Cohen's d, Cramér's V`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 1,
+    minutes: 15,
+    noLab: true,
+    summary: r`Quantify the practical magnitude of experimental findings beyond mere p-values using standardised metrics for continuous and categorical differences.`,
+    lead: r`A tiny p-value tells you an effect is unlikely to be pure noise, but says nothing about whether it actually matters. Effect size metrics decouple statistical significance from sample size, quantifying the real-world strength of relationships on standardised scales. Cohen's d, Hedges' g, and Cramér's V provide universal, scale-free benchmarks for comparing continuous mean shifts and categorical associations across experiments.`,
+    intuition: [
+      r`Suppose an online education platform evaluates a new tutorial on test scores. In a massive sample of 100,000 students, the new tutorial improves the average score from 75.00 to 75.15 points (a 0.15 point lift out of 100), with a pooled standard deviation $s = 15.0$ points. Because the sample size is enormous ($N = 100,000$), the standard error is $\approx 0.067$, producing $z = 2.24$ and $p = 0.025$. A naive team might announce a "statistically significant breakthrough".`,
+      r`However, dividing the 0.15 point difference by the standard deviation of 15.0 yields a Cohen's $d$ of just $0.01$—a minuscule shift of one-hundredth of a standard deviation. Over 99% of student scores overlap completely between the two cohorts. The effect is practically indistinguishable from zero. Conversely, a tiny pilot study of 20 users might show a massive 12-point jump ($d = 0.80$), but have $p = 0.08$ due to low sample size.`,
+      r`Effect sizes protect teams from both traps. For continuous two-group comparisons, Cohen's $d$ expresses the difference in terms of pooled standard deviations ($0.2$ is small, $0.5$ is medium, $0.8$ is large). Hedges' $g$ applies an exact small-sample correction. For categorical contingency tables, Cramér's $V$ bounds association between 0 (complete independence) and 1 (perfect correlation), converting unscaled chi-square statistics into interpretable association strengths.`,
+    ],
+    analogy: r`A p-value is like a telescope telling you whether a celestial body exists; the effect size is the measurement that tells you whether it is a pebble or a planet.`,
+    steps: [
+      r`Determine the data type: continuous measurements between two groups (Cohen's $d$ or Hedges' $g$) or categorical counts in a contingency table (Cramér's $V$).`,
+      r`For continuous variables, compute the mean difference $\bar{X}_1 - \bar{X}_2$ and the pooled standard deviation $s_{\text{pooled}}$.`,
+      r`Divide the mean difference by $s_{\text{pooled}}$ to obtain Cohen's $d$; if $n < 20$, multiply by the Hedges correction factor $J \approx 1 - \frac{3}{4(n_1 + n_2) - 9}$.`,
+      r`For categorical contingency tables, compute the Pearson chi-square statistic $\chi^2$ and total sample size $N$.`,
+      r`Compute Cramér's $V = \sqrt{\frac{\chi^2}{N \min(R - 1, C - 1)}}$.`,
+      r`Interpret the magnitude against established domain standards rather than treating p-values as proxies for impact.`,
+    ],
+    math: [
+      {
+        h: 'Cohen\'s d and Pooled Standard Deviation',
+        tex: r`$$d = \frac{\bar{X}_1 - \bar{X}_2}{s_{\text{pooled}}}, \qquad s_{\text{pooled}} = \sqrt{\frac{(n_1 - 1)s_1^2 + (n_2 - 1)s_2^2}{n_1 + n_2 - 2}}$$`,
+        p: r`Here $\bar{X}_1, \bar{X}_2$ are group sample means, $s_1^2, s_2^2$ are sample variances, and $n_1, n_2$ are sample sizes. The pooled standard deviation $s_{\text{pooled}}$ weights variances by their degrees of freedom, standardising the mean difference into units of population standard deviations.`,
+      },
+      {
+        h: 'Hedges\' g Small-Sample Correction',
+        tex: r`$$g = d \cdot \left(1 - \frac{3}{4(n_1 + n_2) - 9}\right)$$`,
+        p: r`Cohen's $d$ exhibits a slight positive bias when estimated from small sample sizes ($n_1 + n_2 < 30$). Larry Hedges introduced this exact scaling factor to produce an unbiased estimator $g$, which converges to $d$ as sample sizes increase.`,
+      },
+      {
+        h: 'Cramér\'s V for Categorical Association',
+        tex: r`$$V = \sqrt{\frac{\chi^2}{N \cdot \min(R - 1, C - 1)}}$$`,
+        p: r`Here $\chi^2$ is Pearson's chi-square test statistic, $N$ is total observations, and $R$ and $C$ are the row and column dimensions of the contingency table. Dividing by $N \cdot \min(R - 1, C - 1)$ normalises the metric into the interval $[0, 1]$, where 0 indicates statistical independence and 1 indicates perfect complete association.`,
+      },
+    ],
+    keyPoints: [
+      r`Effect sizes measure the substantive magnitude of a difference or relationship completely independent of sample size.`,
+      r`A finding can achieve statistical significance ($p < 0.05$) while remaining practically negligible ($d < 0.05$), or carry huge real-world impact ($d > 0.80$) while lacking significance in a small study.`,
+      r`Jacob Cohen's classic thresholds ($0.2$ small, $0.5$ medium, $0.8$ large) provide general heuristics, but must always be interpreted in domain-specific context.`,
+      r`Reporting effect sizes with confidence intervals gives readers both the magnitude of an effect and the precision of its estimation.`,
+    ],
+    pitfalls: [
+      r`Equating a small p-value with a large effect size: with huge datasets, trivial noise differences yield $p < 0.0001$.`,
+      r`Using unpooled standard deviations when computing Cohen's $d$ on groups with unequal variances; use Glass's delta or Welch-standardised metrics instead.`,
+      r`Ignoring Hedges' small-sample correction ($g$) when reporting results from pilot studies with fewer than 20 observations per group.`,
+      r`Comparing raw Cramér's V values across tables of different dimensions without accounting for the degrees of freedom scaling factor.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+
+# Continuous comparison: tutorial vs control test scores
+scores_tut = rng.normal(loc=78.5, scale=12.0, size=25)
+scores_ctrl = rng.normal(loc=71.2, scale=11.5, size=25)
+n1, n2 = len(scores_tut), len(scores_ctrl)
+s1, s2 = np.std(scores_tut, ddof=1), np.std(scores_ctrl, ddof=1)
+s_pooled = np.sqrt(((n1 - 1) * s1**2 + (n2 - 1) * s2**2) / (n1 + n2 - 2))
+
+cohens_d = (np.mean(scores_tut) - np.mean(scores_ctrl)) / s_pooled
+hedges_g = cohens_d * (1.0 - 3.0 / (4.0 * (n1 + n2) - 9.0))
+
+# Categorical association: 2x3 contingency table
+table = np.array([[120, 80, 50], [180, 50, 20]])
+chi2_val, _, _, _ = stats.chi2_contingency(table)
+cramers_v = np.sqrt(chi2_val / (np.sum(table) * (min(table.shape) - 1)))
+
+print(f"Mean difference: {np.mean(scores_tut) - np.mean(scores_ctrl):.2f}")
+print(f"Cohen's d:       {cohens_d:.3f} (medium effect)")
+print(f"Hedges' g:       {hedges_g:.3f} (bias-corrected)")
+print(f"Cramér's V:      {cramers_v:.3f} (moderate association)")`,
+    quiz: [
+      {
+        q: r`Why is it dangerous to rely exclusively on p-values without reporting effect sizes?`,
+        o: [
+          r`Because p-values cannot be computed on continuous data`,
+          r`Because massive sample sizes can make minuscule, practically meaningless differences achieve $p < 0.001$`,
+          r`Because p-values only apply to non-parametric distributions`,
+          r`Because effect sizes eliminate experimental variance`,
+        ],
+        a: 1,
+        why: r`The p-value conflates effect size and sample size: with large enough $N$, even an imperceptible difference of 0.01 standard deviations will produce a tiny p-value.`,
+      },
+      {
+        q: r`Under Jacob Cohen's conventional benchmarks for continuous mean comparisons ($d$), what value represents a "medium" effect size?`,
+        o: [
+          r`0.1`,
+          r`0.5`,
+          r`0.8`,
+          r`1.5`,
+        ],
+        a: 1,
+        why: r`Cohen's widely adopted guidelines define $d = 0.2$ as small, $d = 0.5$ as medium, and $d = 0.8$ as large.`,
+      },
+      {
+        q: r`When should an analyst report Hedges' $g$ instead of Cohen's $d$?`,
+        o: [
+          r`When sample sizes are small ($N < 30$), to correct for positive small-sample bias in estimated pooled variance`,
+          r`When data is categorical`,
+          r`When comparing more than two groups simultaneously`,
+          r`When population standard deviations are known exactly`,
+        ],
+        a: 0,
+        why: r`Cohen's $d$ slightly overestimates the true effect size in small samples. Hedges' $g$ applies an exact correction factor that removes this small-sample bias.`,
+      },
+      {
+        q: r`What range of values can Cramér's $V$ take in an $R \times C$ contingency table?`,
+        o: [
+          r`$[-1, 1]$`,
+          r`$[0, 1]$`,
+          r`$[0, \infty)$`,
+          r`$[-0.5, 0.5]$`,
+        ],
+        a: 1,
+        why: r`Cramér's $V$ is normalised by dividing by $N \cdot \min(R - 1, C - 1)$, constraining the metric strictly to $[0, 1]$, where 0 reflects independence and 1 reflects complete association.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'logistic_regression'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'z-test-and-t-tests'],
+    related: ['chi-square-tests', 'anova-and-post-hoc-tests', 'confidence-intervals'],
+    keywords: 'effect size cohens d cramers v hedges g standardized difference magnitude practical significance',
+  },
+  {
+    id: 'entropy-and-cross-entropy',
+    short: 'Entropy and Cross-Entropy',
+    title: r`Entropy and Cross-Entropy`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Quantify information content, uncertainty and coding cost with Shannon entropy, and optimise probabilistic classifiers using cross-entropy loss.`,
+    lead: r`Information theory formalises uncertainty by measuring how many bits are required to encode events drawn from a probability distribution. Shannon entropy quantifies the intrinsic unpredictability of a system, while cross-entropy measures the expected coding length when events from a true distribution are encoded using an estimated model. Cross-entropy serves as the standard loss function for training modern classification models and neural networks.`,
+    intuition: [
+      r`Imagine receiving daily weather forecasts for the Sahara Desert in July, where it is sunny 99% of days and rains 1%. A message stating "Tomorrow will be sunny" carries almost zero surprise—you could have guessed it with 99% accuracy before opening the email. But a message stating "Tomorrow will rain" carries enormous surprise and high information value.`,
+      r`Claude Shannon formalised this in 1948: an event with probability $p$ yields surprise (information content) proportional to $\log_2(1/p) = -\log_2(p)$ bits. A fair coin flip has $p = 0.5$, providing exactly $-\log_2(0.5) = 1$ bit of surprise. The expected surprise over all possible outcomes is the distribution's entropy $H(P)$. For a fair coin, entropy is $1.0$ bit (maximum uncertainty for two states). For a heavily biased coin with 90% heads and 10% tails, entropy drops to $-0.90\log_2(0.90) - 0.10\log_2(0.10) \approx 0.469$ bits. If a coin lands heads 100% of the time, entropy is $0$ bits—complete certainty.`,
+      r`Now suppose the true coin has $P(\text{Heads}) = 0.90$, but a machine learning model predicts $Q(\text{Heads}) = 0.60$. If we design a communication code optimised for the model's beliefs $Q$, the average number of bits required to transmit outcomes from reality $P$ is the cross-entropy $H(P, Q) = -0.90\log_2(0.60) - 0.10\log_2(0.40) \approx 0.796$ bits. Notice that $0.796 > 0.469$: using the wrong probability model wastes $0.327$ bits per message. Minimising cross-entropy forces the model $Q$ to match ground reality $P$.`,
+    ],
+    analogy: r`Entropy is the minimum storage space required to pack an uncompressed file; cross-entropy is the actual storage consumed when you compress the file using a compression dictionary tailored for a different language.`,
+    steps: [
+      r`Define a discrete probability distribution $P$ over $K$ outcomes, ensuring non-negativity and $\sum p_k = 1$.`,
+      r`Compute Shannon information content for each event: $I(x) = -\log_2(p(x))$ bits (or nats using natural logarithm).`,
+      r`Calculate Shannon entropy $H(P) = -\sum p(x) \log p(x)$ as the expected information content across the distribution.`,
+      r`For classification models predicting probabilities $Q$, compute cross-entropy $H(P, Q) = -\sum p(x) \log q(x)$.`,
+      r`For one-hot ground truth labels where $p_c = 1$ for true class $c$, simplify cross-entropy to the negative log-likelihood $-\log q_c$.`,
+      r`Compute gradients of cross-entropy loss with respect to model logits to train neural networks via gradient descent.`,
+    ],
+    math: [
+      {
+        h: 'Shannon Entropy',
+        tex: r`$$H(P) = -\sum_{x \in \mathcal{X}} P(x) \log_2 P(x) = E_P[-\log_2 P(X)]$$`,
+        p: r`Here $P(x)$ is the probability mass function. When using base 2 logarithm, entropy is measured in bits (shannons); when using natural logarithm $\ln$, it is measured in nats. For $K$ discrete outcomes, entropy is bounded: $0 \le H(P) \le \log_2 K$, achieving zero for deterministic events and maximum entropy for a uniform distribution.`,
+      },
+      {
+        h: 'Cross-Entropy',
+        tex: r`$$H(P, Q) = -\sum_{x \in \mathcal{X}} P(x) \log_2 Q(x) = E_P[-\log_2 Q(X)]$$`,
+        p: r`Here $P(x)$ is the true reference distribution and $Q(x)$ is the approximating model distribution. Cross-entropy quantifies the average number of bits required to encode data from $P$ when using an encoding scheme optimised for $Q$. By Gibbs' inequality, $H(P, Q) \ge H(P)$, with equality if and only if $Q = P$.`,
+      },
+      {
+        h: 'Categorical Cross-Entropy Loss in Machine Learning',
+        tex: r`$$\mathcal{L}_{\text{CE}} = -\sum_{k=1}^K y_k \ln \hat{y}_k = -\ln \hat{y}_{\text{true}}$$`,
+        p: r`In supervised classification, the ground truth distribution $\mathbf{y}$ is a one-hot vector where $y_c = 1$ for the true class and $y_k = 0$ for all $k \ne c$. Cross-entropy simplifies directly to the negative log-likelihood of the true class under model softmax predictions $\hat{\mathbf{y}}$, establishing that minimising cross-entropy is equivalent to maximum likelihood estimation.`,
+      },
+    ],
+    keyPoints: [
+      r`Entropy measures the fundamental unpredictability of a probability distribution; uniform distributions maximise entropy, while deterministic outcomes minimise it to zero.`,
+      r`Cross-entropy measures the expected coding length when reality follows $P$ but messages are compressed using a model distribution $Q$.`,
+      r`In machine learning, minimising cross-entropy loss is mathematically identical to maximising the likelihood of the training labels.`,
+      r`The difference between cross-entropy and entropy is the Kullback–Leibler divergence: $H(P, Q) = H(P) + D_{\text{KL}}(P \parallel Q)$.`,
+    ],
+    pitfalls: [
+      r`Taking the logarithm of zero when model predicted probabilities reach exact 0.0; always clamp probabilities with an epsilon $\epsilon \approx 10^{-15}$.`,
+      r`Mixing up base 2 logarithms (bits) with natural logarithms (nats); machine learning libraries universally compute losses in nats.`,
+      r`Confusing entropy with variance: high-variance continuous variables can have low differential entropy if concentrated into disjoint sharp spikes.`,
+      r`Assuming cross-entropy is symmetric: $H(P, Q) \ne H(Q, P)$ because expectations are taken with respect to different reference distributions.`,
+    ],
+    code: r`import numpy as np
+
+# True distribution P vs approximating model Q
+p = np.array([0.70, 0.20, 0.10])
+q = np.array([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0])
+
+# Shannon entropy H(P) in bits
+entropy_p = -np.sum(p * np.log2(p))
+
+# Cross-entropy H(P, Q) in bits
+cross_entropy_pq = -np.sum(p * np.log2(q))
+divergence_bits = cross_entropy_pq - entropy_p
+
+# Binary cross-entropy in nats (standard ML classification loss)
+y_true = np.array([1, 0, 1, 1])
+y_prob = np.array([0.92, 0.15, 0.78, 0.65])
+bce = -np.mean(y_true * np.log(y_prob) + (1 - y_true) * np.log(1.0 - y_prob))
+
+print(f"Entropy H(P):         {entropy_p:.4f} bits")
+print(f"Cross-Entropy H(P,Q): {cross_entropy_pq:.4f} bits")
+print(f"Excess code length:   {divergence_bits:.4f} bits")
+print(f"Sample Binary CE loss: {bce:.4f} nats")`,
+    quiz: [
+      {
+        q: r`What probability distribution over $K$ discrete outcomes achieves the maximum possible Shannon entropy?`,
+        o: [
+          r`A deterministic distribution with probability 1.0 on a single state`,
+          r`A uniform distribution where every outcome has probability $1/K$`,
+          r`A Poisson distribution`,
+          r`A Gaussian distribution`,
+        ],
+        a: 1,
+        why: r`When all $K$ outcomes are equally likely, uncertainty is maximised and entropy reaches its upper bound $H(P) = \log_2 K$.`,
+      },
+      {
+        q: r`Why is minimising categorical cross-entropy the standard objective for training classification neural networks?`,
+        o: [
+          r`Because cross-entropy ignores incorrect predictions`,
+          r`Because minimising cross-entropy is mathematically equivalent to maximising the log-likelihood of the true classes`,
+          r`Because cross-entropy is always strictly negative`,
+          r`Because it eliminates the need for gradient descent`,
+        ],
+        a: 1,
+        why: r`For one-hot target vectors, cross-entropy reduces to $-\ln \hat{y}_{\text{true}}$, which is the negative log-likelihood. Minimising it is exact maximum likelihood estimation.`,
+      },
+      {
+        q: r`What is the relationship connecting entropy $H(P)$, cross-entropy $H(P, Q)$, and Kullback–Leibler divergence $D_{\text{KL}}(P \parallel Q)$?`,
+        o: [
+          r`$H(P, Q) = H(P) + D_{\text{KL}}(P \parallel Q)$`,
+          r`$H(P, Q) = H(P) - D_{\text{KL}}(P \parallel Q)$`,
+          r`$D_{\text{KL}}(P \parallel Q) = H(P) \times H(P, Q)$`,
+          r`$H(P) = H(P, Q) + D_{\text{KL}}(P \parallel Q)$`,
+        ],
+        a: 0,
+        why: r`Cross-entropy decomposes into the intrinsic entropy of reality $H(P)$ plus the inefficiency penalty $D_{\text{KL}}(P \parallel Q)$ caused by approximating $P$ with $Q$.`,
+      },
+      {
+        q: r`If a fair coin flip has entropy $H = 1.0$ bit, what is the entropy of a completely rigged coin that always lands heads?`,
+        o: [
+          r`0.5 bits`,
+          r`0 bits`,
+          r`-1.0 bit`,
+          r`Infinite bits`,
+        ],
+        a: 1,
+        why: r`When an outcome is certain ($p = 1$), there is zero surprise: $-1 \log_2(1) = 0$ bits.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'decision_tree_classifier'],
+    prereq: ['random-variables-and-distributions', 'probability-rules-and-bayes-theorem'],
+    related: ['kl-divergence', 'jensen-shannon-divergence', 'loss-functions'],
+    keywords: 'entropy cross-entropy shannon information theory bits nats log-loss surprise uncertainty negative log-likelihood',
+  },
+  {
+    id: 'kl-divergence',
+    short: 'Kullback–Leibler Divergence',
+    title: r`KL Divergence`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Measure the informational divergence and excess code length between probability distributions with relative entropy.`,
+    lead: r`How much information is lost when an estimated probability distribution is substituted for ground truth? The Kullback–Leibler (KL) divergence, or relative entropy, quantifies the asymmetric statistical distance between two probability distributions over the same sample space. It acts as the mathematical cornerstone of variational autoencoders, Bayesian inference, and modern policy gradient reinforcement learning algorithms.`,
+    intuition: [
+      r`Imagine transmitting messages about daily financial market movements where the true probabilities are 70% Bull market, 20% Neutral, and 10% Bear market ($P = [0.70, 0.20, 0.10]$). The optimal Shannon code length for these true states requires an average of $H(P) = -0.7\log_2(0.7) - 0.2\log_2(0.2) - 0.1\log_2(0.1) \approx 1.157$ bits per message.`,
+      r`Now suppose an inexperienced analyst assumes a uniform prior, believing all three outcomes are equally likely at 33.3% each ($Q = [1/3, 1/3, 1/3]$). If you build your transmission code using the analyst's uniform model $Q$, each outcome requires $-\log_2(1/3) \approx 1.585$ bits. When reality sends messages drawn from $P$, the expected message length is $1.585$ bits.`,
+      r`The excess storage wasted per transmission is $1.585 - 1.157 = 0.428$ bits. This exact excess cost—the penalty for using an incorrect distribution $Q$ instead of true distribution $P$—is the Kullback–Leibler divergence $D_{\text{KL}}(P \parallel Q)$. Notice what happens if we reverse the roles: if reality were uniform $Q$, but we mistakenly coded with the analyst's skewed beliefs $P$, the penalty would be $D_{\text{KL}}(Q \parallel P) \approx 0.468$ bits. Because $0.428 \ne 0.468$, KL divergence is not a true mathematical distance metric: it is strictly asymmetric and violates the triangle inequality.`,
+    ],
+    analogy: r`KL divergence is like the fuel penalty of navigating a ship with an outdated nautical map: if the map slightly misjudges open waters the penalty is modest, but if the map assumes deep ocean where a reef exists, disaster strikes.`,
+    steps: [
+      r`Define discrete probability distributions $P$ and $Q$ over the identical support set $\mathcal{X}$.`,
+      r`Verify absolute continuity: ensure $Q(x) > 0$ whenever $P(x) > 0$; if $P(x) > 0$ and $Q(x) = 0$, $D_{\text{KL}}$ is infinite.`,
+      r`Calculate the log-likelihood ratio (information gain) for each state: $\ln(P(x) / Q(x))$.`,
+      r`Compute the expected log-ratio under distribution $P$: $D_{\text{KL}}(P \parallel Q) = \sum P(x) \ln(P(x) / Q(x))$.`,
+      r`Check Gibbs' inequality: verify that $D_{\text{KL}}(P \parallel Q) \ge 0$, with equality if and only if $P = Q$ almost everywhere.`,
+      r`Use $D_{\text{KL}}$ to regularise model posteriors towards priors, such as in variational autoencoders and trust-region policy optimisation.`,
+    ],
+    math: [
+      {
+        h: 'Discrete and Continuous KL Divergence',
+        tex: r`$$D_{\text{KL}}(P \parallel Q) = \sum_{x \in \mathcal{X}} P(x) \ln\left(\frac{P(x)}{Q(x)}\right) = \int_{-\infty}^{\infty} p(x) \ln\left(\frac{p(x)}{q(x)}\right) dx$$`,
+        p: r`Here $P(x)$ is the true or target reference distribution and $Q(x)$ is the approximating distribution. KL divergence can be rewritten as the cross-entropy minus the entropy: $D_{\text{KL}}(P \parallel Q) = H(P, Q) - H(P)$. When using base 2 logarithms, the result is in bits; when using natural logarithms, it is in nats.`,
+      },
+      {
+        h: 'Gibbs\' Inequality and Non-Negativity',
+        tex: r`$$D_{\text{KL}}(P \parallel Q) \ge 0, \qquad D_{\text{KL}}(P \parallel Q) = 0 \iff P = Q \text{ almost everywhere}$$`,
+        p: r`By Jensen's inequality and the strict convexity of $-\ln(t)$, $E_P[-\ln(Q/P)] \ge -\ln(E_P[Q/P]) = -\ln(1) = 0$. This fundamental property guarantees that approximating a distribution never reduces expected coding length below the true entropy.`,
+      },
+      {
+        h: 'KL Divergence Between Univariate Gaussians',
+        tex: r`$$D_{\text{KL}}\left(\mathcal{N}(\mu_1, \sigma_1^2) \parallel \mathcal{N}(\mu_2, \sigma_2^2)\right) = \ln\left(\frac{\sigma_2}{\sigma_1}\right) + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac{1}{2}$$`,
+        p: r`For continuous Gaussian distributions, KL divergence has a closed-form analytic solution. In Variational Autoencoders (VAEs), this formula measures the divergence between an encoder's latent Gaussian posterior $\mathcal{N}(\mu, \sigma^2)$ and a standard Gaussian prior $\mathcal{N}(0, 1)$, simplifying to $\frac{1}{2}(\sigma^2 + \mu^2 - 1 - \ln \sigma^2)$.`,
+      },
+    ],
+    keyPoints: [
+      r`KL divergence measures the expected excess surprise or coding inefficiency of using distribution $Q$ to model reality $P$.`,
+      r`KL divergence is strictly non-negative ($D_{\text{KL}} \ge 0$) and equals zero if and only if the two distributions are identical.`,
+      r`KL divergence is asymmetric: $D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)$, meaning it cannot serve as a true distance metric.`,
+      r`Forward KL ($D_{\text{KL}}(P \parallel Q)$) penalises $Q$ heavily where $P > 0$, forcing $Q$ to cover all modes (mean-seeking); reverse KL ($D_{\text{KL}}(Q \parallel P)$) penalises $Q > 0$ where $P = 0$, forcing $Q$ to concentrate on a single mode (mode-seeking).`,
+    ],
+    pitfalls: [
+      r`Dividing by zero when $Q(x) = 0$ while $P(x) > 0$, causing divergence to explode to infinity.`,
+      r`Treating KL divergence as a symmetric distance metric, causing errors in generative modelling and loss design.`,
+      r`Confusing forward KL (zero-avoiding) with reverse KL (zero-forcing) in variational inference and policy optimisation.`,
+      r`Overlooking that continuous KL divergence is invariant under coordinate reparameterisation, whereas differential entropy is coordinate-dependent.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Discrete distributions: true market states vs uniform belief
+p = np.array([0.70, 0.20, 0.10])
+q = np.array([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0])
+
+# Forward and reverse KL divergence in bits
+kl_forward = stats.entropy(p, q, base=2)
+kl_reverse = stats.entropy(q, p, base=2)
+
+# Analytic KL divergence between two univariate Gaussians (nats)
+mu1, sig1 = 0.0, 1.0
+mu2, sig2 = 1.0, 1.5
+kl_gauss = np.log(sig2 / sig1) + (sig1**2 + (mu1 - mu2)**2) / (2.0 * sig2**2) - 0.5
+
+print(f"Forward KL D(P || Q): {kl_forward:.4f} bits")
+print(f"Reverse KL D(Q || P): {kl_reverse:.4f} bits")
+print(f"Asymmetry delta:      {abs(kl_forward - kl_reverse):.4f} bits")
+print(f"Gaussian KL divergence: {kl_gauss:.4f} nats")`,
+    quiz: [
+      {
+        q: r`Why is the Kullback–Leibler divergence not considered a true distance metric in mathematics?`,
+        o: [
+          r`Because it can take negative values`,
+          r`Because it is asymmetric ($D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)$) and violates the triangle inequality`,
+          r`Because it only applies to discrete distributions`,
+          r`Because it requires continuous differentiability`,
+        ],
+        a: 1,
+        why: r`A formal metric must be symmetric ($d(x,y)=d(y,x)$) and satisfy the triangle inequality ($d(x,z) \le d(x,y)+d(y,z)$). KL divergence violates both properties.`,
+      },
+      {
+        q: r`What happens to $D_{\text{KL}}(P \parallel Q)$ if there exists an outcome $x$ where $P(x) > 0$ but $Q(x) = 0$?`,
+        o: [
+          r`It evaluates to 0`,
+          r`It evaluates to $+\infty$`,
+          r`It equals 1.0 bit`,
+          r`It is undefined and defaults to $-1$`,
+        ],
+        a: 1,
+        why: r`Because the formula involves $\ln(P(x) / Q(x))$, dividing a positive probability by zero causes the logarithm—and hence the divergence—to become infinite.`,
+      },
+      {
+        q: r`In variational inference, how does minimising reverse KL divergence ($D_{\text{KL}}(Q \parallel P)$) affect the approximating distribution $Q$?`,
+        o: [
+          r`It forces $Q$ to spread out over all modes of $P$`,
+          r`It acts as a mode-seeking objective, penalising $Q$ heavily whenever $Q > 0$ where $P \approx 0$, causing $Q$ to focus on a single dominant mode`,
+          r`It turns $Q$ into a uniform distribution`,
+          r`It prevents the model from updating parameters`,
+        ],
+        a: 1,
+        why: r`Reverse KL penalises positive density in $Q$ where $P$ has low density, forcing $Q$ to compress tightly onto one of the major modes of $P$.`,
+      },
+      {
+        q: r`What is the minimum possible value of the Kullback–Leibler divergence $D_{\text{KL}}(P \parallel Q)$?`,
+        o: [
+          r`$-\infty$`,
+          r`$-1.0$`,
+          r`0, achieved if and only if $P = Q$ almost everywhere`,
+          r`0.5`,
+        ],
+        a: 2,
+        why: r`Gibbs' inequality guarantees $D_{\text{KL}}(P \parallel Q) \ge 0$, with equality holding strictly if and only if $P$ and $Q$ are identical probability distributions.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'decision_tree_classifier'],
+    prereq: ['entropy-and-cross-entropy', 'probability-rules-and-bayes-theorem'],
+    related: ['jensen-shannon-divergence', 'loss-functions', 'maximum-likelihood-estimation'],
+    keywords: 'kl divergence kullback leibler relative entropy information divergence information theory asymmetry variational',
+  },
+  {
+    id: 'jensen-shannon-divergence',
+    short: 'Jensen–Shannon Divergence',
+    title: r`Jensen–Shannon Divergence`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Establish symmetric, bounded statistical distances between probability distributions using mixture averages and the square-root metric property.`,
+    lead: r`While the Kullback–Leibler divergence is fundamental to information theory, its asymmetry and unbounded nature create severe numerical instability when distributions have non-overlapping support. The Jensen–Shannon divergence (JSD) resolves these flaws by averaging KL divergences to a shared mixture distribution. Symmetrical, always finite, and bounded between 0 and 1, the square root of Jensen–Shannon divergence forms a true mathematical metric widely used in generative adversarial networks (GANs) and distribution drift monitoring.`,
+    intuition: [
+      r`Imagine auditing data drift between two model deployment environments. In training, user age follows distribution $P$; in production, user age follows distribution $Q$.`,
+      r`If there is even a single age category present in production that never occurred in training (say, users aged 95+), $P(95+) = 0$ while $Q(95+) > 0$. If you compute the forward KL divergence $D_{\text{KL}}(Q \parallel P)$, the ratio $Q(x) / P(x)$ divides by zero, blowing the score up to infinity! A single rare event completely blinds the metric to how closely the remaining 99.9% of the distribution matches.`,
+      r`The Jensen–Shannon divergence solves this by introducing a midpoint: the balanced mixture distribution $M = \frac{1}{2}(P + Q)$. Because $M$ contains half of $P$ and half of $Q$, $M(x)$ is strictly positive whenever either $P(x) > 0$ or $Q(x) > 0$. Neither distribution can ever divide by zero against $M$. JSD then measures the average divergence from both distributions to this midpoint: $\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M)$. For our financial market example ($P = [0.70, 0.20, 0.10]$ and $Q = [1/3, 1/3, 1/3]$), $M = [0.517, 0.267, 0.217]$. The divergences to $M$ produce $\text{JSD} \approx 0.108$ bits. Taking the base 2 logarithm guarantees JSD is bounded between 0 (identical) and 1 bit (completely disjoint). Furthermore, $\sqrt{\text{JSD}}$ satisfies the triangle inequality, creating a true metric distance between probability distributions.`,
+    ],
+    analogy: r`If KL divergence is like measuring the elevation difference between two hikers on a mountain where one hiker cannot see the other's cliff, Jensen–Shannon divergence is like finding the exact halfway basecamp and measuring how far each hiker must walk to meet in the middle.`,
+    steps: [
+      r`Given two distributions $P$ and $Q$ over the same space, construct the equal-weight midpoint mixture $M = \frac{1}{2}(P + Q)$.`,
+      r`Compute the forward KL divergence from $P$ to the mixture: $D_{\text{KL}}(P \parallel M)$.`,
+      r`Compute the forward KL divergence from $Q$ to the mixture: $D_{\text{KL}}(Q \parallel M)$.`,
+      r`Average the two divergences to obtain the Jensen–Shannon divergence: $\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M)$.`,
+      r`If using logarithm base 2, note that JSD is bounded in $[0, 1]$; if using natural logarithm $\ln$, JSD is bounded in $[0, \ln 2]$.`,
+      r`Compute the Jensen–Shannon distance $\sqrt{\text{JSD}}$ whenever a true mathematical metric satisfying the triangle inequality is required.`,
+    ],
+    math: [
+      {
+        h: 'Jensen–Shannon Divergence Definition',
+        tex: r`$$\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M), \qquad M = \frac{1}{2}(P + Q)$$`,
+        p: r`Here $M$ is the equal-weight mixture distribution. Because $M(x) > 0$ wherever either $P(x) > 0$ or $Q(x) > 0$, the ratio never divides by zero, ensuring JSD is always well-defined and finite even for distributions with disjoint supports. Furthermore, JSD is strictly symmetric: $\text{JSD}(P \parallel Q) = \text{JSD}(Q \parallel P)$.`,
+      },
+      {
+        h: 'Entropy Formulation and Boundedness',
+        tex: r`$$\text{JSD}(P \parallel Q) = H(M) - \frac{1}{2}\left[H(P) + H(Q)\right]$$`,
+        p: r`JSD equals the Shannon entropy of the mixture distribution minus the average entropies of the individual distributions. By the strict concavity of Shannon entropy, $\text{JSD} \ge 0$, with equality if and only if $P = Q$. When measured in base 2 logarithm, JSD is bounded in $[0, 1]$ bit, reaching its theoretical maximum of $1.0$ bit when $P$ and $Q$ have completely disjoint support.`,
+      },
+      {
+        h: 'The Jensen–Shannon Distance Metric',
+        tex: r`$$d_{\text{JS}}(P, Q) = \sqrt{\text{JSD}(P \parallel Q)}$$`,
+        p: r`In 2003, Endres and Schindelin proved that the square root of the Jensen–Shannon divergence satisfies the triangle inequality: $d_{\text{JS}}(P, R) \le d_{\text{JS}}(P, Q) + d_{\text{JS}}(Q, R)$. Combined with non-negativity, symmetry, and identity of indiscernibles, $d_{\text{JS}}$ forms a true mathematical metric.`,
+      },
+    ],
+    keyPoints: [
+      r`Jensen–Shannon divergence is strictly symmetric: $\text{JSD}(P \parallel Q) = \text{JSD}(Q \parallel P)$.`,
+      r`JSD is bounded in $[0, 1]$ (when measured in bits) and remains finite even when distributions have completely disjoint support.`,
+      r`The square root $\sqrt{\text{JSD}}$ is a valid mathematical metric satisfying the triangle inequality.`,
+      r`The original formulation of Generative Adversarial Networks (Goodfellow et al., 2014) showed that an optimal discriminator minimax game is mathematically equivalent to minimising the Jensen–Shannon divergence between real and generated distributions.`,
+    ],
+    pitfalls: [
+      r`Using natural logarithm instead of $\log_2$ and assuming the upper bound is 1.0 (with natural log $\ln$, the upper bound is $\ln 2 \approx 0.6931$).`,
+      r`Forgetting that when distributions have disjoint support with zero overlap, JSD saturates at its maximum value (1.0), causing vanishing gradients in GAN training.`,
+      r`Confusing JSD (which is not a metric, but a squared distance) with the Jensen–Shannon distance $\sqrt{\text{JSD}}$ (a true metric).`,
+      r`Applying JSD to unnormalised weight vectors without ensuring $\sum p_i = 1$ and $\sum q_i = 1$.`,
+    ],
+    code: r`import numpy as np
+import scipy.spatial.distance as dist
+import scipy.stats as stats
+
+p = np.array([0.70, 0.20, 0.10])
+q = np.array([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0])
+
+# Midpoint mixture distribution M
+m = 0.5 * (p + q)
+
+# Jensen-Shannon divergence in bits
+jsd = 0.5 * stats.entropy(p, m, base=2) + 0.5 * stats.entropy(q, m, base=2)
+
+# Jensen-Shannon distance metric: sqrt(JSD)
+js_distance = dist.jensenshannon(p, q, base=2)
+
+# Completely disjoint distributions (maximal JSD)
+p_disjoint = np.array([1.0, 0.0])
+q_disjoint = np.array([0.0, 1.0])
+m_disjoint = 0.5 * (p_disjoint + q_disjoint)
+jsd_max = 0.5 * stats.entropy(p_disjoint, m_disjoint, base=2) + \
+          0.5 * stats.entropy(q_disjoint, m_disjoint, base=2)
+
+print(f"JSD(P || Q):          {jsd:.4f} bits")
+print(f"JS distance metric:   {js_distance:.4f}")
+print(f"Disjoint support JSD: {jsd_max:.4f} bits (bounded maximum = 1.0)")`,
+    quiz: [
+      {
+        q: r`Why is the Jensen–Shannon divergence preferred over the Kullback–Leibler divergence for monitoring data drift in production pipelines?`,
+        o: [
+          r`Because JSD is always symmetric and stays finite even when new categories appear that had zero probability in training`,
+          r`Because JSD requires only one distribution`,
+          r`Because JSD does not use logarithms`,
+          r`Because JSD cannot be computed on categorical data`,
+        ],
+        a: 0,
+        why: r`If a production distribution has an outcome unseen in training, KL divergence divides by zero and explodes to infinity. JSD compares against the average mixture $M$, remaining bounded and stable.`,
+      },
+      {
+        q: r`When calculated using base 2 logarithms, what is the maximum possible value of the Jensen–Shannon divergence $\text{JSD}(P \parallel Q)$?`,
+        o: [
+          r`$0.5$ bits`,
+          r`$1.0$ bit`,
+          r`$\infty$`,
+          r`$\ln 2$ bits`,
+        ],
+        a: 1,
+        why: r`When distributions $P$ and $Q$ have completely disjoint support (no shared non-zero states), $\text{JSD} = \log_2(2) = 1.0$ bit.`,
+      },
+      {
+        q: r`Which mathematical transformation turns the Jensen–Shannon divergence into a true distance metric that satisfies the triangle inequality?`,
+        o: [
+          r`Taking the square root ($\sqrt{\text{JSD}}$)`,
+          r`Squaring it ($\text{JSD}^2$)`,
+          r`Multiplying by 2`,
+          r`Inverting it ($1 / \text{JSD}$)`,
+        ],
+        a: 0,
+        why: r`By the Endres–Schindelin theorem (2003), the square root of the Jensen–Shannon divergence satisfies the triangle inequality, making $\sqrt{\text{JSD}}$ a true metric.`,
+      },
+      {
+        q: r`What issue arises in generative adversarial network (GAN) training when real and generated distributions have disjoint support under Jensen–Shannon divergence?`,
+        o: [
+          r`JSD becomes negative`,
+          r`JSD saturates at its constant maximum (1.0 bit), yielding zero gradients and halting generator learning`,
+          r`The discriminator loss oscillates uncontrollably`,
+          r`The mixture distribution cannot be formed`,
+        ],
+        a: 1,
+        why: r`When supports do not overlap, JSD is constantly 1.0 regardless of how far apart the distributions are in space, producing vanishing gradients that motivated Wasserstein GANs.`,
+      },
+    ],
+    usedBy: ['clustering-metrics', 'decision_tree_classifier'],
+    prereq: ['entropy-and-cross-entropy', 'kl-divergence'],
+    related: ['clustering-metrics', 'loss-functions'],
+    keywords: 'jensen shannon divergence jsd jensen shannon distance symmetric divergence information theory drift monitoring gans',
+  },
 ];
