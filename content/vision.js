@@ -1387,4 +1387,774 @@ print(f"Ordinary Least Squares line:   y = {m_ols:.3f} * x + {b_ols:.3f} (BROKEN
   related: ['geometric-transforms-and-homography', 'sift-orb-and-feature-matching', 'corners-and-keypoints-harris-fast'],
   keywords: 'ransac random sample consensus robust estimation outlier rejection breakdown point minimal sample consensus set inliers homography line fitting',
 },
+
+  // ------------------------------------------------------------------ Lesson 8
+{
+  id: 'receptive-field-stride-and-pooling',
+  short: 'Receptive Field & Pooling',
+  title: 'Receptive field, stride and pooling',
+  task: 'concepts',
+  module: 'CNN foundations',
+  level: 2,
+  minutes: 16,
+  noLab: true,
+  summary: r`The receptive field of a neuron in a convolutional neural network (CNN) defines the spatial sub-region of the input image that directly influences its activation. While a single $3 \times 3$ convolutional kernel has a local receptive field of only $3 \times 3$, stacking layers expands the theoretical receptive field linearly as $r_L = r_{L-1} + (k_L - 1) \cdot S_{L-1}$, where $S_{L-1}$ is the cumulative network stride. Downsampling operations—strided convolutions and pooling operators (Max-Pooling, Average-Pooling, and Global Average Pooling)—exponentially accelerate receptive field expansion, reduce spatial memory, and confer translation tolerance. Crucially, the effective receptive field (ERF) follows a 2D Gaussian distribution, concentrating representational impact heavily at the spatial centre.`,
+  lead: r`To recognize that an image contains a Golden Retriever, a deep network cannot rely solely on examining individual fur textures; it must perceive how ears, muzzle, eyes, paws, and torso relate across the entire photograph. Yet individual convolutional filters examine only tiny local windows (such as $3 \times 3$ or $5 \times 5$ pixels). How does a network composed of microscopic local filters assemble global holistic scene understanding? The answer lies in the receptive field: the compounding spatial reach formed by stacking convolutions, strides, and pooling layers throughout the depth of the network.`,
+  intuition: [
+    r`Theoretical receptive field expansion: In layer 1, an output unit computed from a $3 \times 3$ kernel depends directly on a $3 \times 3$ patch of input pixels. In layer 2, another $3 \times 3$ convolution is applied over layer 1's activations. Because each of those 9 activation units already viewed a $3 \times 3$ patch of input pixels, the layer 2 neuron observes a $5 \times 5$ spatial patch of original pixels. Stacking a third $3 \times 3$ layer expands the reach to $7 \times 7$. Thus, stacking two $3 \times 3$ convolutions achieves the identical receptive field of a single $5 \times 5$ convolution, but uses only $2 \times (3^2) = 18$ parameters rather than $5^2 = 25$ parameters, while introducing an extra non-linear activation function.`,
+    r`The acceleration power of stride: While un-strided convolutions expand the receptive field by only $(k-1)$ pixels per layer, adding a stride of $s > 1$ doubles the jump of subsequent kernels across the input image. When an operation has stride $s$, every subsequent unit step in deep feature maps corresponds to $s$ pixels in the preceding representation. Stride acts as an exponential multiplier: combining strided convolutions with pooling allows a 50-layer ResNet to expand its receptive field from 3 pixels to over 400 pixels, covering high-resolution input images entirely.`,
+    r`Max-pooling versus average-pooling: Pooling operations aggregate spatial information across rectangular patches without introducing trainable weight parameters. Max-pooling extracts the maximum activation $\max(x_1, \dots, x_k)$, acting as a non-linear feature detector that records whether a specific visual pattern (such as an edge or texture) was detected anywhere in that window, providing local translation tolerance. Average-pooling computes the arithmetic mean, smoothing activations across regions. Global Average Pooling (GAP) collapses an entire $H \times W$ feature map into a single scalar per channel, replacing parameter-heavy fully connected classifier layers and acting as a powerful spatial regulariser.`,
+    r`The Effective Receptive Field (ERF): While the theoretical receptive field outlines the maximum bounding box of input pixels that could mathematically influence a neuron, not all pixels contribute equally. In 2016, Luo et al. demonstrated that the gradient of an output unit with respect to input pixels follows a 2D Gaussian distribution that decays rapidly away from the centre. The central pixels participate in exponentially more computational paths through the network than peripheral pixels. As a result, the "Effective Receptive Field" (ERF)—the region carrying $95\%$ of the gradient impact—occupies only a fraction of the theoretical receptive field, necessitating much deeper networks than simple theoretical calculations imply.`,
+  ],
+  analogy: r`Think of an army's chain of command reporting intelligence from the battlefield. A frontline scout (layer 1) uses binoculars to observe a small 30-metre patch of terrain. A squad sergeant (layer 2) reads reports from three adjacent scouts, assembling a combined situational view covering 50 metres. A platoon lieutenant (layer 3) reads reports from three sergeants, synthesizing an overview of 70 metres. If the army introduces a regional commander (striding/pooling by 2), the commander aggregates summaries from large sectors, doubling the territory covered at each subsequent leadership tier. The supreme general at headquarters (the final classification neuron) reads a concise summary covering the entire 10-kilometre battlefront. Furthermore, central events mentioned by all scouts carry immense weight, whereas peripheral events at the far flanks barely influence headquarters (the Gaussian Effective Receptive Field).`,
+  steps: [
+    {
+      title: r`Calculate layer-by-layer theoretical receptive field`,
+      desc: r`Track the compounding spatial reach and cumulative stride through the network graph.`,
+      detail: r`Initialise $r_0 = 1$ and cumulative stride $S_0 = 1$. For each subsequent layer $l \in \{1, \dots, L\}$ with kernel size $k_l$ and layer stride $s_l$, update the receptive field via $r_l = r_{l-1} + (k_l - 1) \cdot S_{l-1}$, and then update cumulative stride via $S_l = S_{l-1} \cdot s_l$.`,
+    },
+    {
+      title: r`Determine output feature map spatial dimensions`,
+      desc: r`Calculate how padding, kernel size, and stride alter spatial grid resolution.`,
+      detail: r`For an input of height $H_{\text{in}}$, padding $p$, kernel size $k$, and stride $s$, the output spatial dimension is $H_{\text{out}} = \left\lfloor \frac{H_{\text{in}} - k + 2p}{s} \right\rfloor + 1$. Padding preserves boundary spatial resolution, while stride $s > 1$ downsamples the grid.`,
+    },
+    {
+      title: r`Apply spatial pooling operators`,
+      desc: r`Downsample feature representations to introduce translation tolerance and control computational cost.`,
+      detail: r`Apply $2 \times 2$ max-pooling with stride 2 to retain dominant peak activations while cutting spatial memory by $75\%$. For classification backbones, apply Global Average Pooling (GAP) at the final convolutional stage to produce a flat $1 \times C$ embedding vector ready for linear classification.`,
+    },
+    {
+      title: r`Expand receptive fields without downsampling via dilated convolutions`,
+      desc: r`Insert spatial holes into convolution kernels to enlarge field of view without loss of resolution.`,
+      detail: r`In tasks requiring dense pixel predictions (such as semantic segmentation), downsampling destroys spatial detail. Dilated (atrous) convolutions with dilation rate $d$ inflate the effective kernel size to $k' = k + (k - 1)(d - 1)$ without adding trainable weights, expanding the receptive field while preserving high-resolution feature maps.`,
+    },
+    {
+      title: r`Analyse the Effective Receptive Field (ERF)`,
+      desc: r`Measure the actual impact distribution of input pixels via backward gradient backpropagation.`,
+      detail: r`Set an impulse gradient of $1.0$ at the central unit of the target deep feature map and backpropagate to the input image tensor. Compute the absolute gradient magnitude across input coordinates to reveal the characteristic 2D Gaussian profile.`,
+    },
+  ],
+  math: [
+    {
+      h: r`Recursive theoretical receptive field formula`,
+      tex: r`r_l = r_{l-1} + (k_l - 1) \cdot S_{l-1}, \quad S_l = S_{l-1} \cdot s_l`,
+      p: r`Here $r_l$ denotes the receptive field size of layer $l$, $k_l$ is the kernel size, $s_l$ is the layer stride, and $S_{l-1} = \prod_{i=1}^{l-1} s_i$ represents the cumulative stride of all preceding layers up to layer $l-1$ (with $r_0 = 1, S_0 = 1$).`,
+    },
+    {
+      h: r`Feature map output spatial dimension`,
+      tex: r`O = \left\lfloor \frac{I - k + 2p}{s} \right\rfloor + 1`,
+      p: r`Here $I$ is the input spatial dimension, $k$ is kernel size, $p$ is zero-padding applied to each side, and $s$ is the convolution stride. Setting $p = \frac{k-1}{2}$ for odd kernels with stride $s=1$ yields identical input and output dimensions ($O = I$, known as "same" padding).`,
+    },
+    {
+      h: r`Gaussian distribution of the Effective Receptive Field (ERF)`,
+      tex: r`\frac{\partial y_{\text{centre}}}{\partial x_{i, j}} \approx \frac{1}{2\pi \sigma_{\text{ERF}}^2} \exp\left(-\frac{(i - c_x)^2 + (j - c_y)^2}{2\sigma_{\text{ERF}}^2}\right)`,
+      p: r`By the Central Limit Theorem, composing many independent convolution passes causes the derivative of the central output unit $y_{\text{centre}}$ with respect to input pixels $x_{i, j}$ to converge asymptotically to a 2D Gaussian bell curve with standard deviation $\sigma_{\text{ERF}} \propto \sqrt{L}$.`,
+    },
+  ],
+  keyPoints: [
+    r`The theoretical receptive field defines the maximum input window that mathematically connects to a deep activation neuron.`,
+    r`Stacking two $3 \times 3$ convolutions yields a $5 \times 5$ receptive field while using $28\%$ fewer parameters than a single $5 \times 5$ filter.`,
+    r`Strided convolutions and pooling layers accelerate receptive field expansion exponentially by multiplying cumulative network stride.`,
+    r`Max-pooling preserves the strongest activation within local windows, providing local translation tolerance.`,
+    r`The Effective Receptive Field (ERF) follows a 2D Gaussian distribution, meaning central pixels exert far greater influence than peripheral boundary pixels.`,
+  ],
+  pitfalls: [
+    r`Confusing theoretical receptive field with effective receptive field: Assuming a network perceives a full $200 \times 200$ theoretical window uniformly leads to flawed architectural assumptions; because ERF decays as a Gaussian, the effective area carrying signal is often less than half the theoretical size.`,
+    r`Over-pooling early in the backbone: Applying multiple aggressive pooling steps in early layers rapidly shrinks feature maps, permanently destroying high-frequency edge and texture information required for fine segmentation or small-object detection.`,
+    r`Ignoring cumulative stride in receptive field calculations: Calculating receptive field by simply summing kernel sizes $\sum (k_i - 1)$ produces incorrect results; kernel reach must be scaled by the cumulative product of all prior layer strides ($S_{l-1}$).`,
+    r`Excessive fully connected layers instead of Global Average Pooling: Using flattening followed by large linear layers creates millions of parameters prone to severe overfitting; Global Average Pooling reduces spatial dimensions to $1 \times 1$ without adding a single weight.`,
+    r`Gridding artifacts in dilated convolutions: Stacking convolutions with identical high dilation rates ($d=4, d=4, d=4$) samples input pixels on a sparse grid, causing "gridding" blind spots where intermediate pixels are never observed.`,
+  ],
+  code: r`import numpy as np
+
+# Simulate theoretical receptive field and feature map dimension tracking
+layers = [
+    {"name": "conv1", "k": 3, "s": 1, "p": 1},
+    {"name": "pool1", "k": 2, "s": 2, "p": 0},
+    {"name": "conv2", "k": 3, "s": 1, "p": 1},
+    {"name": "pool2", "k": 2, "s": 2, "p": 0},
+    {"name": "conv3", "k": 3, "s": 1, "p": 1},
+    {"name": "conv4", "k": 3, "s": 1, "p": 1},
+]
+
+# Track input image size 64x64
+current_dim = 64
+r_field = 1.0     # Theoretical receptive field (starts at 1 pixel)
+cum_stride = 1.0  # Cumulative stride
+
+print(f"{'Layer':<8} | {'Kernel':<6} | {'Stride':<6} | {'Out Dim':<8} | {'Cum Stride':<10} | {'Receptive Field':<15}")
+print("-" * 65)
+
+for layer in layers:
+    k = layer["k"]
+    s = layer["s"]
+    p = layer["p"]
+    
+    # 1. Update receptive field: r_l = r_{l-1} + (k - 1) * S_{l-1}
+    r_field += (k - 1) * cum_stride
+    
+    # 2. Update output spatial dimension: O = floor((I - k + 2p) / s) + 1
+    current_dim = int(np.floor((current_dim - k + 2 * p) / s) + 1)
+    
+    # 3. Update cumulative stride: S_l = S_{l-1} * s
+    cum_stride *= s
+    
+    print(f"{layer['name']:<8} | {k:<6} | {s:<6} | {current_dim:<8} | {cum_stride:<10.0f} | {r_field:<15.0f}")
+
+# 4. Demonstrate Effective Receptive Field (ERF) Gaussian concentration
+# Convolve a delta impulse through multiple 1D smoothing passes
+impulse = np.zeros(33, dtype=np.float32)
+impulse[16] = 1.0  # Center unit
+filter_weights = np.array([0.25, 0.5, 0.25], dtype=np.float32)
+
+erf = impulse.copy()
+for _ in range(8):  # 8 convolution layers
+    erf = np.convolve(erf, filter_weights, mode='same')
+
+print(f"\nERF impulse response across 33 input pixels after 8 layers:")
+print(f"Center pixel response:        {erf[16]:.4f} (Peak)")
+print(f"+/- 2 pixels from center:     {erf[18]:.4f}")
+print(f"+/- 5 pixels from center:     {erf[21]:.4f}")
+print(f"+/- 10 pixels from center:    {erf[26]:.6f} (Decayed toward zero)")
+print("Verified: Effective Receptive Field concentrates as a central Gaussian bell curve!")`,
+  quiz: [
+    {
+      q: r`Why does modern CNN design favour stacking multiple $3 \times 3$ convolutions rather than using a single large $7 \times 7$ convolution?`,
+      o: [
+        r`Three stacked $3 \times 3$ convolutions achieve the same $7 \times 7$ receptive field while using $27$ parameters ($3 \times 3^2$) instead of $49$ ($7^2$), incorporating three non-linear activations instead of one`,
+        r`Because $7 \times 7$ convolutions cannot be executed on GPU hardware`,
+        r`Because larger kernels cannot be trained using gradient descent`,
+        r`Because $3 \times 3$ kernels eliminate the need for backpropagation`,
+      ],
+      a: 0,
+      why: r`Stacking three $3 \times 3$ convolutions provides a $(1 + 2 + 2 + 2) = 7$ receptive field. It reduces parameter count from $49C^2$ to $27C^2$ (a $45\%$ savings) while adding three non-linear activation layers, increasing representational expressiveness.`,
+    },
+    {
+      q: r`In a convolutional network, what is the role of cumulative stride $S_{l-1}$ in expanding the theoretical receptive field $r_l = r_{l-1} + (k_l - 1) \cdot S_{l-1}$?`,
+      o: [
+        r`It scales the effective reach of kernel $k_l$ by the total downsampling factor accumulated by all preceding layers`,
+        r`It normalises the weights of the convolutional filters to sum to 1`,
+        r`It counts the number of training epochs elapsed`,
+        r`It restricts the gradient flow during backward passes`,
+      ],
+      a: 0,
+      why: r`When preceding layers have downsampled the image by a cumulative factor $S_{l-1}$, moving one step in the current feature map corresponds to a physical jump of $S_{l-1}$ pixels in the original input image.`,
+    },
+    {
+      q: r`What critical difference distinguishes the Effective Receptive Field (ERF) from the theoretical receptive field?`,
+      o: [
+        r`The theoretical receptive field defines the maximal geometric bounding box, but the actual gradient impact decays as a 2D Gaussian, heavily concentrating influence at the central pixels`,
+        r`The ERF is always rectangular, while the theoretical receptive field is triangular`,
+        r`The theoretical receptive field shrinks during training, while the ERF grows infinitely`,
+        r`The ERF applies only to colour images, while the theoretical receptive field applies to greyscale`,
+      ],
+      a: 0,
+      why: r`Due to the compounding of weighted convolutions, central pixels participate in vastly more forward and backward calculation paths than peripheral pixels. Consequently, the gradient sensitivity follows a Gaussian distribution centered on the neuron.`,
+    },
+    {
+      q: r`Why did modern CNN architectures replace large fully connected classification layers with Global Average Pooling (GAP)?`,
+      o: [
+        r`Global Average Pooling reduces each $H \times W$ feature map to a single average scalar, eliminating millions of parameter weights and preventing overfitting`,
+        r`Global Average Pooling doubles the spatial resolution of the image`,
+        r`Global Average Pooling converts floating-point weights into 8-bit integers`,
+        r`Global Average Pooling allows the network to output audio signals`,
+      ],
+      a: 0,
+      why: r`Flattening deep feature maps into dense linear layers created tens of millions of parameters in early models like AlexNet and VGG. Global Average Pooling averages spatial dimensions completely, requiring zero parameters while acting as a spatial regulariser.`,
+    },
+  ],
+  usedBy: ['cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'one-stage-detectors-ssd-and-yolo'],
+  prereq: ['convolutional_neural_networks', 'pixels-channels-and-colour-spaces'],
+  related: ['cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'convolutional_neural_networks', 'residual-networks-and-skip-connections'],
+  keywords: 'receptive field stride pooling max pooling average pooling global average pooling cnn effective receptive field erf dilated convolution atrous padding',
+},
+
+  // ------------------------------------------------------------------ Lesson 9
+{
+  id: 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet',
+  short: 'CNN Architecture Tour',
+  title: 'CNN architecture tour: LeNet to ResNet to EfficientNet',
+  task: 'concepts',
+  module: 'CNN foundations',
+  level: 2,
+  minutes: 18,
+  noLab: true,
+  summary: r`The evolution of convolutional neural networks charts a thirty-year trajectory of overcoming vanishing gradients, parameter explosion, and computational bottlenecks. From Yann LeCun's LeNet-5 (1998) and Alex Krizhevsky's AlexNet (2012) to VGG's modular $3 \times 3$ factorisation, GoogLeNet's multi-scale Inception branches, He et al.'s revolutionary ResNet identity skip connections ($\mathbf{x} + \mathcal{F}(\mathbf{x})$), DenseNet's dense connectivity, and Tan & Le's EfficientNet compound scaling ($d, w, r$), this architectural progression reveals the fundamental design principles that power deep visual representation learning.`,
+  lead: r`In 1998, a state-of-the-art convolutional network could process $32 \times 32$ greyscale cheques using 60,000 parameters. By 2012, AlexNet ignited the modern deep learning revolution by classifying 1.2 million high-resolution ImageNet photographs across dual GPUs using 60 million parameters. Yet training networks beyond twenty layers caused performance to degrade rapidly—not from overfitting, but from vanishing gradients. Overcoming this barrier demanded a series of architectural breakthroughs that reshaped how representations flow through deep computation graphs.`,
+  intuition: [
+    r`The pioneer era: LeNet and AlexNet: Yann LeCun established the core paradigm of modern computer vision in LeNet-5: alternating convolutional layers (for translation-equivariant local feature extraction) and subsampling layers (for spatial pooling), followed by fully connected classification heads. In 2012, AlexNet scaled this blueprint to ImageNet by replacing sigmoid non-linearities with Rectified Linear Units (ReLU) to avert gradient saturation, employing Dropout to combat overfitting, and implementing parallel split-convolution layers across two GPUs. AlexNet slashed the ImageNet top-5 error rate from $26\%$ to $16\%$, proving the viability of deep learning.`,
+    r`Factorisation and multi-scale branching: VGG and Inception: VGG (2014) introduced mathematical elegance and architectural discipline: replacing heterogeneous filter sizes ($11 \times 11, 5 \times 5$) with homogeneous stacks of $3 \times 3$ convolutions. VGG demonstrated that depth itself is a critical dimension of representational power. Simultaneously, GoogLeNet (Inception-v1) tackled computational efficiency by processing features across parallel multi-scale branches ($1 \times 1, 3 \times 3, 5 \times 5$, and max-pooling), introducing $1 \times 1$ "bottleneck" convolutions to project channel dimensions down prior to expensive spatial convolutions.`,
+    r`The residual revolution: ResNet and DenseNet: As researchers tried stacking VGG layers to 30 or 50 tiers, training error degraded—a fundamental optimisation failure. In 2015, Kaiming He et al. introduced ResNet (Residual Networks), transforming the layer learning objective from fitting an underlying mapping $\mathcal{H}(\mathbf{x})$ directly to fitting a residual function $\mathcal{F}(\mathbf{x}) = \mathcal{H}(\mathbf{x}) - \mathbf{x}$. By adding identity shortcut skip connections $\mathbf{y} = \mathbf{x} + \mathcal{F}(\mathbf{x})$, gradients can flow unimpeded directly from the loss back to early layers via the identity operator. ResNet trained models of 152 layers—and even 1,202 layers—winning ImageNet with a superhuman $3.57\%$ error rate. DenseNet pushed this logic further by concatenating all preceding feature maps directly into every subsequent layer.`,
+    r`Principled scaling: EfficientNet: After ResNet, practitioners scaled networks arbitrarily by making them deeper (more layers), wider (more channels), or higher resolution (larger input images). In 2019, Mingxing Tan and Quoc Le demonstrated that scaling only one dimension yields diminishing returns because receptive fields, channel capacities, and spatial pixel details must balance. EfficientNet introduced "compound scaling": using a compound coefficient $\phi$ to scale depth, width, and resolution simultaneously via fixed power ratios ($\alpha^\phi, \beta^\phi, \gamma^\phi$). Paired with lightweight inverted residual bottleneck blocks (MBConv), EfficientNet achieved state-of-the-art accuracy with up to $8.4\times$ fewer parameters and $6.1\times$ fewer FLOPs than previous architectures.`,
+  ],
+  analogy: r`Think of designing a deep transport railway network across a vast continent. LeNet built the first small regional tram line. AlexNet proved that an industrial steam locomotive could traverse massive mountain ranges, though it burned enormous coal and belched smoke (millions of dense fully connected weights). VGG standardised the track gauges using uniform steel segments ($3 \times 3$ blocks), proving that longer trains carry more cargo. ResNet's identity skip connection was the invention of express bypass tracks: rather than forcing every single package to be unloaded and reloaded at every tiny local village station (where goods get lost or delayed by gradient degradation), express bypass tracks allow trains to shoot uninterrupted across hundreds of kilometres directly to destination terminals, dropping off local freight along the way. EfficientNet acts like modern transport logistics optimisation: rather than blindly making trains twice as long without upgrading station platforms or track width, it balances train length, carriage width, and track gauge in mathematical harmony.`,
+  steps: [
+    {
+      title: r`Homogeneous 3x3 filter stacking (VGG)`,
+      desc: r`Replace large heterogeneous kernels with stacks of uniform 3x3 convolutions.`,
+      detail: r`Two stacked $3 \times 3$ convolutions have an identical receptive field to a $5 \times 5$ filter but require $2 \times (3^2 C^2) = 18 C^2$ parameters compared to $25 C^2$ parameters (a $28\%$ parameter reduction) while inserting two non-linear activations. VGG doubled channel counts ($64 \to 128 \to 256 \to 512$) after each $2 \times 2$ max-pooling downsampling stage.`,
+    },
+    {
+      title: r`Channel dimensionality reduction via 1x1 convolutions (Inception)`,
+      desc: r`Use 1x1 projection layers to throttle channel counts before spatial filtering.`,
+      detail: r`A $5 \times 5$ convolution operating on 256 input channels produces immense FLOP counts. Inserting a $1 \times 1$ convolution that projects 256 channels down to 32 channels before the $5 \times 5$ filter slashes computational complexity by over $80\%$, enabling multi-scale feature extraction within a manageable parameter budget.`,
+    },
+    {
+      title: r`Implement identity shortcut skip connections (ResNet)`,
+      desc: r`Reformulate network layers to learn residual perturbations over an identity mapping.`,
+      detail: r`Add an identity skip path $\mathbf{y} = \mathbf{x} + \mathcal{F}(\mathbf{x})$. If a layer's weights decay to zero during training, the layer trivially defaults to the identity operator $\mathbf{y} = \mathbf{x}$, preventing deep network degradation. When spatial dimensions or channel counts change during striding, apply a $1 \times 1$ projection shortcut $W_s \mathbf{x}$ to match tensor dimensions.`,
+    },
+    {
+      title: r`Employ inverted residual bottleneck blocks (MobileNet / EfficientNet)`,
+      desc: r`Expand channels internally and filter with depthwise separable convolutions.`,
+      detail: r`Traditional ResNet bottlenecks compress channels ($256 \to 64 \to 256$). Inverted residual blocks (MBConv) reverse this: they project channels up by an expansion factor ($64 \to 384$), execute a lightweight depthwise convolution ($3 \times 3$ per channel independently), and project back down to low-dimensional linear bottlenecks, combining high representational capacity with minimal memory footprints.`,
+    },
+    {
+      title: r`Apply compound scaling across depth, width, and resolution`,
+      desc: r`Scale network depth, channel width, and input image resolution in balanced mathematical harmony.`,
+      detail: r`Scale depth $d = \alpha^\phi$, width $w = \beta^\phi$, and resolution $r = \gamma^\phi$ subject to $\alpha \cdot \beta^2 \cdot \gamma^2 \approx 2$, where $\phi$ is a global user-specified scaling coefficient governed by available compute resources.`,
+    },
+  ],
+  math: [
+    {
+      h: r`ResNet residual block formulation and gradient highway`,
+      tex: r`\mathbf{y} = \mathcal{F}(\mathbf{x}, \{W_i\}) + \mathbf{x} \implies \frac{\partial \mathcal{E}}{\partial \mathbf{x}} = \frac{\partial \mathcal{E}}{\partial \mathbf{y}} \left(\frac{\partial \mathcal{F}}{\partial \mathbf{x}} + I\right)`,
+      p: r`The gradient of the loss $\mathcal{E}$ with respect to input $\mathbf{x}$ contains the additive term $\frac{\partial \mathcal{E}}{\partial \mathbf{y}} \cdot I$. Even if the Jacobian term $\frac{\partial \mathcal{F}}{\partial \mathbf{x}}$ vanishes or approaches zero across dozens of layers, the identity operator $I$ guarantees that gradients flow cleanly back to shallow layers without vanishing.`,
+    },
+    {
+      h: r`Depthwise separable convolution parameter reduction`,
+      tex: r`\frac{|\Theta_{\text{depthwise-separable}}|}{|\Theta_{\text{standard}}|} = \frac{k^2 \cdot C_{\text{in}} + C_{\text{in}} \cdot C_{\text{out}}}{k^2 \cdot C_{\text{in}} \cdot C_{\text{out}}} = \frac{1}{C_{\text{out}}} + \frac{1}{k^2}`,
+      p: r`A standard convolution requires $k^2 \cdot C_{\text{in}} \cdot C_{\text{out}}$ weights. Factoring into a depthwise convolution ($k^2 \cdot C_{\text{in}}$) followed by a $1 \times 1$ pointwise projection ($C_{\text{in}} \cdot C_{\text{out}}$) reduces computational cost and parameter storage by approximately $8\times$ to $9\times$ for $3 \times 3$ kernels.`,
+    },
+    {
+      h: r`EfficientNet compound scaling equations`,
+      tex: r`\text{Depth: } d = \alpha^\phi, \quad \text{Width: } w = \beta^\phi, \quad \text{Resolution: } r = \gamma^\phi, \quad \text{s.t. } \alpha \beta^2 \gamma^2 \approx 2, \; \alpha \ge 1, \beta \ge 1, \gamma \ge 1`,
+      p: r`Doubling network depth doubles FLOPs ($d \propto \text{FLOP}$), whereas doubling width or resolution quadruples FLOPs ($w^2, r^2 \propto \text{FLOP}$). Constraining $\alpha \beta^2 \gamma^2 \approx 2$ ensures that for any integer compound coefficient $\phi$, total computational requirements scale predictably as $2^\phi$.`,
+    },
+  ],
+  keyPoints: [
+    r`LeNet and AlexNet established the foundational paradigm of convolutions, pooling, and non-linearities for visual recognition.`,
+    r`VGG demonstrated that stacks of uniform $3 \times 3$ convolutions reduce parameter counts while increasing network depth and non-linear expressiveness.`,
+    r`ResNet introduced identity shortcut connections ($\mathbf{x} + \mathcal{F}(\mathbf{x})$), creating gradient highways that solved the degradation problem for ultra-deep networks.`,
+    r`Depthwise separable convolutions decouple spatial filtering from cross-channel combination, slashing FLOPs by over $80\%$.`,
+    r`EfficientNet compound scaling balances depth, width, and input image resolution simultaneously, achieving superior accuracy with fewer parameters.`,
+  ],
+  pitfalls: [
+    r`Blindly scaling a single architectural dimension: Making a network excessively deep without increasing width or image resolution leads to diminishing returns and early feature saturation.`,
+    r`Placing activation non-linearities on the identity skip connection path: Placing ReLU or batch normalisation directly onto the identity shortcut breaks the clean gradient highway, re-introducing gradient degradation in ultra-deep networks.`,
+    r`Over-parameterising fully connected classifier heads: Retaining AlexNet/VGG-style dense linear heads ($4096 \times 4096$) wastes hundreds of megabytes of memory; always terminate modern convolutional backbones with Global Average Pooling.`,
+    r`Mismatching channel dimensions in residual addition: Adding $\mathcal{F}(\mathbf{x}) + \mathbf{x}$ requires both tensors to have identical spatial shapes and channel counts; when downsampling, apply a strided $1 \times 1$ projection on the shortcut path.`,
+    r`Ignoring FLOP and memory latency divergence: Inverted bottleneck blocks reduce theoretical FLOPs dramatically, but high channel expansion factors can increase memory bandwidth traffic on resource-constrained edge hardware.`,
+  ],
+  code: r`import numpy as np
+
+# Comparative architectural parameter and FLOP analysis across generations
+# Consider an intermediate layer mapping 64 input channels to 128 output channels
+H, W = 28, 28
+c_in, c_out = 64, 128
+k = 3
+
+# 1. Standard Convolution (VGG-style: 3x3 conv)
+params_vgg = (k * k * c_in) * c_out
+flops_vgg = 2 * (k * k * c_in) * c_out * (H * W)
+
+# 2. ResNet Bottleneck block (1x1 down -> 3x3 spatial -> 1x1 up)
+c_bottleneck = 32
+params_resnet = (1 * 1 * c_in * c_bottleneck) + (k * k * c_bottleneck * c_bottleneck) + (1 * 1 * c_bottleneck * c_out)
+flops_resnet = 2 * params_resnet * (H * W)
+
+# 3. Depthwise Separable Conv (MobileNet / EfficientNet MBConv)
+# Depthwise 3x3 conv (per channel) + Pointwise 1x1 conv (cross channel)
+params_dw = (k * k * c_in)
+params_pw = (1 * 1 * c_in * c_out)
+params_mobilenet = params_dw + params_pw
+flops_mobilenet = 2 * (params_dw + params_pw) * (H * W)
+
+print(f"{'Architecture Style':<25} | {'Parameters':<12} | {'FLOPs (MFLOPs)':<15} | {'Rel Parameter Cost':<18}")
+print("-" * 75)
+print(f"{'VGG Standard (3x3)':<25} | {params_vgg:<12,d} | {flops_vgg / 1e6:<15.2f} | 100.0%")
+print(f"{'ResNet Bottleneck':<25} | {params_resnet:<12,d} | {flops_resnet / 1e6:<15.2f} | {params_resnet / params_vgg * 100:.1f}%")
+print(f"{'Depthwise Separable':<25} | {params_mobilenet:<12,d} | {flops_mobilenet / 1e6:<15.2f} | {params_mobilenet / params_vgg * 100:.1f}%\n")
+
+# 4. Demonstrate ResNet Identity Skip Connection forward pass in NumPy
+np.random.seed(42)
+x = np.random.randn(2, c_in, H, W).astype(np.float32)  # batch of 2
+
+# Simulated residual branch weights (initialized small)
+W_res = np.random.randn(c_in, c_in).astype(np.float32) * 0.01
+
+# Compute residual mapping F(x) = W @ x
+F_x = np.einsum('oi,bihw->bohw', W_res, x)
+
+# Add identity shortcut connection: y = F(x) + x
+y = F_x + x
+
+# Verify gradient highway: dy/dx = dF/dx + I
+diff_norm = np.linalg.norm(y - x) / np.linalg.norm(x)
+print(f"Residual branch relative perturbation: {diff_norm:.4f}")
+print("Verified: Identity skip connection preserves input signal when residual weights are small!")`,
+  quiz: [
+    {
+      q: r`Why did ResNet's identity skip connection ($\mathbf{y} = \mathcal{F}(\mathbf{x}) + \mathbf{x}$) resolve the vanishing gradient degradation problem in very deep networks?`,
+      o: [
+        r`The additive identity shortcut provides an uninterrupted gradient pathway ($\frac{\partial \mathcal{E}}{\partial \mathbf{y}} \cdot I$) back to early layers, preventing gradients from vanishing even across hundreds of layers`,
+        r`It removes all convolution operations from the computation graph`,
+        r`It quantises all activations into 8-bit integers`,
+        r`It forces the loss function to be strictly convex`,
+      ],
+      a: 0,
+      why: r`Because $\frac{\partial \mathbf{y}}{\partial \mathbf{x}} = \frac{\partial \mathcal{F}}{\partial \mathbf{x}} + I$, backpropagating gradients incorporates an additive identity term $I$. Even if the learned residual transformation has near-zero gradients, error signals flow unimpeded directly back through the identity highway.`,
+    },
+    {
+      q: r`What core insight guided VGG to replace large kernels ($11 \times 11, 7 \times 7$) with stacks of $3 \times 3$ convolutions?`,
+      o: [
+        r`Stacking two $3 \times 3$ kernels covers the same $5 \times 5$ spatial receptive field while using $28\%$ fewer parameters and incorporating two non-linear activations instead of one`,
+        r`Large kernels cannot be computed using floating-point operations`,
+        r`GPU memory caches only support matrix sizes that are multiples of three`,
+        r`Stacking $3 \times 3$ filters eliminates the need for zero-padding`,
+      ],
+      a: 0,
+      why: r`Stacking multiple $3 \times 3$ convolutions maintains receptive field coverage while dramatically reducing total weights ($2 \times 3^2 = 18$ vs $5^2 = 25$) and injecting additional non-linear activation functions that increase expressive power.`,
+    },
+    {
+      q: r`How does a depthwise separable convolution achieve substantial parameter reduction compared to a standard convolution?`,
+      o: [
+        r`By decoupling spatial filtering (depthwise convolution per channel) from cross-channel feature fusion ($1 \times 1$ pointwise convolution)`,
+        r`By discarding all odd-numbered feature channels during the forward pass`,
+        r`By converting all convolutional weights to binary values ($-1, +1$)`,
+        r`By computing fast Fourier transforms over downsampled spatial patches`,
+      ],
+      a: 0,
+      why: r`Standard convolutions filter spatial patterns and mix channels simultaneously ($k^2 C_{\text{in}} C_{\text{out}}$). Depthwise separable convolutions separate this into a depthwise spatial filter ($k^2 C_{\text{in}}$) followed by a $1 \times 1$ channel projection ($C_{\text{in}} C_{\text{out}}$), slashing parameters by roughly $k^2$ (8 to 9 times for $3 \times 3$).`,
+    },
+    {
+      q: r`What is the central premise behind EfficientNet's compound scaling principle?`,
+      o: [
+        r`Scaling depth, channel width, and input image resolution concurrently with fixed power coefficients yields superior accuracy and efficiency compared to scaling any single dimension in isolation`,
+        r`Networks should be made infinitely deep while keeping width fixed at 64 channels`,
+        r`Resolution should always be fixed at $224 \times 224$ pixels regardless of model size`,
+        r`Only the fully connected classification head should receive additional parameters`,
+      ],
+      a: 0,
+      why: r`Tan and Le proved that scaling depth, width, and resolution independently suffers from rapid diminishing returns. Compound scaling balances all three dimensions simultaneously based on available computational resources.`,
+    },
+  ],
+  usedBy: ['one-stage-detectors-ssd-and-yolo'],
+  prereq: ['receptive-field-stride-and-pooling', 'convolutional_neural_networks'],
+  related: ['residual-networks-and-skip-connections', 'receptive-field-stride-and-pooling', 'the-pytorch-training-loop'],
+  keywords: 'cnn architecture lenet alexnet vgg inception resnet densenet efficientnet residual skip connection depthwise separable compound scaling computer vision',
+},
+
+  // ------------------------------------------------------------------ Lesson 10
+{
+  id: 'iou-nms-and-map',
+  short: 'IoU, NMS & mAP',
+  title: 'IoU, NMS and mAP',
+  task: 'concepts',
+  module: 'Detection and segmentation',
+  level: 2,
+  minutes: 16,
+  noLab: true,
+  summary: r`Object detection extends image classification by predicting both categorical semantics and spatial bounding box coordinates for multiple targets across an image. Evaluating and post-processing object detector outputs depends on three foundational metrics and algorithms: Intersection over Union (IoU) measures geometric bounding box overlap $\frac{|A \cap B|}{|A \cup B|}$; Non-Maximum Suppression (NMS) eliminates redundant overlapping candidate proposals by iteratively suppressing lower-scoring boxes that exceed an IoU overlap threshold with the highest-confidence prediction; and mean Average Precision (mAP) integrates precision-recall curves across classes and IoU thresholds (such as mAP@0.5 and the COCO primary challenge metric mAP@[0.5:0.95]), rigorously penalising false alarms, missed targets, and duplicate detections.`,
+  lead: r`Unlike standard image classification, where a model outputs a single class label per photograph, object detection outputs a variable list of coordinates and confidence scores: "Dog at $[x_1, y_1, x_2, y_2]$ with $92\%$ confidence; Bicycle at $[x_3, y_3, x_4, y_4]$ with $87\%$ confidence." But how close does a predicted box need to be to count as a "hit"? How do you prevent a model from generating twenty slightly shifted boxes over a single cat? And how do you combine localization precision with classification recall into a single benchmark metric? The answers lie in IoU, NMS, and mAP.`,
+  intuition: [
+    r`Geometric overlap via Intersection over Union (IoU): A predicted bounding box rarely aligns with the ground-truth box down to the exact pixel. Intersection over Union (IoU), also known as the Jaccard Index, quantifies spatial overlap as the area of intersection divided by the area of union: $\text{IoU} = \frac{\text{Area}(B_p \cap B_{gt})}{\text{Area}(B_p \cup B_{gt})}$. IoU is scale-invariant: an overlap score of $0.70$ signifies the identical degree of geometric alignment whether evaluating a tiny pedestrian at distance or a massive freight truck filling the camera frame. An IoU of $1.0$ indicates perfect overlap; an IoU of $0.0$ indicates disjoint boxes.`,
+    r`Eliminating duplicates via Non-Maximum Suppression (NMS): Modern object detectors evaluate thousands of candidate anchor boxes across the spatial grid. A single physical object frequently triggers dozens of adjacent detector heads, producing a cluttered swarm of redundant bounding boxes. Non-Maximum Suppression prunes this crowd greedily: (1) Sort all candidate boxes descending by class confidence score. (2) Select the highest-scoring box $B_{\text{best}}$ and add it to the final detection list. (3) Compare $B_{\text{best}}$ against every remaining box; any box whose IoU with $B_{\text{best}}$ exceeds an overlap threshold $\tau_{\text{NMS}}$ (typically $0.45$ to $0.60$) is suppressed and permanently discarded. (4) Repeat until no candidates remain.`,
+    r`Precision, recall, and the detection matching protocol: To evaluate a detector, predicted boxes must be matched against ground truth. Predictions are sorted by confidence and matched greedily to ground-truth objects. A prediction is classified as a True Positive (TP) if its IoU with an unmatched ground-truth box exceeds an evaluation threshold (e.g. $\text{IoU} \ge 0.50$). If a prediction matches an already-claimed ground-truth object, or if its IoU falls below the threshold, it is labelled a False Positive (FP). Ground-truth objects that receive no matching prediction are False Negatives (FN). Sweeping the confidence threshold from $1.0$ down to $0.0$ traces out a Precision-Recall curve.`,
+    r`From Average Precision (AP) to mAP: Precision-Recall curves are jagged because precision can oscillate as recall increases. Average Precision (AP) computes the area under the interpolated Precision-Recall curve, where the interpolated precision at recall $r$ is taken as the maximum precision found for any recall $r' \ge r$. The mean Average Precision (mAP) averages AP scores across all semantic categories. The modern COCO evaluation benchmark averages mAP across ten IoU overlap thresholds spanning $0.50$ to $0.95$ in steps of $0.05$ (mAP@[0.5:0.95]), demanding both coarse detection capability and sub-pixel localization accuracy.`,
+  ],
+  analogy: r`Imagine an archery competition. Calculating IoU is like measuring how much of your arrow's broad arrowhead overlaps the bullseye ring painted on the target: if your arrow clips the edge, the overlap is 10%; if it strikes dead centre, the overlap is 90%. Non-Maximum Suppression is like a scoring referee resolving an archer who fires a volley of ten tightly grouped arrows at the same bullseye: the referee awards points for the single best shot in the cluster and pulls the other nine arrows out of the board so they don't count as ten separate bullseyes. Mean Average Precision (mAP) is like the tournament decathlon leaderboard: it scores how consistently an archer hits targets as distance increases, averaging performance across different bow disciplines (classes) and across both lenient target rings (IoU 0.5) and strict pin-point bullseyes (IoU 0.95).`,
+  steps: [
+    {
+      title: r`Compute box intersection and union coordinates`,
+      desc: r`Calculate overlap area between predicted and ground-truth bounding box tensors.`,
+      detail: r`Represent bounding boxes as $[x_1, y_1, x_2, y_2]$ where $(x_1, y_1)$ is top-left and $(x_2, y_2)$ is bottom-right. The intersection box coordinates are $x_1^I = \max(x_1^A, x_1^B)$, $y_1^I = \max(y_1^A, y_1^B)$, $x_2^I = \min(x_2^A, x_2^B)$, and $y_2^I = \min(y_2^A, y_2^B)$. The intersection area is $\max(0, x_2^I - x_1^I) \times \max(0, y_2^I - y_1^I)$. Union area is $\operatorname{Area}(A) + \operatorname{Area}(B) - \operatorname{Area}(\text{Intersection})$.`,
+    },
+    {
+      title: r`Filter background predictions via confidence thresholding`,
+      desc: r`Discard candidate boxes with low class probability scores before running NMS.`,
+      detail: r`Set a minimum confidence score cutoff (e.g. $p_{\text{score}} \ge 0.05$ during evaluation, or $\ge 0.30$ during live inference) to strip out tens of thousands of background anchors, accelerating subsequent NMS processing.`,
+    },
+    {
+      title: r`Execute greedy Non-Maximum Suppression (NMS)`,
+      desc: r`Iteratively prune redundant overlapping detections for each object class independently.`,
+      detail: r`For each semantic class: sort surviving candidate boxes descending by score. Pop the top box $B_{\text{top}}$, add it to the output list, and compute IoU with all remaining candidate boxes. Discard all candidate boxes where $\operatorname{IoU}(B_{\text{top}}, B_i) > \tau_{\text{NMS}}$ (typically $\tau_{\text{NMS}} = 0.5$). Repeat until the candidate pool is exhausted.`,
+    },
+    {
+      title: r`Match predictions to ground-truth objects`,
+      desc: r`Classify detections as True Positives or False Positives across ranked confidence thresholds.`,
+      detail: r`For an evaluation IoU threshold (e.g. $0.50$): sort all dataset predictions descending by confidence. For each prediction, find the ground-truth box of the same class with the highest IoU. If $\operatorname{IoU} \ge \tau$ and that ground truth has not yet been matched, flag the prediction as a True Positive (TP) and mark the ground truth as matched. Otherwise, flag the prediction as a False Positive (FP).`,
+    },
+    {
+      title: r`Calculate interpolated Average Precision (AP) and mAP`,
+      desc: r`Integrate the precision-recall curve across categories and overlap thresholds.`,
+      detail: r`Compute cumulative TP and FP counts to generate recall $R = \frac{\text{cumTP}}{N_{\text{total\_gt}}}$ and precision $P = \frac{\text{cumTP}}{\text{cumTP} + \text{cumFP}}$. Compute interpolated precision $P_{\text{interp}}(r) = \max_{r' \ge r} P(r')$ to eliminate curve oscillations. Integrate the area under the curve to yield class AP. Average across all classes to compute mAP.`,
+    },
+  ],
+  math: [
+    {
+      h: r`Intersection over Union (Jaccard Index)`,
+      tex: r`\operatorname{IoU}(A, B) = \frac{|A \cap B|}{|A \cup B|} = \frac{|A \cap B|}{|A| + |B| - |A \cap B|} \in [0, 1]`,
+      p: r`Here $|A|$ and $|B|$ denote the 2D spatial areas of bounding boxes $A$ and $B$. IoU is strictly bounded between $0$ (completely disjoint boxes) and $1$ (exact geometric identity).`,
+    },
+    {
+      h: r`Precision, Recall, and Interpolated Precision`,
+      tex: r`P = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad R = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad P_{\text{interp}}(r) = \max_{r' \ge r} P(r')`,
+      p: r`Precision measures the proportion of predicted detections that are authentic targets. Recall measures the proportion of total ground-truth targets successfully found. Replacing $P(r)$ with $P_{\text{interp}}(r)$ creates a monotonically non-increasing envelope that eliminates noise spikes from individual prediction rankings.`,
+    },
+    {
+      h: r`COCO mean Average Precision (mAP@[0.50:0.95])`,
+      tex: r`\text{mAP} = \frac{1}{|C|} \sum_{c \in C} \left( \frac{1}{10} \sum_{\tau \in \{0.50, 0.55, \dots, 0.95\}} \text{AP}_{c, \tau} \right)`,
+      p: r`The standard MS COCO benchmark computes Average Precision for each class $c \in C$ across ten IoU match thresholds $\tau \in [0.50, 0.95]$ in increments of $0.05$. Averaging across all IoU levels and classes yields the primary challenge metric mAP.`,
+    },
+  ],
+  keyPoints: [
+    r`IoU measures scale-invariant spatial overlap as the ratio of intersection area to union area.`,
+    r`Non-Maximum Suppression (NMS) greedily eliminates redundant overlapping candidate boxes based on confidence rankings and IoU overlap thresholds.`,
+    r`In object detection evaluation, each ground-truth object can be matched at most once; subsequent duplicate detections are penalised as False Positives.`,
+    r`Average Precision (AP) measures the area under the interpolated Precision-Recall curve for a single semantic class.`,
+    r`COCO mAP averages AP across multiple IoU thresholds ($0.50$ to $0.95$) and all object classes, rewarding precise bounding box localization.`,
+  ],
+  pitfalls: [
+    r`Double-counting ground truth matches: Allowing multiple predictions to claim the same ground-truth object artificially inflates precision; subsequent overlapping predictions must be counted as False Positives.`,
+    r`Setting NMS threshold too low: Setting $\tau_{\text{NMS}} < 0.30$ causes NMS to inadvertently suppress distinct adjacent objects in crowded scenes (such as people standing close together in a queue).`,
+    r`Running class-agnostic NMS when objects can overlap: Applying NMS across all classes simultaneously can cause a high-confidence "person" prediction to suppress a valid overlapping "bicycle" prediction; NMS should normally be evaluated per-class.`,
+    r`Evaluating mAP without checking confidence ranking: Failing to sort predictions descending by confidence before assigning TP and FP labels completely invalidates the Precision-Recall curve.`,
+    r`Assuming IoU is differentiable when disjoint: Standard IoU gradient is zero whenever boxes do not overlap ($\text{IoU}=0$), which prevents gradient flow during training; modern detectors use generalised IoU (GIoU), Distance-IoU (DIoU), or Complete-IoU (CIoU) loss.`,
+  ],
+  code: r`import numpy as np
+
+# Vectorized Intersection over Union (IoU) calculation
+def compute_iou(box1, boxes):
+    # box1: [x1, y1, x2, y2]
+    # boxes: [[x1, y1, x2, y2], ...] shape (N, 4)
+    x1 = np.maximum(box1[0], boxes[:, 0])
+    y1 = np.maximum(box1[1], boxes[:, 1])
+    x2 = np.minimum(box1[2], boxes[:, 2])
+    y2 = np.minimum(box1[3], boxes[:, 3])
+    
+    inter_w = np.maximum(0.0, x2 - x1)
+    inter_h = np.maximum(0.0, y2 - y1)
+    inter_area = inter_w * inter_h
+    
+    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    area2 = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    union_area = area1 + area2 - inter_area
+    
+    return inter_area / np.maximum(union_area, 1e-6)
+
+# 1. Greedy Non-Maximum Suppression (NMS)
+def nms(boxes, scores, iou_threshold=0.5):
+    order = np.argsort(scores)[::-1]
+    keep = []
+    
+    while len(order) > 0:
+        idx = order[0]
+        keep.append(idx)
+        if len(order) == 1:
+            break
+            
+        ious = compute_iou(boxes[idx], boxes[order[1:]])
+        # Retain only boxes whose IoU is below the suppression threshold
+        survivors = np.where(ious <= iou_threshold)[0]
+        order = order[survivors + 1]
+        
+    return keep
+
+# Simulate 5 candidate boxes (e.g. 3 overlapping boxes on one object, 2 on another)
+candidate_boxes = np.array([
+    [50.0,  50.0,  150.0, 150.0],  # Box A (top confidence: 0.95)
+    [52.0,  48.0,  155.0, 152.0],  # Box A overlap 1 (conf: 0.88)
+    [48.0,  55.0,  145.0, 148.0],  # Box A overlap 2 (conf: 0.72)
+    [200.0, 200.0, 300.0, 300.0],  # Box B (top confidence: 0.91)
+    [205.0, 195.0, 310.0, 305.0],  # Box B overlap 1 (conf: 0.65)
+], dtype=np.float32)
+
+candidate_scores = np.array([0.95, 0.88, 0.72, 0.91, 0.65], dtype=np.float32)
+
+kept_indices = nms(candidate_boxes, candidate_scores, iou_threshold=0.5)
+print(f"Total candidate proposals: {len(candidate_boxes)}")
+print(f"Indices kept after NMS:    {kept_indices}")
+print(f"Selected boxes (one per true target):\n{candidate_boxes[kept_indices]}")
+
+# 2. Precision-Recall curve and 11-point interpolated Average Precision (AP)
+# Simulated matching results (sorted by confidence)
+tp = np.array([1, 1, 0, 1, 0, 1, 0, 0, 1, 0], dtype=np.float32)
+fp = np.array([0, 0, 1, 0, 1, 0, 1, 1, 0, 1], dtype=np.float32)
+num_ground_truth = 6
+
+cum_tp = np.cumsum(tp)
+cum_fp = np.cumsum(fp)
+recalls = cum_tp / num_ground_truth
+precisions = cum_tp / (cum_tp + cum_fp)
+
+# 11-point interpolation (recall thresholds: 0.0, 0.1, ..., 1.0)
+ap_11 = 0.0
+for r_thresh in np.linspace(0.0, 1.0, 11):
+    prec_candidates = precisions[recalls >= r_thresh]
+    p_interp = np.max(prec_candidates) if len(prec_candidates) > 0 else 0.0
+    ap_11 += p_interp / 11.0
+
+print(f"\nDetection AP evaluation (11-point interpolated):")
+print(f"Total True Positives found: {cum_tp[-1]:.0f} / {num_ground_truth} GT targets")
+print(f"Final Recall:               {recalls[-1]:.3f}")
+print(f"Calculated AP@0.5:          {ap_11:.4f}")`,
+  quiz: [
+    {
+      q: r`Why is Intersection over Union (IoU) preferred over absolute pixel Euclidean distance when measuring bounding box localization error?`,
+      o: [
+        r`IoU is scale-invariant, providing a consistent relative overlap metric for both small distant targets and large foreground objects`,
+        r`IoU requires only integer additions without division`,
+        r`IoU can only be evaluated on square bounding boxes`,
+        r`IoU converts bounding box coordinates into RGB pixel values`,
+      ],
+      a: 0,
+      why: r`A 10-pixel error on a 20-pixel object represents a catastrophic $50\%$ displacement, whereas a 10-pixel error on a 500-pixel object is negligible. Dividing intersection by union normalises for target scale, providing a scale-invariant metric in $[0, 1]$.`,
+    },
+    {
+      q: r`In Non-Maximum Suppression (NMS), why are candidate boxes sorted descending by confidence score before evaluating overlap?`,
+      o: [
+        r`To ensure that the most confident prediction is retained first as the anchor for suppressing redundant overlapping proposals`,
+        r`To reduce the number of memory bytes consumed by the GPU`,
+        r`To convert bounding box coordinates from floats to integers`,
+        r`To verify that the model has converged during backpropagation`,
+      ],
+      a: 0,
+      why: r`Greedy NMS works by selecting the highest-confidence prediction as the primary reference box for a detected object and then pruning all lower-scoring candidate boxes that overlap significantly with it.`,
+    },
+    {
+      q: r`When evaluating detections against ground truth to construct a Precision-Recall curve, what happens if two predicted boxes both overlap a single ground-truth object above the IoU threshold?`,
+      o: [
+        r`The higher-confidence prediction is credited as a True Positive (TP), and the second duplicate prediction is classified as a False Positive (FP)`,
+        r`Both predictions are credited as True Positives, doubling the recall score`,
+        r`Both predictions are disqualified and discarded from the evaluation`,
+        r`The ground-truth box is duplicated in memory`,
+      ],
+      a: 0,
+      why: r`Each ground-truth object can be matched at most once. The first (highest-scoring) matching prediction claims the True Positive; any subsequent duplicate predictions for that same object are penalised as False Positives to deter duplicate clutter.`,
+    },
+    {
+      q: r`How does the primary COCO benchmark metric (mAP@[0.50:0.95]) differ from the classical PASCAL VOC metric (mAP@0.50)?`,
+      o: [
+        r`COCO averages AP across ten IoU thresholds from $0.50$ to $0.95$ in steps of $0.05$, rewarding detectors that achieve precise boundary alignment rather than merely coarse localization`,
+        r`COCO evaluates only grayscale images`,
+        r`COCO excludes False Positives from the score calculation`,
+        r`COCO uses F1 score rather than precision and recall`,
+      ],
+      a: 0,
+      why: r`While PASCAL VOC accepted any detection with $\text{IoU} \ge 0.50$, the COCO benchmark averages across $0.50, 0.55, \dots, 0.95$. A detector with loose, sloppy boxes scores poorly under COCO mAP, pushing models to predict tight, exact boundaries.`,
+    },
+  ],
+  usedBy: ['one-stage-detectors-ssd-and-yolo'],
+  prereq: ['convolutional_neural_networks', 'pixels-channels-and-colour-spaces'],
+  related: ['one-stage-detectors-ssd-and-yolo', 'precision-recall-f1', 'confusion-matrix'],
+  keywords: 'iou intersection over union nms non maximum suppression map mean average precision object detection bounding box coco pascal voc precision recall',
+},
+
+  // ------------------------------------------------------------------ Lesson 11
+{
+  id: 'one-stage-detectors-ssd-and-yolo',
+  short: 'SSD & YOLO',
+  title: 'One-stage detectors: SSD and YOLO',
+  task: 'concepts',
+  module: 'Detection and segmentation',
+  level: 2,
+  minutes: 18,
+  noLab: true,
+  summary: r`While two-stage detectors (such as Faster R-CNN) separate region proposal generation from bounding box classification, one-stage detectors frame object detection as a unified, single-pass dense regression problem directly from raw pixels to bounding boxes and class probabilities. Joseph Redmon's YOLO (You Only Look Once) pioneered high-frame-rate real-time detection on a spatial grid, while Wei Liu's SSD (Single Shot MultiBox Detector) introduced multi-scale feature pyramid heads with pre-defined multi-aspect anchor boxes. Modern one-stage detectors combine multi-scale Feature Pyramid Networks (FPN), anchor-free regression, and Tsung-Yi Lin's Focal Loss to conquer severe foreground-background class imbalance and match two-stage accuracy at blazing inference speeds.`,
+  lead: r`Early deep object detection architectures were complex, multi-stage pipelines: first, a Region Proposal Network (RPN) hypothesised thousands of candidate object regions; next, ROI-pooling cropped each proposal; and finally, fully connected networks classified each crop and refined coordinates. This two-pass process achieved high accuracy but crawled at 5 to 7 frames per second—far too slow for autonomous driving, drone navigation, or robotics. In 2015, YOLO shattered this complexity by asking a provocative question: why not treat detection as a single regression problem, passing the image through a convolutional network once and reading off all detections simultaneously at 45 frames per second?`,
+  intuition: [
+    r`The unified grid paradigm (YOLOv1): Joseph Redmon framed detection as a single neural forward pass. YOLO divides the input image into an $S \times S$ grid (e.g. $7 \times 7$). If an object's centre falls within a specific grid cell, that cell is responsible for detecting it. Each cell predicts $B$ bounding box offsets $(x, y, w, h)$, an objectness confidence score $\operatorname{Pr}(\text{Object}) \cdot \operatorname{IoU}$, and conditional class probabilities $\operatorname{Pr}(\text{Class}_i \mid \text{Object})$. By processing the entire image holistically in one shot, YOLO encodes global contextual awareness, drastically reducing background false positive detections compared to sliding-window or region-proposal approaches.`,
+    r`Multi-scale detection heads and anchor boxes (SSD): A key limitation of early YOLO was poor localization on small objects: a single coarse $7 \times 7$ grid cannot resolve multiple tiny birds clustered together. In 2016, SSD (Single Shot MultiBox Detector) resolved this by attaching detection heads to multiple intermediate feature maps of varying spatial resolutions throughout the convolutional backbone. Deep low-resolution layers ($10 \times 10$) detect large objects using expansive receptive fields, while shallow high-resolution layers ($38 \times 38$) detect tiny objects. Furthermore, SSD placed pre-defined "anchor boxes" (or default priors) of various aspect ratios ($1:1, 1:2, 2:1, 1:3, 3:1$) at each grid location, predicting relative offset residuals $(\Delta x, \Delta y, \Delta w, \Delta h)$ rather than absolute coordinates.`,
+    r`The extreme foreground-background class imbalance problem: While two-stage detectors filter out 99% of empty background candidates during the initial RPN proposal stage, a one-stage detector evaluates hundreds of thousands of candidate locations across its spatial pyramid simultaneously. Over $99.9\%$ of these dense anchor locations contain empty background. In standard cross-entropy loss, the overwhelming accumulation of easy background negative gradients drowns out the rare positive target gradients, crippling detector training.`,
+    r`Focal Loss and the modern one-stage convergence: In 2017, Lin et al. introduced RetinaNet and Focal Loss: $\operatorname{FL}(p_t) = -\alpha_t (1 - p_t)^\gamma \log(p_t)$. By inserting the modulating factor $(1 - p_t)^\gamma$ (with focusing parameter $\gamma = 2$), the loss of well-classified easy examples ($p_t \ge 0.9$) is down-weighted by a factor of $100\times$, focusing gradient updates predominantly on hard, ambiguous object candidates. Coupled with Path Aggregation Feature Pyramids (PANet) and anchor-free centre-point regression, modern one-stage detectors (such as YOLOv8 and YOLOv10) achieve both real-time execution (>100 FPS) and state-of-the-art mAP, rendering two-stage detectors obsolete for most production computer vision applications.`,
+  ],
+  analogy: r`Think of inspecting a crowded international airport baggage terminal for suspicious luggage. A two-stage detector (Faster R-CNN) is like having two separate shifts of security officers: first, an initial team walks the conveyor belt, sticking yellow post-it notes onto any bag that looks vaguely interesting; then, a second specialised inspection team individually picks up each tagged bag, scans it with an X-ray machine, and classifies its contents. This is thorough, but it creates huge lines and slow baggage throughput. A one-stage detector (YOLO) is like mounting automated high-speed ceiling scanners along the conveyor belt: as bags glide past at full speed, the scanner grid reads barcodes, estimates suitcase dimensions, and classifies contents in a single continuous camera sweep. Focal Loss is like programming the ceiling scanner to ignore millions of obvious nylon black roller bags, alerting security personnel exclusively when unusual, complex, or ambiguous cargo appears.`,
+  steps: [
+    {
+      title: r`Divide image into spatial multi-scale feature pyramids`,
+      desc: r`Extract hierarchical feature grids representing small, medium, and large target scales.`,
+      detail: r`Pass the input image through a convolutional backbone (such as CSPDarknet) coupled with a Feature Pyramid Network (FPN / PANet). Generate prediction grids across three spatial strides: $8\times$ downsampled ($52 \times 52$ grid for small objects), $16\times$ downsampled ($26 \times 26$ grid for medium objects), and $32\times$ downsampled ($13 \times 13$ grid for large objects).`,
+    },
+    {
+      title: r`Assign pre-defined anchor priors or identify centre points`,
+      desc: r`Establish spatial reference templates across each grid cell.`,
+      detail: r`At each spatial cell $(c_x, c_y)$, instantiate anchor boxes with predefined scales and aspect ratios (historically derived via k-means clustering on training set bounding box dimensions). In modern anchor-free variants, the grid cell centre itself acts as the reference point, predicting distances $(l, t, r, b)$ directly to the four object boundaries.`,
+    },
+    {
+      title: r`Predict multi-task coordinate deltas and class probabilities`,
+      desc: r`Evaluate the dense detection head to output localization offsets and classification logits.`,
+      detail: r`For each anchor or cell, predict bounding box offsets $t_x, t_y, t_w, t_h$, objectness confidence logit $t_o$, and $C$ class logits $t_c$. Apply sigmoid functions: $b_x = \sigma(t_x) + c_x$, $b_y = \sigma(t_y) + c_y$, $b_w = p_w e^{t_w}$, and $b_h = p_h e^{t_h}$ to guarantee spatial stability.`,
+    },
+    {
+      title: r`Formulate unified multi-task loss with Focal Loss`,
+      desc: r`Balance bounding box regression, objectness, and class probability errors.`,
+      detail: r`Combine CIoU / GIoU loss for bounding box localization, Binary Cross-Entropy with Focal Loss for objectness confidence, and Focal Loss or BCE for multi-label class prediction. Positive targets are assigned using SimOTA or Task-Aligned Assigner (TAL) based on joint classification-localization scores.`,
+    },
+    {
+      title: r`Decode and prune candidates via Non-Maximum Suppression`,
+      desc: r`Filter background predictions and collapse redundant overlapping boxes at runtime.`,
+      detail: r`Multiply class probabilities by the objectness confidence score. Discard candidate proposals falling below score threshold (e.g. $0.25$). Feed surviving candidate bounding boxes to class-wise Non-Maximum Suppression (NMS) with IoU threshold $\tau_{\text{NMS}} = 0.5$ to produce clean, final detection outputs.`,
+    },
+  ],
+  math: [
+    {
+      h: r`YOLO bounding box coordinate parameterisation`,
+      tex: r`b_x = \sigma(t_x) + c_x, \quad b_y = \sigma(t_y) + c_y, \quad b_w = p_w e^{t_w}, \quad b_h = p_h e^{t_h}`,
+      p: r`Here $(c_x, c_y)$ is the top-left offset of the grid cell, $(p_w, p_h)$ are anchor box prior dimensions, $\sigma(\cdot)$ is the logistic sigmoid constraining box centres to remain within their assigned cell, and $(b_x, b_y, b_w, b_h)$ are absolute predicted coordinates normalised by grid size.`,
+    },
+    {
+      h: r`Focal Loss for addressing class imbalance`,
+      tex: r`\operatorname{FL}(p_t) = -\alpha_t \left(1 - p_t\right)^\gamma \log(p_t), \quad p_t = \begin{cases} p & \text{if } y = 1 \\ 1 - p & \text{otherwise} \end{cases}`,
+      p: r`Here $p \in [0, 1]$ is the model's estimated probability for the ground-truth class, $\alpha_t$ balances positive versus negative examples, and $\gamma \ge 0$ is the tunable focusing parameter (typically $\gamma = 2.0$). As $p_t \to 1$ for easy background examples, the modulating factor $(1 - p_t)^\gamma \to 0$, preventing background gradients from dominating the loss.`,
+    },
+    {
+      h: r`Complete Intersection over Union (CIoU) loss`,
+      tex: r`\mathcal{L}_{\text{CIoU}} = 1 - \operatorname{IoU} + \frac{\rho^2(\mathbf{b}, \mathbf{b}_{\text{gt}})}{c^2} + \alpha\, v, \quad v = \frac{4}{\pi^2}\left(\arctan\frac{w_{\text{gt}}}{h_{\text{gt}}} - \arctan\frac{w}{h}\right)^2`,
+      p: r`CIoU loss incorporates three geometric factors: overlap area ($\operatorname{IoU}$), normalised central point Euclidean distance $\rho^2 / c^2$ (where $c$ is the diagonal length of the smallest enclosing box), and aspect ratio consistency $v$, driving smooth gradient updates even when candidate boxes have zero initial spatial overlap.`,
+    },
+  ],
+  keyPoints: [
+    r`One-stage detectors frame object detection as a single-pass regression problem, eliminating separate region proposal stages.`,
+    r`YOLO divides images into spatial grid cells, predicting bounding boxes and class probabilities simultaneously at high frame rates.`,
+    r`SSD introduces multi-scale feature pyramids and multi-aspect anchor boxes to detect both small and large objects effectively.`,
+    r`Focal Loss down-weights easy background negative examples by $(1 - p_t)^\gamma$, solving the extreme class imbalance inherent in dense single-stage detection.`,
+    r`Modern one-stage detectors employ Feature Pyramid Networks (FPN/PANet), anchor-free heads, and CIoU loss to rival two-stage accuracy with real-time throughput.`,
+  ],
+  pitfalls: [
+    r`Unconstrained coordinate regression: Directly predicting unconstrained unbounded offsets $(\Delta x, \Delta y)$ causes gradient instability; using sigmoid activations $\sigma(t_x) + c_x$ restricts box centres to their local cell, ensuring stable convergence.`,
+    r`Ignoring small-object feature degradation: Detecting small objects on deep feature maps fails because aggressive striding shrinks small targets below 1 pixel; predictions for small objects must be extracted from shallow high-resolution pyramid layers.`,
+    r`Over-relying on hand-crafted anchor shapes: Hard-coding anchor aspect ratios without inspecting target dataset distributions degrades IoU matching; anchor dimensions should be tailored to dataset statistics via k-means clustering or replaced with anchor-free heads.`,
+    r`Training one-stage detectors with standard cross-entropy without Focal Loss: Using standard unmodulated cross-entropy on dense single-stage grids causes background negatives to swamp positive signals, leading to non-converging or degenerate models.`,
+    r`Excessive NMS compute overhead: Feeding hundreds of thousands of raw predictions directly into NMS causes latency bottlenecks; always apply pre-filtering with a confidence threshold ($p \ge 0.05$) to cull 95% of candidates prior to NMS.`,
+  ],
+  code: r`import numpy as np
+
+# Simulate a YOLO-style one-stage detection head decoding pass
+np.random.seed(42)
+
+# Input parameters: 13x13 spatial grid, 3 anchor boxes per cell, 3 classes
+grid_h, grid_w = 13, 13
+num_anchors = 3
+num_classes = 3
+
+# Pre-defined anchor prior dimensions (width, height in grid units)
+anchors = np.array([
+    [1.5, 2.0],  # Tall anchor (e.g. pedestrian)
+    [3.0, 3.0],  # Square anchor
+    [5.0, 2.5]   # Wide anchor (e.g. car)
+], dtype=np.float32)
+
+# Raw network output logits for one image: shape (13, 13, num_anchors, 4 + 1 + num_classes)
+# Channels: [tx, ty, tw, th, objectness_logit, class_logit_0, class_logit_1, class_logit_2]
+num_attribs = 4 + 1 + num_classes
+raw_preds = np.random.randn(grid_h, grid_w, num_anchors, num_attribs).astype(np.float32)
+
+# 1. Sigmoid activation helper
+def sigmoid(z):
+    return 1.0 / (1.0 + np.exp(-z))
+
+# 2. Decode bounding box coordinates and probabilities
+# Construct grid coordinate offsets
+grid_y, grid_x = np.meshgrid(np.arange(grid_h), np.arange(grid_w), indexing='ij')
+grid_x = grid_x[:, :, np.newaxis]  # shape (13, 13, 1)
+grid_y = grid_y[:, :, np.newaxis]
+
+# Extract predicted terms
+tx = raw_preds[..., 0]
+ty = raw_preds[..., 1]
+tw = raw_preds[..., 2]
+th = raw_preds[..., 3]
+obj_logits = raw_preds[..., 4]
+class_logits = raw_preds[..., 5:]
+
+# Decode coordinates: bx = sigmoid(tx) + cx, by = sigmoid(ty) + cy
+bx = sigmoid(tx) + grid_x
+by = sigmoid(ty) + grid_y
+
+# Decode dimensions: bw = pw * exp(tw), bh = ph * exp(th)
+anchor_w = anchors[:, 0].reshape(1, 1, num_anchors)
+anchor_h = anchors[:, 1].reshape(1, 1, num_anchors)
+bw = anchor_w * np.exp(np.clip(tw, -5.0, 5.0))
+bh = anchor_h * np.exp(np.clip(th, -5.0, 5.0))
+
+# Decode confidence and probabilities
+confidence = sigmoid(obj_logits)
+class_probs = sigmoid(class_logits)
+
+# Convert center format (bx, by, bw, bh) to corner format (x1, y1, x2, y2)
+x1 = bx - bw / 2.0
+y1 = by - bh / 2.0
+x2 = bx + bw / 2.0
+y2 = by + bh / 2.0
+
+# 3. Flatten and filter candidates
+total_proposals = grid_h * grid_w * num_anchors
+flat_x1 = x1.flatten()
+flat_y1 = y1.flatten()
+flat_x2 = x2.flatten()
+flat_y2 = y2.flatten()
+flat_conf = confidence.flatten()
+flat_classes = np.argmax(class_probs.reshape(-1, num_classes), axis=-1)
+
+# Pre-NMS confidence filtering (confidence >= 0.85)
+keep_mask = flat_conf >= 0.85
+kept_count = np.sum(keep_mask)
+
+print(f"Total dense spatial anchor proposals: {total_proposals:,}")
+print(f"Proposals surviving confidence >= 0.85: {kept_count}")
+print(f"Confidence score of top candidate:     {np.max(flat_conf):.4f}")
+print(f"Predicted box 0 (corner format):       [{flat_x1[0]:.2f}, {flat_y1[0]:.2f}, {flat_x2[0]:.2f}, {flat_y2[0]:.2f}]")
+print("Verified: One-stage detection head successfully decodes multi-scale bounding boxes!")`,
+  quiz: [
+    {
+      q: r`What is the defining architectural distinction between a one-stage detector (e.g. YOLO, SSD) and a two-stage detector (e.g. Faster R-CNN)?`,
+      o: [
+        r`One-stage detectors predict bounding boxes and class probabilities directly in a single forward pass without a separate region proposal generation step`,
+        r`One-stage detectors process only single-channel greyscale images`,
+        r`One-stage detectors cannot be trained using gradient descent`,
+        r`One-stage detectors require two consecutive passes through the convolutional backbone`,
+      ],
+      a: 0,
+      why: r`Two-stage detectors generate candidate proposals first using a Region Proposal Network (RPN) before classifying each crop. One-stage detectors treat detection as a direct unified regression problem across a spatial grid in one forward pass.`,
+    },
+    {
+      q: r`Why does SSD (Single Shot MultiBox Detector) attach detection heads to multiple intermediate layers throughout its convolutional backbone?`,
+      o: [
+        r`To detect small objects using shallow high-resolution feature maps and large objects using deep low-resolution feature maps with expansive receptive fields`,
+        r`To invert the brightness histogram for contrast normalisation`,
+        r`To avoid computing bounding box coordinates on the GPU`,
+        r`To ensure the network output is invariant to colour shifts`,
+      ],
+      a: 0,
+      why: r`Shallow layers retain fine spatial resolution necessary to detect small targets, whereas deep layers possess the wide receptive fields required to comprehend and bound large objects. Multi-scale heads enable scale-invariant detection.`,
+    },
+    {
+      q: r`How does Focal Loss resolve the severe foreground-background class imbalance problem encountered in dense one-stage detectors?`,
+      o: [
+        r`By introducing a modulating factor $(1 - p_t)^\gamma$ that heavily down-weights the loss contributions of easy, confident background negative examples`,
+        r`By discarding all negative training examples entirely`,
+        r`By doubling the learning rate whenever a background anchor is evaluated`,
+        r`By converting cross-entropy into a mean squared error loss`,
+      ],
+      a: 0,
+      why: r`In dense single-stage detection, over 99% of anchors are easy background negatives. Focal Loss dynamically scales the loss by $(1 - p_t)^\gamma$; for easy background examples where $p_t \approx 0.99$, the loss is reduced by $10,000\times$, focusing gradient updates on hard positive targets.`,
+    },
+    {
+      q: r`In YOLO coordinate decoding, why are bounding box centre offsets passed through a sigmoid function ($\sigma(t_x) + c_x$)?`,
+      o: [
+        r`To constrain the predicted box centre strictly within the boundaries of the assigned grid cell, preventing unbounded spatial drift and stabilizing early training`,
+        r`To convert bounding box coordinates into logarithmic scale`,
+        r`To ensure bounding box coordinates sum to 1.0`,
+        r`To avoid negative floating-point numbers in memory`,
+      ],
+      a: 0,
+      why: r`Unconstrained linear predictions can place the box centre anywhere across the image, causing chaotic gradient fluctuations. The sigmoid function bounds offsets strictly to $[0, 1]$, anchoring the box centre firmly within its designated cell.`,
+    },
+  ],
+  usedBy: [],
+  prereq: ['iou-nms-and-map', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'receptive-field-stride-and-pooling'],
+  related: ['iou-nms-and-map', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'convolutional_neural_networks'],
+  keywords: 'one stage detector yolo ssd single shot multibox detector focal loss anchor boxes feature pyramid network fpn bounding box regression object detection',
+},
 ];
