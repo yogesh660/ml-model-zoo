@@ -129,9 +129,9 @@ module.exports = [
       { title: 'Classical features', lessons: ['corners-and-keypoints-harris-fast', 'sift-orb-and-feature-matching', ...X('HOG with SVM', 'Image pyramids and scale space', 'Bag of visual words')] },
       { title: 'Geometry', lessons: ['geometric-transforms-and-homography', 'ransac', ...X('Camera model and calibration', 'Stereo vision and depth', 'Optical flow')] },
       { title: 'CNN foundations', lessons: ['receptive-field-stride-and-pooling', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', ...X('Depthwise-separable convolutions and ConvNeXt')] },
-      { title: 'Detection and segmentation', lessons: ['iou-nms-and-map', 'one-stage-detectors-ssd-and-yolo', ...C('Semantic segmentation: FCN and U-Net'), ...X('Two-stage detectors: the R-CNN family', 'Anchor-free detection and DETR', 'Instance segmentation: Mask R-CNN', 'Segment Anything')] },
-      { title: 'Modern vision', lessons: [...C('Vision Transformer'), ...X('Swin and hierarchical transformers', 'Vision-language models and VQA', 'Latent diffusion and ControlNet')] },
-      { title: 'Applications', lessons: [...C('OCR and document AI'), ...X('Face detection and recognition', 'Pose estimation', 'Object tracking: SORT and DeepSORT', 'Video models: 3D CNN and SlowFast', '3D vision: NeRF and Gaussian splatting', 'Medical imaging', 'Edge deployment of vision models')] },
+      { title: 'Detection and segmentation', lessons: ['iou-nms-and-map', 'one-stage-detectors-ssd-and-yolo', 'semantic-segmentation-fcn-and-u-net', ...X('Two-stage detectors: the R-CNN family', 'Anchor-free detection and DETR', 'Instance segmentation: Mask R-CNN', 'Segment Anything')] },
+      { title: 'Modern vision', lessons: ['vision-transformer', ...X('Swin and hierarchical transformers', 'Vision-language models and VQA', 'Latent diffusion and ControlNet')] },
+      { title: 'Applications', lessons: ['ocr-and-document-ai', ...X('Face detection and recognition', 'Pose estimation', 'Object tracking: SORT and DeepSORT', 'Video models: 3D CNN and SlowFast', '3D vision: NeRF and Gaussian splatting', 'Medical imaging', 'Edge deployment of vision models')] },
     ],
   },
   {
@@ -139,7 +139,7 @@ module.exports = [
     blurb: 'From regular expressions and TF-IDF to Word2Vec, parsing, BERT and GPT, taught on one running corpus with every algorithm runnable step by step.',
     tasks: ['nlp'],
     modules: [
-      { title: '1 · Words and text', lessons: [...C('Text normalisation, Unicode and regex', 'Word and sentence tokenization'), 'tokenization', ...C('Stop words and n-grams', 'Stemming vs lemmatisation', 'Edit distance and spelling correction ⚙', 'Bag of words and TF-IDF', 'BM25 and search ranking'), ...X('Phonetic matching: Soundex', 'Collocations and PMI', 'Multilingual text: scripts and the tokenisation tax')] },
+      { title: '1 · Words and text', lessons: ['text-normalisation-unicode-and-regex', ...C('Word and sentence tokenization'), 'tokenization', ...C('Stop words and n-grams', 'Stemming vs lemmatisation', 'Edit distance and spelling correction ⚙', 'Bag of words and TF-IDF', 'BM25 and search ranking'), ...X('Phonetic matching: Soundex', 'Collocations and PMI', 'Multilingual text: scripts and the tokenisation tax')] },
       { title: '2 · Syntax', lessons: [...C('Part-of-speech tagging', 'Hidden Markov models and Viterbi ⚙', 'Context-free grammars and CKY parsing ⚙', 'Dependency parsing', 'Named entity recognition and IOB tagging'), ...X('Conditional random fields')] },
       { title: '3 · Meaning', lessons: [...C('Distributional semantics', 'LSA and SVD for text', 'Word2Vec: CBOW ⚙', 'Word2Vec: skip-gram with negative sampling ⚙', 'GloVe and FastText'), 'embeddings', ...C('Topic models: LDA ⚙', 'Sentence embeddings and SBERT'), ...X('Contextual embeddings: ELMo to BERT', 'Word sense disambiguation and Lesk', 'Semantic role labelling', 'Evaluating embeddings: similarity, analogy, bias')] },
       { title: '4 · Language models', lessons: [...C('N-gram models, smoothing and perplexity ⚙', 'Sequence-to-sequence with attention ⚙'), 'transformer_networks', ...C('BERT and masked language models', 'GPT and decoder-only models', 'Decoding: greedy, beam, top-k, top-p ⚙'), ...X('Neural language models', 'Instruction tuning, RLHF and DPO', 'Long context and efficient attention', 'Hallucination and factuality')] },

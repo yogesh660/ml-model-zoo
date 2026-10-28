@@ -2157,4 +2157,602 @@ print("Verified: One-stage detection head successfully decodes multi-scale bound
   related: ['iou-nms-and-map', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'convolutional_neural_networks'],
   keywords: 'one stage detector yolo ssd single shot multibox detector focal loss anchor boxes feature pyramid network fpn bounding box regression object detection',
 },
+
+  // ------------------------------------------------------------------ Lesson 12
+{
+  id: 'semantic-segmentation-fcn-and-u-net',
+  short: 'FCN & U-Net',
+  title: 'Semantic segmentation: FCN and U-Net',
+  task: 'concepts',
+  module: 'Detection and segmentation',
+  level: 2,
+  minutes: 18,
+  noLab: true,
+  summary: r`Semantic segmentation assigns a categorical semantic label to every individual pixel in an image, generating dense spatial masks for medical diagnosis, autonomous driving drivable-area detection, and satellite terrain mapping. Jonathan Long et al.'s Fully Convolutional Network (FCN) established the deep segmentation paradigm by converting dense classification layers into $1 \times 1$ convolutions and introducing transposed convolutions for learnable spatial upsampling. Olaf Ronneberger et al.'s U-Net introduced a symmetric contracting encoder and expansive decoder architecture connected by direct skip pathways that concatenate high-resolution shallow spatial details with deep semantic context, resolving the fundamental tension between spatial localization and semantic abstraction.`,
+  lead: r`Bounding boxes are useful, but for many safety-critical vision tasks, a rectangle is too coarse. An autonomous car navigating a narrow city street cannot simply know that an obstacle is roughly bounded by a $2 \times 3$ metre box; it needs to know the exact curving boundary of the asphalt kerb down to the single pixel. A surgical robot cutting a tumour cannot risk a bounding box estimate; it must delineate diseased tissue margins with sub-millimetre precision. Semantic segmentation delivers this dense per-pixel understanding, bridging high-level semantic recognition with low-level spatial geometry.`,
+  intuition: [
+    r`From image classification to dense per-pixel prediction: Standard CNN classifiers (such as VGG or ResNet) downsample input images through successive pooling and strided convolutions, collapsing spatial dimensions into a single $1 \times 1 \times C$ embedding vector connected to a fully connected layer. While this destroys spatial coordinates to achieve translation invariance for classification, segmentation requires translation equivariance: if an object shifts five pixels to the left, its output mask must also shift five pixels to the left. In 2015, Long et al. showed that any fully connected layer can be viewed as a $1 \times 1$ convolution covering the entire receptive field. Replacing fully connected layers with convolutions yields a Fully Convolutional Network (FCN) capable of processing arbitrary input resolutions and outputting 2D spatial heatmap logits.`,
+    r`The upsampling challenge: Transposed convolutions: A deep convolutional backbone downsamples an image by a factor of 32 ($H/32 \times W/32$). To produce a dense mask matching the input resolution $H \times W$, feature maps must be upsampled. While bilinear interpolation can resize matrices, it cannot learn data-dependent reconstruction filters. Transposed convolutions (also known as fractionally strided convolutions or deconvolution) reverse the forward convolution stride: they expand feature dimensions by interleaving zeros between activations and applying learnable convolution kernels, allowing the network to learn optimal spatial reconstruction filters during backpropagation.`,
+    r`The spatial localization dilemma: Deep layers in a CNN possess expansive receptive fields capable of recognizing complex semantics ("this region is a human lung"), but their coarse spatial resolution blurs boundaries and obliterates fine anatomical details. Conversely, shallow layers possess fine spatial resolution capable of pinpointing crisp boundaries, but lack semantic depth (they perceive only raw edges and colour gradients). How can a network be both semantically wise and spatially precise?`,
+    r`U-Net's symmetric skip connection architecture: Ronneberger et al. answered this in 1995 with the U-Net architecture. U-Net is structured as a symmetric U-shaped topology: a contracting path (encoder) that captures contextual semantic representations through repeated convolutions and max-pooling, paired with an expansive path (decoder) that restores spatial resolution through repeated transposed convolutions. Crucially, U-Net introduces horizontal skip connections: feature maps from the encoder are copied and concatenated channel-wise directly into the corresponding decoder tier. The decoder therefore receives both high-resolution spatial boundary cues from the encoder and rich semantic representations from deep bottleneck layers, synthesizing sharp, pixel-accurate segmentation boundaries.`,
+  ],
+  analogy: r`Imagine an architect tasked with restoring an intricate, centuries-old cathedral mosaic that has suffered minor earthquake damage. The encoder path is like an art historian stepping backward across the cathedral plaza: with each step back, the individual mosaic tiles blur together, but the historian grasps the grand thematic composition—understanding that this section depicts a saint and that section depicts an archway. If the historian tries to repaint the mosaic from memory from fifty metres away, the boundaries will be blurry and misshapen. U-Net's skip connection is like a master craftsman on scaffolding who takes high-resolution Polaroid snapshots of the individual tile grout lines before stepping back. As the historian directs the restoration from afar (semantic decoder), the craftsman injects the exact high-resolution Polaroid photographs of the original tile boundaries (encoder skip connections) directly into the plastering stage. The resulting restoration captures both grand artistic intent and razor-sharp tile alignment.`,
+  steps: [
+    {
+      title: r`Contracting encoder path (feature extraction)`,
+      desc: r`Extract hierarchical semantic representations through repeated convolution and pooling stages.`,
+      detail: r`Pass the input image through consecutive $3 \times 3$ convolutions paired with ReLU activations. Downsample spatial dimensions by a factor of 2 using $2 \times 2$ max-pooling with stride 2, while doubling the channel depth ($64 \to 128 \to 256 \to 512$). Store copies of pre-pooling feature maps in memory for skip connection routing.`,
+    },
+    {
+      title: r`Bottleneck representation`,
+      desc: r`Process compressed features at the lowest spatial resolution and highest channel capacity.`,
+      detail: r`At the base of the U, two $3 \times 3$ convolutions operate on the maximally downsampled feature map (e.g. $1024$ channels at $H/16 \times W/16$), capturing global context across the entire image receptive field.`,
+    },
+    {
+      title: r`Expansive decoder path (transposed convolution upsampling)`,
+      desc: r`Incrementally restore spatial grid resolution using learnable upsampling layers.`,
+      detail: r`At each decoder stage, apply a $2 \times 2$ transposed convolution with stride 2, halving the channel depth while doubling spatial height and width. This expands the spatial grid to match the corresponding encoder stage.`,
+    },
+    {
+      title: r`Skip connection concatenation`,
+      desc: r`Fuse high-resolution encoder spatial features with upsampled decoder semantic features.`,
+      detail: r`Concatenate the stored feature map from the encoder stage along the channel axis with the upsampled decoder tensor (e.g. $256 + 256 = 512$ channels). If padding differences create slight spatial dimension mismatches, crop the encoder map or use reflection padding. Process the concatenated tensor through two $3 \times 3$ convolutions to fuse spatial and semantic cues.`,
+    },
+    {
+      title: r`Final 1x1 convolution and segmentation loss`,
+      desc: r`Project multi-channel decoder features to per-class pixel probability maps.`,
+      detail: r`Apply a final $1 \times 1$ convolution mapping channel depth to the number of semantic classes $K$. Compute pixel-wise softmax across classes. Train using a hybrid loss combining Weighted Cross-Entropy (to handle class imbalance) and Soft Dice Loss $\mathcal{L}_{\text{Dice}} = 1 - \frac{2 |Y \cap \hat{Y}| + \epsilon}{|Y| + |\hat{Y}| + \epsilon}$ to reward mask intersection alignment.`,
+    },
+  ],
+  math: [
+    {
+      h: r`Pixel-wise cross-entropy loss with class weights`,
+      tex: r`\mathcal{L}_{\text{CE}} = -\frac{1}{N} \sum_{i=1}^N \sum_{c=1}^K w_c\, y_{i, c} \log(p_{i, c}), \quad p_{i, c} = \frac{\exp(z_{i, c})}{\sum_{k=1}^K \exp(z_{i, k})}`,
+      p: r`Here $N = H \times W$ is total pixels, $K$ is the number of semantic classes, $y_{i, c} \in \{0, 1\}$ is ground-truth indicator, $p_{i, c}$ is the predicted softmax probability for pixel $i$ and class $c$, and $w_c$ is an inverse frequency weight to prevent common background pixels from overpowering rare foreground categories.`,
+    },
+    {
+      h: r`Sørensen-Dice coefficient and Soft Dice Loss`,
+      tex: r`\text{Dice} = \frac{2 \sum_{i=1}^N p_i y_i + \epsilon}{\sum_{i=1}^N p_i^2 + \sum_{i=1}^N y_i^2 + \epsilon}, \quad \mathcal{L}_{\text{Dice}} = 1 - \text{Dice}`,
+      p: r`The Dice loss directly mirrors the continuous Intersection over Union metric. By operating on probability outputs $p_i \in [0, 1]$, Dice loss is differentiable and remains robust under extreme class imbalance (e.g. when a brain lesion occupies only $0.1\%$ of total image pixels). Constant $\epsilon$ prevents division by zero.`,
+    },
+    {
+      h: r`Transposed convolution spatial dimension mapping`,
+      tex: r`O = (I - 1) \cdot s - 2p + k + p_{\text{out}}`,
+      p: r`Here $I$ is input dimension, $s$ is stride, $p$ is padding, $k$ is kernel size, and $p_{\text{out}}$ is optional output padding. For standard $2\times$ upsampling with $k=2, s=2, p=0$, the output dimension doubles exactly: $O = (I - 1) \cdot 2 + 2 = 2I$.`,
+    },
+  ],
+  keyPoints: [
+    r`Semantic segmentation outputs dense categorical labels for every pixel in an image, preserving spatial geometry.`,
+    r`Fully Convolutional Networks (FCN) replace dense linear layers with $1 \times 1$ convolutions to process arbitrary input dimensions.`,
+    r`U-Net's symmetric encoder-decoder architecture pairs contracting context extraction with expansive spatial resolution recovery.`,
+    r`Encoder-decoder skip connections concatenate shallow spatial boundary details with deep semantic representations, resolving spatial blurring.`,
+    r`Combining Cross-Entropy with Soft Dice Loss ensures robust training on segmentation tasks with severe foreground-background class imbalance.`,
+  ],
+  pitfalls: [
+    r`Checkerboard artifacts from transposed convolutions: Transposed convolutions with kernel size not divisible by stride (e.g. $k=3, s=2$) cause uneven overlap during upsampling, producing visible checkerboard artifacts; using bilinear upsampling followed by a standard $3 \times 3$ convolution avoids this.`,
+    r`Severe foreground-background class imbalance: In medical imaging, background pixels often exceed $99\%$ of the image; training with unweighted cross-entropy causes the network to predict all pixels as background, achieving $99\%$ accuracy with $0\%$ utility.`,
+    r`Spatial dimension mismatch at skip connections: Successive downsampling on odd-numbered image dimensions (e.g. $125 \to 62 \to 31$) leads to rounding issues during $2\times$ upsampling ($31 \times 2 = 62 \neq 125$); ensure input dimensions are multiples of $2^D$ (where $D$ is network depth) or use reflection padding.`,
+    r`Confusing semantic segmentation with instance segmentation: Semantic segmentation labels all pixels belonging to a class with the same integer ID without distinguishing separate object instances (e.g. two overlapping sheep are merged into a single mask).`,
+    r`Overfitting on small medical datasets: Training deep U-Nets on limited patient cohorts causes rapid memorisation; heavy data augmentation (elastic deformations, random rotations, intensity jitter) is essential.`,
+  ],
+  code: r`import numpy as np
+
+# Simulate a minimal U-Net style encoder-decoder forward pass with skip connection
+np.random.seed(42)
+
+# Input image tensor: batch=1, channels=1, height=16, width=16
+H, W = 16, 16
+x = np.random.randn(1, 1, H, W).astype(np.float32)
+
+# 1. Encoder Stage: 3x3 conv with padding, ReLU, and 2x2 max pooling
+# Filter weights: conv1 (1 in -> 4 out), stride=1, pad=1
+w_conv1 = np.random.randn(4, 1, 3, 3).astype(np.float32) * 0.1
+
+def conv2d_same(inp, weights):
+    B, Cin, iH, iW = inp.shape
+    Cout, _, kH, kW = weights.shape
+    pad = kH // 2
+    padded = np.pad(inp, ((0,0), (0,0), (pad,pad), (pad,pad)), mode='constant')
+    out = np.zeros((B, Cout, iH, iW), dtype=np.float32)
+    for b in range(B):
+        for c_out in range(Cout):
+            for r in range(iH):
+                for c in range(iW):
+                    patch = padded[b, :, r:r+kH, c:c+kW]
+                    out[b, c_out, r, c] = np.sum(patch * weights[c_out])
+    return out
+
+# Forward encoder conv
+feat_enc = np.maximum(0.0, conv2d_same(x, w_conv1))  # shape (1, 4, 16, 16) - SKIP CONNECTION SOURCE
+
+# Max pooling 2x2 (stride 2) -> downsamples to 8x8
+def maxpool2d(inp):
+    B, C, iH, iW = inp.shape
+    out = np.zeros((B, C, iH // 2, iW // 2), dtype=np.float32)
+    for r in range(iH // 2):
+        for c in range(iW // 2):
+            patch = inp[:, :, r*2:r*2+2, c*2:c*2+2]
+            out[:, :, r, c] = np.max(patch, axis=(2, 3))
+    return out
+
+bottleneck = maxpool2d(feat_enc)  # shape (1, 4, 8, 8)
+print(f"Input image shape:            {x.shape}")
+print(f"Encoder feature (skip source): {feat_enc.shape}")
+print(f"Bottleneck feature shape:     {bottleneck.shape}")
+
+# 2. Decoder Stage: 2x upsampling (nearest neighbour / bilinear)
+def upsample2x(inp):
+    return np.repeat(np.repeat(inp, 2, axis=2), 2, axis=3)
+
+feat_up = upsample2x(bottleneck)  # shape (1, 4, 16, 16)
+
+# 3. Skip connection concatenation along channel axis
+# Concatenate encoder feature (4 channels) + upsampled decoder feature (4 channels) = 8 channels
+feat_concat = np.concatenate([feat_enc, feat_up], axis=1)  # shape (1, 8, 16, 16)
+print(f"Upsampled decoder shape:      {feat_up.shape}")
+print(f"Concatenated skip map shape:  {feat_concat.shape}")
+
+# 4. Final 1x1 conv to produce binary segmentation mask (2 classes: background / foreground)
+w_out = np.random.randn(2, 8, 1, 1).astype(np.float32) * 0.1
+logits = conv2d_same(feat_concat, w_out)  # shape (1, 2, 16, 16)
+
+# Softmax probabilities over classes
+exp_logits = np.exp(logits - np.max(logits, axis=1, keepdims=True))
+probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+predicted_mask = np.argmax(probs, axis=1)[0]
+
+print(f"Output probability map shape: {probs.shape}")
+print(f"Final segmentation mask shape: {predicted_mask.shape} (values 0 or 1)")
+print("Verified: U-Net encoder-decoder skip connection executed successfully!")`,
+  quiz: [
+    {
+      q: r`What is the primary function of the horizontal skip connections in the U-Net architecture?`,
+      o: [
+        r`To copy and concatenate high-resolution shallow encoder spatial details directly into the expansive decoder, overcoming the spatial blurring caused by repeated pooling downsampling`,
+        r`To reduce the number of floating-point operations by skipping all convolutional layers`,
+        r`To convert greyscale images into 3-channel RGB tensors automatically`,
+        r`To force the network to output bounding boxes instead of masks`,
+      ],
+      a: 0,
+      why: r`Repeated max-pooling downsamples spatial dimensions, capturing high-level context but destroying precise boundary locations. Skip connections route early, high-resolution spatial feature maps directly to the decoder, restoring sharp boundary localisation.`,
+    },
+    {
+      q: r`How does a Fully Convolutional Network (FCN) differ from a traditional CNN image classifier (like VGG or ResNet)?`,
+      o: [
+        r`FCN replaces dense fully connected classifier layers with $1 \times 1$ convolutions, allowing it to take images of arbitrary resolution and output 2D spatial heatmap predictions`,
+        r`FCN cannot use backpropagation or gradient descent during training`,
+        r`FCN operates strictly on 1D audio sequences rather than 2D images`,
+        r`FCN removes all activation non-linearities from the network`,
+      ],
+      a: 0,
+      why: r`By converting dense linear layers into $1 \times 1$ spatial convolutions, FCN eliminates fixed-input-size constraints. It computes representations across 2D spatial feature grids, outputting dense per-pixel class logits.`,
+    },
+    {
+      q: r`Why is Soft Dice Loss often combined with Cross-Entropy when training semantic segmentation models on medical images?`,
+      o: [
+        r`Dice Loss directly optimises geometric mask overlap and is robust to extreme foreground-background class imbalance where targets occupy tiny percentages of the image`,
+        r`Dice Loss guarantees that all predicted mask pixels are integers`,
+        r`Cross-Entropy cannot be computed when the number of classes exceeds two`,
+        r`Dice Loss prevents the network from using GPU memory`,
+      ],
+      a: 0,
+      why: r`In medical scans, lesions or tumours often occupy less than $1\%$ of pixels. Cross-entropy can be dominated by easy background predictions; Dice Loss evaluates relative intersection overlap, maintaining strong gradient signals even for diminutive anatomical targets.`,
+    },
+    {
+      q: r`What visual artifact frequently appears when using transposed convolutions with kernel sizes that are not multiples of the stride (e.g. $k=3, s=2$)?`,
+      o: [
+        r`Periodic checkerboard artifacts in the generated feature maps due to non-uniform filter kernel overlap during upsampling`,
+        r`Complete colour inversion where red and blue channels swap`,
+        r`Random pixel dropout resembling salt-and-pepper noise`,
+        r`A 45-degree rotational shear of the output mask`,
+      ],
+      a: 0,
+      why: r`When kernel size is not divisible by stride, transposed convolution filters overlap unevenly across neighbouring pixels, depositing more energy onto certain output coordinates and creating a characteristic high-frequency checkerboard pattern.`,
+    },
+  ],
+  usedBy: [],
+  prereq: ['receptive-field-stride-and-pooling', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'convolutional_neural_networks'],
+  related: ['one-stage-detectors-ssd-and-yolo', 'iou-nms-and-map', 'autoencoders'],
+  keywords: 'semantic segmentation fcn fully convolutional network u net skip connection transposed convolution deconvolution dice loss medical imaging encoder decoder',
+},
+
+  // ------------------------------------------------------------------ Lesson 13
+{
+  id: 'vision-transformer',
+  short: 'Vision Transformer',
+  title: 'Vision Transformer',
+  task: 'concepts',
+  module: 'Modern vision',
+  level: 2,
+  minutes: 18,
+  noLab: true,
+  summary: r`The Vision Transformer (ViT, Alexey Dosovitskiy et al., 2020) demonstrated that standard Transformer encoder architectures—designed originally for natural language processing—can be applied directly to computer vision with minimal architectural modifications. By partitioning an image of resolution $H \times W$ into a regular grid of non-overlapping $P \times P$ spatial patches, flattening each patch into a vector, prepending a learnable [CLS] classification token, adding 1D learnable position embeddings, and feeding the token sequence into standard Multi-Head Self-Attention (MHSA) blocks, ViT attains a global receptive field at layer 1. ViT discards convolutional inductive biases (translation equivariance and local connectivity) in exchange for massive representational capacity when pre-trained on large-scale datasets.`,
+  lead: r`For nearly a decade after AlexNet, convolutional neural networks were considered the irreplaceable, biologically inspired foundation of all computer vision. Convolutions enforce two rigid inductive biases: local connectivity (pixels close together interact first) and translation equivariance (the identical filter slides across every spatial location). But in 2020, Google Research asked a radical question: what if we discard convolutions entirely and treat an image simply as a sequence of words? The resulting model—the Vision Transformer (ViT)—not only matched state-of-the-art convolutional networks on ImageNet, but ignited a paradigm shift unifying language, audio, and visual computing under a single self-attention architecture.`,
+  intuition: [
+    r`Images as sequences of visual words: Transformers are permutation-equivariant sequence models that compute pairwise self-attention between all tokens in an input sequence. Applying self-attention directly to individual raw pixels in a standard $224 \times 224$ image would require computing attention across $N = 224^2 = 50,176$ tokens, creating an intractable $O(N^2)$ memory bottleneck of over 2.5 billion pairwise dot products per layer. ViT bypasses this by grouping pixels into $16 \times 16$ non-overlapping patches. A $224 \times 224$ image decomposes into exactly $(224 / 16) \times (224 / 16) = 14 \times 14 = 196$ patches. Each patch is flattened into a vector of $16 \times 16 \times 3 = 768$ values and linearly projected into an embedding space, creating a sequence of 196 visual tokens perfectly matched to standard Transformer architectures.`,
+    r`Inductive bias versus data scale: Convolutional networks are hard-coded with inductive biases: they inherently assume that spatial locality matters and that visual features behave identically regardless of where they appear. This makes CNNs sample-efficient on modest datasets (such as ImageNet-1k). The Vision Transformer possesses almost no visual inductive bias: self-attention allows any patch to attend to any other patch across the entire canvas from layer 1, and the model must learn 2D spatial relationships entirely from scratch via position embeddings. Consequently, when trained on small datasets, ViT underperforms ResNet. But when pre-trained on massive datasets (ImageNet-21k or JFT-300M), ViT's unconstrained capacity breaks past the performance saturation ceiling of CNNs, achieving superior representation quality.`,
+    r`The [CLS] token and global receptive fields: How does a sequence-to-sequence Transformer output a single image classification label? Borrowing from BERT, ViT prepends a learnable [CLS] (classification) embedding vector to the patch token sequence. Because Multi-Head Self-Attention allows every token to exchange information with all other tokens across all layers, the [CLS] token aggregates global contextual information from the entire image. The final state of the [CLS] token is passed to a simple MLP classification head to output class probabilities.`,
+    r`Positional embeddings and learned 2D topology: Because standard self-attention is permutation-invariant (scrambling the token order produces an identical output set), ViT must inject spatial coordinate information. ViT adds learnable 1D position embeddings $\mathbf{E}_{\text{pos}} \in \mathbb{R}^{(N+1) \times D}$ to the patch tokens before the first encoder block. Remarkably, after pre-training, visualising the cosine similarity of these learned 1D positional vectors reveals that the model autonomously discovers the 2D Euclidean topology of images: patches situated physically near each other in 2D space exhibit highly correlated position embeddings.`,
+  ],
+  analogy: r`Think of reading an illustrated comic book page. A convolutional neural network reads like an insect crawling across the page through a tiny straw: it can only see a $3 \times 3$ millimetre circle at any moment, slowly aggregating lines into textures, then textures into shapes, and only understanding the full narrative in the final layer. The Vision Transformer is like a human reader who cuts the page into 196 square puzzle tiles and lays them all across a table simultaneously. From the very first glance, the human reader can look directly from a puzzle tile in the top-left corner (a character's eye) to a puzzle tile in the bottom-right corner (a dialogue speech bubble) and connect their meaning instantly. The reader needs to learn how to assemble puzzle pieces from scratch (requiring more practice on thousands of books), but once mastered, they comprehend global narrative composition far more flexibly than an insect crawling through a straw.`,
+  steps: [
+    {
+      title: r`Extract and flatten non-overlapping image patches`,
+      desc: r`Discretise a 2D image tensor into a 1D sequence of flattened spatial tokens.`,
+      detail: r`Given an image $\mathbf{x} \in \mathbb{R}^{H \times W \times C}$ and patch size $P$ (typically $P=16$), divide the image into $N = \frac{HW}{P^2}$ spatial patches $\mathbf{x}_p \in \mathbb{R}^{N \times (P^2 C)}$. For a $224 \times 224 \times 3$ image with $P=16$, this yields $N=196$ flattened patches of length $768$.`,
+    },
+    {
+      title: r`Linear patch projection and [CLS] token prepending`,
+      desc: r`Map raw pixel patches to latent dimension $D$ and append the global classification token.`,
+      detail: r`Project each flattened patch through a trainable linear matrix $\mathbf{E} \in \mathbb{R}^{(P^2 C) \times D}$ (or equivalently, a 2D convolution with kernel size $P$, stride $P$, and $D$ filters). Prepend a learnable classification token $\mathbf{x}_{\text{class}} \in \mathbb{R}^{1 \times D}$, forming an input sequence of shape $(N + 1) \times D$.`,
+    },
+    {
+      title: r`Add learnable position embeddings`,
+      desc: r`Inject spatial coordinate awareness into the permutation-invariant token sequence.`,
+      detail: r`Add a learnable positional embedding tensor $\mathbf{E}_{\text{pos}} \in \mathbb{R}^{(N+1) \times D}$ element-wise: $\mathbf{z}_0 = [\mathbf{x}_{\text{class}}; \mathbf{x}_p^1 \mathbf{E}; \dots; \mathbf{x}_p^N \mathbf{E}] + \mathbf{E}_{\text{pos}}$. This provides each token with an initial representation of its absolute spatial location on the image grid.`,
+    },
+    {
+      title: r`Process through Transformer encoder blocks`,
+      desc: r`Iterate through stacked Multi-Head Self-Attention (MHSA) and MLP feed-forward layers.`,
+      detail: r`Pass the token sequence through $L$ identical Transformer encoder blocks (e.g. $L=12$ in ViT-Base). Each block applies Layer Normalisation, Multi-Head Self-Attention with residual connections ($\mathbf{z}'_l = \text{MHSA}(\text{LN}(\mathbf{z}_{l-1})) + \mathbf{z}_{l-1}$), followed by another Layer Normalisation, two-layer MLP with GELU activations, and residual addition ($\mathbf{z}_l = \text{MLP}(\text{LN}(\mathbf{z}'_l)) + \mathbf{z}'_l$).`,
+    },
+    {
+      title: r`Extract [CLS] representation and classify`,
+      desc: r`Pass the aggregated classification token through an MLP head for class prediction.`,
+      detail: r`Extract the final representation of the first token $\mathbf{z}_L^0$ (the [CLS] token). Pass it through Layer Normalisation and a linear classification head (or two-layer MLP during pre-training) to output class probability logits over the dataset vocabulary.`,
+    },
+  ],
+  math: [
+    {
+      h: r`Patch sequence projection and embedding construction`,
+      tex: r`\mathbf{z}_0 = \left[\mathbf{x}_{\text{class}}; \, \mathbf{x}_p^1 \mathbf{E}; \, \mathbf{x}_p^2 \mathbf{E}; \, \dots; \, \mathbf{x}_p^N \mathbf{E}\right] + \mathbf{E}_{\text{pos}}, \quad \mathbf{E} \in \mathbb{R}^{(P^2 C) \times D}, \; \mathbf{E}_{\text{pos}} \in \mathbb{R}^{(N+1) \times D}`,
+      p: r`Here $N = HW / P^2$ is the number of image patches, $P$ is patch dimension, $D$ is the Transformer latent embedding width (e.g. $D=768$ in ViT-Base), and $\mathbf{x}_{\text{class}}$ is the learnable classification token.`,
+    },
+    {
+      h: r`Multi-Head Self-Attention (MHSA) formulation`,
+      tex: r`\text{Attention}(Q, K, V) = \operatorname{softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V, \quad \text{MHSA}(X) = \left[\text{head}_1, \dots, \text{head}_h\right] W^O`,
+      p: r`Queries $Q$, keys $K$, and values $V$ are linear projections of the input token sequence $\mathbf{z}$. Dividing by $\sqrt{d_k}$ prevents dot products from growing excessively large, preserving stable gradients through the softmax operator.`,
+    },
+    {
+      h: r`Encoder block forward recursion`,
+      tex: r`\mathbf{z}'_l = \text{MHSA}\left(\text{LN}(\mathbf{z}_{l-1})\right) + \mathbf{z}_{l-1}, \quad \mathbf{z}_l = \text{MLP}\left(\text{LN}(\mathbf{z}'_l)\right) + \mathbf{z}'_l, \quad \mathbf{y} = \text{LN}\left(\mathbf{z}_L^0\right)`,
+      p: r`ViT employs pre-layer normalisation (applying LayerNorm before MHSA and MLP blocks), which stabilises forward activation propagation and gradient backpropagation in deep architectures. The output prediction $\mathbf{y}$ is extracted from the [CLS] token position $\mathbf{z}_L^0$.`,
+    },
+  ],
+  keyPoints: [
+    r`The Vision Transformer treats images as sequences of non-overlapping $16 \times 16$ pixel patches processed by a standard Transformer encoder.`,
+    r`ViT possesses a global receptive field at layer 1, enabling every image patch to attend to any other patch from the start of computation.`,
+    r`ViT lacks convolutional inductive biases (locality and translation equivariance), requiring massive pre-training datasets (ImageNet-21k, JFT-300M) to outperform CNNs.`,
+    r`A learnable [CLS] token prepended to the patch sequence aggregates global context for downstream classification.`,
+    r`Learnable 1D position embeddings autonomously learn the 2D Euclidean spatial topology of images during pre-training.`,
+  ],
+  pitfalls: [
+    r`Training ViT from scratch on small datasets: Without large-scale pre-training, ViT severely overfits and underperforms ResNet on modest datasets (such as CIFAR-10 or ImageNet-1k) due to the absence of spatial inductive biases.`,
+    r`Interpolating position embeddings without scale adjustment: When transferring a pre-trained ViT to a higher image resolution (e.g. $224 \to 384$), the number of patches increases ($196 \to 576$); position embeddings must be bicubically interpolated in 2D to preserve learned spatial coordinates.`,
+    r`Quadratic computational scaling with high resolution: Because self-attention scales as $O(N^2)$, reducing patch size from $16 \times 16$ to $8 \times 8$ quadruples the token count $N$, increasing memory consumption and compute sixteen-fold ($O(16\times)$).`,
+    r`Omitting the [CLS] token or global pooling: Relying on an unpooled arbitrary token for classification ignores global image context; always use the dedicated [CLS] token or Global Average Pooling across all output tokens.`,
+    r`Using standard Post-LayerNorm: Implementing post-layer normalisation rather than Pre-LayerNorm frequently causes gradient instability and divergent training runs in deep Vision Transformers.`,
+  ],
+  code: r`import numpy as np
+
+# Pure NumPy implementation of Vision Transformer (ViT) patch extraction and self-attention
+np.random.seed(42)
+
+# Input image dimensions: 1 image, 3 channels, 32x32 pixels
+H, W, C = 32, 32, 3
+P = 8  # 8x8 patch size
+img = np.random.randn(H, W, C).astype(np.float32)
+
+# 1. Patch Extraction and Flattening
+# Number of patches: N = (32/8) * (32/8) = 4 * 4 = 16 patches
+num_patches_h = H // P
+num_patches_w = W // P
+N = num_patches_h * num_patches_w
+patch_dim = P * P * C  # 8 * 8 * 3 = 192
+
+patches = np.zeros((N, patch_dim), dtype=np.float32)
+idx = 0
+for r in range(num_patches_h):
+    for c in range(num_patches_w):
+        patch = img[r*P:(r+1)*P, c*P:(c+1)*P, :]
+        patches[idx] = patch.flatten()
+        idx += 1
+
+print(f"Input image shape:             {img.shape}")
+print(f"Extracted patch tokens shape:  {patches.shape} ({N} patches of length {patch_dim})")
+
+# 2. Linear Projection to Latent Dimension D = 64
+D = 64
+W_proj = np.random.randn(patch_dim, D).astype(np.float32) * (1.0 / np.sqrt(patch_dim))
+tokens = patches @ W_proj  # shape (16, 64)
+
+# 3. Prepend Learnable [CLS] Token
+cls_token = np.random.randn(1, D).astype(np.float32) * 0.02
+tokens_with_cls = np.vstack([cls_token, tokens])  # shape (17, 64)
+
+# 4. Add Learnable 1D Position Embeddings
+pos_embed = np.random.randn(N + 1, D).astype(np.float32) * 0.02
+z0 = tokens_with_cls + pos_embed  # shape (17, 64)
+print(f"Sequence with [CLS] & PosEmb:  {z0.shape} (17 tokens in D={D})")
+
+# 5. Single Multi-Head Self-Attention (MHSA) layer (2 heads, head_dim = 32)
+num_heads = 2
+d_k = D // num_heads
+
+# Weight projections for Q, K, V
+W_q = np.random.randn(D, D).astype(np.float32) * (1.0 / np.sqrt(D))
+W_k = np.random.randn(D, D).astype(np.float32) * (1.0 / np.sqrt(D))
+W_v = np.random.randn(D, D).astype(np.float32) * (1.0 / np.sqrt(D))
+W_out = np.random.randn(D, D).astype(np.float32) * (1.0 / np.sqrt(D))
+
+Q = z0 @ W_q
+K = z0 @ W_k
+V = z0 @ W_v
+
+# Scaled Dot-Product Attention: Softmax(Q @ K.T / sqrt(d_k)) @ V
+attn_scores = (Q @ K.T) / np.sqrt(d_k)
+exp_scores = np.exp(attn_scores - np.max(attn_scores, axis=-1, keepdims=True))
+attn_weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)
+
+context = attn_weights @ V
+out_mhsa = context @ W_out  # shape (17, 64)
+
+# 6. Extract [CLS] Token Representation for Classification
+cls_out = out_mhsa[0]  # First token
+print(f"Attention matrix shape:        {attn_weights.shape} (every patch attends to every patch)")
+print(f"[CLS] token output vector:     {cls_out.shape} (ready for MLP classification head)")
+print(f"Attention from [CLS] to patch 0: {attn_weights[0, 1]:.4f}")
+print(f"Attention from [CLS] to patch 15: {attn_weights[0, 16]:.4f}")
+print("Verified: Vision Transformer tokenisation and self-attention executed cleanly!")`,
+  quiz: [
+    {
+      q: r`Why does the Vision Transformer (ViT) divide an image into $16 \times 16$ pixel patches rather than applying self-attention directly to individual raw pixels?`,
+      o: [
+        r`To avoid an intractable $O(N^2)$ computational complexity bottleneck; a $224 \times 224$ image has over 50,000 pixels but only 196 patches of size $16 \times 16$`,
+        r`Because Transformer attention heads can only accept inputs that are powers of two`,
+        r`Because raw pixels lack RGB colour information`,
+        r`To prevent image files from exceeding GPU memory cache lines`,
+      ],
+      a: 0,
+      why: r`Pairwise self-attention across 50,176 individual pixels requires computing a $50,176 \times 50,176$ attention matrix ($2.5$ billion operations per layer). Grouping pixels into $16 \times 16$ patches yields 196 tokens, rendering self-attention computationally efficient.`,
+    },
+    {
+      q: r`Why does ViT typically perform worse than ResNet when trained from scratch on small datasets (like ImageNet-1k) without large-scale pre-training?`,
+      o: [
+        r`ViT lacks the hard-coded inductive biases of CNNs (spatial locality and translation equivariance), requiring vast datasets to learn 2D spatial relationships from scratch`,
+        r`ViT cannot process colour images`,
+        r`ViT has fewer parameters than ResNet-18`,
+        r`ViT does not support the AdamW optimiser`,
+      ],
+      a: 0,
+      why: r`Convolutions inherently enforce that neighbouring pixels interact first and that features behave identically across space. ViT has no built-in knowledge of 2D geometry; it must learn spatial topology entirely from data, making it sample-hungry on small datasets.`,
+    },
+    {
+      q: r`What is the function of the learnable [CLS] classification token prepended to the patch token sequence in ViT?`,
+      o: [
+        r`It interacts with all patch tokens via multi-head self-attention across all layers, aggregating global visual context into a single vector used for classification`,
+        r`It stores the aspect ratio and resolution of the input image`,
+        r`It normalises the learning rate during backward propagation`,
+        r`It acts as a random dropout mask across the token sequence`,
+      ],
+      a: 0,
+      why: r`Borrowing from BERT, the [CLS] token has no fixed patch assignment. Through stacked self-attention layers, it gathers semantic information from all patches, serving as a unified holistic summary vector for the final classification head.`,
+    },
+    {
+      q: r`When fine-tuning a pre-trained ViT model on higher-resolution images (e.g. increasing resolution from $224 \times 224$ to $384 \times 384$), what operation must be applied to the position embeddings?`,
+      o: [
+        r`2D bicubic interpolation of the pre-trained position embedding grid to match the increased number of spatial patch tokens`,
+        r`Padding the position embeddings with zeros at the end of the sequence`,
+        r`Re-initialising all position embeddings randomly from Gaussian noise`,
+        r`Discarding position embeddings entirely`,
+      ],
+      a: 0,
+      why: r`Higher image resolution produces more patches ($196 \to 576$). Because position embeddings reflect 2D coordinates, 2D bicubic interpolation smoothly stretches the learned coordinate grid to match the new token count while preserving spatial order.`,
+    },
+  ],
+  usedBy: [],
+  prereq: ['the-attention-mechanism', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'receptive-field-stride-and-pooling'],
+  related: ['the-attention-mechanism', 'clip-and-multimodal-embeddings', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet'],
+  keywords: 'vision transformer vit self attention transformer patches cls token position embeddings inductive bias mhsa imagenet dosovitskiy',
+},
+
+  // ------------------------------------------------------------------ Lesson 14
+{
+  id: 'ocr-and-document-ai',
+  short: 'OCR & Document AI',
+  title: 'OCR and document AI',
+  task: 'concepts',
+  module: 'Applications',
+  level: 2,
+  minutes: 16,
+  noLab: true,
+  summary: r`Optical Character Recognition (OCR) and Document AI transform unstructured raster document images into structured machine-readable text, tabular hierarchies, and semantic key-value records. Modern industrial Document AI pipelines operate across two tightly coupled stages: text detection (localising curved and multi-oriented text lines via segmentation-driven differentiable binarisation, such as DBNet and CRAFT) and text recognition (transcribing cropped image text strips into character sequences via Convolutional Recurrent Neural Networks with Connectionist Temporal Classification (CRNN-CTC) or autoregressive Vision-Language decoders like TrOCR and Donut).`,
+  lead: r`Every business, legal firm, hospital, and government agency operates on paper: invoices, tax forms, receipts, clinical prescriptions, and identity cards. Yet to a standard database or machine learning pipeline, a scanned PDF or photograph is merely a dead grid of pixels. Bridging the physical-to-digital divide requires more than simple character recognition: an intelligent document system must detect oriented text in cluttered backgrounds, transcribe multilingual typography and cursive handwriting, parse tabular layouts, and extract semantic relationships ("Total Due: £142.50").`,
+  intuition: [
+    r`The two-stage Document AI paradigm: Reading a document comprises two distinct sub-problems: (1) Text Detection—where is the text located on the page? and (2) Text Recognition—what characters do those text regions represent? While early systems attempted end-to-end character classification via sliding windows, contemporary pipelines decouple the tasks: a robust detection network locates arbitrarily oriented word or text-line polygons, crops and rectifies the text strips into horizontal patches, and passes them to a specialised sequence recognition engine.`,
+    r`Differentiable Binarisation for text detection (DBNet): Traditional segmentation-based text detectors generate probability heatmaps and apply a fixed threshold to extract bounding polygons. However, standard step-function thresholding is non-differentiable, preventing the binarisation step from being optimised end-to-end. DBNet (Differentiable Binarisation Network) solves this by reformulating thresholding as an adaptive, differentiable sigmoid approximation: $\hat{B}_{i, j} = \frac{1}{1 + \exp(-k(P_{i, j} - T_{i, j}))}$, where $P$ is the predicted probability map and $T$ is an adaptively learned spatial threshold map. This allows the network to jointly optimise text probability boundaries and edge thresholds directly with gradient descent.`,
+    r`Sequence transcription without alignment: CRNN and CTC: Text lines have variable lengths, and character boundaries in cursive handwriting or compressed fonts cannot be easily segmented into discrete letters. Baoguang Shi et al.'s Convolutional Recurrent Neural Network (CRNN) processes an entire horizontal text strip through a CNN backbone, producing a sequence of feature vectors along the horizontal axis. A bidirectional LSTM models sequential linguistic context. To train the network without requiring tedious character-level bounding box annotations, Alex Graves's Connectionist Temporal Classification (CTC) loss introduces a special blank token ($\epsilon$). The CTC objective marginalises over all possible alignments that collapse to the ground-truth text string, allowing the model to learn character alignment and language spelling simultaneously.`,
+    r`The modern frontier: Vision-Language Document Transformers: While CRNN-CTC pipelines excel at isolated text-line transcription, complex documents (such as financial balance sheets or insurance claims) encode crucial meaning in 2D layout geometry and spatial typography. Modern Document AI models (such as LayoutLM, Donut, and TrOCR) integrate image pixel embeddings, 2D spatial bounding box coordinates, and pre-trained Transformer language models. By treating Document AI as a multi-modal sequence generation task, these architectures directly output structured JSON schemas ("vendor": "Acme Corp", "total": "£500") directly from raw document scans.`,
+  ],
+  analogy: r`Think of an administrative assistant processing incoming physical mail. Text detection is like the assistant picking up a yellow highlighter and drawing clean rectangular boxes around every printed paragraph, handwritten note, and invoice total on the invoice. Text recognition is like typing those highlighted snippets into a word processor letter-by-letter. CRNN with CTC loss acts like a court stenographer listening to continuous spoken speech: the stenographer does not need a pause between every individual phoneme; they transcribe a continuous rhythmic stream of sound, automatically collapsing repeated sounds and omitting silent pauses to form clean words. Vision-Language Document AI is like an experienced accountant reading the whole page: they do not just read words in isolation, but immediately recognise that a number positioned in the bottom-right corner beneath a bold double-line represents the grand total amount payable.`,
+  steps: [
+    {
+      title: r`Pre-process and deskew document image`,
+      desc: r`Rectify scanned pages and enhance contrast prior to neural detection.`,
+      detail: r`Convert high-resolution document scans to grayscale, estimate document skew angle via Radon transform or Hough line analysis, and rotate the page to horizontal orientation. Apply adaptive contrast thresholding to mitigate scan shadows and uneven illumination.`,
+    },
+    {
+      title: r`Detect text regions via Differentiable Binarisation`,
+      desc: r`Extract precise multi-oriented text line polygons using segmentation backbones.`,
+      detail: r`Pass the document through a Feature Pyramid Network to predict a probability map $P$ and an adaptive threshold map $T$. Apply differentiable binarisation $\hat{B} = \text{Sigmoid}(k(P - T))$ and extract polygon contours via Vatti clipping or morphological contour tracking.`,
+    },
+    {
+      title: r`Crop and rectify text strips`,
+      desc: r`Extract and transform bounding polygons into standardised horizontal strips.`,
+      detail: r`For each detected text polygon, apply an affine or thin-plate spline (TPS) transformation to rectify curved or perspective-sheared text into a normalised rectangular image strip of standard height (typically $32$ pixels) and variable width.`,
+    },
+    {
+      title: r`Encode feature sequences and decode via CTC`,
+      desc: r`Transcribe horizontal pixel strips into discrete character sequences using CRNN-CTC.`,
+      detail: r`Process the text strip through convolutional layers to extract a temporal sequence of feature vectors $\mathbf{x}_1, \dots, \mathbf{x}_T$. Pass through a Bidirectional LSTM to model language context, project to character vocabulary logits (including the blank token $\epsilon$), and decode the most probable sequence using CTC greedy best-path decoding or beam search.`,
+    },
+    {
+      title: r`Extract structured entities via Document Transformers`,
+      desc: r`Map recognized text and 2D spatial coordinates into structured semantic schemas.`,
+      detail: r`Feed transcribed text tokens along with their 2D spatial bounding box coordinates into multi-modal models (such as LayoutLM or Donut) to perform named entity recognition (e.g. tagging dates, totals, and addresses) and relation extraction to generate structured JSON records.`,
+    },
+  ],
+  math: [
+    {
+      h: r`Differentiable Binarisation (DBNet) formulation`,
+      tex: r`\hat{B}_{i, j} = \frac{1}{1 + \exp\left(-k(P_{i, j} - T_{i, j})\right)}`,
+      p: r`Here $P_{i, j}$ is the predicted text probability at coordinate $(i, j)$, $T_{i, j}$ is the adaptively learned threshold map, and $k$ is an amplification factor (typically $k=50$). This smooth, differentiable approximation of the standard Heavyside step function allows end-to-end backpropagation through the binarisation operation.`,
+    },
+    {
+      h: r`Connectionist Temporal Classification (CTC) conditional probability`,
+      tex: r`p(\mathbf{l} \mid \mathbf{x}) = \sum_{\pi \in \mathcal{B}^{-1}(\mathbf{l})} p(\pi \mid \mathbf{x}) = \sum_{\pi \in \mathcal{B}^{-1}(\mathbf{l})} \prod_{t=1}^T y_{\pi_t}^t`,
+      p: r`Here $\mathbf{l}$ is the target text label, $\pi$ is an alignment path across $T$ time steps, $y_{\pi_t}^t$ is the emission probability of label $\pi_t$ at time step $t$, and $\mathcal{B}$ is the collapse mapping that removes sequential duplicate characters and strips out blank tokens $\epsilon$ (e.g. $\mathcal{B}(\text{c-a-a-t}) = \text{cat}$).`,
+    },
+    {
+      h: r`Character Error Rate (CER) and Word Error Rate (WER)`,
+      tex: r`\text{CER} = \frac{S + D + I}{N_{\text{ref}}} = \frac{\operatorname{Lev}(\mathbf{l}_{\text{pred}}, \mathbf{l}_{\text{ref}})}{|\mathbf{l}_{\text{ref}}|}, \quad \text{WER} = \frac{S_w + D_w + I_w}{N_{\text{words}}}`,
+      p: r`Here $S$ is substitutions, $D$ is deletions, $I$ is insertions, and $N_{\text{ref}}$ is the total number of characters in the ground-truth reference string. CER evaluates character-level Levenshtein edit distance, providing a granular benchmark of OCR transcription accuracy.`,
+    },
+  ],
+  keyPoints: [
+    r`Document AI pipelines operate as a two-stage process: text detection (where is text?) followed by text recognition (what is written?).`,
+    r`DBNet enables end-to-end backpropagation for text detection by approximating hard step-function binarisation with a differentiable sigmoid.`,
+    r`CRNN combines convolutional spatial feature extraction with bidirectional LSTMs to transcribe variable-length horizontal text strips.`,
+    r`CTC loss enables training text recognition networks on full words without requiring costly character-level bounding box annotations.`,
+    r`Modern multi-modal Document Transformers (LayoutLM, Donut) combine 2D spatial layouts, text semantics, and visual cues to extract structured key-value entities.`,
+  ],
+  pitfalls: [
+    r`Running OCR on unrectified skewed documents: Passing text rotated by even $5^\circ$ to $10^\circ$ causes horizontal CRNN feature sequences to slice across multiple text lines simultaneously, producing garbled transcription outputs; always deskew pages beforehand.`,
+    r`Ignoring the CTC blank token: Omitting the blank token ($\epsilon$) prevents CTC from transcribing words with legitimate consecutive duplicate letters (e.g. distinguishing 'book' from 'bok').`,
+    r`Evaluating OCR solely with Word Error Rate (WER): In specialized technical domains (such as serial numbers or chemistry formulas), a single character typo in a 20-character identifier marks the entire word as an error; Character Error Rate (CER) provides a much fairer metric.`,
+    r`Assuming linear reading order in multi-column layouts: Reading multi-column documents strictly top-to-bottom across the full page width merges text across columns; layout analysis must partition the page into columns before extracting reading order.`,
+    r`Relying on classical rule-based regex parsing for key-value extraction: Using static regex to parse invoices fails when document templates change; multi-modal Document Transformers generalise across unseen vendor invoice layouts.`,
+  ],
+  code: r`import numpy as np
+
+# Simulate Connectionist Temporal Classification (CTC) Greedy Best-Path Decoding
+# Character vocabulary: index 0 is blank token ('-'), indices 1-4 are letters ['c', 'a', 't', 'o']
+vocab = ['-', 'c', 'a', 't', 'o']
+blank_idx = 0
+
+# Simulated emission logits from a CRNN over T=8 time steps for vocabulary size 5
+# Target ground-truth word: "cat"
+np.random.seed(42)
+T = 8
+num_classes = len(vocab)
+logits = np.random.randn(T, num_classes).astype(np.float32)
+
+# Bias logits to strongly emit sequence: 'c', 'c', '-', 'a', 'a', 'a', '-', 't'
+# Which should collapse to: "cat"
+logits[0, 1] += 5.0  # 'c'
+logits[1, 1] += 4.5  # 'c'
+logits[2, 0] += 5.0  # '-' (blank)
+logits[3, 2] += 4.0  # 'a'
+logits[4, 2] += 5.5  # 'a'
+logits[5, 2] += 4.2  # 'a'
+logits[6, 0] += 4.8  # '-' (blank)
+logits[7, 3] += 5.2  # 't'
+
+# 1. Softmax probability computation over time steps
+exp_logits = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
+probs = exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)
+
+# 2. Greedy best-path decoding: argmax at each time step
+raw_path_indices = np.argmax(probs, axis=-1)
+raw_path_chars = [vocab[idx] for idx in raw_path_indices]
+
+print(f"Raw frame-level emission path (T={T}):")
+print(f"Indices: {raw_path_indices.tolist()}")
+print(f"Tokens:  {' '.join(raw_path_chars)}")
+
+# 3. CTC Collapse Function B(pi):
+# Step A: Collapse consecutive identical characters
+collapsed_consecutive = []
+for i, token in enumerate(raw_path_indices):
+    if i == 0 or token != raw_path_indices[i - 1]:
+        collapsed_consecutive.append(token)
+
+# Step B: Remove blank tokens (index 0)
+final_indices = [idx for idx in collapsed_consecutive if idx != blank_idx]
+final_transcription = "".join([vocab[idx] for idx in final_indices])
+
+print(f"\nAfter collapsing consecutive duplicates: {[vocab[i] for i in collapsed_consecutive]}")
+print(f"Final CTC decoded transcription:        '{final_transcription}'")
+
+# 4. Character Error Rate (CER) calculation
+def levenshtein_distance(s1, s2):
+    m, n = len(s1), len(s2)
+    dp = np.zeros((m + 1, n + 1), dtype=int)
+    for i in range(m + 1): dp[i, 0] = i
+    for j in range(n + 1): dp[0, j] = j
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            cost = 0 if s1[i-1] == s2[j-1] else 1
+            dp[i, j] = min(dp[i-1, j] + 1, dp[i, j-1] + 1, dp[i-1, j-1] + cost)
+    return dp[m, n]
+
+ground_truth = "cat"
+edit_dist = levenshtein_distance(final_transcription, ground_truth)
+cer = edit_dist / len(ground_truth)
+print(f"Ground-truth text:                     '{ground_truth}'")
+print(f"Levenshtein edit distance:             {edit_dist}")
+print(f"Character Error Rate (CER):            {cer:.1%}")
+assert final_transcription == ground_truth, "CTC decoding mismatch!"
+print("Verified: CTC greedy best-path decoding executed successfully!")`,
+  quiz: [
+    {
+      q: r`Why does Connectionist Temporal Classification (CTC) incorporate a dedicated "blank" token ($\epsilon$) in its character vocabulary?`,
+      o: [
+        r`To allow the decoding collapse operator $\mathcal{B}$ to differentiate between consecutive repeated characters (e.g. 'b-o-o-k') and a single elongated character sound (e.g. 'b-o-k')`,
+        r`To represent spaces between paragraphs in multi-page documents`,
+        r`To indicate punctuation marks like commas and periods`,
+        r`To reset the hidden state of the LSTM memory cell to zero`,
+      ],
+      a: 0,
+      why: r`Without a blank token, consecutive identical characters would always collapse into a single character ('o-o' would become 'o'). Inserting an intermediate blank token ('o-\epsilon-o') signals that the two letters are distinct instances.`,
+    },
+    {
+      q: r`How does DBNet (Differentiable Binarisation Network) make the text detection binarisation step trainable end-to-end with gradient descent?`,
+      o: [
+        r`It replaces standard non-differentiable step-function thresholding with an adaptive, differentiable sigmoid function comparing predicted probability maps against a learned threshold map`,
+        r`It converts text images into 3D point clouds before clustering`,
+        r`It trains exclusively on binary black-and-white bitmap files`,
+        r`It skips the backward pass during backpropagation`,
+      ],
+      a: 0,
+      why: r`Standard hard thresholding ($P \ge T$) has zero gradient everywhere. DBNet approximates thresholding using a steep sigmoid function $\hat{B} = 1 / (1 + e^{-k(P-T)})$, enabling gradients to flow backward through the threshold map and probability map simultaneously.`,
+    },
+    {
+      q: r`Why is Character Error Rate (CER) often preferred over Word Error Rate (WER) when evaluating OCR on technical documents (such as serial numbers or clinical dosages)?`,
+      o: [
+        r`Because a single typo in a long alphanumeric code marks the entire word as incorrect under WER, obscuring that the detector was $95\%$ accurate at the character level`,
+        r`Because CER does not require a ground-truth reference string`,
+        r`Because CER can only be calculated on English text`,
+        r`Because WER cannot be evaluated using Levenshtein distance`,
+      ],
+      a: 0,
+      why: r`WER is an all-or-nothing metric: a 15-character serial number with one misplaced letter receives a $100\%$ word error. CER measures character-level Levenshtein edit distance, providing a granular and fair assessment of recognition fidelity.`,
+    },
+    {
+      q: r`What advantage do modern multi-modal Document Transformers (such as LayoutLM) have over traditional OCR pipelines when extracting key-value pairs from receipts?`,
+      o: [
+        r`They incorporate 2D spatial coordinate layout embeddings alongside text semantics and visual features, recognizing semantic hierarchies across varying document templates`,
+        r`They eliminate the need for GPU hardware during training`,
+        r`They require zero training data`,
+        r`They convert scanned images directly into audio speech`,
+      ],
+      a: 0,
+      why: r`In structured documents, visual layout conveys meaning (e.g. an address is always located in the header). Multi-modal transformers encode 2D bounding box positions along with token embeddings, generalising across diverse layouts where static rules fail.`,
+    },
+  ],
+  usedBy: [],
+  prereq: ['receptive-field-stride-and-pooling', 'cnn-architecture-tour-lenet-to-resnet-to-efficientnet', 'iou-nms-and-map'],
+  related: ['vision-transformer', 'semantic-segmentation-fcn-and-u-net', 'the-attention-mechanism'],
+  keywords: 'ocr optical character recognition document ai dbnet crnn ctc connectionist temporal classification layoutlm text detection text recognition trocr',
+},
 ];
