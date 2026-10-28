@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsibucz">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsibucz">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsimj7s">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsimj7s">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -142,6 +142,56 @@ Z = projector.<span class="f">transform</span>(X_te)</code></pre></div>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>1</span></button><button class="opt" type="button"><b>B</b><span>3</span></button><button class="opt" type="button"><b>C</b><span>4</span></button><button class="opt" type="button"><b>D</b><span>As many as features</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The between-class scatter matrix has rank at most $K - 1$.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>What is the fundamental difference between LDA and Logistic Regression in how they model data?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>LDA is a generative model that estimates $P(x \mid y)$ and $P(y)$, whereas Logistic Regression is discriminative and models $P(y \mid x)$ directly</span></button><button class="opt" type="button"><b>B</b><span>LDA can only handle binary classification, whereas Logistic Regression naturally handles multiclass</span></button><button class="opt" type="button"><b>C</b><span>LDA requires iterative gradient descent, whereas Logistic Regression has an exact closed-form formula</span></button><button class="opt" type="button"><b>D</b><span>LDA assumes features are uniformly distributed on a unit circle</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> LDA models the generative class-conditional densities $P(x \mid y=k) \sim \mathcal{N}(\mu_k, \Sigma)$ and inverts them via Bayes' rule. Logistic Regression models the posterior class probabilities $P(y \mid x)$ directly without assuming Gaussian feature distributions.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>What objective function does Fisher's linear discriminant maximise when projecting data onto direction vector $w$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The total variance of the projected points, identical to Principal Component Analysis</span></button><button class="opt" type="button"><b>B</b><span>The ratio of the between-class scatter to the within-class scatter: $\frac{w^\top S_B w}{w^\top S_W w}$</span></button><button class="opt" type="button"><b>C</b><span>The sum of squared distances to the overall dataset centroid</span></button><button class="opt" type="button"><b>D</b><span>The margin between the two closest points regardless of class labels</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Fisher's criterion seeks a projection vector $w$ that spreads out the class means (maximising between-class scatter $S_B$) while keeping the spread within each individual class as tight as possible (minimising within-class scatter $S_W$).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>How does the dimensionality reduction performed by LDA differ fundamentally from PCA?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>LDA is supervised and uses class labels to maximise class separability, whereas PCA is unsupervised and ignores class labels to maximise overall feature variance</span></button><button class="opt" type="button"><b>B</b><span>LDA projects onto orthogonal axes that retain 100% of the input variance, whereas PCA discards class labels</span></button><button class="opt" type="button"><b>C</b><span>LDA can output more dimensions than the original number of features $p$, whereas PCA cannot</span></button><button class="opt" type="button"><b>D</b><span>PCA is limited to binary classification problems, whereas LDA works for any target</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> PCA finds directions of maximum overall variance in $X$ without knowing about classes; if the direction of highest variance does not separate classes, PCA fails for classification. LDA explicitly uses class labels to find projection axes that separate classes.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>Why is shrinkage regularisation (Ledoit–Wolf shrinkage) crucial when applying LDA to high-dimensional data where $p &gt; n$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the empirical covariance matrix $\Sigma$ becomes singular and non-invertible, making $\Sigma^{-1}$ undefined without regularisation</span></button><button class="opt" type="button"><b>B</b><span>Because standardisation prevents LDA from predicting negative numbers</span></button><button class="opt" type="button"><b>C</b><span>Because shrinkage forces all class centroids to zero</span></button><button class="opt" type="button"><b>D</b><span>Because gradient descent diverges when features are correlated</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When $p &gt; n$, the sample covariance matrix $\Sigma$ has rank at most $n - 1$ and cannot be inverted. Shrinkage blends $\Sigma$ with a well-conditioned diagonal matrix, guaranteeing an invertible positive definite covariance matrix.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>In the linear discriminant score $\delta_k(x) = x^\top \Sigma^{-1} \mu_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k + \log\pi_k$, what effect does having a much larger prior $\pi_1 \gg \pi_2$ have on the decision boundary?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It shifts the decision boundary closer to $\mu_1$, shrinking the decision region for class 1</span></button><button class="opt" type="button"><b>B</b><span>It shifts the decision boundary closer to $\mu_2$, expanding the decision region for the more frequent class 1</span></button><button class="opt" type="button"><b>C</b><span>It has no effect on the boundary because the $\log\pi_k$ terms cancel out</span></button><button class="opt" type="button"><b>D</b><span>It converts the linear boundary into a curved quadratic boundary</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The term $\log\pi_k$ acts as a class-specific threshold. When class 1 is much more common ($\pi_1 &gt; \pi_2$), $\log\pi_1 &gt; \log\pi_2$, so a test point must be substantially closer to $\mu_2$ for $\delta_2(x)$ to exceed $\delta_1(x)$. This shifts the boundary towards $\mu_2$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>What is a major pitfall of applying standard LDA to categorical features that have been encoded as arbitrary integers (e.g. 1, 2, 3)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Categorical variables cause the prior probabilities $\pi_k$ to sum to more than 1</span></button><button class="opt" type="button"><b>B</b><span>LDA assumes continuous, normally distributed features within each class; integer-coded discrete categories violate the normality assumption and impose artificial linear metric distances</span></button><button class="opt" type="button"><b>C</b><span>Scikit-learn's LinearDiscriminantAnalysis will automatically convert all numbers into strings</span></button><button class="opt" type="button"><b>D</b><span>LDA requires all features to have zero mean and unit variance across classes</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> LDA assumes $x \mid y=k \sim \mathcal{N}(\mu_k, \Sigma)$. Treating discrete categorical states as numbers implies equidistant Gaussian distributions along that axis, which is statistically invalid and degrades classification.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>For two classes with means $\mu_1$ and $\mu_2$ and shared covariance $\Sigma$, in what direction is the normal vector $w$ of the LDA decision hyperplane aligned?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>In the direction of $w = \Sigma^{-1}(\mu_1 - \mu_2)$</span></button><button class="opt" type="button"><b>B</b><span>In the direction of $w = \mu_1 + \mu_2$</span></button><button class="opt" type="button"><b>C</b><span>In the direction of the first principal component of $X$</span></button><button class="opt" type="button"><b>D</b><span>Orthogonal to $\mu_1 - \mu_2$ in Euclidean space</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The linear decision boundary occurs where $\delta_1(x) = \delta_2(x)$, which simplifies to $x^\top \Sigma^{-1}(\mu_1 - \mu_2) + c = 0$. The normal vector perpendicular to this hyperplane is $w = \Sigma^{-1}(\mu_1 - \mu_2)$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>Consider a 1D two-class problem where Class 1 has mean $\mu_1 = 2.0$ and prior $\pi_1 = 0.50$, while Class 2 has mean $\mu_2 = 6.0$ and prior $\pi_2 = 0.50$. Both classes share common variance $\sigma^2 = 4.0$. At what coordinate $x$ does the LDA decision boundary lie?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$x = 3.0$</span></button><button class="opt" type="button"><b>B</b><span>$x = 4.0$</span></button><button class="opt" type="button"><b>C</b><span>$x = 5.0$</span></button><button class="opt" type="button"><b>D</b><span>$x = 2.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With equal priors $\pi_1 = \pi_2$, the $\log\pi_k$ terms cancel. The boundary satisfies $\delta_1(x) = \delta_2(x) \iff x = \frac{\mu_1 + \mu_2}{2} = \frac{2.0 + 6.0}{2} = 4.0$, exactly halfway between the two class means.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>Continuing from the 1D problem with $\mu_1 = 2.0, \mu_2 = 6.0, \sigma^2 = 4.0$, suppose the priors change to $\pi_1 = 0.80$ and $\pi_2 = 0.20$. Where does the decision boundary $x$ move? (Use $\log(0.80 / 0.20) = \log(4) \approx 1.386$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$x = 4.000$</span></button><button class="opt" type="button"><b>B</b><span>$x = 2.614$</span></button><button class="opt" type="button"><b>C</b><span>$x = 5.386$</span></button><button class="opt" type="button"><b>D</b><span>$x = 4.693$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The boundary equation is $\frac{x(\mu_1 - \mu_2)}{\sigma^2} - \frac{\mu_1^2 - \mu_2^2}{2\sigma^2} + \log(\frac{\pi_1}{\pi_2}) = 0$. Substituting: $\frac{-4x}{4} - \frac{-32}{8} + 1.386 = 0 \implies -x + 4 + 1.386 = 0 \implies x = 5.386$. The boundary shifts towards $\mu_2 = 6.0$, widening the decision region for the dominant class 1.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>For two 1D classes with means $\mu_1 = 1.0, \mu_2 = 5.0$, within-class scatter $S_W = 8.0$, and between-class scatter $S_B = (\mu_1 - \mu_2)^2 = (1 - 5)^2 = 16.0$, what is Fisher's criterion score $J(w) = \frac{w^\top S_B w}{w^\top S_W w}$ for any non-zero projection $w$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$J(w) = 0.5$</span></button><button class="opt" type="button"><b>B</b><span>$J(w) = 2.0$</span></button><button class="opt" type="button"><b>C</b><span>$J(w) = 8.0$</span></button><button class="opt" type="button"><b>D</b><span>$J(w) = 16.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In 1D, the projection vector $w$ is a non-zero scalar, so $J(w) = \frac{w^2 S_B}{w^2 S_W} = \frac{S_B}{S_W} = \frac{16.0}{8.0} = 2.0$, which is constant and independent of the scaling of $w$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -177,11 +227,11 @@ Z = projector.<span class="f">transform</span>(X_te)</code></pre></div>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsibucz" defer></script>
-<script src="../../assets/labs/core.js?v=mvsibucz" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsibucz" defer></script>
-<script src="../../assets/labs/models.js?v=mvsibucz" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvsibucz" defer></script>
-<script src="../../assets/learn.js?v=mvsibucz" defer></script>
+<script src="../../assets/site.js?v=mvsimj7s" defer></script>
+<script src="../../assets/labs/core.js?v=mvsimj7s" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsimj7s" defer></script>
+<script src="../../assets/labs/models.js?v=mvsimj7s" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsimj7s" defer></script>
+<script src="../../assets/learn.js?v=mvsimj7s" defer></script>
 </body>
 </html>
