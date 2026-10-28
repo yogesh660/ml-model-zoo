@@ -85,7 +85,7 @@ module.exports = [
       { title: 'Interpretability and fairness', lessons: ['permutation-and-impurity-feature-importance', 'shap', 'pdp-ice-and-ale-plots', ...X('LIME', 'Counterfactual explanations', 'Fairness metrics and mitigation')] },
       { title: 'Learning theory', lessons: ['kernel-trick-and-mercers-condition', ...X('SVM dual formulation', 'VC dimension and PAC learning', 'No free lunch and inductive bias')] },
       { title: 'Semi-supervised and active', lessons: [...X('Label propagation', 'Self-training and pseudo-labels', 'Active learning', 'Weak supervision')] },
-      { title: 'Recommender systems', lessons: [...C('Collaborative filtering', 'Matrix factorisation and ALS', 'Ranking metrics: NDCG, MAP, learning to rank'), ...X('Content-based and hybrid recommenders', 'Implicit feedback and BPR', 'Two-tower retrieval')] },
+      { title: 'Recommender systems', lessons: ['collaborative-filtering', 'matrix-factorisation-and-als', 'ranking-metrics-ndcg-map-learning-to-rank', ...X('Content-based and hybrid recommenders', 'Implicit feedback and BPR', 'Two-tower retrieval')] },
       { title: 'Pattern mining', lessons: [...X('Apriori and association rules', 'FP-growth')] },
     ],
   },

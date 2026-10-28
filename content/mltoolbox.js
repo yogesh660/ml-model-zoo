@@ -3048,4 +3048,357 @@ print(f"Kernel prediction: {[round(float(v), 3) for v in y_pred]}")`,
     related: ['support_vector_classifier', 'pca', 'convex-optimisation-and-duality'],
     keywords: 'kernel trick mercer condition rbf kernel gram matrix hilbert space support vector machines positive semidefinite',
   },
+  {
+    id: 'collaborative-filtering',
+    short: 'Collaborative filtering',
+    title: 'Collaborative Filtering',
+    task: 'concepts',
+    module: 'Recommender systems',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Predicting user preferences by pooling feedback patterns across an entire community, using user-based or item-based neighbourhood models.`,
+    lead: r`Collaborative filtering generates personalised recommendations without requiring item metadata, tags, or content descriptions. By mining historical ratings or interaction matrices, it identifies akin taste profiles (user-based) or co-rated items (item-based) to predict unseen preferences through neighbourhood aggregation.`,
+    intuition: [
+      r`Imagine visiting a vast library containing 100,000 novels. Rather than categorising books by genres or author biographies, you look at borrowers who read the same five eclectic titles you adored last month. When you find three other readers whose checkout logs overlap with yours 90% of the time, you can confidently read whatever novel they picked next. You did not need to know whether the book is a sci-fi thriller or historical non-fiction; their shared reading behaviour acts as the collective filter.`,
+      r`This is user-based collaborative filtering (UBCF). We build a matrix where rows are users and columns are items. To predict how Alice will rate a new film, we compute pairwise similarity scores between Alice and all other users using their co-rated items. We select Alice's nearest neighbours (the $k$ highest-scoring users) and calculate a weighted average of their ratings. Crucially, because Alice might be a stingy rater whose average score is 2.5 stars while Bob awards 5 stars to everything, we mean-centre ratings before averaging so personal rating baselines do not corrupt predictions.`,
+      r`When users dramatically outnumber items—such as millions of shoppers purchasing from an inventory of 20,000 products—computing user similarities becomes computationally prohibitive and volatile. Item-based collaborative filtering (IBCF) flips the perspective: it computes similarities between pairs of items based on how users rated them concurrently. Because item relationships reflect enduring characteristics rather than fleeting user moods, item similarity matrices can be precomputed offline, updated incrementally, and produce explainable recommendations ("Because you watched Inception...").`,
+    ],
+    analogy: r`Asking your culinary soulmate what they ordered off a foreign menu you cannot read, rather than attempting to decipher the ingredient list yourself.`,
+    steps: [
+      r`Construct the user-item interaction matrix $R \in \mathbb{R}^{m \times n}$, where observed cells record explicit ratings or implicit actions, and unobserved pairs form the sparse missing majority.`,
+      r`Compute user mean ratings $\bar{r}_u$ across observed items to calculate mean-centred ratings $r_{u, i} - \bar{r}_u$, isolating genuine deviations from individual baseline leniency.`,
+      r`Calculate pairwise item similarities (for IBCF) or user similarities (for UBCF) using adjusted cosine or Pearson correlation over mutually evaluated entries.`,
+      r`For a target user and unrated item, filter candidate neighbours to the top $k$ entities exhibiting positive similarity ($s > 0$).`,
+      r`Aggregate the neighbourhood ratings via a similarity-weighted sum added back to the user baseline, predicting the target interaction score.`,
+    ],
+    math: [
+      {
+        h: 'Pearson correlation similarity for user-based CF',
+        tex: r`$$s(u, v) = \frac{\sum_{i \in I_{uv}} (r_{u, i} - \bar{r}_u)(r_{v, i} - \bar{r}_v)}{\sqrt{\sum_{i \in I_{uv}} (r_{u, i} - \bar{r}_u)^2} \sqrt{\sum_{i \in I_{uv}} (r_{v, i} - \bar{r}_v)^2}}$$`,
+        p: r`Here $I_{uv} = I_u \cap I_v$ represents the subset of items evaluated by both user $u$ and user $v$. Subtracting user-specific means $\bar{r}_u$ and $\bar{r}_v$ centres each user's rating distribution around zero, preventing differences in personal rating scales from distorting the cosine angle.`,
+      },
+      {
+        h: 'Adjusted cosine similarity for item-based CF',
+        tex: r`$$s(i, j) = \frac{\sum_{u \in U_{ij}} (r_{u, i} - \bar{r}_u)(r_{u, j} - \bar{r}_u)}{\sqrt{\sum_{u \in U_{ij}} (r_{u, i} - \bar{r}_u)^2} \sqrt{\sum_{u \in U_{ij}} (r_{u, j} - \bar{r}_u)^2}}$$`,
+        p: r`In item-based filtering, $U_{ij}$ is the set of users who rated both item $i$ and item $j$. Unlike standard cosine similarity between item column vectors, adjusted cosine subtracts the respective user mean $\bar{r}_u$ from each interaction. This normalises across user rating tendencies before evaluating item co-occurrence.`,
+      },
+      {
+        h: 'Rating prediction via normalised neighbourhood aggregation',
+        tex: r`$$\hat{r}_{u, i} = \bar{r}_u + \frac{\sum_{j \in N_u(i)} s(i, j) \big(r_{u, j} - \bar{r}_u\big)}{\sum_{j \in N_u(i)} |s(i, j)|}$$`,
+        p: r`The predicted rating $\hat{r}_{u, i}$ starts from user $u$'s mean rating $\bar{r}_u$. It then adds the similarity-weighted offset from the top-$k$ nearest items $j \in N_u(i)$ that user $u$ has already rated. Dividing by the sum of absolute similarities ensures the aggregated deviation respects the original rating scale.`,
+      },
+    ],
+    keyPoints: [
+      r`Domain-free discovery: collaborative filtering requires no content metadata, discovering unexpected serendipitous connections across item categories.`,
+      r`Item-based stability: item-item similarities remain far more stable over time than user-user similarities, allowing large-scale precomputation and caching.`,
+      r`Mean-centring necessity: subtracting user averages removes individual bias, ensuring that harsh critics and generous raters contribute on equal terms.`,
+    ],
+    pitfalls: [
+      r`Cold-start vulnerability: completely new users without interaction history or new items with zero ratings cannot be recommended via collaborative signals alone.`,
+      r`Extreme sparsity: commercial catalogues typically exhibit $>99\%$ sparsity; two random users rarely co-rate items, collapsing the intersection size $|I_{uv}|$.`,
+      r`Popularity echo-chambers: universally popular blockbuster items dominate co-occurrence graphs, crowding out niche long-tail items unless explicit inverse-frequency penalties are applied.`,
+    ],
+    code: r`import numpy as np
+
+R = np.array([[5, 4, 1, 0], [4, 5, 1, 2], [1, 2, 5, 4], [2, 1, 4, 5], [5, 5, 2, 1]], dtype=float)
+means = np.array([row[row > 0].mean() for row in R])
+R_c = np.where(R > 0, R - means[:, None], 0.0)
+
+m, n = R.shape
+sim = np.eye(n)
+for i in range(n):
+    for j in range(i + 1, n):
+        co = (R[:, i] > 0) & (R[:, j] > 0)
+        if np.sum(co) >= 2:
+            ui, uj = R_c[co, i], R_c[co, j]
+            d = np.sqrt(np.sum(ui**2)) * np.sqrt(np.sum(uj**2))
+            sim[i, j] = sim[j, i] = np.sum(ui * uj) / d if d > 1e-9 else 0.0
+
+target_u, target_i, k = 0, 3, 2
+rated = np.where(R[target_u] > 0)[0]
+top_k = rated[np.argsort(sim[target_i, rated])[::-1][:k]]
+w = sim[target_i, top_k]
+
+pred = means[target_u] + np.sum(w * R_c[target_u, top_k]) / np.sum(np.abs(w))
+print(f"User 0 mean rating: {means[target_u]:.2f}")
+print(f"Item similarities to Item 3: {np.round(sim[target_i], 3)}")
+print(f"Predicted rating for User 0 on Item 3: {pred:.2f}")`,
+    quiz: [
+      {
+        q: r`Why is adjusted cosine similarity preferred over standard cosine similarity in item-based collaborative filtering?`,
+        o: [
+          r`It eliminates user scale differences by subtracting each user's mean rating from their reviews`,
+          r`It operates without requiring any observed ratings`,
+          r`It guarantees all similarity scores are strictly positive between 0 and 1`,
+          r`It converts the user-item matrix into an orthogonal basis`,
+        ],
+        a: 0,
+        why: r`Different users possess distinct internal rating scales (e.g. some hand out 5s easily, others reserve 5 for masterpieces). Adjusted cosine subtracts the user mean $\bar{r}_u$ from each rating, standardising ratings across users before computing item vector similarities.`,
+      },
+      {
+        q: r`In a production system with 50,000,000 registered users and 100,000 catalogue products, why is item-based collaborative filtering (IBCF) favoured over user-based (UBCF)?`,
+        o: [
+          r`Item catalogues are smaller and their relationships change slower, making similarity precomputation feasible`,
+          r`Item-based filtering requires zero memory and runs in $O(1)$ time`,
+          r`User-based filtering cannot use cosine similarity`,
+          r`Item-based filtering completely solves the cold-start problem for newly launched items`,
+        ],
+        a: 0,
+        why: r`Item similarity matrices are smaller ($10^5 \times 10^5$ vs $10^7 \times 10^7$) and item-item correlations remain stable over time, allowing item similarities to be precomputed and cached offline for sub-millisecond retrieval.`,
+      },
+      {
+        q: r`What is the primary manifestation of the "cold-start" problem in pure collaborative filtering?`,
+        o: [
+          r`The system cannot make personalised recommendations for new users or items lacking interaction history`,
+          r`Gradient descent diverges when learning rates are set too high`,
+          r`The similarity matrix cannot be inverted due to zero determinants`,
+          r`Ratings cannot be normalised when user scores are integers`,
+        ],
+        a: 0,
+        why: r`Collaborative filtering relies exclusively on past behavioural overlap. When a brand-new user joins or a new item is added, they have zero co-ratings, preventing neighbourhood models from calculating valid similarity scores.`,
+      },
+    ],
+    usedBy: ['matrix-factorisation-and-als'],
+    prereq: ['knn_regressor', 'correlation-pearson-spearman-kendall'],
+    related: ['matrix-factorisation-and-als', 'ranking-metrics-ndcg-map-learning-to-rank', 'knn_regressor'],
+    keywords: 'collaborative filtering recommender systems user based item based pearson correlation adjusted cosine cold start',
+  },
+  {
+    id: 'matrix-factorisation-and-als',
+    short: 'Matrix factorisation & ALS',
+    title: 'Matrix Factorisation and ALS',
+    task: 'concepts',
+    module: 'Recommender systems',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Decomposing sparse interaction matrices into low-rank latent user and item embeddings using regularised Alternating Least Squares.`,
+    lead: r`High-dimensional user-item interaction matrices are riddled with missing entries, confounding classical SVD and neighbourhood methods. Matrix factorisation projects both users and items into a shared $k$-dimensional latent vector space where inner products predict unobserved interactions. Alternating Least Squares (ALS) solves the non-convex joint optimisation problem by alternately fixing user vectors to solve for item vectors and vice versa via exact closed-form quadratic ridge regressions.`,
+    intuition: [
+      r`Imagine describing movies not by hundreds of messy genre tags, but along two fundamental psychological axes: seriousness versus comedy, and action versus cerebral dialogue. If we could assign every movie a 2-dimensional coordinate along these axes, and similarly position each moviegoer along the same preference axes, predicting whether a user will enjoy a film becomes as simple as a dot product: $\text{preference} \times \text{attribute}$. A viewer who loves high-octane comedy will score high positive values on films positioned at those exact coordinates.`,
+      r`In real applications, we do not hand-craft or label these latent dimensions. Instead, matrix factorisation discovers them automatically from the raw interaction matrix $R \approx U V^T$. For $m$ users and $n$ items, each user $u$ is mapped to a latent vector $p_u \in \mathbb{R}^k$ and each item $i$ to $q_i \in \mathbb{R}^k$, where $k \ll \min(m, n)$ (typically 20 to 100). The predicted rating is $\hat{r}_{u, i} = \mu + b_u + b_i + p_u^T q_i$, incorporating global, user, and item baseline biases to isolate true affinity from systematic scale differences.`,
+      r`Because 99% of entries in $R$ are unobserved, classical Singular Value Decomposition (SVD) cannot be directly applied without imputing zeros (which falsely asserts users hate everything they have not yet seen). Jointly optimising $U$ and $V$ over known entries is non-convex. However, when user vectors $U$ are held fixed, the objective function becomes strictly convex and quadratic in $V$—amounting to an independent ridge regression for every item. Alternating Least Squares (ALS) leverages this: hold $U$ constant and solve for $V$ in closed form, then hold $V$ constant and solve for $U$, rapidly converging to a high-quality local minimum.`,
+    ],
+    analogy: r`Solving a two-variable combination lock by turning dial A while dial B is clamped, then clamping dial A to turn dial B until both slots click into alignment.`,
+    steps: [
+      r`Initialise user latent matrix $U \in \mathbb{R}^{m \times k}$ and item latent matrix $V \in \mathbb{R}^{n \times k}$ with small random Gaussian values.`,
+      r`Compute the global mean $\mu$, user baseline biases $b_u$, and item baseline biases $b_i$ across all observed entries $\mathcal{K}$.`,
+      r`Fix the item embeddings $V$ and item biases $b_i$, and solve for each user's vector $p_u$ and bias $b_u$ via regularised ridge regression over the subset of items rated by user $u$.`,
+      r`Fix the user embeddings $U$ and user biases $b_u$, and solve for each item's vector $q_i$ and bias $b_i$ via regularised ridge regression over the subset of users who rated item $i$.`,
+      r`Repeat the alternating updates until the regularised mean squared error over observed interactions converges below a threshold $\epsilon$.`,
+    ],
+    math: [
+      {
+        h: 'Regularised matrix factorisation objective',
+        tex: r`$$\min_{U, V, b} \sum_{(u, i) \in \mathcal{K}} \Big(r_{u, i} - (\mu + b_u + b_i + p_u^T q_i)\Big)^2 + \lambda \sum_u \big(\|p_u\|_2^2 + b_u^2\big) + \lambda \sum_i \big(\|q_i\|_2^2 + b_i^2\big)$$`,
+        p: r`The objective minimises squared reconstruction error exclusively over the set of observed user-item interactions $\mathcal{K}$. The regularisation parameter $\lambda > 0$ penalises large latent weights and extreme biases, preventing overfitting on active users or items with scarce feedback.`,
+      },
+      {
+        h: 'Closed-form ALS user update step',
+        tex: r`$$p_u = \Big(V_{I_u}^T V_{I_u} + \lambda I_k\Big)^{-1} V_{I_u}^T \tilde{r}_{u, I_u}$$`,
+        p: r`Holding item matrix $V$ fixed turns user $u$'s optimisation into regularised linear regression. Here $I_u$ is the set of items rated by user $u$, $V_{I_u} \in \mathbb{R}^{|I_u| \times k}$ is the submatrix of corresponding item vectors, and $\tilde{r}_{u, I_u}$ contains residual ratings after subtracting $\mu + b_u + b_i$. The $k \times k$ matrix inversion is fast and parallelisable across users.`,
+      },
+      {
+        h: 'Implicit feedback formulation (Hu, Koren, Volinsky)',
+        tex: r`$$\mathcal{L}_{\text{implicit}} = \sum_{u=1}^m \sum_{i=1}^n c_{u, i} \big(p_{u, i} - p_u^T q_i\big)^2 + \lambda \sum_u \|p_u\|_2^2 + \lambda \sum_i \|q_i\|_2^2$$`,
+        p: r`For implicit feedback (clicks, watch time), binary preference $p_{u, i} = \mathbf{1}_{r_{u, i} > 0}$ is paired with confidence $c_{u, i} = 1 + \alpha r_{u, i}$. Crucially, the $O(m n)$ sum over all unobserved pairs simplifies because $V^T C^u V = V^T V + V^T (C^u - I) V$, allowing $V^T V$ to be computed once per iteration in $O(n k^2)$, keeping each user update at $O(|I_u| k^2 + k^3)$.`,
+      },
+    ],
+    keyPoints: [
+      r`Dense semantic representations: maps sparse interaction matrices into compact $k$-dimensional latent spaces that capture latent user tastes and item attributes.`,
+      r`Monotonic convergence: each alternating quadratic sub-step is strictly convex and solved in closed form, guaranteeing non-increasing loss at every iteration.`,
+      r`Scalable implicit feedback: reformulating the confidence-weighted objective allows training across billions of implicit missing pairs in polynomial time.`,
+    ],
+    pitfalls: [
+      r`SVD confusion: running standard SVD requires imputing unobserved matrix entries with zeros, corrupting representations by misinterpreting unobserved items as disliked items.`,
+      r`Neglecting baseline biases: omitting $b_u$ and $b_i$ forces the latent dot product $p_u^T q_i$ to absorb broad rating scale differences, degrading latent semantic geometry.`,
+      r`Overfitting sparse entities: users or items with only one or two ratings easily overfit unless heavy L2 regularisation $\lambda$ is enforced.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+R = np.array([[5, 3, 0, 1], [4, 0, 0, 1], [1, 1, 0, 5], [1, 0, 4, 4], [0, 1, 5, 4]], dtype=float)
+m, n, k, reg = *R.shape, 2, 0.1
+mu, mask = R[R > 0].mean(), R > 0
+P, Q = np.random.normal(0, 0.1, (m, k)), np.random.normal(0, 0.1, (n, k))
+bu, bi = np.zeros(m), np.zeros(n)
+
+for _ in range(20):
+    for u in range(m):
+        idx = np.where(mask[u])[0]
+        if len(idx):
+            Vu, yu = Q[idx], R[u, idx] - mu - bi[idx]
+            bu[u] = np.sum(yu - Vu @ P[u]) / (len(idx) + reg)
+            P[u] = np.linalg.solve(Vu.T @ Vu + reg * np.eye(k), Vu.T @ (yu - bu[u]))
+    for i in range(n):
+        idx = np.where(mask[:, i])[0]
+        if len(idx):
+            Ui, yi = P[idx], R[idx, i] - mu - bu[idx]
+            bi[i] = np.sum(yi - Ui @ Q[i]) / (len(idx) + reg)
+            Q[i] = np.linalg.solve(Ui.T @ Ui + reg * np.eye(k), Ui.T @ (yi - bi[i]))
+
+R_pred = mu + bu[:, None] + bi[None, :] + P @ Q.T
+rmse = np.sqrt(np.mean((R[mask] - R_pred[mask])**2))
+print(f"Global mean: {mu:.2f}")
+print(f"Training RMSE on observed: {rmse:.4f}")
+print(f"Predicted unobserved rating R[0, 2]: {R_pred[0, 2]:.2f}")`,
+    quiz: [
+      {
+        q: r`Why does Alternating Least Squares (ALS) switch between updating user vectors $P$ and item vectors $Q$ rather than optimising both simultaneously via standard least squares?`,
+        o: [
+          r`Joint optimisation of $P$ and $Q$ is non-convex, but fixing one makes the objective strictly convex and quadratic in the other`,
+          r`Simultaneous least squares requires computing the determinant of non-square matrices`,
+          r`ALS is an online reinforcement learning algorithm that cannot process offline batches`,
+          r`Standard least squares cannot handle matrices with more than 100 rows`,
+        ],
+        a: 0,
+        why: r`The product $P Q^T$ couples the variables, making the joint loss surface non-convex with saddle points. Holding $Q$ fixed reduces the problem to an independent, strictly convex ridge regression for each row of $P$, solved exactly in closed form.`,
+      },
+      {
+        q: r`What is the role of the user bias $b_u$ and item bias $b_i$ in the formulation $\hat{r}_{u, i} = \mu + b_u + b_i + p_u^T q_i$?`,
+        o: [
+          r`They capture baseline rating tendencies (e.g. generous raters or critically acclaimed films) so latent vectors model pure interactions`,
+          r`They eliminate the need for L2 regularisation`,
+          r`They restrict all predictions to integer values between 1 and 5`,
+          r`They force the latent factor dimension $k$ to equal 1`,
+        ],
+        a: 0,
+        why: r`A 4-star rating on a movie whose average is 4.5 by a user whose average is 4.2 actually represents a negative relative preference. Baseline terms capture these systematic shifts, leaving the latent dot product to capture genuine affinity patterns.`,
+      },
+      {
+        q: r`How does implicit feedback matrix factorisation (Hu, Koren, Volinsky) handle items that a user has never clicked on or viewed?`,
+        o: [
+          r`It treats unobserved items as zero preference ($p_{u, i} = 0$) with a low baseline confidence weight ($c_{u, i} = 1$)`,
+          r`It removes all unobserved items from the loss function entirely`,
+          r`It marks them as negative infinity to prevent recommendations`,
+          r`It replaces missing values with the global mean $\mu$`,
+        ],
+        a: 0,
+        why: r`In implicit settings, non-interaction could mean the user dislikes the item or simply never saw it. The model assigns zero preference ($p_{ui} = 0$) to all unobserved pairs but assigns them minimal confidence ($c_{ui} = 1$), reserving higher confidence ($1 + \alpha r_{ui}$) for observed interactions.`,
+      },
+    ],
+    usedBy: ['ranking-metrics-ndcg-map-learning-to-rank'],
+    prereq: ['collaborative-filtering', 'ridge_regression'],
+    related: ['collaborative-filtering', 'ranking-metrics-ndcg-map-learning-to-rank', 'pca'],
+    keywords: 'matrix factorisation als alternating least squares latent factors recommender systems implicit feedback collaborative filtering',
+  },
+  {
+    id: 'ranking-metrics-ndcg-map-learning-to-rank',
+    short: 'Ranking metrics & LTR',
+    title: 'Ranking Metrics: NDCG, MAP, Learning to Rank',
+    task: 'concepts',
+    module: 'Recommender systems',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Evaluating ranked lists through position-discounted gains and mean average precision, and training models with learning-to-rank loss functions.`,
+    lead: r`Regression and classification metrics evaluate items in isolation, ignoring that search and recommendation systems present ordered lists where top positions command supreme attention. Ranking metrics like NDCG (Normalised Discounted Cumulative Gain) and MAP (Mean Average Precision) penalise relevant items relegated to lower slots. Learning to Rank (LTR) operationalises this principle by training pointwise, pairwise, or listwise models directly on rank orders.`,
+    intuition: [
+      r`Suppose a search engine returns five documents for the query "emergency plumber". If the single most relevant 24-hour service appears at position 1, the user is thrilled. If that exact same document appears at position 10, the user has likely abandoned the query in frustration. Mean squared error treats an error at rank 1 and an error at rank 10 identically ($(\hat{y} - y)^2$). In ranking systems, position is everything: a prediction error at the very top of the list carries catastrophic cost compared to a swap at position 50.`,
+      r`Discounted Cumulative Gain (DCG) reflects human visual browsing behaviour. It assigns each item a graded relevance score (e.g. 0 = irrelevant, 1 = relevant, 2 = highly relevant, 3 = perfect match) and divides that score by a logarithmic discount based on its display position: $\log_2(\text{rank} + 1)$. To allow fair comparison across queries with varying numbers of relevant results, Normalised DCG (NDCG) divides DCG by the Ideal DCG (IDCG)—the theoretical maximum score achieved by sorting all documents in perfect descending relevance order. An NDCG of 1.0 indicates perfect ranking.`,
+      r`Moving from evaluation to model training is non-trivial because rank positions are discrete step functions: shifting a prediction score slightly does not change rankings until an item crosses another, resulting in zero gradients almost everywhere. Learning to Rank (LTR) solves this through three paradigms. Pointwise models predict isolated relevance scores via standard regression. Pairwise models (e.g. RankNet, LambdaMART) train on document pairs $(A, B)$, penalising inversions where $A$ was preferred to $B$ but scored lower. Listwise models (e.g. ListNet, Softmax cross-entropy) treat the entire ranked slate as a probability distribution, directly optimising top-heavy list structures.`,
+    ],
+    analogy: r`Scoring an Olympic gymnastics final where winning a gold medal yields enormous points and finishing fourth receives nothing, rather than grading every athlete on a flat pass/fail test.`,
+    steps: [
+      r`Collect query-document interaction logs with relevance judgements: binary indicators ($y \in \{0, 1\}$) or graded scores ($y \in \{0, 1, 2, 3\}$).`,
+      r`For binary relevance, compute Precision@k across the top $k$ items and calculate Average Precision (AP), averaging across queries to evaluate Mean Average Precision (MAP).`,
+      r`For graded relevance, compute Discounted Cumulative Gain at truncation rank $k$ ($\text{DCG}@k$) using logarithmic rank discounts.`,
+      r`Sort true relevance scores in descending order to calculate Ideal DCG ($\text{IDCG}@k$), computing the ratio $\text{NDCG}@k = \text{DCG}@k / \text{IDCG}@k$.`,
+      r`Train ranking models using pointwise regression, pairwise logistic loss with dynamic lambda-gradients (LambdaMART), or listwise cross-entropy loss.`,
+    ],
+    math: [
+      {
+        h: 'Discounted Cumulative Gain (DCG) and NDCG',
+        tex: r`$$\text{DCG}@k = \sum_{i=1}^k \frac{2^{r_i} - 1}{\log_2(i + 1)}, \qquad \text{NDCG}@k = \frac{\text{DCG}@k}{\text{IDCG}@k}$$`,
+        p: r`Here $r_i$ is the graded relevance of the item displayed at position $i$. The exponential numerator $2^{r_i} - 1$ heavily rewards highly relevant items, while the logarithmic denominator $\log_2(i + 1)$ imposes a position discount. Dividing by $\text{IDCG}@k$ normalises the metric to $[0, 1]$, enabling meaningful averaging across queries of varying difficulty.`,
+      },
+      {
+        h: 'Average Precision (AP) and Mean Average Precision (MAP)',
+        tex: r`$$\text{AP}@k = \frac{1}{\min(m, k)} \sum_{i=1}^k P(i) \cdot y_i, \qquad \text{MAP} = \frac{1}{|Q|} \sum_{q \in Q} \text{AP}(q)$$`,
+        p: r`In binary ranking ($y_i \in \{0, 1\}$), $P(i)$ is the precision among the top $i$ retrieved items, and $m$ is the total count of relevant items for query $q$. Multiplying by $y_i$ ensures that precision is sampled only at ranks where a relevant item is retrieved. MAP averages AP across all evaluation queries $Q$.`,
+      },
+      {
+        h: 'LambdaMART virtual pairwise gradient',
+        tex: r`$$\lambda_{ij} = \frac{-\sigma}{1 + e^{\sigma(s_i - s_j)}} |\Delta \text{NDCG}_{ij}|$$`,
+        p: r`Because rank positions are non-differentiable, LambdaMART bypasses explicit differentiation by scaling the pairwise logistic gradient between items $i$ and $j$ by $|\Delta \text{NDCG}_{ij}|$—the exact absolute change in NDCG that would occur if the ranks of items $i$ and $j$ were swapped. Items near the top receive massive gradient forces, aligning tree boosting directly with ranking utility.`,
+      },
+    ],
+    keyPoints: [
+      r`Position discounting: logarithmic discounts model user eye-tracking decay, heavily weighting relevance at top ranks while diminishing returns down the page.`,
+      r`Relative order over absolute values: ranking models care exclusively about correctly sorting pairs ($s_i > s_j$), making absolute score calibration secondary.`,
+      r`LambdaMART gradient synthesis: multiplying pairwise classification gradients by $\Delta \text{NDCG}$ allows gradient boosted trees to directly optimise discrete ranking metrics.`,
+    ],
+    pitfalls: [
+      r`Evaluating beyond the user horizon: calculating NDCG@50 when mobile interfaces display only 3 items provides misleading offline optimism.`,
+      r`Position bias in training data: training directly on uncorrected user click logs reinforces historical presentation order rather than true relevance, requiring inverse propensity scoring.`,
+      r`Empty query dilution: including queries with zero relevant documents can distort unweighted macro-averaged MAP metrics.`,
+    ],
+    code: r`import numpy as np
+
+y_true_graded = np.array([3, 1, 2, 0, 3, 0])
+
+def dcg_at_k(r, k):
+    r = np.asarray(r, dtype=float)[:k]
+    return np.sum((2**r - 1) / np.log2(np.arange(len(r)) + 2)) if r.size else 0.0
+
+def ndcg_at_k(r, k):
+    idcg = dcg_at_k(np.sort(r)[::-1], k)
+    return dcg_at_k(r, k) / idcg if idcg > 0 else 0.0
+
+def average_precision_at_k(binary_rel, k):
+    b = np.asarray(binary_rel)[:k]
+    n_rel = np.sum(b)
+    if n_rel == 0: return 0.0
+    p = [np.sum(b[:i+1]) / (i + 1) for i in range(len(b)) if b[i] == 1]
+    return np.sum(p) / min(n_rel, k)
+
+q1_bin, q2_bin = np.array([1, 0, 1, 0, 0]), np.array([0, 1, 1, 0, 0])
+map_score = np.mean([average_precision_at_k(q1_bin, 5), average_precision_at_k(q2_bin, 5)])
+
+k = 5
+print(f"DCG@{k}:  {dcg_at_k(y_true_graded, k):.4f}")
+print(f"IDCG@{k}: {dcg_at_k(np.sort(y_true_graded)[::-1], k):.4f}")
+print(f"NDCG@{k}: {ndcg_at_k(y_true_graded, k):.4f}")
+print(f"MAP@5:   {map_score:.4f}")`,
+    quiz: [
+      {
+        q: r`What is the role of the Ideal Discounted Cumulative Gain (IDCG) in the computation of NDCG?`,
+        o: [
+          r`It serves as the normalising denominator, representing the maximum possible DCG achieved by perfect sorting`,
+          r`It penalises the model when irrelevant documents appear at the bottom of the list`,
+          r`It computes the inverse log discount for documents beyond rank 100`,
+          r`It converts graded relevance scores into continuous probabilities`,
+        ],
+        a: 0,
+        why: r`Different queries have different numbers of relevant documents, making raw DCG incomparable across queries. Dividing DCG by IDCG normalises the score to $[0, 1]$, where 1.0 represents a flawless ranking.`,
+      },
+      {
+        q: r`Why is Mean Squared Error (MSE) often a poor loss function when training search and recommendation ranking models?`,
+        o: [
+          r`MSE penalises prediction errors equally across all positions, ignoring that mistakes at rank 1 are far more damaging than mistakes at rank 50`,
+          r`MSE cannot be optimised using gradient descent`,
+          r`MSE requires binary labels and cannot handle continuous scores`,
+          r`MSE always predicts zero for sparse datasets`,
+        ],
+        a: 0,
+        why: r`Ranking utility is concentrated heavily in the first few displayed positions. Pointwise MSE penalises an error on an obscure item at the bottom of the catalogue identically to an error on the top displayed result.`,
+      },
+      {
+        q: r`How does LambdaMART overcome the mathematical challenge that NDCG is a non-differentiable step function with zero gradient?`,
+        o: [
+          r`It scales pairwise logistic gradients by the change in NDCG ($|\Delta \text{NDCG}|$) resulting from swapping the two items`,
+          r`It approximates NDCG by replacing all logarithmic discounts with linear functions`,
+          r`It converts the ranking problem into an unsupervised k-means clustering task`,
+          r`It trains trees using non-gradient random search`,
+        ],
+        a: 0,
+        why: r`Instead of defining an explicit smooth surrogate loss, LambdaMART directly defines virtual gradients ($\lambda$-gradients) for item pairs by weighting the logistic loss gradient by the actual discrete change in NDCG ($|\Delta \text{NDCG}|$) that would occur if their ranks were swapped.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['collaborative-filtering', 'matrix-factorisation-and-als'],
+    related: ['collaborative-filtering', 'matrix-factorisation-and-als', 'confusion-matrix'],
+    keywords: 'ranking metrics ndcg map learning to rank dcg lambdamart recommender systems average precision search ranking',
+  },
 ];
