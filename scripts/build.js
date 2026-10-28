@@ -446,7 +446,7 @@ function lessonPage(l) {
   add('how', isModel ? 'How it works' : 'Step by step', `
         <ol class="steps">${(l.steps || []).map(s => `<li>${R(s)}</li>`).join('')}</ol>`);
   if (l.architecture) add('arch', 'The architecture', `
-        <p>A small CNN that reads 28×28 handwritten digits, drawn layer by layer. Hover over any part (or tap it on a phone) to see what it does, its input and output shape and how many weights it learns.</p>
+        <p>${R(l.archIntro || 'Hover over any part (or tap it on a phone) to see what it does.')}</p>
         <div class="arch" data-architecture="${l.architecture}" style="margin-top:18px"><noscript><p class="lab-noscript">The diagram needs JavaScript.</p></noscript></div>`);
   if (l.explainer) add('watch', 'Watch it work', `
         <p>Press play, or step through at your own pace. Each step adds one idea.</p>

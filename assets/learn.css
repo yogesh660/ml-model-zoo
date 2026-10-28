@@ -425,3 +425,4 @@
 .arch-foot { padding: 12px 22px; border-top: 1px solid var(--line); font: 400 11px var(--mono); letter-spacing: .06em; color: var(--dim); }
 .ex-part { display: block; font: 400 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--violet-2); margin-bottom: 6px; min-height: 14px; }
 @media (max-width: 760px) { .arch-card dl { grid-template-columns: 1fr; } .arch-card { min-height: 280px; } .arch-hint { display: none; } }
+.arch-card .tagline { height: auto; min-height: 24px; padding: 4px 10px; white-space: normal; line-height: 1.4; }

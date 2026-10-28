@@ -14,7 +14,7 @@ It is meant to sit at `yogesh660.github.io/ml-model-zoo/` and uses the same desi
 | 04 Clustering | 14 | k-means, k-means++, k-medoids, fuzzy c-means, agglomerative, divisive, BIRCH, DBSCAN, HDBSCAN, OPTICS, mean shift, GMM, spectral, affinity propagation |
 | 05 Neural networks | 7 | Perceptron, MLP, CNNs, RNNs, GRUs, LSTMs, Transformers |
 
-Each lesson follows the same structure: the idea, how it works, an animated walkthrough (for CNNs and the sequence models), a live lab, the maths, hyperparameters (or key takeaways), when to use it, code with common pitfalls, results on a dataset (models), a short quiz and related lessons.
+Each lesson follows the same structure: the idea, how it works, an interactive architecture diagram and an animated walkthrough (for linear regression, CNNs and the sequence models), a live lab, the maths, hyperparameters (or key takeaways), when to use it, code with common pitfalls, results on a dataset (models), a short quiz and related lessons.
 
 ## Structure
 
@@ -32,8 +32,8 @@ assets/
     models.js         one lab per model lesson
     concepts.js       one lab per concept lesson
     sequences.js      labs for the RNN, GRU, LSTM and Transformer lessons
-    explainers.js     step-by-step animated explainers shown above the labs (CNN and sequence lessons)
-    architecture.js   interactive architecture diagrams with hover/tap explanations (CNN lesson)
+    explainers.js     step-by-step animated explainers shown above the labs (linear regression, CNN and sequence lessons)
+    architecture.js   interactive architecture diagrams with hover/tap explanations (linear regression and CNN lessons)
 scripts/build.js      content -> index.html, models/<id>/index.html, concepts/<id>/index.html
 models/<id>/          train.py (scikit-learn or PyTorch) and the metrics.json it writes
 datasets/raw/         small synthetic teaching samples modelled on well-known datasets

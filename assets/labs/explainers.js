@@ -503,6 +503,311 @@
     });
   };
 
+  // ================================================================== Linear regression (in depth)
+  ex.ols = el => {
+    const XS = [45, 55, 62, 70, 78, 85, 95, 104, 115, 125];          // house size, m²
+    const YS = [32, 41, 40, 52, 50, 61, 63, 74, 76, 88];             // price, ₹ lakh
+    const N = XS.length;
+    const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+    const fit = (xs, ys) => { const mx = mean(xs), my = mean(ys); let sxy = 0, sxx = 0; xs.forEach((x, i) => { sxy += (x - mx) * (ys[i] - my); sxx += (x - mx) ** 2; }); const w = sxy / sxx; return { w, b: my - w * mx, mx, my, sxy, sxx }; };
+    const F = fit(XS, YS);
+    const rss = (w, b, xs = XS, ys = YS) => xs.reduce((s, x, i) => s + (ys[i] - (w * x + b)) ** 2, 0);
+    const TSS = YS.reduce((s, y) => s + (y - F.my) ** 2, 0), RSS = rss(F.w, F.b), R2 = 1 - RSS / TSS;
+    const G = { w: 0.32, b: 30 };                                     // the first, deliberately poor guess
+    const f1 = v => v.toFixed(1), f2 = v => v.toFixed(2);
+    // a plot box mapping data to canvas
+    const plot = (x0, y0, w, h, xr = [35, 135], yr = [20, 100]) => ({
+      x0, y0, w, h,
+      X: x => x0 + ((x - xr[0]) / (xr[1] - xr[0])) * w,
+      Y: y => y0 + h - ((y - yr[0]) / (yr[1] - yr[0])) * h,
+      axes(g, a = 1, labels = true) {
+        g.line([[x0, y0 + h], [x0 + w, y0 + h]], { color: 'rgba(255,255,255,0.25)', a }); g.line([[x0, y0], [x0, y0 + h]], { color: 'rgba(255,255,255,0.25)', a });
+        if (labels) { g.text('size (m²) →', x0 + w, y0 + h + 16, { size: 10, color: T.dim, align: 'right', a }); g.text('price (₹ lakh)', x0 + 2, y0 - 10, { size: 10, color: T.dim, align: 'left', a }); }
+      },
+      pts(g, a = 1, xs = XS, ys = YS, r = 4.5) { xs.forEach((x, i) => g.dot(this.X(x), this.Y(ys[i]), r, T.violet2, a)); },
+      line(g, w_, b_, o = {}) { const xa = o.from ?? 38, xb = o.to ?? 132; g.line([[this.X(xa), this.Y(w_ * xa + b_)], [this.X(xb), this.Y(w_ * xb + b_)]], { color: o.color || T.cyan, w: o.w || 2.2, a: o.a ?? 1, dash: o.dash }); },
+    });
+    const note = (g, lines, x, y, a = 1, o = {}) => lines.forEach((l, i) => g.text(l, x, y + i * (o.lh || 21), { size: o.size || 13, color: (o.colors && o.colors[i]) || o.color || T.soft, align: 'left', a, sans: !o.mono }));
+
+    const steps = [
+      { part: 'Part 1 · The question', t: 'Start with data: one input, one output', dur: 4600,
+        d: 'Ten flats: their size in m² (the <strong>feature</strong> x) and their price in ₹ lakh (the <strong>target</strong> y). Each row becomes one point on a scatter plot. Bigger flats tend to cost more, roughly along a straight line.' },
+      { part: 'Part 1 · The question', t: 'A model is a line: ŷ = w·x + b', dur: 5200,
+        d: 'Linear regression predicts with a straight line. The <strong>slope w</strong> says how much the price rises per extra m² (rise ÷ run); the <strong>intercept b</strong> is where the line crosses x = 0. Different (w, b) give different lines. Here is a first guess: w = 0.32, b = 30.' },
+      { part: 'Part 2 · Measuring error', t: 'Residuals: how wrong is each prediction?', dur: 4800,
+        d: 'For each flat, the line predicts ŷ. The <strong>residual</strong> e = y − ŷ is the vertical gap between the real price and the line. Points above the line have positive residuals (we under-predicted), points below are negative.' },
+      { part: 'Part 2 · Measuring error', t: 'Square every residual and add them up', dur: 5200,
+        d: 'Turn each residual into a literal square with side |e|: its area is e². Adding the areas gives the <strong>residual sum of squares (RSS)</strong>, one number that measures how bad the whole line is. Divide by n and you get the mean squared error.' },
+      { part: 'Part 2 · Measuring error', t: 'Why squares and not just distances?', dur: 5600,
+        d: 'Squares make every error positive, punish a large miss far more than a small one (an error of 10 costs 100, an error of 2 costs 4), and give a smooth loss with exactly one minimum that can be solved with algebra. The price: a single outlier can carry a lot of weight.' },
+      { part: 'Part 2 · Measuring error', t: 'The best line has the smallest total area', dur: 7000,
+        d: 'Now try many slopes. Each line has its own RSS (the bar chart on the right). Somewhere in between “too flat” and “too steep” is the line whose squares add up to the least: the <strong>least-squares</strong> line.' },
+      { part: 'Part 3 · Finding the best line', t: 'Every (w, b) has a loss: a bowl-shaped surface', dur: 5600,
+        d: 'Plot RSS for every combination of slope and intercept and you get a bowl (here seen from above as contour lines). Our first guess sits high up the side; the best line is the single lowest point at the bottom. Because the bowl has one bottom, there is exactly one best answer.' },
+      { part: 'Part 3 · Finding the best line', t: 'Solve it exactly with the averages', dur: 7400,
+        d: 'For one feature the bottom of the bowl has a formula. Work out how far each x and y is from its mean, then <strong>w = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)²</strong> and <strong>b = ȳ − w·x̄</strong>. That is all: no iteration, no guessing.' },
+      { part: 'Part 3 · Finding the best line', t: 'The least-squares line', dur: 5000,
+        d: 'This is the best line for these ten flats. It always passes through the <strong>average point</strong> (x̄, ȳ), its residuals add up to zero, and no other straight line has a smaller sum of squared residuals.' },
+      { part: 'Part 3 · Finding the best line', t: 'Or walk downhill: gradient descent', dur: 7600,
+        d: 'Instead of a formula, start anywhere on the bowl and repeatedly step in the steepest downhill direction: w ← w − η·∂L/∂w, b ← b − η·∂L/∂b. Watch the line (right) improve with every step until it settles on the same answer. This is how models with millions of parameters are trained.' },
+      { part: 'Part 4 · Many features', t: 'More features: the design matrix', dur: 6400,
+        d: 'With several inputs (size, age, distance to the metro…) the model becomes ŷ = b + w₁x₁ + w₂x₂ + …. Put the features in a matrix X, add a <strong>column of 1s</strong> for the intercept, and all predictions are one matrix product: <strong>ŷ = Xβ</strong>. Each row of X times β gives one prediction. (Numbers illustrative.)' },
+      { part: 'Part 4 · Many features', t: 'The normal equation is a projection', dur: 6400,
+        d: 'Setting the gradient to zero gives <strong>XᵀXβ = Xᵀy</strong>, so β = (XᵀX)⁻¹Xᵀy. Geometrically: every possible prediction Xβ lies on a flat “plane” spanned by the columns of X. The best prediction ŷ is the point on that plane closest to y, the shadow of y, and the residual e sticks out at a right angle: Xᵀe = 0.' },
+      { part: 'Part 5 · Is it any good?', t: 'R²: how much better than predicting the average?', dur: 6400,
+        d: 'Compare the model’s squares (RSS, right) with the squares you would get by always predicting the average price (TSS, left). <strong>R² = 1 − RSS / TSS</strong>: the share of the variation in price that the line explains. 1 is perfect, 0 is no better than the mean.' },
+      { part: 'Part 5 · Is it any good?', t: 'Residual plots: look for patterns', dur: 6400,
+        d: 'Plot residuals against predictions. A shapeless band around 0 is what you want. A <strong>curve</strong> means the true relationship is not straight (add a squared term or transform). A <strong>funnel</strong> means errors grow with the prediction (try a log target).' },
+      { part: 'Part 5 · Is it any good?', t: 'Reading the coefficients, and their limits', dur: 6400,
+        d: 'The slope is a rate: each extra m² goes with about ₹{W} lakh more. With several features it means “with everything else held fixed”. Two warnings: this is <strong>association, not causation</strong>, and the line is only trustworthy inside the range of the data; extrapolating to a 300 m² penthouse is guesswork.' },
+      { part: 'Part 5 · Is it any good?', t: 'One outlier can pull the whole line', dur: 6800,
+        d: 'Because errors are squared, a single extreme point far from the others (a <strong>high-leverage</strong> point) can tilt the entire line toward itself. Always plot the data; if outliers are real errors, fix them; if they are genuine, consider robust regression (Huber, RANSAC).' },
+    ];
+    steps[14].d = steps[14].d.replace('{W}', F.w.toFixed(2));
+
+    player(el, {
+      title: 'Linear regression in depth, step by step', steps,
+      draw(g, s, p, time) {
+        const P1 = plot(60, 50, 300, 260);
+        // ---------- part 1
+        if (s === 0) {
+          const ta = 1 - ease(clamp01((p - 0.55) * 3)) * 0.65;
+          g.text('size', 64, 52, { size: 11, color: T.muted, a: ta }); g.text('price', 124, 52, { size: 11, color: T.muted, a: ta });
+          XS.forEach((x, i) => {
+            const y = 74 + i * 25, k = ease(clamp01(p * 2.2 - i * 0.08));
+            g.rr(36, y - 10, 120, 21, 5, { fill: 'rgba(255,255,255,0.04)', a: ta * k });
+            g.text(String(x), 64, y + 1, { size: 12, color: T.violet2, a: ta * k }); g.text(String(YS[i]), 124, y + 1, { size: 12, color: T.amber, a: ta * k });
+            const fly = ease(clamp01((p - 0.3 - i * 0.03) * 2.2));
+            const P2 = plot(250, 50, 340, 270);
+            if (fly > 0) { const x0 = 156, y0 = y, x1 = P2.X(x), y1 = P2.Y(YS[i]); g.dot(lerp(x0, x1, fly), lerp(y0, y1, fly), 4.5, T.violet2, fly); }
+          });
+          const P2 = plot(250, 50, 340, 270); P2.axes(g, ease(clamp01(p * 2 - 0.4)));
+          return;
+        }
+        const P = plot(56, 46, 330, 280);
+        if (s === 1) {
+          P.axes(g); P.pts(g);
+          const a = ease(clamp01(p * 2));
+          P.line(g, G.w, G.b, { a, color: T.amber });
+          // slope triangle
+          const ta = ease(clamp01(p * 2 - 0.8));
+          const xa = 70, xb = 100, ya = G.w * xa + G.b, yb = G.w * xb + G.b;
+          g.line([[P.X(xa), P.Y(ya)], [P.X(xb), P.Y(ya)], [P.X(xb), P.Y(yb)]], { color: T.cyan, a: ta, dash: [4, 3] });
+          g.text('run = 30 m²', (P.X(xa) + P.X(xb)) / 2, P.Y(ya) + 14, { size: 11, color: T.cyan, a: ta });
+          g.text(`rise = ${f1(yb - ya)}`, P.X(xb) + 8, (P.Y(ya) + P.Y(yb)) / 2, { size: 11, color: T.cyan, a: ta, align: 'left' });
+          note(g, ['ŷ = w · x + b', '', `w = ${G.w}  (slope: rise ÷ run)`, `b = ${G.b}  (intercept)`, '', 'a guess, not yet the best'], 400, 110, ease(clamp01(p * 2 - 0.4)), { mono: true, size: 12, colors: [T.ink, '', T.cyan, T.cyan, '', T.amber] });
+          return;
+        }
+        if (s >= 2 && s <= 4) {
+          P.axes(g); P.line(g, G.w, G.b, { color: T.amber });
+          const res = XS.map((x, i) => YS[i] - (G.w * x + G.b));
+          XS.forEach((x, i) => {
+            const k = ease(clamp01(p * 2.2 - i * 0.1)), yh = G.w * x + G.b;
+            if (s === 2) {
+              g.line([[P.X(x), P.Y(yh)], [P.X(x), P.Y(lerp(yh, YS[i], k))]], { color: res[i] > 0 ? T.cyan : T.pink, w: 2, a: 0.9 });
+              if (i % 3 === 0) g.text(`${res[i] > 0 ? '+' : ''}${f1(res[i])}`, P.X(x) + 6, P.Y((YS[i] + yh) / 2), { size: 11, align: 'left', color: res[i] > 0 ? T.cyan : T.pink, a: k });
+            } else {
+              const side = Math.abs(P.Y(YS[i]) - P.Y(yh)) * (s === 3 ? k : 1);
+              const top = Math.min(P.Y(YS[i]), P.Y(yh));
+              g.rr(x > 90 ? P.X(x) - side : P.X(x), res[i] > 0 ? P.Y(yh) - side : P.Y(yh), side, side, 2, { fill: alpha(res[i] > 0 ? T.cyan : T.pink, 0.22), stroke: alpha(res[i] > 0 ? T.cyan : T.pink, 0.8), w: 1 });
+              void top;
+            }
+          });
+          P.pts(g);
+          if (s === 2) note(g, ['e = y − ŷ', '', 'above the line → e > 0', 'below the line → e < 0'], 410, 120, ease(clamp01(p * 2)), { mono: true, colors: [T.ink, '', T.cyan, T.pink] });
+          if (s === 3) {
+            let run = 0; const shown = Math.min(N, Math.floor(p * 2.2 * 10 / 1.9));
+            res.forEach((e, i) => { if (i < shown) run += e * e; });
+            note(g, ['RSS = Σ e²', ''], 410, 100, 1, { mono: true, color: T.ink });
+            res.slice(0, Math.min(shown, 10)).forEach((e, i) => g.text(`${f1(e).padStart(6)}² = ${f1(e * e).padStart(6)}`, 410, 140 + i * 17, { size: 11, align: 'left', color: T.muted }));
+            g.text(`RSS = ${f1(run)}`, 410, 330, { size: 16, align: 'left', color: T.amber, weight: 500 });
+          }
+          if (s === 4) {
+            const bx = 400, by = 300, bw = 22;
+            g.text('|e|', bx, 70, { size: 11, color: T.muted, align: 'left' }); g.text('e²', bx + 120, 70, { size: 11, color: T.muted, align: 'left' });
+            const mx = Math.max(...res.map(e => e * e));
+            res.forEach((e, i) => {
+              const k = ease(clamp01(p * 1.6));
+              g.rr(bx, 84 + i * 21, (Math.abs(e) / Math.sqrt(mx)) * 100 * k, 14, 3, { fill: alpha(T.violet2, 0.7) });
+              g.rr(bx + 120, 84 + i * 21, ((e * e) / mx) * 100 * k, 14, 3, { fill: alpha(T.amber, 0.8) });
+            });
+            g.text('the biggest misses dominate the squared total', 400, by + 22, { size: 11, color: T.dim, align: 'left', a: ease(clamp01(p * 2 - 0.8)) });
+            void bw;
+          }
+          return;
+        }
+        if (s === 5) {
+          P.axes(g); P.pts(g);
+          const slopes = Array.from({ length: 13 }, (_, k) => 0.2 + k * 0.06);
+          const k = Math.min(12, Math.floor(p * 15));
+          const ws = slopes[k], bs = F.my - ws * F.mx;
+          XS.forEach((x, i) => { const yh = ws * x + bs, side = Math.abs(P.Y(YS[i]) - P.Y(yh)); g.rr(x > 90 ? P.X(x) - side : P.X(x), YS[i] > yh ? P.Y(yh) - side : P.Y(yh), side, side, 2, { fill: alpha(T.amber, 0.16), stroke: alpha(T.amber, 0.6), w: 1 }); });
+          P.line(g, ws, bs, { color: T.amber });
+          const vals = slopes.map(w => rss(w, F.my - w * F.mx)), mx = Math.max(...vals);
+          const bx = 410, by = 310;
+          g.text('RSS for each slope tried', 500, 60, { size: 11, color: T.muted });
+          vals.forEach((v, j) => { if (j > k) return; const h = (v / mx) * 220; const best = j === vals.indexOf(Math.min(...vals)); g.rr(bx + j * 15, by - h, 11, h, 2, { fill: alpha(best ? T.green : T.amber, j === k ? 0.95 : 0.45) }); });
+          g.text(`w = ${f2(ws)}   RSS = ${Math.round(rss(ws, bs))}`, 500, 340, { size: 13, color: T.amber });
+          return;
+        }
+        // ---------- part 3
+        if (s === 6 || s === 9) {
+          const C = { x0: s === 6 ? 60 : 30, y0: 50, w: s === 6 ? 330 : 270, h: 270 }, wr = [0.05, 1.15], br = [-25, 50];
+          const W2X = w => C.x0 + ((w - wr[0]) / (wr[1] - wr[0])) * C.w, B2Y = b => C.y0 + C.h - ((b - br[0]) / (br[1] - br[0])) * C.h;
+          const lo = RSS, hi = rss(wr[1], br[1]);
+          const cs = 6;
+          for (let px = 0; px < C.w; px += cs) for (let py = 0; py < C.h; py += cs) {
+            const w = wr[0] + ((px + cs / 2) / C.w) * (wr[1] - wr[0]), b = br[0] + ((C.h - py - cs / 2) / C.h) * (br[1] - br[0]);
+            const t = clamp01(Math.log(1 + (rss(w, b) - lo) / 40) / Math.log(1 + (hi - lo) / 40));
+            const band = Math.abs(((t * 9) % 1) - 0.5) < 0.07 ? 0.18 : 0;
+            g.c.fillStyle = `rgba(${Math.round(140 * (1 - t) + 30)},${Math.round(124 * (1 - t) + 20)},${Math.round(255 * (1 - t) + 50)},${0.22 + 0.5 * (1 - t) + band})`;
+            g.c.fillRect(C.x0 + px, C.y0 + py, cs, cs);
+          }
+          g.text('slope w →', C.x0 + C.w, C.y0 + C.h + 16, { size: 10, color: T.dim, align: 'right' }); g.text('intercept b ↑', C.x0, C.y0 - 10, { size: 10, color: T.dim, align: 'left' });
+          g.dot(W2X(F.w), B2Y(F.b), 5, T.green); g.ring(W2X(F.w), B2Y(F.b), 10, T.green, 1.5);
+          if (s === 6) {
+            g.dot(W2X(G.w), B2Y(G.b), 6, T.amber); g.text('first guess', W2X(G.w) + 10, B2Y(G.b) - 10, { size: 11, color: T.amber, align: 'left' });
+            g.text('best (w, b)', W2X(F.w) + 14, B2Y(F.b) + 4, { size: 11, color: T.green, align: 'left' });
+            note(g, ['RSS(w, b) for every line', '', `first guess: RSS = ${Math.round(rss(G.w, G.b))}`, `bottom:      RSS = ${Math.round(RSS)}`, '', 'one bowl, one lowest point'], 410, 120, ease(clamp01(p * 2)), { mono: true, colors: [T.ink, '', T.amber, T.green, '', T.muted] });
+          } else {
+            // gradient descent on standardised x, mapped back to (w, b)
+            const sd = Math.sqrt(F.sxx / N), steps_ = Math.floor(p * 34), lr = 0.12;
+            let a = (G.w * sd), c = G.w * F.mx + G.b; const path = [[G.w, G.b]];
+            for (let it = 0; it < steps_; it++) {
+              let ga = 0, gc = 0;
+              XS.forEach((x, i) => { const z = (x - F.mx) / sd, e = a * z + c - YS[i]; ga += 2 * e * z / N; gc += 2 * e / N; });
+              a -= lr * ga; c -= lr * gc; const w = a / sd; path.push([w, c - w * F.mx]);
+            }
+            g.line(path.map(([w, b]) => [W2X(w), B2Y(b)]), { color: T.amber, w: 1.6 });
+            path.forEach(([w, b], k) => g.dot(W2X(w), B2Y(b), k === path.length - 1 ? 5 : 2.2, T.amber));
+            const [cw, cb] = path[path.length - 1];
+            const P3 = plot(350, 50, 260, 270);
+            P3.axes(g, 1, false); P3.pts(g, 1, XS, YS, 3.6); P3.line(g, F.w, F.b, { color: T.green, a: 0.35, dash: [5, 4], w: 1.4 }); P3.line(g, cw, cb, { color: T.amber });
+            g.text(`step ${path.length - 1}   RSS = ${Math.round(rss(cw, cb))}`, 480, 344, { size: 12, color: T.amber });
+          }
+          return;
+        }
+        if (s === 7) {
+          const a = ease(clamp01(p * 1.5));
+          const cols = ['x', 'y', 'x − x̄', 'y − ȳ', '(x−x̄)(y−ȳ)', '(x−x̄)²'], cx = [40, 92, 150, 222, 306, 400];
+          cols.forEach((c, j) => g.text(c, cx[j] + 22, 44, { size: 11, color: T.muted, a }));
+          XS.forEach((x, i) => {
+            const dx = x - F.mx, dy = YS[i] - F.my, k = ease(clamp01(p * 2 - i * 0.06));
+            [x, YS[i], dx, dy, dx * dy, dx * dx].forEach((v, j) => g.text(j < 2 ? String(v) : f1(v), cx[j] + 22, 66 + i * 20, { size: 11, color: j === 4 ? T.cyan : j === 5 ? T.violet2 : T.soft, a: k }));
+          });
+          const sa = ease(clamp01(p * 2 - 1));
+          g.line([[40, 266], [470, 266]], { color: 'rgba(255,255,255,0.2)', a: sa });
+          g.text(`x̄ = ${f1(F.mx)}`, 62, 282, { size: 11, color: T.ink, a: sa }); g.text(`ȳ = ${f1(F.my)}`, 114, 282, { size: 11, color: T.ink, a: sa });
+          g.text(`Σ = ${f1(F.sxy)}`, cx[4] + 22, 282, { size: 12, color: T.cyan, a: sa }); g.text(`Σ = ${f1(F.sxx)}`, cx[5] + 22, 282, { size: 12, color: T.violet2, a: sa });
+          const fa = ease(clamp01(p * 2 - 1.3));
+          g.text(`w = ${f1(F.sxy)} / ${f1(F.sxx)} = ${f2(F.w)}`, 320, 318, { size: 15, color: T.cyan, a: fa });
+          g.text(`b = ${f1(F.my)} − ${f2(F.w)} × ${f1(F.mx)} = ${f2(F.b)}`, 320, 344, { size: 15, color: T.amber, a: fa });
+          return;
+        }
+        if (s === 8) {
+          P.axes(g); P.pts(g);
+          P.line(g, F.w, F.b, { color: T.green, a: ease(clamp01(p * 2)) });
+          P.line(g, G.w, G.b, { color: T.amber, a: 0.3, dash: [5, 4], w: 1.4 });
+          const ca = ease(clamp01(p * 2 - 0.6));
+          g.line([[P.X(F.mx), P.Y(20)], [P.X(F.mx), P.Y(F.my)]], { color: T.ink, a: ca * 0.3, dash: [3, 3] }); g.line([[P.X(35), P.Y(F.my)], [P.X(F.mx), P.Y(F.my)]], { color: T.ink, a: ca * 0.3, dash: [3, 3] });
+          g.ring(P.X(F.mx), P.Y(F.my), 9, T.ink, 2, ca); g.text('(x̄, ȳ)', P.X(F.mx) + 12, P.Y(F.my) + 16, { size: 11, color: T.ink, a: ca, align: 'left' });
+          note(g, [`ŷ = ${f2(F.w)} · x ${F.b < 0 ? '−' : '+'} ${f2(Math.abs(F.b))}`, '', `RSS: ${Math.round(rss(G.w, G.b))} (guess) → ${Math.round(RSS)}`, `Σ residuals = ${f2(XS.reduce((sm, x, i) => sm + YS[i] - (F.w * x + F.b), 0))}`, 'passes through (x̄, ȳ)'], 410, 120, ease(clamp01(p * 2 - 0.3)), { mono: true, colors: [T.green, '', T.amber, T.muted, T.muted] });
+          return;
+        }
+        // ---------- part 4
+        if (s === 10) {
+          const rows = [[1, 72, 8], [1, 95, 15], [1, 58, 3], [1, 110, 22], [1, 84, 10]], beta = [12, 0.62, -0.35];
+          const cs = 34, X0 = 40, Y0 = 92, k = Math.min(4, Math.floor(p * 6));
+          g.text('X  (1s · size · age)', X0 + 51, Y0 - 24, { size: 11, color: T.muted });
+          rows.forEach((r, i) => r.forEach((v, j) => { g.rr(X0 + j * cs + 1, Y0 + i * cs + 1, cs - 2, cs - 2, 4, { fill: j === 0 ? alpha(T.amber, 0.35) : alpha(T.cyan, 0.18), stroke: i === k ? T.amber : null }); g.text(String(v), X0 + j * cs + cs / 2, Y0 + i * cs + cs / 2 + 1, { size: 12, color: T.ink }); }));
+          g.text('×', X0 + 3 * cs + 18, Y0 + 2.5 * cs, { size: 18, color: T.muted });
+          const BX = X0 + 3 * cs + 38;
+          g.text('β', BX + 24, Y0 - 24, { size: 11, color: T.muted });
+          beta.forEach((v, i) => { g.rr(BX, Y0 + i * cs + 1 + cs, 48, cs - 2, 4, { fill: alpha(T.violet, 0.25) }); g.text(String(v), BX + 24, Y0 + (i + 1) * cs + cs / 2 + 1, { size: 12, color: T.ink }); });
+          g.text('=', BX + 66, Y0 + 2.5 * cs, { size: 18, color: T.muted });
+          const YX = BX + 86;
+          g.text('ŷ', YX + 30, Y0 - 24, { size: 11, color: T.muted });
+          rows.forEach((r, i) => { const v = r.reduce((sm, x, j) => sm + x * beta[j], 0); if (i <= k) { g.rr(YX, Y0 + i * cs + 1, 60, cs - 2, 4, { fill: alpha(T.green, i === k ? 0.4 : 0.18) }); g.text(f2(v), YX + 30, Y0 + i * cs + cs / 2 + 1, { size: 12, color: T.ink }); } });
+          const r = rows[k];
+          g.text(`row ${k + 1}:  1×${beta[0]} + ${r[1]}×${beta[1]} + ${r[2]}×(${beta[2]}) = ${f2(r.reduce((sm, x, j) => sm + x * beta[j], 0))}`, 320, 300, { size: 13, color: T.amber });
+          g.text('n rows × (p + 1) columns   ·   one weight per column', 320, 330, { size: 11, color: T.dim });
+          return;
+        }
+        if (s === 11) {
+          const a = ease(clamp01(p * 2));
+          const O = [150, 270], u = [170, -20], v = [70, -70];
+          const pl = [[O[0], O[1]], [O[0] + u[0] * 1.6, O[1] + u[1] * 1.6], [O[0] + u[0] * 1.6 + v[0] * 1.6, O[1] + u[1] * 1.6 + v[1] * 1.6], [O[0] + v[0] * 1.6, O[1] + v[1] * 1.6]].map(([x, y]) => [x - 60, y + 20]);
+          g.c.beginPath(); pl.forEach(([x, y], i) => (i ? g.c.lineTo(x, y) : g.c.moveTo(x, y))); g.c.closePath(); g.c.fillStyle = alpha(T.violet, 0.14 * a + 0.04); g.c.fill(); g.c.strokeStyle = alpha(T.violet2, 0.5); g.c.stroke();
+          g.text('all possible Xβ (column space of X)', 250, 318, { size: 11, color: T.violet2, a });
+          const yhat = [O[0] + 180, O[1] - 66], yv = [yhat[0], yhat[1] - 150 * ease(clamp01(p * 1.6))];
+          g.line([O, [O[0] + u[0] * 0.9, O[1] + u[1] * 0.9]], { color: alpha(T.cyan, 0.7), arrow: true }); g.text('x₁', O[0] + u[0] * 0.9 + 10, O[1] + u[1] * 0.9 + 8, { size: 12, color: T.cyan });
+          g.line([O, [O[0] + v[0] * 0.9, O[1] + v[1] * 0.9]], { color: alpha(T.cyan, 0.7), arrow: true }); g.text('1s', O[0] + v[0] * 0.9 - 10, O[1] + v[1] * 0.9 - 6, { size: 12, color: T.cyan });
+          g.line([O, [yhat[0], yv[1]]], { color: T.amber, w: 2.2, arrow: true }); g.text('y (actual prices)', yhat[0] + 8, yv[1] - 4, { size: 12, color: T.amber, align: 'left' });
+          const sa = ease(clamp01(p * 2 - 0.7));
+          g.line([O, yhat], { color: T.green, w: 2.2, arrow: true, a: sa }); g.text('ŷ = Xβ', yhat[0] + 10, yhat[1] + 14, { size: 12, color: T.green, align: 'left', a: sa });
+          g.line([yhat, [yhat[0], yv[1] + 6]], { color: T.pink, dash: [4, 3], a: sa, w: 1.8 }); g.text('e = y − ŷ', yhat[0] - 8, (yhat[1] + yv[1]) / 2, { size: 12, color: T.pink, align: 'right', a: sa });
+          g.rr(yhat[0], yhat[1] - 10, 10, 10, 0, { stroke: T.pink, a: sa });
+          note(g, ['XᵀX β = Xᵀy', 'β = (XᵀX)⁻¹ Xᵀy', '', 'residual ⟂ every column:', 'Xᵀ e = 0'], 440, 90, ease(clamp01(p * 2 - 1)), { mono: true, colors: [T.ink, T.ink, '', T.muted, T.pink] });
+          return;
+        }
+        // ---------- part 5
+        if (s === 12) {
+          const L = plot(36, 60, 250, 230), R = plot(350, 60, 250, 230);
+          const a = ease(clamp01(p * 2));
+          [L, R].forEach(Q => { Q.axes(g, 1, false); });
+          L.line(g, 0, F.my, { color: T.muted, dash: [5, 4] }); R.line(g, F.w, F.b, { color: T.green });
+          XS.forEach((x, i) => {
+            [[L, F.my, T.pink], [R, F.w * x + F.b, T.cyan]].forEach(([Q, yh, col]) => { const side = Math.abs(Q.Y(YS[i]) - Q.Y(yh)) * a; g.rr(x > 90 ? Q.X(x) - side : Q.X(x), YS[i] > yh ? Q.Y(yh) - side : Q.Y(yh), side, side, 2, { fill: alpha(col, 0.18), stroke: alpha(col, 0.7), w: 1 }); });
+          });
+          L.pts(g, 1, XS, YS, 3.6); R.pts(g, 1, XS, YS, 3.6);
+          g.text(`predict the mean: TSS = ${Math.round(TSS)}`, 161, 44, { size: 12, color: T.pink });
+          g.text(`the line: RSS = ${Math.round(RSS)}`, 475, 44, { size: 12, color: T.cyan });
+          const ra = ease(clamp01(p * 2 - 0.9));
+          g.text(`R² = 1 − ${Math.round(RSS)} / ${Math.round(TSS)} = ${R2.toFixed(3)}`, 320, 334, { size: 16, color: T.amber, a: ra });
+          g.text(`the line explains ${Math.round(R2 * 100)}% of the variation in price`, 320, 358, { size: 12, color: T.muted, a: ra });
+          return;
+        }
+        if (s === 13) {
+          const panels = [['good: random band', (u, R0) => R0() * 2 - 1], ['curve: missing non-linearity', u => (u - 0.5) * (u - 0.5) * 9 - 0.7 + (Math.sin(u * 40) * 0.15)], ['funnel: unequal variance', (u, R0) => (R0() * 2 - 1) * (0.15 + u * 1.4)]];
+          panels.forEach(([title, fn], k) => {
+            const a = ease(clamp01(p * 2.2 - k * 0.4)), x0 = 26 + k * 205, y0 = 80, w = 180, h = 200;
+            let seed = 7 + k; const R0 = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+            g.rr(x0, y0, w, h, 10, { fill: 'rgba(255,255,255,0.03)', stroke: 'rgba(255,255,255,0.12)', a });
+            g.line([[x0 + 8, y0 + h / 2], [x0 + w - 8, y0 + h / 2]], { color: 'rgba(255,255,255,0.3)', dash: [4, 3], a });
+            for (let i = 0; i < 40; i++) { const u = i / 39, r = fn(u, R0); g.dot(x0 + 12 + u * (w - 24), y0 + h / 2 - r * (h / 2 - 16), 2.8, k === 0 ? T.green : k === 1 ? T.amber : T.pink, a); }
+            g.text(title, x0 + w / 2, y0 + h + 22, { size: 12, color: k === 0 ? T.green : k === 1 ? T.amber : T.pink, a });
+            g.text('residual', x0 + 8, y0 - 8, { size: 10, color: T.dim, align: 'left', a }); g.text('prediction →', x0 + w - 6, y0 + h - 8, { size: 10, color: T.dim, align: 'right', a });
+          });
+          return;
+        }
+        if (s === 14) {
+          const Q = plot(56, 46, 300, 270, [35, 320], [0, 210]);
+          Q.axes(g); Q.pts(g, 1, XS, YS, 3.6);
+          Q.line(g, F.w, F.b, { color: T.green, from: 40, to: 130 });
+          const ea = ease(clamp01(p * 2 - 0.6));
+          Q.line(g, F.w, F.b, { color: T.pink, from: 130, to: 310, dash: [6, 5], a: ea });
+          g.rr(Q.X(40), Q.Y(205), Q.X(130) - Q.X(40), Q.Y(0) - Q.Y(205), 0, { fill: alpha(T.green, 0.05), a: 1 });
+          g.text('range of the data', (Q.X(40) + Q.X(130)) / 2, Q.Y(205) + 14, { size: 10, color: T.green });
+          g.text('300 m²?', Q.X(300), Q.Y(F.w * 300 + F.b) - 14, { size: 12, color: T.pink, a: ea });
+          note(g, [`slope ${f2(F.w)}: +₹${f2(F.w)} lakh per m²`, `→ +₹${f1(F.w * 10)} lakh per 10 m²`, '', 'association, not causation', 'valid only inside the data'], 386, 110, ease(clamp01(p * 2)), { mono: true, size: 12, colors: [T.green, T.green, '', T.amber, T.pink] });
+          return;
+        }
+        if (s === 15) {
+          const t = ease(clamp01((p - 0.15) * 1.6));
+          const xs = XS.concat([150]), ys = YS.concat([lerp(102, 30, t)]);
+          const Q = plot(56, 46, 330, 280, [35, 160], [10, 110]);
+          Q.axes(g); Q.pts(g, 1, XS, YS);
+          g.dot(Q.X(150), Q.Y(ys[N]), 6, T.pink); g.ring(Q.X(150), Q.Y(ys[N]), 11, T.pink, 1.5);
+          const F2 = fit(xs, ys);
+          Q.line(g, F.w, F.b, { color: T.green, a: 0.4, dash: [5, 4], w: 1.4, to: 158 });
+          Q.line(g, F2.w, F2.b, { color: T.amber, to: 158 });
+          g.text('outlier', Q.X(150) - 8, Q.Y(ys[N]) + 22, { size: 11, color: T.pink });
+          note(g, [`slope without it: ${f2(F.w)}`, `slope with it:    ${f2(F2.w)}`, '', 'one point, far out on x,', 'tilts the whole line'], 410, 120, 1, { mono: true, colors: [T.green, T.amber, '', T.muted, T.muted] });
+        }
+      },
+    });
+  };
+
   // ================================================================== RNN
   ex.rnn = el => {
     const words = ['the', 'film', 'was', 'not', 'very', 'good'];

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvrwuu8f">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvrwuu8f">
+<link rel="stylesheet" href="../../assets/site.css?v=mvrxbotc">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvrxbotc">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -63,7 +63,7 @@
           <dt>Prediction cost</dt><dd>$O(p)$ per row</dd>
           <dt>In code</dt><dd><code class="no-math">sklearn.<wbr>linear_model.<wbr>LinearRegression</code></dd>
       </dl>
-      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>How it works</a></li><li><a href="#lab"><span>03</span>Try it</a></li><li><a href="#maths"><span>04</span>The maths</a></li><li><a href="#tuning"><span>05</span>Hyperparameters</a></li><li><a href="#when"><span>06</span>When to use it</a></li><li><a href="#code"><span>07</span>In code</a></li><li><a href="#results"><span>08</span>On real data</a></li><li><a href="#quiz"><span>09</span>Check yourself</a></li><li><a href="#related"><span>10</span>Related lessons</a></li></ol>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>How it works</a></li><li><a href="#arch"><span>03</span>The architecture</a></li><li><a href="#watch"><span>04</span>Watch it work</a></li><li><a href="#lab"><span>05</span>Try it</a></li><li><a href="#maths"><span>06</span>The maths</a></li><li><a href="#tuning"><span>07</span>Hyperparameters</a></li><li><a href="#when"><span>08</span>When to use it</a></li><li><a href="#code"><span>09</span>In code</a></li><li><a href="#results"><span>10</span>On real data</a></li><li><a href="#quiz"><span>11</span>Check yourself</a></li><li><a href="#related"><span>12</span>Related lessons</a></li></ol>
       <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
     </aside>
 
@@ -79,14 +79,24 @@
         <h2 class="h3"><span>02</span> How it works</h2>
         <ol class="steps"><li>Stack the features into a design matrix $X$ (one row per example) and add a column of ones for the intercept.</li><li>Write the loss as the residual sum of squares: $\lVert y - X\beta \rVert^2$.</li><li>Take the gradient with respect to $\beta$ and set it to zero. This gives the normal equations $X^\top X\beta = X^\top y$.</li><li>Solve them, in practice with a QR or SVD decomposition rather than an explicit matrix inverse, because that is numerically safer.</li><li>Check the residuals: they should look like structureless noise. A pattern in the residuals means the model is missing something.</li></ol>
       </section>
+      <section class="reveal" id="arch">
+        <h2 class="h3"><span>03</span> The architecture</h2>
+        <p>The full workflow of a linear regression, from raw table to a model you can trust, fitted on this repository’s California housing sample. Hover over any stage or tag (or tap it on a phone) for what it does, its shape and the real numbers from the fit.</p>
+        <div class="arch" data-architecture="linreg" style="margin-top:18px"><noscript><p class="lab-noscript">The diagram needs JavaScript.</p></noscript></div>
+      </section>
+      <section class="reveal" id="watch">
+        <h2 class="h3"><span>04</span> Watch it work</h2>
+        <p>Press play, or step through at your own pace. Each step adds one idea.</p>
+        <div class="explainer" data-explainer="ols" style="margin-top:18px"><noscript><p class="lab-noscript">The animation needs JavaScript.</p></noscript></div>
+      </section>
       <section class="reveal" id="lab">
-        <h2 class="h3"><span>03</span> Try it</h2>
+        <h2 class="h3"><span>05</span> Try it</h2>
         <p>Click on the plot to add points and drag them around. The line is refitted instantly with the closed-form solution; dashed lines are the residuals being squared.</p>
         <div class="lab" data-lab="ols_linear_regression" data-kind="models" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
         <div class="try"><small class="kicker">Things to try</small><ol><li>Add one point far above the others and watch how far the line tilts toward it.</li><li>Press <em>Run gradient descent</em> to watch the same answer being found iteratively.</li><li>Make the cloud vertical: $R^2$ falls even though the line still minimises squared error.</li></ol></div>
       </section>
       <section class="reveal" id="maths">
-        <h2 class="h3"><span>04</span> The maths</h2>
+        <h2 class="h3"><span>06</span> The maths</h2>
         <ol class="math-steps">
           <li><h3>The objective</h3><div class="formula">$$\hat\beta = \arg\min_\beta \; \lVert y - X\beta\rVert_2^2 = \arg\min_\beta \sum_{i=1}^n \big(y_i - x_i^\top \beta\big)^2$$</div><p>Squared error is smooth and convex, so there is exactly one minimum when the columns of $X$ are linearly independent.</p></li>
           <li><h3>Setting the gradient to zero</h3><div class="formula">$$\nabla_\beta = -2X^\top(y - X\beta) = 0 \;\;\Longrightarrow\;\; \hat\beta = (X^\top X)^{-1}X^\top y$$</div><p>Geometrically, $\hat y = X\hat\beta$ is the orthogonal projection of $y$ onto the space spanned by the columns of $X$. The residual vector is perpendicular to every feature.</p></li>
@@ -94,14 +104,14 @@
         </ol>
       </section>
       <section class="reveal" id="tuning">
-        <h2 class="h3"><span>05</span> Hyperparameters</h2>
+        <h2 class="h3"><span>07</span> Hyperparameters</h2>
         <div class="table-wrap"><table class="kv">
           <thead><tr><th>Setting</th><th>What it does</th><th>Typical choice</th></tr></thead>
           <tbody><tr><td><span class="hp">fit_intercept</span></td><td>Whether to learn $\beta_0$.</td><td>Keep it on unless the data is already centred.</td></tr><tr><td><span class="hp">Feature scaling</span></td><td>Does not change predictions for plain OLS.</td><td>Still useful for reading coefficient sizes side by side, and required once you add a penalty.</td></tr></tbody>
         </table></div>
       </section>
       <section class="reveal" id="when">
-        <h2 class="h3"><span>06</span> When to use it</h2>
+        <h2 class="h3"><span>08</span> When to use it</h2>
         <div class="split2">
           <div class="box good"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Strengths</h3><ul><li>Closed-form, fast and deterministic.</li><li>Coefficients are directly interpretable.</li><li>Comes with standard errors and confidence intervals under its assumptions.</li><li>A strong, honest baseline for any regression problem.</li></ul></div>
           <div class="box bad"><h3><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg> Limitations</h3><ul><li>Only captures linear relationships unless you engineer features.</li><li>Squared loss lets a few outliers drag the line.</li><li>Coefficients become unstable when features are highly correlated (multicollinearity).</li><li>Breaks down when there are more features than rows.</li></ul></div>
@@ -110,7 +120,7 @@
         </div>
       </section>
       <section class="reveal" id="code">
-        <h2 class="h3"><span>07</span> In code</h2>
+        <h2 class="h3"><span>09</span> In code</h2>
         <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> pandas <span class="k">as</span> pd
 <span class="k">from</span> sklearn.linear_model <span class="k">import</span> LinearRegression
 <span class="k">from</span> sklearn.model_selection <span class="k">import</span> train_test_split
@@ -127,7 +137,7 @@ pred = model.<span class="f">predict</span>(X_te)
         <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Reading coefficients as causal effects. A coefficient tells you about association with everything else held fixed in <em>this</em> data, nothing more.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Comparing raw coefficient sizes across features measured in different units. Standardise first if you want to compare them.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Ignoring correlated features. Two near-duplicate columns can get huge coefficients with opposite signs; check the variance inflation factor (VIF).</span></li></ul>
       </section>
       <section class="reveal" id="results">
-        <h2 class="h3"><span>08</span> On real data</h2>
+        <h2 class="h3"><span>10</span> On real data</h2>
         <p>OLS trained on 80% of the California housing sample (MedHouseVal as target), scored on a held-out 20%. The baseline always predicts the training mean.</p>
         <div class="table-wrap" style="margin-top:18px"><table class="kv results-table">
           <thead><tr><th>Metric</th><th>OLS</th><th>Predict the mean</th></tr></thead>
@@ -136,7 +146,7 @@ pred = model.<span class="f">predict</span>(X_te)
         <p class="note">Produced by <a href="https://github.com/yogesh660/ml-model-zoo/blob/main/models/ols_linear_regression/train.py" target="_blank" rel="noopener">models/ols_linear_regression/train.py</a> · generated 2026-10-28. Run it yourself: <code class="no-math">python models/ols_linear_regression/train.py</code></p>
       </section>
       <section class="reveal" id="quiz">
-        <h2 class="h3"><span>09</span> Check yourself</h2>
+        <h2 class="h3"><span>11</span> Check yourself</h2>
         <div class="quiz">
           <div class="q" data-answer="0">
             <p><span>Q1</span>Why does one far-away outlier move an OLS line so much?</p>
@@ -157,7 +167,7 @@ pred = model.<span class="f">predict</span>(X_te)
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
       <section class="reveal" id="related">
-        <h2 class="h3"><span>10</span> Related lessons</h2>
+        <h2 class="h3"><span>12</span> Related lessons</h2>
         <div class="related"><a href="../../models/polynomial_regression/"><small class="kicker">Regression</small><b>Polynomial regression</b></a><a href="../../models/ridge_regression/"><small class="kicker">Regression</small><b>Ridge regression</b></a><a href="../../models/robust_regression/"><small class="kicker">Regression</small><b>Robust regression</b></a><a href="../../concepts/regression-metrics/"><small class="kicker">Concept</small><b>Regression metrics</b></a><a href="../../concepts/bias-variance-tradeoff/"><small class="kicker">Concept</small><b>Bias–variance trade-off</b></a><a href="../../concepts/gradient-descent/"><small class="kicker">Concept</small><b>Gradient descent</b></a></div>
       </section>
     </div>
@@ -188,11 +198,13 @@ pred = model.<span class="f">predict</span>(X_te)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvrwuu8f" defer></script>
-<script src="../../assets/labs/core.js?v=mvrwuu8f" defer></script>
-<script src="../../assets/labs/algos.js?v=mvrwuu8f" defer></script>
-<script src="../../assets/labs/models.js?v=mvrwuu8f" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvrwuu8f" defer></script>
-<script src="../../assets/learn.js?v=mvrwuu8f" defer></script>
+<script src="../../assets/site.js?v=mvrxbotc" defer></script>
+<script src="../../assets/labs/core.js?v=mvrxbotc" defer></script>
+<script src="../../assets/labs/algos.js?v=mvrxbotc" defer></script>
+<script src="../../assets/labs/models.js?v=mvrxbotc" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvrxbotc" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvrxbotc" defer></script>
+<script src="../../assets/labs/architecture.js?v=mvrxbotc" defer></script>
+<script src="../../assets/learn.js?v=mvrxbotc" defer></script>
 </body>
 </html>
