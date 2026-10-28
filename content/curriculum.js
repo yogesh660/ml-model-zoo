@@ -126,8 +126,8 @@ module.exports = [
     tasks: ['cv'],
     modules: [
       { title: 'Image basics', lessons: ['pixels-channels-and-colour-spaces', ...C('Image filtering and convolution ⚙'), 'edge-detection-sobel-and-canny', 'thresholding-histograms-and-morphology', ...X('Classical segmentation: k-means, watershed, GrabCut')] },
-      { title: 'Classical features', lessons: [...C('Corners and keypoints: Harris, FAST', 'SIFT, ORB and feature matching'), ...X('HOG with SVM', 'Image pyramids and scale space', 'Bag of visual words')] },
-      { title: 'Geometry', lessons: [...C('Geometric transforms and homography', 'RANSAC'), ...X('Camera model and calibration', 'Stereo vision and depth', 'Optical flow')] },
+      { title: 'Classical features', lessons: ['corners-and-keypoints-harris-fast', 'sift-orb-and-feature-matching', ...X('HOG with SVM', 'Image pyramids and scale space', 'Bag of visual words')] },
+      { title: 'Geometry', lessons: ['geometric-transforms-and-homography', 'ransac', ...X('Camera model and calibration', 'Stereo vision and depth', 'Optical flow')] },
       { title: 'CNN foundations', lessons: [...C('Receptive field, stride and pooling', 'CNN architecture tour: LeNet to ResNet to EfficientNet'), ...X('Depthwise-separable convolutions and ConvNeXt')] },
       { title: 'Detection and segmentation', lessons: [...C('IoU, NMS and mAP', 'One-stage detectors: SSD and YOLO', 'Semantic segmentation: FCN and U-Net'), ...X('Two-stage detectors: the R-CNN family', 'Anchor-free detection and DETR', 'Instance segmentation: Mask R-CNN', 'Segment Anything')] },
       { title: 'Modern vision', lessons: [...C('Vision Transformer'), ...X('Swin and hierarchical transformers', 'Vision-language models and VQA', 'Latent diffusion and ControlNet')] },
