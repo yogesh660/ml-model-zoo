@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsi1g3o">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsi1g3o">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -146,6 +146,56 @@ plt.<span class="f">show</span>()</code></pre></div>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Retrain with k = 4</span></button><button class="opt" type="button"><b>B</b><span>Cut the tree at a height that crosses 4 vertical branches</span></button><button class="opt" type="button"><b>C</b><span>Take the top 4 leaves</span></button><button class="opt" type="button"><b>D</b><span>It is not possible</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The hierarchy contains every number of clusters from 1 to $n$.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>How does agglomerative hierarchical clustering begin its clustering process?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>With all data points in a single giant cluster</span></button><button class="opt" type="button"><b>B</b><span>With $k$ randomly chosen centroids</span></button><button class="opt" type="button"><b>C</b><span>With every data point treated as its own independent singleton cluster</span></button><button class="opt" type="button"><b>D</b><span>By fitting a Gaussian distribution to the entire dataset</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Agglomerative (bottom-up) clustering starts with $n$ distinct clusters of 1 observation each and iteratively merges the most similar pairs.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>Which linkage criterion merges the two clusters that cause the smallest increase in total within-cluster variance (sum of squared errors)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Single linkage</span></button><button class="opt" type="button"><b>B</b><span>Complete linkage</span></button><button class="opt" type="button"><b>C</b><span>Ward linkage</span></button><button class="opt" type="button"><b>D</b><span>Centroid linkage</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Ward's criterion calculates the increase in within-cluster sum of squares $\Delta(A, B) = \frac{|A||B|}{|A| + |B|}\lVert\mu_A - \mu_B\rVert^2$ and merges the pair that minimises this variance inflation.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>How is complete linkage distance defined between two clusters $A$ and $B$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The distance between their closest pair of points</span></button><button class="opt" type="button"><b>B</b><span>The maximum distance between any point in $A$ and any point in $B$: $\max_{a \in A, b \in B} d(a, b)$</span></button><button class="opt" type="button"><b>C</b><span>The average of all pairwise distances between points in $A$ and $B$</span></button><button class="opt" type="button"><b>D</b><span>The distance between the cluster medoids</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Complete linkage defines cluster dissimilarity as the maximum pairwise distance between their elements, ensuring that every point in the merged cluster will be within that distance of all other points.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>Why can Ward linkage only be used with Euclidean distance?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because other distance metrics are patent-protected</span></button><button class="opt" type="button"><b>B</b><span>Because Ward's criterion is defined mathematically as the increase in sum of squared Euclidean deviations from centroids</span></button><button class="opt" type="button"><b>C</b><span>Because scipy raises a warning on non-Euclidean metrics but executes anyway</span></button><button class="opt" type="button"><b>D</b><span>Because Manhattan distance cannot be computed between pairs of points</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Ward linkage specifically minimises variance (sum of squared Euclidean distances to the mean). Conceptually and mathematically, variance is tied to Euclidean geometry; using other metrics breaks the variance objective.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q7</span>What is the Lance-Williams formula used for in hierarchical clustering algorithms?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To update distances between a newly merged cluster $(A \cup B)$ and all other remaining clusters $C$ using only existing distances, without re-inspecting raw data points</span></button><button class="opt" type="button"><b>B</b><span>To calculate the optimal number of clusters $k$ using eigenvalues</span></button><button class="opt" type="button"><b>C</b><span>To project high-dimensional data into 2D</span></button><button class="opt" type="button"><b>D</b><span>To scale features to zero mean and unit variance</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The Lance-Williams recurrence expresses the distance $d(A \cup B, C)$ as a linear combination of $d(A, C)$, $d(B, C)$, and $d(A, B)$, enabling fast $O(1)$ distance updates after each merge.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>In a dendrogram, how do you identify a natural or robust clustering structure?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By finding the shortest vertical lines near the leaves</span></button><button class="opt" type="button"><b>B</b><span>By locating a large vertical distance (gap) between successive merge heights that is not crossed by any horizontal lines</span></button><button class="opt" type="button"><b>C</b><span>By counting how many leaves touch the bottom axis</span></button><button class="opt" type="button"><b>D</b><span>By checking if the tree is completely balanced</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A tall vertical gap between merges indicates that clusters remained distinct and separated across a wide range of dissimilarity thresholds before being forced to merge, signalling natural cluster separation.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>Why does agglomerative hierarchical clustering become impractical on datasets with more than 30,000 observations?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the algorithm requires storing an $n \times n$ distance matrix requiring $O(n^2)$ memory and at least $O(n^2)$ time</span></button><button class="opt" type="button"><b>B</b><span>Because trees cannot have more than 1,000 leaf nodes in Python</span></button><button class="opt" type="button"><b>C</b><span>Because the dendrogram becomes too wide to render on a screen</span></button><button class="opt" type="button"><b>D</b><span>Because Ward linkage only converges on small samples</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Storing an $n \times n$ distance matrix for $n = 30,000$ requires $(30,000)^2 \times 8\text{ bytes} \approx 7.2\text{ GB}$ of RAM, and naive implementations scale as $O(n^3)$ or $O(n^2 \log n)$, making it computationally intractable for large datasets.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q10</span>Suppose cluster $A = \{1\}$ and cluster $B = \{5, 9\}$ in 1D. What are the linkage distances between $A$ and $B$ under single linkage, complete linkage, and average linkage?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Single $= 4$, Complete $= 8$, Average $= 6$</span></button><button class="opt" type="button"><b>B</b><span>Single $= 8$, Complete $= 4$, Average $= 6$</span></button><button class="opt" type="button"><b>C</b><span>Single $= 4$, Complete $= 6$, Average $= 8$</span></button><button class="opt" type="button"><b>D</b><span>Single $= 2$, Complete $= 4$, Average $= 3$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The pairwise distances from 1 to $\{5, 9\}$ are 4 and 8. Single linkage is the minimum ($\min(4, 8) = 4$), complete linkage is the maximum ($\max(4, 8) = 8$), and average linkage is the arithmetic mean ($(4 + 8)/2 = 6$).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Two 1D clusters $A = \{2\}$ and $B = \{8\}$ have centroids $\mu_A = 2$ ($|A| = 1$) and $\mu_B = 8$ ($|B| = 1$). What is the increase in variance $\Delta(A, B) = \frac{|A||B|}{|A| + |B|}\lVert\mu_A - \mu_B\rVert^2$ under Ward's criterion if $A$ and $B$ are merged?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$36.0$</span></button><button class="opt" type="button"><b>B</b><span>$18.0$</span></button><button class="opt" type="button"><b>C</b><span>$9.0$</span></button><button class="opt" type="button"><b>D</b><span>$6.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The multiplier is $(1 \times 1) / (1 + 1) = 0.5$. The squared distance between centroids is $(2 - 8)^2 = 36$. Thus $\Delta(A, B) = 0.5 \times 36 = 18.0$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>In a dataset of $n = 50$ observations, how many merge steps occur from the initial singleton state until all points belong to a single root cluster?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>25</span></button><button class="opt" type="button"><b>B</b><span>50</span></button><button class="opt" type="button"><b>C</b><span>49</span></button><button class="opt" type="button"><b>D</b><span>1,225</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Each agglomerative merge step decreases the number of active clusters by exactly one ($n \to n - 1$). Reducing $n = 50$ initial clusters down to 1 single cluster requires exactly $n - 1 = 49$ merges.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -181,11 +231,11 @@ plt.<span class="f">show</span>()</code></pre></div>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/core.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/models.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/learn.js?v=mvsi1g3o" defer></script>
 </body>
 </html>

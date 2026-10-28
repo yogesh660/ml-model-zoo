@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsi1g3o">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsi1g3o">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -145,6 +145,56 @@ X = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Round blobs of similar size</span></button><button class="opt" type="button"><b>B</b><span>Two interleaved crescents</span></button><button class="opt" type="button"><b>C</b><span>Well-separated clusters</span></button><button class="opt" type="button"><b>D</b><span>Clusters of equal spread</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It partitions space into convex Voronoi cells around the centres.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What mathematical objective function does standard k-means clustering minimise?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The sum of Manhattan distances to the median</span></button><button class="opt" type="button"><b>B</b><span>The log-likelihood under a Dirichlet distribution</span></button><button class="opt" type="button"><b>C</b><span>The Within-Cluster Sum of Squares (WCSS / inertia), measuring squared Euclidean distances from points to their cluster centroids</span></button><button class="opt" type="button"><b>D</b><span>The maximum distance between any two points in the dataset</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> k-means minimises the within-cluster sum of squares $J = \sum_{k=1}^K \sum_{x_i \in C_k} \lVert x_i - \mu_k \rVert^2$, also referred to as inertia.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>Why is feature standardisation (e.g. <code>StandardScaler</code>) essential before running k-means?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because k-means fails to compile on non-zero centred inputs</span></button><button class="opt" type="button"><b>B</b><span>Because features with large numerical ranges dominate Euclidean distance calculations, rendering smaller-scale features irrelevant</span></button><button class="opt" type="button"><b>C</b><span>Because standardising forces the clusters to be non-convex</span></button><button class="opt" type="button"><b>D</b><span>Because the algorithm requires all values to be positive</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> k-means relies entirely on Euclidean distances. If salary is measured in tens of thousands and age in tens, salary will completely dictate cluster assignments unless features are scaled to equal variance.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>In the update step of Lloyd's algorithm, why is the arithmetic mean $\mu_k = \frac{1}{|C_k|}\sum_{x_i \in C_k} x_i$ chosen as the new cluster centre?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the arithmetic mean is the unique point in Euclidean space that minimises the sum of squared distances to all points in that cluster</span></button><button class="opt" type="button"><b>B</b><span>Because it guarantees that the prototype is an actual observed data point</span></button><button class="opt" type="button"><b>C</b><span>Because it eliminates the influence of outliers</span></button><button class="opt" type="button"><b>D</b><span>Because it maximises the silhouette score automatically</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Setting the derivative of $\sum \lVert x_i - \mu \rVert^2$ with respect to $\mu$ to zero yields $\mu = \frac{1}{|C|}\sum x_i$. The mean is the exact mathematical minimiser of squared Euclidean error.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>Why can you NOT simply pick the optimal number of clusters $k$ by choosing the value that minimises inertia (WCSS)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because inertia is not computable for $k &gt; 3$</span></button><button class="opt" type="button"><b>B</b><span>Because inertia monotonically decreases as $k$ increases, reaching exactly zero when $k = n$ (every point is its own cluster)</span></button><button class="opt" type="button"><b>C</b><span>Because inertia only applies to Gaussian mixtures</span></button><button class="opt" type="button"><b>D</b><span>Because scikit-learn does not expose the inertia value</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Adding more centres always reduces or preserves squared distances to the nearest centre. At $k = n$, inertia is identically zero. Instead, the "elbow" where reduction rate flattens or silhouette scores are used.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>What is the computational time complexity of assigning a single new, unseen query point to its nearest cluster in a fitted k-means model with $k$ clusters in $p$ dimensions?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$O(n \cdot p)$</span></button><button class="opt" type="button"><b>B</b><span>$O(k \cdot p)$</span></button><button class="opt" type="button"><b>C</b><span>$O(k^2)$</span></button><button class="opt" type="button"><b>D</b><span>$O(p^2)$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Assigning a new observation requires computing its Euclidean distance to each of the $k$ centroids in $p$-dimensional space, costing $O(k \cdot p)$ operations.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>How does k-means partition the feature space between adjacent cluster centroids?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Into quadratic curved boundaries</span></button><button class="opt" type="button"><b>B</b><span>Into concentric spherical shells</span></button><button class="opt" type="button"><b>C</b><span>Into overlapping probabilistic contours</span></button><button class="opt" type="button"><b>D</b><span>Into linear Voronoi polyhedra (perpendicular bisecting hyperplanes between centres)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Assigning points to the nearest centre partitions Euclidean space into Voronoi cells bounded by linear hyperplanes equidistant between pairs of centres.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>Why does running <code>KMeans(n_clusters=k, n_init=10)</code> execute the algorithm 10 times?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To compute a 10-fold cross-validation score</span></button><button class="opt" type="button"><b>B</b><span>To average the coordinates of 10 different runs</span></button><button class="opt" type="button"><b>C</b><span>To run 10 independent restarts from different initialisations and keep the model that achieves the lowest overall inertia</span></button><button class="opt" type="button"><b>D</b><span>To train an ensemble of 10 bagging models</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> k-means is only guaranteed to converge to a local minimum, which depends heavily on initial centroid placement. <code>n_init=10</code> runs 10 independent trials and outputs the best solution.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q10</span>Consider 4 points on a 1D line assigned to a cluster: $\{2, 4, 6, 8\}$. What is the cluster centroid $\mu$, and what is the within-cluster sum of squared errors (inertia contribution) $\sum (x_i - \mu)^2$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Centroid $\mu = 5.0$, inertia $= 20$</span></button><button class="opt" type="button"><b>B</b><span>Centroid $\mu = 5.0$, inertia $= 10$</span></button><button class="opt" type="button"><b>C</b><span>Centroid $\mu = 4.0$, inertia $= 16$</span></button><button class="opt" type="button"><b>D</b><span>Centroid $\mu = 5.0$, inertia $= 40$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The centroid is the mean $\mu = 20/4 = 5.0$. The squared deviations are $(-3)^2 + (-1)^2 + 1^2 + 3^2 = 9 + 1 + 1 + 9 = 20$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Two clusters in 1D have centres at $\mu_1 = 4.0$ and $\mu_2 = 12.0$. At what coordinate $x$ lies the decision boundary between these two clusters, and to which cluster is a new point $x = 7.9$ assigned?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Boundary at $x = 6.0$, assigned to Cluster 2</span></button><button class="opt" type="button"><b>B</b><span>Boundary at $x = 8.0$, assigned to Cluster 1</span></button><button class="opt" type="button"><b>C</b><span>Boundary at $x = 8.0$, assigned to Cluster 2</span></button><button class="opt" type="button"><b>D</b><span>Boundary at $x = 10.0$, assigned to Cluster 1</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In 1D, the Voronoi boundary between two centres is their exact midpoint: $(4.0 + 12.0)/2 = 8.0$. Because $7.9 &lt; 8.0$, the point is closer to $\mu_1$ ($|7.9 - 4.0| = 3.9$ vs $|7.9 - 12.0| = 4.1$) and is assigned to Cluster 1.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>In an iteration of 2-means clustering in 2D, Cluster 1 contains three points: $A = [1, 2]$, $B = [3, 4]$, and $C = [5, 6]$. What are the coordinates of the updated centroid $\mu_1$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$[3.0, 4.0]$</span></button><button class="opt" type="button"><b>B</b><span>$[4.0, 5.0]$</span></button><button class="opt" type="button"><b>C</b><span>$[2.5, 3.5]$</span></button><button class="opt" type="button"><b>D</b><span>$[9.0, 12.0]$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The updated centroid is the component-wise mean: $\mu_x = (1 + 3 + 5)/3 = 3.0$ and $\mu_y = (2 + 4 + 6)/3 = 4.0$, yielding $[3.0, 4.0]$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -180,11 +230,11 @@ X = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/core.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/models.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/learn.js?v=mvsi1g3o" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsi1g3o">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsi1g3o">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -147,6 +147,56 @@ db = <span class="f">DBSCAN</span>(eps=<span class="n">0.3</span>, min_samples=<
             <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses more iterations</span></button><button class="opt" type="button"><b>B</b><span>Clusters grow through chains of dense neighbourhoods, not around a centre</span></button><button class="opt" type="button"><b>C</b><span>It uses Gaussian components</span></button><button class="opt" type="button"><b>D</b><span>It uses a kernel</span></button></div>
             <div class="why" hidden><strong>Why:</strong> No centre, no convexity assumption.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>In DBSCAN, what condition must a point satisfy to be classified as a core point?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It must have at least min_samples points (including itself) within distance $\varepsilon$</span></button><button class="opt" type="button"><b>B</b><span>It must have the smallest coordinate in its cluster</span></button><button class="opt" type="button"><b>C</b><span>Its distance to the dataset centroid must be less than $\varepsilon$</span></button><button class="opt" type="button"><b>D</b><span>It must be connected to at least two other clusters</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A core point is defined as any point whose $\varepsilon$-neighbourhood contains at least <code>min_samples</code> observations: $|N_\varepsilon(p)| \ge \text{min\_samples}$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>What label does scikit-learn's <code>DBSCAN</code> assign to points classified as noise?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0</span></button><button class="opt" type="button"><b>B</b><span>None</span></button><button class="opt" type="button"><b>C</b><span>-1</span></button><button class="opt" type="button"><b>D</b><span>99</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In scikit-learn, DBSCAN labels noise points with integer <code>-1</code>, distinguishing them from valid clusters (which are indexed $0, 1, 2, \dots$).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>How does the k-distance graph help an analyst choose an appropriate value for $\varepsilon$ in DBSCAN?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It calculates the exact AIC score for each possible $\varepsilon$</span></button><button class="opt" type="button"><b>B</b><span>It sorts points by their distance to the $k$-th nearest neighbour and displays a "knee" where the curve bends sharply upward, separating dense points from sparse noise</span></button><button class="opt" type="button"><b>C</b><span>It finds the eigenvalue gap of the graph Laplacian</span></button><button class="opt" type="button"><b>D</b><span>It plots training loss across 100 epochs</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In a k-distance plot, points in dense clusters have small distances to their $k$-th neighbour (flat lower part), while noise points have large distances (steep rise). The "knee" represents the optimal transition threshold $\varepsilon$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q6</span>What is the primary failure mode of DBSCAN when clustering datasets containing groups of widely varying densities?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The algorithm crashes because of unequal variances</span></button><button class="opt" type="button"><b>B</b><span>It produces only spherical clusters</span></button><button class="opt" type="button"><b>C</b><span>A single global $\varepsilon$ cannot capture both: an $\varepsilon$ large enough for the sparse cluster merges the dense cluster with noise, while a small $\varepsilon$ fragments the sparse cluster entirely into noise</span></button><button class="opt" type="button"><b>D</b><span>It forces all clusters to have equal sample sizes</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> DBSCAN applies one fixed $\varepsilon$ radius across the entire dataset. When clusters have different densities, no single global $\varepsilon$ works simultaneously for both tight and diffuse groups.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>Why can border points in DBSCAN produce non-deterministic cluster assignments depending on the processing order of data?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because random numbers are drawn at each step</span></button><button class="opt" type="button"><b>B</b><span>Because a border point lying within distance $\varepsilon$ of core points from two different clusters is assigned to whichever cluster reaches it first during traversal</span></button><button class="opt" type="button"><b>C</b><span>Because border points are dynamically converted into centroids</span></button><button class="opt" type="button"><b>D</b><span>Because floating-point arithmetic is non-associative</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> If a border point is reachable from core points belonging to two distinct clusters, it gets attached to the first cluster that processes it, making border assignments slightly order-dependent.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>What is a common rule of thumb for setting the <code>min_samples</code> parameter in DBSCAN for a dataset with $p$ features?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{min\_samples} \approx 2 \times p$ (and at least 4)</span></button><button class="opt" type="button"><b>B</b><span>$\text{min\_samples} = 1$</span></button><button class="opt" type="button"><b>C</b><span>$\text{min\_samples} = n / 2$</span></button><button class="opt" type="button"><b>D</b><span>$\text{min\_samples} = \sqrt{n}$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A widely adopted guideline (Ester et al., 1996) recommends choosing $\text{min\_samples} \ge 2 \times \text{dimensions}$, with a practical minimum of 4 to suppress noise.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>Why is feature standardisation especially critical prior to fitting DBSCAN with Euclidean distance?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because DBSCAN only accepts values between -1 and +1</span></button><button class="opt" type="button"><b>B</b><span>Because $\varepsilon$ is a fixed isotropic Euclidean radius; unscaled features with large scales would make $\varepsilon$ completely ineffective along smaller-scale dimensions</span></button><button class="opt" type="button"><b>C</b><span>Because standardising removes all noise points from the data</span></button><button class="opt" type="button"><b>D</b><span>Because unscaled data causes the spatial index tree to loop infinitely</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The neighbourhood radius $\varepsilon$ defines a sphere in feature space. If one feature has variance 10,000 and another 0.1, the distance is driven solely by the first feature, rendering neighbourhood searches meaningless along the second.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>Consider 4 points on a 1D line: $A = 1.0, B = 2.0, C = 3.0, D = 5.0$. DBSCAN is run with $\varepsilon = 1.0$ and <code>min_samples = 3</code> (where a point's count includes itself). Which points are core points?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>All four points are core points</span></button><button class="opt" type="button"><b>B</b><span>Points $A, B$, and $C$ are core points</span></button><button class="opt" type="button"><b>C</b><span>Only point $B$ is a core point</span></button><button class="opt" type="button"><b>D</b><span>None of the points are core points</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Point $B$ has three points in its $\varepsilon$-neighbourhood ($A, B, C$ are all within distance $1.0$), satisfying $\text{min\_samples} = 3$. Point $A$ only has 2 points ($A, B$), Point $C$ only has 2 points ($B, C$), and Point $D$ has 1 ($D$). Thus, only $B$ is a core point.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Following the previous 1D scenario ($A = 1.0, B = 2.0, C = 3.0, D = 5.0$ with $\varepsilon = 1.0$ and <code>min_samples = 3</code>), what are the resulting DBSCAN cluster labels for points $A, B, C, D$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$[0, 0, 0, 0]$ (all points in cluster 0)</span></button><button class="opt" type="button"><b>B</b><span>$[0, 0, 0, -1]$ ($A, B, C$ in cluster 0; $D$ is noise)</span></button><button class="opt" type="button"><b>C</b><span>$[-1, 0, -1, -1]$ (only $B$ is clustered)</span></button><button class="opt" type="button"><b>D</b><span>$[0, 1, 2, -1]$ (each in its own cluster)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $B$ is a core point and establishes Cluster 0. $A$ and $C$ are within $\varepsilon = 1.0$ of $B$, so they join Cluster 0 as border points. $D$ is too far ($|5.0 - 2.0| = 3.0 &gt; 1.0$) and has no core neighbours, so it is labelled as noise ($-1$).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>In scikit-learn, what is the length of <code>set(db.labels_) - {-1}</code> for a fitted DBSCAN model where 100 points are assigned to Cluster 0, 80 points to Cluster 1, and 20 points are labelled as noise (-1)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>3</span></button><button class="opt" type="button"><b>B</b><span>2</span></button><button class="opt" type="button"><b>C</b><span>200</span></button><button class="opt" type="button"><b>D</b><span>180</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The distinct labels in <code>db.labels_</code> are $0, 1$, and $-1$. Removing the noise label $\{-1\}$ leaves $\{0, 1\}$, whose length is 2 (representing the 2 genuine clusters found).</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -182,11 +232,11 @@ db = <span class="f">DBSCAN</span>(eps=<span class="n">0.3</span>, min_samples=<
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/core.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/models.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/learn.js?v=mvsi1g3o" defer></script>
 </body>
 </html>

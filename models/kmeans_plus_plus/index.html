@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsi1g3o">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsi1g3o">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -144,6 +144,56 @@ X = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>The objective being minimised</span></button><button class="opt" type="button"><b>B</b><span>The starting point, so k-means finds better local minima faster</span></button><button class="opt" type="button"><b>C</b><span>The number of clusters</span></button><button class="opt" type="button"><b>D</b><span>Robustness to non-convex shapes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Only the initialisation changes; Lloyd’s algorithm runs as before.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>How is the very first initial centroid selected in the k-means++ algorithm?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Uniformly at random from all data observations</span></button><button class="opt" type="button"><b>B</b><span>The point closest to the dataset mean</span></button><button class="opt" type="button"><b>C</b><span>The point with the largest feature values</span></button><button class="opt" type="button"><b>D</b><span>The medoid of the entire dataset</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Step 1 of k-means++ selects the first centre uniformly at random from the data points with equal probability $1/n$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>Does k-means++ change the objective function or update equations of standard k-means during Lloyd's iterations?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Yes, it replaces squared Euclidean distance with Manhattan distance</span></button><button class="opt" type="button"><b>B</b><span>Yes, it incorporates gradient descent with momentum</span></button><button class="opt" type="button"><b>C</b><span>No, it is strictly an initialisation algorithm; once $k$ centres are seeded, standard Lloyd's iterations run unchanged</span></button><button class="opt" type="button"><b>D</b><span>Yes, it dynamically adjusts the number of clusters $k$ at each iteration</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> k-means++ only modifies how initial centroids are seeded. Once the $k$ initial centres are chosen, standard Lloyd's assignment and update steps execute as normal.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>What is the theoretical approximation guarantee proven by Arthur and Vassilvitskii (2007) for k-means++ seeding?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It guarantees finding the exact global minimum in polynomial time</span></button><button class="opt" type="button"><b>B</b><span>The expected inertia $\mathbb{E}[J]$ of the initial seeding is bounded by $O(\log k)$ times the optimal clustering inertia: $\mathbb{E}[J] \le 8(\ln k + 2) J_{\text{opt}}$</span></button><button class="opt" type="button"><b>C</b><span>It guarantees that the silhouette score will exceed 0.80</span></button><button class="opt" type="button"><b>D</b><span>It guarantees that no cluster will have fewer than 10 points</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Arthur and Vassilvitskii proved that k-means++ seeding achieves an $O(\log k)$ approximation ratio in expectation relative to the global optimum, ensuring that the starting points are provably competitive.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>Why does k-means++ sample with probability proportional to squared distance $D(x)^2$ rather than deterministically selecting the point with the maximum distance $\arg\max D(x)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because deterministic selection always chooses extreme outliers or isolated noise points as cluster centres</span></button><button class="opt" type="button"><b>B</b><span>Because computing the maximum distance is NP-hard</span></button><button class="opt" type="button"><b>C</b><span>Because squared distance guarantees an even number of clusters</span></button><button class="opt" type="button"><b>D</b><span>Because deterministic selection cannot be implemented in Python</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> If the algorithm deterministically picked $\arg\max D(x)$, any single extreme outlier would be guaranteed to become an initial centroid. Sampling stochastically with $D(x)^2$ weights distant points heavily while preventing outliers from dominating.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>Why does standard random initialisation (picking $k$ points uniformly at random) often lead to poor clustering outcomes?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because random initialisation causes matrix inversion errors</span></button><button class="opt" type="button"><b>B</b><span>Because random initialisation frequently places multiple starting centres in the same large cluster while leaving other distinct clusters without any centre</span></button><button class="opt" type="button"><b>C</b><span>Because uniform sampling only selects points near the origin</span></button><button class="opt" type="button"><b>D</b><span>Because random initialisation forces $k$-means to run indefinitely</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In dense regions with many points, uniform random selection is likely to place multiple centres in the same cluster. The algorithm then gets stuck in poor local minima trying to split one natural cluster while merging others.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>What is a practical limitation of the k-means++ initialisation procedure on distributed computing frameworks with massive $k$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It requires $k$ sequential passes over the dataset (each centre must be chosen before distances to it can be evaluated for the next centre)</span></button><button class="opt" type="button"><b>B</b><span>It cannot compute Euclidean distance in parallel</span></button><button class="opt" type="button"><b>C</b><span>It only works on datasets with fewer than 1,000 points</span></button><button class="opt" type="button"><b>D</b><span>It requires calculating the full $n \times n$ distance matrix</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because each new centre depends on distances to all previously selected centres, standard k-means++ requires $k$ sequential round-trip passes over the data. For large $k$ (e.g. $k = 1,000$) on distributed clusters, this serial dependency causes substantial network latency (prompting algorithms like k-means||).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>How does k-means++ affect the number of Lloyd's iterations required until convergence compared to uniform random initialisation?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It requires significantly more iterations because centres start further apart</span></button><button class="opt" type="button"><b>B</b><span>It typically reduces the number of iterations required to converge because centroids start much closer to their true natural cluster locations</span></button><button class="opt" type="button"><b>C</b><span>It always converges in exactly 1 iteration</span></button><button class="opt" type="button"><b>D</b><span>It has no effect on convergence speed</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because starting centres are already well distributed across natural cluster locations, fewer assignment-update cycles are needed to reach equilibrium, saving computational time overall.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>Suppose a 1D dataset has 4 points: $\{0, 2, 6, 10\}$. The first centre chosen at random is $c_1 = 0$. For $k = 2$, what is the sampling probability that the next centre chosen is $x = 10$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$10/18 \approx 0.556$ (linear distance ratio)</span></button><button class="opt" type="button"><b>B</b><span>$1/4 = 0.250$ (uniform ratio)</span></button><button class="opt" type="button"><b>C</b><span>$5/7 \approx 0.714$</span></button><button class="opt" type="button"><b>D</b><span>$100/136 \approx 0.735$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The squared distances from $c_1 = 0$ are $D(0)^2 = 0$, $D(2)^2 = 4$, $D(6)^2 = 36$, and $D(10)^2 = 100$, summing to 140. The probability of picking $x = 10$ is $100 / 140 = 5/7 \approx 0.714$. Notice how $D(x)^2$ concentrates over 71% of the probability on the farthest point.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Three points lie in 1D: $x_1 = 0, x_2 = 2, x_3 = 6$. Two centres have already been chosen: $c_1 = 0$ and $c_2 = 6$. For the remaining point $x_2 = 2$, what is $D(x_2)$ (the distance to its nearest chosen centre), and what is $D(x_2)^2$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$D(x_2) = 4, D(x_2)^2 = 16$</span></button><button class="opt" type="button"><b>B</b><span>$D(x_2) = 2, D(x_2)^2 = 4$</span></button><button class="opt" type="button"><b>C</b><span>$D(x_2) = 3, D(x_2)^2 = 9$</span></button><button class="opt" type="button"><b>D</b><span>$D(x_2) = 6, D(x_2)^2 = 36$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The distance to the nearest centre is $D(x_2) = \min(|2 - 0|, |2 - 6|) = \min(2, 4) = 2$. Its squared distance is $2^2 = 4$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>In a dataset with $n = 100$ points, suppose 90 points belong to a tight cluster at $(0, 0)$ and 10 points belong to a distant cluster at $(10, 0)$. The first centre $c_1$ is picked from the tight cluster at $(0, 0)$. How does the probability of picking the second centre from the distant cluster under k-means++ compare to uniform random initialisation?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It is roughly identical ($\approx 10\%$) in both methods</span></button><button class="opt" type="button"><b>B</b><span>Under k-means++ it rises from $\approx 10\%$ to nearly $100\%$, almost guaranteeing the second cluster is seeded</span></button><button class="opt" type="button"><b>C</b><span>Under k-means++ it drops to $0\%$ because the distant cluster has fewer points</span></button><button class="opt" type="button"><b>D</b><span>Under k-means++ it is exactly $50\%$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Under uniform sampling, the chance of picking from the 10-point cluster is only $10/99 \approx 10.1\%$. Under k-means++, each distant point has $D(x)^2 \approx 100$ while points near $c_1$ have $D(x)^2 \approx 0$, directing virtually all sampling probability ($\approx 100\%$) to the unrepresented cluster.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -179,11 +229,11 @@ X = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/core.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/models.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/learn.js?v=mvsi1g3o" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsi1g3o">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsi1g3o">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -140,6 +140,61 @@ fewer = <span class="f">AffinityPropagation</span>(damping=<span class="n">0.9</
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Create more clusters</span></button><button class="opt" type="button"><b>B</b><span>Create fewer clusters</span></button><button class="opt" type="button"><b>C</b><span>Make it converge faster</span></button><button class="opt" type="button"><b>D</b><span>Change nothing</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Points become less willing to be exemplars.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q2</span>In Affinity Propagation, what are the representative prototypes of clusters called, and what form do they take?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Exemplars, which are actual observations from the dataset</span></button><button class="opt" type="button"><b>B</b><span>Centroids, defined as arithmetic means of cluster features</span></button><button class="opt" type="button"><b>C</b><span>Eigenvectors, derived from the graph Laplacian</span></button><button class="opt" type="button"><b>D</b><span>Modes, computed from kernel density gradients</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Affinity Propagation chooses actual data points from the sample to represent clusters; these representative instances are called exemplars.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What does the "responsibility" message $r(i, k)$ communicate from point $i$ to candidate exemplar $k$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>How many clusters exist in the current iteration</span></button><button class="opt" type="button"><b>B</b><span>Whether point $i$ is an outlier</span></button><button class="opt" type="button"><b>C</b><span>How well-suited candidate $k$ is to serve as the exemplar for point $i$, taking into account other competing candidates</span></button><button class="opt" type="button"><b>D</b><span>The Euclidean distance between point $i$ and the origin</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Responsibility $r(i, k)$ quantifies how well-suited candidate $k$ is to be point $i$'s exemplar relative to all other candidate exemplars.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>What does the "availability" message $a(i, k)$ communicate from candidate exemplar $k$ to point $i$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The execution time remaining in the algorithm</span></button><button class="opt" type="button"><b>B</b><span>How appropriate it would be for point $i$ to choose candidate $k$ as its exemplar, based on evidence accumulated from other points that also favour $k$</span></button><button class="opt" type="button"><b>C</b><span>The number of features in the dataset</span></button><button class="opt" type="button"><b>D</b><span>The learning rate for gradient updates</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Availability $a(i, k)$ reflects how appropriate it is for point $i$ to select $k$ as its exemplar, derived from the positive responsibilities that other points have sent to $k$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>What is the role of the <code>damping</code> parameter (typically between 0.5 and 0.9) in Affinity Propagation?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It scales the feature values between 0 and 1</span></button><button class="opt" type="button"><b>B</b><span>It blends new message values with values from the previous iteration to prevent numerical oscillations and limit cycles</span></button><button class="opt" type="button"><b>C</b><span>It determines the number of clusters $k$</span></button><button class="opt" type="button"><b>D</b><span>It stops the algorithm after a fixed number of seconds</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Message-passing algorithms can enter periodic oscillations. Damping applies exponential smoothing: $M_t = \lambda M_{t-1} + (1 - \lambda) M_{\text{new}}$, stabilising convergence.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>By default in scikit-learn, what value is assigned to the diagonal elements $s(k, k)$ (the preferences) of the similarity matrix?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The median of all pairwise similarities between points</span></button><button class="opt" type="button"><b>B</b><span>Zero</span></button><button class="opt" type="button"><b>C</b><span>Negative infinity</span></button><button class="opt" type="button"><b>D</b><span>The maximum distance in the dataset</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In <code>AffinityPropagation</code>, setting <code>preference=None</code> defaults to the median of the input similarities, which yields a moderate number of clusters.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>After convergence, how does Affinity Propagation decide whether a specific point $k$ is an exemplar?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>If its silhouette score is greater than 0.5</span></button><button class="opt" type="button"><b>B</b><span>If the sum of its self-responsibility and self-availability is positive: $r(k, k) + a(k, k) &gt; 0$</span></button><button class="opt" type="button"><b>C</b><span>If it is chosen by more than 50% of the points in the dataset</span></button><button class="opt" type="button"><b>D</b><span>If its Euclidean norm is less than 1.0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Point $k$ identifies as an exemplar when its self-belief $r(k, k) + a(k, k) &gt; 0$. Points then choose the exemplar $k$ that maximises $r(i, k) + a(i, k)$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>Why is Affinity Propagation generally impractical for datasets with more than 10,000 observations?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it cannot handle continuous numeric features</span></button><button class="opt" type="button"><b>B</b><span>Because it only produces binary clusters</span></button><button class="opt" type="button"><b>C</b><span>Because it requires storing and updating full $n \times n$ responsibility and availability matrices, demanding $O(n^2)$ memory and $O(n^2)$ compute per iteration</span></button><button class="opt" type="button"><b>D</b><span>Because it requires GPU acceleration</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Maintaining dense $n \times n$ similarity, responsibility, and availability matrices requires $O(n^2)$ memory. For $n = 20,000$, storing three $20,000 \times 20,000$ float64 matrices requires nearly 10 GB of RAM.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>If an analyst sets <code>preference</code> to the minimum pairwise similarity $\min_{i \ne j} s(i, j)$, what effect does this have on the resulting clustering?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Every single point becomes its own exemplar</span></button><button class="opt" type="button"><b>B</b><span>Very few exemplars emerge, producing a small number of broad clusters</span></button><button class="opt" type="button"><b>C</b><span>The algorithm crashes due to negative numbers</span></button><button class="opt" type="button"><b>D</b><span>All points are labelled as unclustered noise</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Setting low preference makes points reluctant to volunteer as exemplars. When $s(k, k)$ is set to the minimum similarity, only the strongest candidate exemplars emerge, yielding few, large clusters.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q10</span>Suppose point $i$ evaluates two candidate exemplars $k_1$ and $k_2$ with similarities $s(i, k_1) = -2$ and $s(i, k_2) = -8$. The current availabilities are $a(i, k_1) = 0$ and $a(i, k_2) = 0$. Using the responsibility update formula $r(i, k) = s(i, k) - \max_{k' \ne k} \{a(i, k') + s(i, k')\}$, what is the updated responsibility $r(i, k_1)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$-10$</span></button><button class="opt" type="button"><b>B</b><span>$-2$</span></button><button class="opt" type="button"><b>C</b><span>$0$</span></button><button class="opt" type="button"><b>D</b><span>$+6$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $k = k_1$, the competing candidate is $k_2$ with $a(i, k_2) + s(i, k_2) = 0 + (-8) = -8$. Then $r(i, k_1) = s(i, k_1) - (-8) = -2 + 8 = +6$. The positive responsibility indicates that $k_1$ is substantially more suitable for $i$ than its rival $k_2$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Candidate exemplar $k$ receives positive responsibilities from other points: $r(1, k) = 3.0$, $r(2, k) = 1.5$, and $r(3, k) = -2.0$. Candidate $k$'s self-responsibility is $r(k, k) = -4.0$. What is the updated availability $a(4, k)$ sent to point 4 using $a(i, k) = \min\{0, \; r(k, k) + \sum_{i' \notin \{i, k\}} \max(0, r(i', k))\}$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$+0.5$</span></button><button class="opt" type="button"><b>B</b><span>$0.0$</span></button><button class="opt" type="button"><b>C</b><span>$-4.0$</span></button><button class="opt" type="button"><b>D</b><span>$-2.5$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The positive support from other points is $\max(0, 3.0) + \max(0, 1.5) + \max(0, -2.0) = 4.5$. Adding self-responsibility gives $-4.0 + 4.5 = +0.5$. Because availability cannot exceed zero ($a(i, k) = \min\{0, \dots\}$), $a(4, k) = \min(0, 0.5) = 0.0$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>In an Affinity Propagation run with damping factor $\lambda = 0.8$, the old responsibility value was $r_{\text{old}} = 2.0$. The raw update calculation produces $r_{\text{new}} = 7.0$. What is the damped responsibility value $r_{\text{damped}} = \lambda r_{\text{old}} + (1 - \lambda) r_{\text{new}}$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$4.5$</span></button><button class="opt" type="button"><b>B</b><span>$3.0$</span></button><button class="opt" type="button"><b>C</b><span>$6.0$</span></button><button class="opt" type="button"><b>D</b><span>$2.8$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Damping applies convex smoothing: $r_{\text{damped}} = (0.8 \times 2.0) + (0.2 \times 7.0) = 1.6 + 1.4 = 3.0$. This prevents wild jumps between iterations.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -175,11 +230,11 @@ fewer = <span class="f">AffinityPropagation</span>(damping=<span class="n">0.9</
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/core.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/models.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsi1g3o" defer></script>
+<script src="../../assets/learn.js?v=mvsi1g3o" defer></script>
 </body>
 </html>
