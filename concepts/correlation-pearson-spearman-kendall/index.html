@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvse1hbt">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvse1hbt">
+<link rel="stylesheet" href="../../assets/site.css?v=mvse7hhp">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvse7hhp">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -87,7 +87,7 @@
       </section>
       <section class="reveal" id="takeaways">
         <h2 class="h3"><span>04</span> Key takeaways</h2>
-        <div class="box use"><ul><li>Correlation measures association, never causation: a third lurking variable can induce strong spurious correlations.</li><li>Pearson is highly sensitive to outliers; a single distant rogue point can artificially inflate or destroy linear correlation.</li><li>Spearman and Kendall are invariant to any strictly monotonic transformation, such as taking logarithms or square roots.</li><li>Kendall's $\tau$ converges to a normal distribution much faster than Spearman's $\rho$ on small samples, making hypothesis testing more reliable.</li></ul></div>
+        <div class="box use"><ul><li>Correlation measures association, never causation: a third lurking variable can induce strong spurious correlations.</li><li>Pearson is highly sensitive to outliers; a single distant rogue point can artificially inflate or destroy linear correlation.</li><li>Spearman and Kendall are invariant to any strictly monotonic transformation, such as taking logarithms or square roots.</li><li>Kendall's $\tau$ has a direct reading (the probability of a concordant pair minus the probability of a discordant pair) and is often preferred to Spearman's $\rho$ for small samples with many ties.</li></ul></div>
       </section>
       <section class="reveal" id="code">
         <h2 class="h3"><span>05</span> In code</h2>
@@ -131,10 +131,10 @@ tau_clean, _ = stats.<span class="f">kendalltau</span>(x, y)
             <div class="opts"><button class="opt" type="button"><b>A</b><span>60% of the variance in $Y$ is explained by $X$</span></button><button class="opt" type="button"><b>B</b><span>60% of the data points lie on the regression line</span></button><button class="opt" type="button"><b>C</b><span>The probability of drawing a concordant pair is 60 percentage points higher than drawing a discordant pair</span></button><button class="opt" type="button"><b>D</b><span>The slope of the line is 0.6</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Kendall's $\tau = P(\text{concordant}) - P(\text{discordant})$, so $\tau = 0.6$ means the concordance probability exceeds discordance by 0.6.</div>
           </div>
-          <div class="q" data-answer="3">
-            <p><span>Q4</span>Which correlation metric is most suitable for evaluating rank orderings on small samples with tied ranks?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Pearson's $r$</span></button><button class="opt" type="button"><b>B</b><span>Coefficient of determination $R^2$</span></button><button class="opt" type="button"><b>C</b><span>Mutual information</span></button><button class="opt" type="button"><b>D</b><span>Kendall's $\tau$</span></button></div>
-            <div class="why" hidden><strong>Why:</strong> Kendall's $\tau$ has smaller gross error sensitivity, handles tied ranks cleanly via Kendall's tau-b, and has well-characterised small-sample variance.</div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>You want to measure association between two ordinal survey ratings (1 to 5) that contain many tied values. Which choice is appropriate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Pearson's $r$ on the raw scores, which assumes a linear relationship between the numbers</span></button><button class="opt" type="button"><b>B</b><span>Covariance, because it ignores the scale of the ratings</span></button><button class="opt" type="button"><b>C</b><span>A rank-based coefficient with a tie correction, such as Spearman's $\rho$ or Kendall's $\tau_b$</span></button><button class="opt" type="button"><b>D</b><span>$R^2$ from a straight-line fit</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Ordinal ratings carry order but not equal spacing, so a rank-based measure fits. With many ties you need a version that corrects for them: Spearman's $\rho$ uses average ranks and Kendall's $\tau_b$ adjusts its denominator.</div>
           </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
@@ -171,11 +171,11 @@ tau_clean, _ = stats.<span class="f">kendalltau</span>(x, y)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/core.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/algos.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/models.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvse1hbt" defer></script>
-<script src="../../assets/learn.js?v=mvse1hbt" defer></script>
+<script src="../../assets/site.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/core.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/algos.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/models.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvse7hhp" defer></script>
+<script src="../../assets/learn.js?v=mvse7hhp" defer></script>
 </body>
 </html>

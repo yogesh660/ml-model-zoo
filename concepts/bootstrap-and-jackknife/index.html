@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvse1hbt">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvse1hbt">
+<link rel="stylesheet" href="../../assets/site.css?v=mvse7hhp">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvse7hhp">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -87,7 +87,7 @@
       </section>
       <section class="reveal" id="takeaways">
         <h2 class="h3"><span>04</span> Key takeaways</h2>
-        <div class="box use"><ul><li>Bootstrapping requires no parametric distribution assumptions; it works for medians, ratios, eigenvalues, and complex ML metric pipelines.</li><li>Roughly 63.2% of distinct samples appear in each bootstrap sample, leaving 36.8% out-of-bag (the foundation of Random Forest OOB error).</li><li>The standard jackknife fails on non-smooth statistics (such as the sample median); the delete-$d$ jackknife or bootstrap must be used instead.</li><li>Percentile bootstrap intervals can be biased for skewed distributions; the $\text{BC}_a$ (bias-corrected and accelerated) method adjusts for skewness and acceleration.</li></ul></div>
+        <div class="box use"><ul><li>Bootstrapping requires no parametric distribution assumptions; it works for medians, ratios, eigenvalues, and complex ML metric pipelines.</li><li>Roughly 63.2% of the distinct original observations appear in each bootstrap sample, leaving 36.8% out-of-bag (the foundation of Random Forest OOB error).</li><li>The standard jackknife fails on non-smooth statistics (such as the sample median); the delete-$d$ jackknife or bootstrap must be used instead.</li><li>Percentile bootstrap intervals can be biased for skewed distributions; the $\text{BC}_a$ (bias-corrected and accelerated) method adjusts for skewness and acceleration.</li></ul></div>
       </section>
       <section class="reveal" id="code">
         <h2 class="h3"><span>05</span> In code</h2>
@@ -176,11 +176,11 @@ ci_upper = np.<span class="f">percentile</span>(boot_medians, <span class="n">97
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/core.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/algos.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/models.js?v=mvse1hbt" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvse1hbt" defer></script>
-<script src="../../assets/learn.js?v=mvse1hbt" defer></script>
+<script src="../../assets/site.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/core.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/algos.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/models.js?v=mvse7hhp" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvse7hhp" defer></script>
+<script src="../../assets/learn.js?v=mvse7hhp" defer></script>
 </body>
 </html>
