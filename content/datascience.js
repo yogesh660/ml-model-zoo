@@ -466,4 +466,430 @@ print(f"Regression imputed mean income: {np.mean(reg_imputed):.2f} (Unbiased und
     related: ['data-cleaning-and-validation', 'pandas-and-polars-patterns', 'knn_regressor'],
     keywords: 'missing data mcar mar mnar imputation mice knn imputation rubin rules data wrangling',
   },
+  {
+    id: 'outlier-handling',
+    short: 'Outlier handling',
+    title: 'Outlier Handling',
+    task: 'concepts',
+    module: 'Data wrangling',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Detecting, evaluating, and transforming anomalous extreme observations using robust statistical thresholds, clipping, and power transforms.`,
+    lead: r`Extreme outliers corrupt parametric estimators, inflate standard errors, and distort loss gradients during model training. Simply deleting every extreme row discards genuine black-swan signals and induces severe sample truncation. Systematic outlier handling diagnoses whether anomalies stem from measurement corruption or genuine heavy tails, deploying robust winsorisation, clipping, or loss reformulation.`,
+    intuition: [
+      r`Imagine calculating the average net worth of ten patrons enjoying coffee at a neighbourhood café. Nine patrons earn normal middle-class salaries around £50,000. Suddenly, a tech billionaire walks in with a net worth of £50,000,000,000. If you calculate the arithmetic mean, the café's average patron net worth rockets to £5,000,045,000. A standard linear regression or Ordinary Least Squares model trained on this sample will tilt its entire prediction surface to accommodate this single individual, rendering its predictions wildly inaccurate for the other nine ordinary patrons.`,
+      r`What should an analyst do? The knee-jerk reaction—immediately deleting the billionaire's record—is often dangerous. If you are predicting luxury yacht purchases, the billionaire is your primary customer; deleting them erases the signal you exist to model. First, we must distinguish between error outliers (a human entering 999999 as a placeholder for unknown data) and valid extremes (rare but genuine high-value events). Error outliers should be quarantined or replaced with nulls; valid extremes require statistical treatment.`,
+      r`To handle valid heavy tails without corrupting models, data scientists employ three robust strategies: trimming (removing observations beyond extreme quantile boundaries like the 1st and 99th percentiles), winsorisation or clipping (capping values exceeding a threshold $c$ at $c$, preserving rank order while bounding leverage), and monotonic transformations (such as logarithmic or Box-Cox transforms) that pull exponential right tails inward. Alternatively, switching from squared error loss ($L_2$) to robust Huber or pinball loss bounds the gradient influence of extreme residuals.`,
+    ],
+    analogy: r`Trimming the extreme high and low scores from Olympic judges to prevent a single biased score from deciding the medal.`,
+    steps: [
+      r`Profile tail behaviour: visualise distributions using box plots, histograms, and QQ plots to assess whether data exhibits Gaussian, log-normal, or Pareto heavy tails.`,
+      r`Compute robust boundary thresholds: calculate the Interquartile Range ($\text{IQR} = Q_3 - Q_1$) or Median Absolute Deviation (MAD) to establish non-parametric fence limits.`,
+      r`Classify outlier genesis: audit anomalous records against domain rules to separate sensor or keystroke errors from genuine natural extremes.`,
+      r`Apply transformation or clipping: winsorise extreme values to lower and upper percentile fences ($[P_1, P_{99}]$) or apply $\log(1 + x)$ to compress positive right tails.`,
+      r`Select robust downstream models: use tree ensembles or loss functions with linear tail penalties (Huber loss) when outliers carry valid predictive signal.`,
+    ],
+    math: [
+      {
+        h: 'Tukey\'s Interquartile Range (IQR) fence boundaries',
+        tex: r`$$\text{Fence}_{\text{lower}} = Q_1 - 1.5 \cdot \text{IQR}, \qquad \text{Fence}_{\text{upper}} = Q_3 + 1.5 \cdot \text{IQR}$$`,
+        p: r`Here $Q_1$ is the 25th percentile, $Q_3$ is the 75th percentile, and $\text{IQR} = Q_3 - Q_1$. For Gaussian distributions, the $1.5 \times \text{IQR}$ fence encompasses approximately $99.3\%$ of values. Observations outside this interval represent potential outliers; values beyond $3.0 \times \text{IQR}$ are classified as extreme outliers.`,
+      },
+      {
+        h: 'Winsorisation (quantile clipping) operator',
+        tex: r`$$\tilde{x}_i = \begin{cases} c_{\text{lower}} & \text{if } x_i < c_{\text{lower}} \\ x_i & \text{if } c_{\text{lower}} \le x_i \le c_{\text{upper}} \\ c_{\text{upper}} & \text{if } x_i > c_{\text{upper}} \end{cases}$$`,
+        p: r`Cut-offs $c_{\text{lower}}$ and $c_{\text{upper}}$ are chosen percentiles (such as the 1st and 99th percentiles). Capping preserves sample size $n$ and monotonic rank order while strictly bounding maximum leverage $x_i^2$, preventing a single extreme observation from dictating squared-error loss gradients.`,
+      },
+      {
+        h: 'Huber loss gradient saturation',
+        tex: r`$$\frac{\partial L_\delta}{\partial r} = \begin{cases} r & \text{if } |r| \le \delta \\ \delta \cdot \text{sign}(r) & \text{if } |r| > \delta \end{cases}$$`,
+        p: r`For residual $r = y - \hat{y}$, Huber loss scales quadratically for small errors ($|r| \le \delta$) but switches to linear scaling for large errors ($|r| > \delta$). The derivative saturates at constant $\pm \delta$, preventing extreme target outliers from dominating gradient updates.`,
+      },
+    ],
+    keyPoints: [
+      r`Distinction between error and signal: never delete extreme values without verifying whether they represent data corruption or genuine black-swan events.`,
+      r`Non-parametric bounds: IQR and MAD fences detect outliers without assuming data follows a normal bell curve.`,
+      r`Winsorisation preserves sample size: capping at extreme quantiles neutralises leverage while retaining valid observational rows.`,
+    ],
+    pitfalls: [
+      r`Blind 3-sigma rule on non-normal distributions: applying mean $\pm 3\sigma$ to skewed log-normal or power-law data falsely flags valid high-volume transactions as outliers while corrupting the mean.`,
+      r`Truncation bias: dropping high-value outliers when estimating financial totals systematically underestimates risk and expected revenue.`,
+      r`Fitting outlier cut-offs on test data: computing winsorisation limits on test splits leaks distribution boundaries; boundaries must be fit on training data and applied to test.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+x = np.concatenate([np.random.normal(50, 5, 95), [180, 220, -40, 195, 210]])
+q1, q3 = np.percentile(x, [25, 75])
+iqr = q3 - q1
+lower_fence, upper_fence = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+
+p1, p99 = np.percentile(x, [1, 99])
+x_winsor = np.clip(x, p1, p99)
+
+outliers = (x < lower_fence) | (x > upper_fence)
+print(f"Total samples: {len(x)}, Outliers detected: {np.sum(outliers)}")
+print(f"Raw mean: {np.mean(x):.2f}, std: {np.std(x):.2f}")
+print(f"Winsorised mean: {np.mean(x_winsor):.2f}, std: {np.std(x_winsor):.2f}")`,
+    quiz: [
+      {
+        q: r`Why does applying the standard 3-sigma rule (mean $\pm 3\sigma$) often fail on skewed financial transaction data?`,
+        o: [
+          r`Extreme outliers pull the sample mean upward and heavily inflate $\sigma$, masking valid outliers while misclassifying valid positive skewness as anomalous`,
+          r`The 3-sigma rule can only be evaluated on integer values`,
+          r`Standard deviations cannot be calculated when sample size exceeds 1,000`,
+          r`Financial transactions must always follow a uniform distribution`,
+        ],
+        a: 0,
+        why: r`The sample mean and standard deviation have a 0% breakdown point. In heavily right-skewed or heavy-tailed distributions, a few massive values drastically inflate $\sigma$, creating an artificially wide acceptance band that fails to flag anomalies while corrupting the centre.`,
+      },
+      {
+        q: r`What is the primary operational advantage of winsorisation (clipping at quantiles) over row deletion?`,
+        o: [
+          r`It preserves the total sample size $n$ and rank ordering while bounding leverage on squared-error loss gradients`,
+          r`It guarantees that all values become normally distributed`,
+          r`It removes the need for cross-validation`,
+          r`It converts continuous numbers into discrete categories`,
+        ],
+        a: 0,
+        why: r`Row deletion discards observational evidence and induces truncation bias. Winsorisation caps extreme values at safe percentile limits (e.g. 1st and 99th percentiles), bounding outlier influence while retaining the record in training.`,
+      },
+      {
+        q: r`When preparing data for a gradient boosted tree model, how should valid extreme outliers in predictor features be handled?`,
+        o: [
+          r`Tree models split on monotonic rank thresholds, making them inherently invariant to monotonic scaling and extreme outlier magnitudes`,
+          r`Outliers must always be replaced with zero`,
+          r`Features must be scaled using min-max normalisation between -1 and 1`,
+          r`Decision trees crash when feature values exceed 100`,
+        ],
+        a: 0,
+        why: r`Decision trees choose split points based on ordered partitions ($x_j \le \theta$). A value of 1,000,000 is placed on the exact same side of a split as a value of 100, making decision trees robust to monotonic feature outliers.`,
+      },
+    ],
+    usedBy: ['scaling-and-transforms-standard-robust-box-cox-yeo-johnson'],
+    prereq: ['sampling-and-standard-error', 'data-cleaning-and-validation'],
+    related: ['data-cleaning-and-validation', 'robust_regression', 'isolation-forest'],
+    keywords: 'outlier handling winsorisation tukey iqr mad clipping robust statistics huber loss data wrangling',
+  },
+  {
+    id: 'encoding-categoricals-one-hot-ordinal-target-woe',
+    short: 'Encoding categoricals',
+    title: 'Encoding Categoricals: One-Hot, Ordinal, Target, WoE',
+    task: 'concepts',
+    module: 'Feature engineering',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Transforming discrete strings and high-cardinality levels into informative numerical representations while preventing target leakage and dimensionality explosion.`,
+    lead: r`Mathematical models cannot multiply, divide, or take gradients over raw string labels. Encoding maps discrete categorical variables into numeric vectors, but each strategy balances distinct trade-offs between dimensionality, ordinal assumptions, and information retention. From sparse one-hot expansions to smoothed target encoding and Weight of Evidence (WoE), selecting the correct transformation prevents curse-of-dimensionality memory crashes and catastrophic target leakage.`,
+    intuition: [
+      r`Imagine predicting hotel booking cancellations using categorical columns like room type (Standard, Deluxe, Suite) and user nationality (195 countries). The simplest idea is assigning consecutive integers: Standard = 1, Deluxe = 2, Suite = 3. For room type, this ordinal encoding makes intuitive sense because there is a natural hierarchy of luxury and price. But if you apply arbitrary integers to nationalities (France = 1, Germany = 2, Japan = 3), a linear model or neural network assumes that Germany is twice France and Japan is three times France, inventing nonsensical mathematical arithmetic out of arbitrary alphabetical order.`,
+      r`One-hot encoding avoids this false ordering by creating an independent binary flag for each level (e.g. [1, 0, 0] for France). For variables with few categories (low cardinality), one-hot encoding is clean and effective. But for UK postcodes or search queries with 50,000 unique levels, one-hot encoding explodes the feature space into a colossal 50,000-column sparse matrix. Tree models struggle because each individual binary split isolates only a tiny fraction of samples, diluting statistical split strength.`,
+      r`Target encoding and Weight of Evidence (WoE) solve high cardinality by condensing each category into a single continuous number representing its historical association with the outcome $y$. For each nationality, target encoding replaces the label with the mean cancellation rate of that country. To prevent rare categories (like a country with only 1 customer who cancelled) from overfitting to 100%, empirical Bayes m-estimate smoothing pulls rare categories toward the global cancellation prior.`,
+    ],
+    analogy: r`Translating a foreign menu: giving each dish an arbitrary catalogue number (ordinal), creating 200 checkboxes for 200 ingredients (one-hot), or simply labelling each dish with its average customer spiciness rating (target encoding).`,
+    steps: [
+      r`Audit cardinality and ordering: determine whether levels possess an intrinsic natural hierarchy (ordinal) or arbitrary nominal identity.`,
+      r`Apply one-hot encoding to low-cardinality nominals ($k < 10$): drop one reference dummy column when training unregularised linear models to avoid multicollinearity.`,
+      r`Map ranked tiers via ordinal encoding: assign monotonic integer values when domain hierarchy is strict (e.g. Low, Medium, High to 0, 1, 2).`,
+      r`Deploy smoothed target encoding for high-cardinality features: blend category target means with global priors using m-estimate or empirical Bayes weighting.`,
+      r`Enforce leakage-safe cross-validation: compute target encodings strictly inside cross-validation folds or using out-of-fold leave-one-out calculation to prevent target leakage.`,
+    ],
+    math: [
+      {
+        h: 'Smoothed empirical Bayes target encoding (m-estimate)',
+        tex: r`$$\hat{S}_c = \frac{n_c \cdot \bar{y}_c + m \cdot \bar{y}_{\text{global}}}{n_c + m}$$`,
+        p: r`Here $n_c$ is the count of category $c$ in training data, $\bar{y}_c$ is the sample mean of the target for category $c$, $\bar{y}_{\text{global}}$ is the overall target mean across all rows, and $m > 0$ is the smoothing weight of the prior. When $n_c \gg m$, $\hat{S}_c \to \bar{y}_c$; when $n_c \to 0$, $\hat{S}_c \to \bar{y}_{\text{global}}$, preventing rare categories from producing overfit extreme values.`,
+      },
+      {
+        h: 'Weight of Evidence (WoE) for binary classification',
+        tex: r`$$\text{WoE}_c = \ln\left(\frac{P(Y=1 \mid X=c)}{P(Y=0 \mid X=c)} \Big/ \frac{P(Y=1)}{P(Y=0)}\right) = \ln\left(\frac{B_c / B_{\text{total}}}{G_c / G_{\text{total}}}\right)$$`,
+        p: r`Here $B_c$ and $G_c$ are bad (events, $y=1$) and good (non-events, $y=0$) counts for category $c$. WoE represents the log-odds ratio relative to the population base rate. Because WoE possesses an exact linear relationship with log-odds, it is extensively used in credit risk scorecards with logistic regression.`,
+      },
+      {
+        h: 'Dummy variable trap and rank deficiency',
+        tex: r`$$\sum_{j=1}^k D_j = \mathbf{1}_n = X_0 \implies \text{rank}(X) < k$$`,
+        p: r`The sum of all $k$ one-hot binary indicator columns equals the constant intercept column vector $\mathbf{1}_n$, creating perfect multicollinearity. For unregularised Ordinary Least Squares, one category must be omitted ($k-1$ dummy columns) to ensure the design matrix $X^T X$ is invertible.`,
+      },
+    ],
+    keyPoints: [
+      r`Cardinality dictates strategy: use one-hot for low cardinality ($<10$ levels), frequency or target encoding for high cardinality.`,
+      r`Target leakage hazard: target encoding must never compute category statistics across the entire dataset before cross-validation splitting.`,
+      r`Bayesian prior smoothing: blending category averages with global priors prevents rare levels with tiny sample sizes from producing extreme overfit predictions.`,
+    ],
+    pitfalls: [
+      r`Catastrophic target leakage: calculating target means on training and validation data simultaneously causes near-perfect training scores and disastrous test performance.`,
+      r`Unseen categories in production: new categories absent during training crash one-hot transformers unless handle_unknown='ignore' or fallback to global target prior is configured.`,
+      r`Ordinal encoding on nominal variables: assigning sequential integers to arbitrary categories forces non-linear models to navigate artificial metric distances.`,
+    ],
+    code: r`import numpy as np
+
+categories = np.array(['UK', 'FR', 'DE', 'UK', 'US', 'FR', 'UK', 'LUX'])
+y = np.array([1, 0, 1, 1, 0, 0, 1, 0], dtype=float)
+global_mean, m = np.mean(y), 2.0  # m-estimate prior weight
+
+encoded = np.zeros_like(y)
+for cat in np.unique(categories):
+    idx = np.where(categories == cat)[0]
+    n_c, y_c = len(idx), np.sum(y[idx])
+    smoothed = (y_c + m * global_mean) / (n_c + m)
+    encoded[idx] = smoothed
+
+print(f"Global target mean: {global_mean:.3f}")
+for c in ['UK', 'LUX']:
+    print(f"Category {c} target encoded: {encoded[categories == c][0]:.3f}")`,
+    quiz: [
+      {
+        q: r`Why does raw unsmoothed target encoding overfit heavily on categories with very few observations?`,
+        o: [
+          r`A category with a single observation will receive an encoding of exactly 0.0 or 1.0, memorising target noise instead of true population affinity`,
+          r`It converts numbers into complex imaginary components`,
+          r`It causes the matrix determinant to equal zero`,
+          r`It only operates when the target is multi-class`,
+        ],
+        a: 0,
+        why: r`If category 'LUX' appears only once with target $y=1$, unsmoothed target encoding assigns it 1.0 (100% cancellation rate), creating an over-confident feature based on zero statistical evidence. Smoothing pulls small-sample categories toward the global mean.`,
+      },
+      {
+        q: r`What is the primary danger of applying ordinal integer encoding (e.g. 1, 2, 3, 4) to nominal variables like car colours?`,
+        o: [
+          r`It imposes an artificial metric distance and ordering, causing linear models and neural networks to assume colour 4 is mathematically four times colour 1`,
+          r`It causes memory exhaustion in decision trees`,
+          r`It is unsupported in Python`,
+          r`It requires all colours to have equal row counts`,
+        ],
+        a: 0,
+        why: r`Nominal categories possess no quantitative hierarchy. Assigning numbers implies metric distances ($|1 - 2| = |2 - 3|$) and mathematical ratios that corrupt linear regression, distance metrics, and neural weights.`,
+      },
+      {
+        q: r`How must target encoding be calculated to completely eliminate data leakage during cross-validation?`,
+        o: [
+          r`Category target statistics must be computed strictly on the training fold, or calculated out-of-fold without using each row's own target value`,
+          r`Target encoding should be computed across the test fold first`,
+          r`The target variable must be binned into quintiles`,
+          r`Target encoding cannot be used in cross-validation`,
+        ],
+        a: 0,
+        why: r`If validation row targets are included when computing category means, the model learns to reconstruct the validation target directly from the encoding, producing severe over-optimistic leakage. Out-of-fold or strictly train-fold statistics prevent this.`,
+      },
+    ],
+    usedBy: ['scaling-and-transforms-standard-robust-box-cox-yeo-johnson'],
+    prereq: ['sampling-and-standard-error', 'cross-validation'],
+    related: ['scaling-and-transforms-standard-robust-box-cox-yeo-johnson', 'multicollinearity-and-vif', 'logistic_regression'],
+    keywords: 'categorical encoding one hot encoding target encoding woe weight of evidence ordinal encoding high cardinality feature engineering',
+  },
+  {
+    id: 'scaling-and-transforms-standard-robust-box-cox-yeo-johnson',
+    short: 'Scaling and transforms',
+    title: 'Scaling and Transforms: Standard, Robust, Box–Cox, Yeo–Johnson',
+    task: 'concepts',
+    module: 'Feature engineering',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Standardising feature ranges and normalising skewed distributions to satisfy linear assumptions and accelerate gradient convergence.`,
+    lead: r`Distance metrics, regularisation penalties, and gradient descent updates are acutely sensitive to feature scales. If one feature spans $[0, 1]$ while another ranges $[0, 1{,}000{,}000]$, the larger variable completely dominates Euclidean distances and distorts L1/L2 penalties. Transforming features via standard, robust, or power transformations aligns feature scales and normalises skewed distributions into symmetrical Gaussian-like shapes.`,
+    intuition: [
+      r`Imagine training a k-Nearest Neighbours or Support Vector Machine model to evaluate bank loan risk based on two customer attributes: age in years (ranging from 18 to 75) and annual income in pounds (ranging from £15,000 to £500,000). If you compute the Euclidean distance between two applicants, a difference of 30 years in age contributes $(30)^2 = 900$ to the squared distance, while a difference of £10,000 in income contributes $(10,000)^2 = 100,000,000$. The income feature is over 100,000 times more influential simply because of the arbitrary choice of measurement currency. Age becomes completely invisible to the algorithm.`,
+      r`Scaling resolves this by transforming variables into comparable dimensionless numerical spaces. Standard scaling (Z-score normalisation) shifts the mean to 0 and rescales variance to 1. Min-max scaling squashes values into a bounded interval such as $[0, 1]$. However, both techniques are vulnerable to extreme outliers: a single massive outlier compresses all normal data points into a microscopic cluster near zero. Robust scaling replaces the sample mean and variance with the median and interquartile range (IQR), ensuring scale normalisation remains unaffected by rogue outliers.`,
+      r`Beyond scaling spread, many linear algorithms and hypothesis tests assume underlying errors or features are normally distributed. Highly skewed variables (such as website visit durations or insurance claim amounts) violate these assumptions. Power transformations—such as the Box-Cox transform for strictly positive data and the Yeo-Johnson transform for data containing zero or negative values—estimate an optimal power parameter $\lambda$ that mathematically bends skewed probability distributions into symmetrical, near-Gaussian bell curves.`,
+    ],
+    analogy: r`Converting currencies from Yen, Pounds, and Dollars into a single standardised international credit unit so that prices can be compared on equal terms.`,
+    steps: [
+      r`Diagnose distribution characteristics: inspect feature skewness, presence of negative values, and outlier density using histograms and quantile plots.`,
+      r`Select scaling mechanism: apply standard scaling ($z = (x - \mu)/\sigma$) for Gaussian features, Min-Max scaling for bounded bounds (e.g. neural network inputs), or robust scaling (median/IQR) for outlier-rich data.`,
+      r`Fit scaler exclusively on training data: calculate $\mu$, $\sigma$, or median strictly on training folds to prevent distribution leakage.`,
+      r`Evaluate power transformations for skewed data: apply Box-Cox for strictly positive features ($x > 0$) or Yeo-Johnson for real-valued features with zeros and negatives.`,
+      r`Optimise transformation parameter $\lambda$: maximise profile log-likelihood across grid search to find the power that minimises distribution skewness.`,
+    ],
+    math: [
+      {
+        h: 'Standard scaling vs Robust scaling',
+        tex: r`$$z_i = \frac{x_i - \bar{x}}{s}, \qquad r_i = \frac{x_i - \text{median}(X)}{\text{IQR}(X)}$$`,
+        p: r`Standard scaling centres at sample mean $\bar{x}$ and scales by standard deviation $s$. Robust scaling centres at the sample median and divides by $\text{IQR} = Q_3 - Q_1$, maintaining a 50% breakdown point that resists distortion from extreme outliers.`,
+      },
+      {
+        h: 'Box-Cox power transformation ($x > 0$)',
+        tex: r`$$y^{(\lambda)} = \begin{cases} \frac{x^\lambda - 1}{\lambda} & \text{if } \lambda \ne 0 \\ \ln(x) & \text{if } \lambda = 0 \end{cases}$$`,
+        p: r`Parametrised by power $\lambda$, Box-Cox continuous power scaling maps positive distributions into Gaussian profiles. At $\lambda = 1$, the transform is linear (shift); at $\lambda = 0.5$, it acts as a square root; at $\lambda = 0$, it becomes the natural logarithm, compressing heavy right tails.`,
+      },
+      {
+        h: r`Yeo-Johnson power transformation (all $x \in \mathbb{R}$)`,
+        tex: r`$$\psi(\lambda, x) = \begin{cases} \frac{(x + 1)^\lambda - 1}{\lambda} & \text{if } \lambda \ne 0, x \ge 0 \\ \ln(x + 1) & \text{if } \lambda = 0, x \ge 0 \\ -\frac{(-x + 1)^{2 - \lambda} - 1}{2 - \lambda} & \text{if } \lambda \ne 2, x < 0 \\ -\ln(-x + 1) & \text{if } \lambda = 2, x < 0 \end{cases}$$`,
+        p: r`Yeo-Johnson generalises Box-Cox to accommodate zero and negative values, guaranteeing monotonic continuity across the entire real line without requiring arbitrary additive positive shifts.`,
+      },
+    ],
+    keyPoints: [
+      r`Distance and gradient invariance: scaling ensures features contribute proportionately to Euclidean distance calculations and prevents elongated, zig-zagging gradient descent trajectories.`,
+      r`Robust scaling resistance: median/IQR scaling resists outlier contamination, preventing extreme observations from squashing normal feature distributions.`,
+      r`Yeo-Johnson zero-handling: unlike Box-Cox, Yeo-Johnson operates over positive, zero, and negative values without requiring arbitrary positive offset shifts.`,
+    ],
+    pitfalls: [
+      r`Data leakage by fitting on entire dataset: computing scaler parameters ($\mu, \sigma$) across training and test sets leaks test distribution bounds.`,
+      r`Tree-based model misconception: applying monotonic scaling or power transforms to features fed into decision trees, Random Forests, or XGBoost is computationally superfluous, as trees are invariant to monotonic univariate transforms.`,
+      r`Inverting predictions without inverse transformation: when transforming a continuous target variable $y$ with Box-Cox, predictions must be inverted via inverse power transform back to original monetary or physical units.`,
+    ],
+    code: r`import numpy as np
+from scipy import stats
+
+np.random.seed(42)
+raw = np.random.exponential(scale=2.0, size=100)
+
+standardised = (raw - np.mean(raw)) / np.std(raw)
+med = np.median(raw)
+iqr_val = np.percentile(raw, 75) - np.percentile(raw, 25)
+robust = (raw - med) / iqr_val
+boxcox_trans, opt_lambda = stats.boxcox(raw)
+
+print(f"Raw skewness:        {stats.skew(raw):.3f}")
+print(f"Standardised skew:   {stats.skew(standardised):.3f} (mean: {np.mean(standardised):.1f})")
+print(f"Robust scaled skew:  {stats.skew(robust):.3f} (median: {np.median(robust):.1f})")
+print(f"Box-Cox skew (lambda={opt_lambda:.2f}): {stats.skew(boxcox_trans):.3f}")`,
+    quiz: [
+      {
+        q: r`Why does standardising or min-max scaling features have virtually zero effect on the predictive accuracy of a Random Forest or XGBoost model?`,
+        o: [
+          r`Decision trees split on monotonic rank thresholds, making split decisions completely invariant to monotonic univariate scaling`,
+          r`Tree models internally normalise all columns to Gaussian distributions`,
+          r`Ensemble algorithms only process categorical variables`,
+          r`Gradient boosting automatically divides all numbers by 100`,
+        ],
+        a: 0,
+        why: r`Decision trees evaluate splits of the form $x_j \le \theta$. Monotonically scaling $x_j$ by $a x_j + b$ simply transforms the threshold $\theta$ by the same factor, leaving sample partitions and impurity gains identical.`,
+      },
+      {
+        q: r`What is the primary constraint that limits the use of the classic Box-Cox transformation?`,
+        o: [
+          r`All feature values must be strictly positive ($x > 0$)`,
+          r`The dataset must have fewer than 100 rows`,
+          r`It can only be applied to binary classification labels`,
+          r`The data must already follow a normal distribution`,
+        ],
+        a: 0,
+        why: r`Box-Cox relies on power functions and natural logarithms ($\ln x$), which are undefined for zero and negative real numbers. The Yeo-Johnson transform was developed specifically to overcome this constraint.`,
+      },
+      {
+        q: r`Why is RobustScaler (median and IQR) preferred over StandardScaler when scaling data with severe unclipped outliers?`,
+        o: [
+          r`StandardScaler's mean and variance are heavily distorted by outliers, squashing normal data into a narrow band, whereas median and IQR resist outlier leverage`,
+          r`RobustScaler guarantees all outputs fall strictly between 0 and 1`,
+          r`RobustScaler eliminates the need for test set splitting`,
+          r`StandardScaler cannot process floating-point data`,
+        ],
+        a: 0,
+        why: r`In StandardScaler, an extreme outlier inflates the sample standard deviation, shrinking the scaled values of typical records into a tiny range near zero. RobustScaler's median and IQR have a 50% breakdown point, preserving normal variation.`,
+      },
+    ],
+    usedBy: ['lag-and-rolling-window-features'],
+    prereq: ['outlier-handling', 'sampling-and-standard-error'],
+    related: ['outlier-handling', 'encoding-categoricals-one-hot-ordinal-target-woe', 'knn_classifier', 'ridge_regression'],
+    keywords: 'feature scaling standardisation normalisation robust scaler box cox yeo johnson power transform skewness feature engineering',
+  },
+  {
+    id: 'lag-and-rolling-window-features',
+    short: 'Lag and rolling-window features',
+    title: 'Lag and Rolling-Window Features',
+    task: 'concepts',
+    module: 'Feature engineering',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Constructing historical lag shifts, rolling summary statistics, and exponentially weighted moving averages for tabular time-series forecasting.`,
+    lead: r`Tabular models like XGBoost and LightGBM cannot inherently process sequential dependencies without explicit temporal feature engineering. Lag features and rolling-window aggregations convert sequential time-series into standard supervised learning matrices, capturing momentum, seasonality, and volatility. Rigorous window construction prevents lookahead leakage and ensures predictive features reflect strictly historical information.`,
+    intuition: [
+      r`Imagine predicting tomorrow's electricity consumption for a large city. If you provide a gradient boosted tree only with the date "Thursday, 12th November", the model has no way of knowing whether the city is currently experiencing a sudden cold snap or how much power was consumed yesterday. However, if you provide the electricity consumption from 24 hours ago (lag 1 day), from 7 days ago (lag 7 days, capturing weekly seasonality), and the average consumption over the past 3 days (rolling mean), the model instantly grasps current demand momentum and baseline expectations.`,
+      r`Constructing temporal tabular features relies on two primary primitives: lags and rolling windows. A lag feature shifts the time series backward by $k$ time steps ($y_{t-k}$), allowing standard tabular regression models to condition on previous state values. Rolling-window features pass a sliding aggregation frame over past observations, computing summary statistics such as rolling mean (trend), rolling standard deviation (volatility), rolling min/max (envelope range), and exponentially weighted moving averages (EWMA), which weight recent observations more heavily than distant history.`,
+      r`The single most catastrophic error in time-series feature engineering is lookahead leakage (future leakage). If you calculate a rolling 7-day average using a centred window that includes $t-3$ to $t+3$, your model is trained using information from three days in the future. In offline cross-validation, the model appears to predict the future with supernatural precision. When deployed into production, tomorrow's data does not exist, causing model accuracy to collapse completely. Every rolling feature must be strictly left-aligned or shifted by at least the forecast horizon.`,
+    ],
+    analogy: r`Driving a car forward while glancing at the rear-view mirror to observe how fast traffic behind you is moving, rather than attempting to look through a crystal ball.`,
+    steps: [
+      r`Establish regular time index: verify uniform sampling frequency (hourly, daily) and resolve missing temporal timestamps via forward-filling or interpolation.`,
+      r`Generate lag features: shift the target series backward by $k$ discrete steps ($y_{t-1}, y_{t-7}, y_{t-365}$) corresponding to domain seasonality cycles.`,
+      r`Compute rolling window aggregates: slide fixed-length historical frames ($W \in \{7, 14, 30\}$) to compute rolling means, standard deviations, and quantiles.`,
+      r`Enforce strict causal alignment: shift rolling calculations by at least the forecast horizon ($h \ge 1$) to eliminate lookahead leakage.`,
+      r`Calculate momentum and divergence ratios: compute relative velocity features such as $(y_{t-1} - \text{mean}_{7}) / \text{std}_{7}$ to measure deviation from recent baseline trends.`,
+    ],
+    math: [
+      {
+        h: 'Discrete lag operator and difference transformations',
+        tex: r`$$L^k y_t = y_{t-k}, \qquad \Delta^k y_t = (1 - L)^k y_t = y_t - y_{t-k}$$`,
+        p: r`Here $L$ is the backshift lag operator. The term $y_{t-k}$ captures the historical value $k$ steps prior. First-order differences $\Delta y_t = y_t - y_{t-1}$ remove linear trends, while seasonal differences $y_t - y_{t-s}$ remove recurring periodicities (such as $s = 7$ for weekly patterns).`,
+      },
+      {
+        h: 'Causal rolling window mean and variance',
+        tex: r`$$\mu_{t, W} = \frac{1}{W} \sum_{i=1}^W y_{t-i}, \qquad \sigma_{t, W}^2 = \frac{1}{W - 1} \sum_{i=1}^W \big(y_{t-i} - \mu_{t, W}\big)^2$$`,
+        p: r`Historical window $W$ is summed strictly over historical indices $i \in \{1, \dots, W\}$. The upper index is $t-1$, which strictly excludes the concurrent observation $y_t$ to prevent target leakage when training models to predict $y_t$.`,
+      },
+      {
+        h: 'Exponentially Weighted Moving Average (EWMA)',
+        tex: r`$$\hat{y}_t^{(\alpha)} = \alpha y_{t-1} + (1 - \alpha) \hat{y}_{t-1}^{(\alpha)} = \alpha \sum_{i=1}^\infty (1 - \alpha)^{i-1} y_{t-i}$$`,
+        p: r`The smoothing parameter $\alpha \in (0, 1]$ dictates the geometric decay rate. Recent observations receive exponentially decaying weights $(1 - \alpha)^{i-1}$, adapting rapidly to structural trend shifts without requiring a sharp rectangular cut-off window.`,
+      },
+    ],
+    keyPoints: [
+      r`Tabularizing sequential data: lag and window features allow non-recurrent algorithms (like LightGBM) to capture temporal dependencies with exceptional speed.`,
+      r`Strict causal lagging: rolling statistics must exclude the current time step $t$ when predicting $y_t$, strictly bounding historical inputs to $\{t-1, t-2, \dots\}$.`,
+      r`Domain seasonal lags: alignment with natural cycles (e.g. 24 hours, 7 days, 52 weeks) captures periodic autocorrelation structures.`,
+    ],
+    pitfalls: [
+      r`Centred window lookahead leakage: using default centred rolling windows incorporates future time points $t+1, \dots, t+k$, invalidating the model for live deployment.`,
+      r`Multi-step forecast horizon mismatch: when forecasting $h$ steps ahead (e.g. predicting day $t+7$), lag features like $y_{t-1}$ are unobserved at prediction time, demanding recursive or direct forecasting strategies.`,
+      r`Inadvertent training set NaN leakage: shifting by $k$ produces $k$ leading NaNs; dropping NaNs carelessly can truncate early training cohorts or cause row misalignment across multi-entity panels.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+series = 10.0 + np.sin(np.linspace(0, 10, 50)) + np.random.normal(0, 0.5, 50)
+T = len(series)
+
+# Lags: t-1 and t-3
+lag1 = series[2:-1]
+lag3 = series[0:-3]
+# Causal rolling mean (window=3)
+rolling_mean = np.array([np.mean(series[i-3:i]) for i in range(3, T)])
+y_target = series[3:]
+
+print(f"Constructed supervised samples: {len(y_target)}")
+print(f"Sample 0 -> Target: {y_target[0]:.2f}, Lag-1: {series[2]:.2f}, 3-step Rolling Mean: {rolling_mean[0]:.2f}")`,
+    quiz: [
+      {
+        q: r`Why is calculating a rolling mean using a centred window (e.g. including $t-2$ through $t+2$) considered fatal when building time-series features?`,
+        o: [
+          r`It introduces lookahead leakage by using future values ($t+1, t+2$) that are unobserved at inference time, rendering the model useless in production`,
+          r`It causes the rolling standard deviation to become negative`,
+          r`It converts daily time series into monthly data`,
+          r`It forces the model to use linear regression`,
+        ],
+        a: 0,
+        why: r`At test time, the model must forecast $y_t$ using only data available prior to $t$. A centred window incorporates future values that cannot exist at prediction time, producing deceptively high backtest scores that collapse in production.`,
+      },
+      {
+        q: r`When building a multi-step forecasting model to predict sales 7 days into the future ($y_{t+7}$), which of the following lag features is valid without recursive chaining?`,
+        o: [
+          r`$y_t$ or earlier lags like $y_{t-1}, y_{t-7}$`,
+          r`$y_{t+6}$`,
+          r`$y_{t+1}$`,
+          r`A centred 3-day average around $y_{t+7}$`,
+        ],
+        a: 0,
+        why: r`When forecasting 7 steps ahead from origin $t$, only observations at or before time $t$ ($y_t, y_{t-1}, \dots$) are known. Features like $y_{t+1}$ or $y_{t+6}$ are in the future and cannot be observed directly without multi-step recursive forecasting.`,
+      },
+      {
+        q: r`What structural role do lag differences ($\Delta y_t = y_t - y_{t-1}$) serve in time-series feature engineering?`,
+        o: [
+          r`They transform non-stationary trending series into stationary mean-reverting increments, highlighting short-term acceleration and momentum`,
+          r`They eliminate all missing values automatically`,
+          r`They ensure all target values are integers`,
+          r`They double the number of rows in the dataset`,
+        ],
+        a: 0,
+        why: r`Differencing removes secular non-stationary trends ($y_t - y_{t-1}$), capturing whether the process is accelerating or decelerating relative to its recent level.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['stationarity-acf-and-pacf', 'scaling-and-transforms-standard-robust-box-cox-yeo-johnson'],
+    related: ['stationarity-acf-and-pacf', 'exponential-smoothing-ets', 'gradient_boosting_regressor'],
+    keywords: 'lag features rolling window features time series feature engineering ewma lookahead leakage supervised forecasting autocorrelation',
+  },
 ];
