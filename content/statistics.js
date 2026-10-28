@@ -8,8 +8,15 @@ module.exports = [
     task: 'concepts',
     module: 'Probability',
     level: 1,
-    minutes: 15,
-    noLab: true,
+    minutes: 20,
+    explainer: 'bayes',
+    labIntro: r`Each dot is one of 1,000 people. Move the sliders and watch the cyan dots (real cases) compete with the pink ones (false alarms). The curve on the right shows the posterior for every prevalence at once. Repeated tests assume each one errs independently, given whether the person is really sick.`,
+    tryThis: [
+      r`Press <em>Rare disease</em> (prevalence 0.1%). The pink false alarms swamp the cyan dots and a positive test means only about 1%.`,
+      r`At 1% prevalence, raise sensitivity from 90% to 99%. The posterior barely moves (about 10% to 11%), because the false alarms are the real problem.`,
+      r`Instead, cut the false-positive rate from 8% to 1%. The posterior jumps to about 48%.`,
+      r`Go back to the defaults and raise <em>Independent positive tests</em> to 2 and 3: the posterior climbs from 10% to about 56% and then 93%.`,
+    ],
     summary: r`The calculus of uncertainty: addition, multiplication, conditional probability and Bayes' theorem. Invert probabilities to update beliefs as new evidence arrives.`,
     lead: r`Probability quantifies uncertainty on a principled scale from 0 to 1. Bayes' theorem provides the mathematical machinery to invert conditional probabilities, updating prior beliefs into posterior distributions in the light of fresh empirical data.`,
     intuition: [

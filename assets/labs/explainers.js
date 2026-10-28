@@ -1937,6 +1937,107 @@
     });
   };
 
+  // ================================================================== Bayes' theorem in natural frequencies
+  ex.bayes = el => {
+    const R = root.Lab.rng(5), COLS = 50, GX = 45, GY = 64, C = 11;
+    // 1,000 people: 10 sick (9 test positive), 990 healthy (79 test positive)
+    const idx = Array.from({ length: 990 }, (_, i) => i + 10);
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    const rank = new Map(idx.slice(0, 79).map((v, i) => [v, i]));
+    const kindOf = i => (i < 9 ? 'tp' : i < 10 ? 'fn' : rank.has(i) ? 'fp' : 'tn');
+    const GREY = 'rgba(255,255,255,0.38)';
+    const dots = (g, s, p) => {
+      const e = ease(p), n = s === 0 ? Math.floor(e * 1000) : 1000;
+      const fade = s < 4 ? 1 : s === 4 ? 1 - 0.88 * e : 0.12;
+      for (let i = 0; i < n; i++) {
+        const x = GX + ((i % COLS) + 0.5) * C, y = GY + (Math.floor(i / COLS) + 0.5) * C, k = kindOf(i);
+        let col = GREY, a = 1, r = 3.5;
+        const sick = s > 1 || (s === 1 && i < e * 10);
+        if (i < 10 && sick) { col = T.amber; r = 4.2; }
+        if (k === 'tp' && (s > 2 || (s === 2 && i < e * 9))) col = T.cyan;
+        if (k === 'fp' && (s > 3 || (s === 3 && rank.get(i) < e * 79))) { col = T.pink; r = 4; }
+        if (k === 'tn' || k === 'fn') a = fade;
+        g.dot(x, y, r, col, a);
+      }
+    };
+    const bar = (g, x, base, w, h, color, label, value, a = 1) => {
+      const hh = Math.max(h, 3); g.rr(x - w / 2, base - hh, w, hh, Math.min(5, hh / 2), { fill: alpha(color, 0.35), stroke: color, a });
+      g.text(label, x, base + 18, { size: 12, color: T.soft, a });
+      g.text(value, x, base - h - 13, { size: 14, color: T.ink, a });
+    };
+    const steps = [
+      { part: 'Part 1 · Natural frequencies', t: 'Start with 1,000 people', dur: 3800,
+        d: 'Probabilities are easier to feel as counts of people. Picture <strong>1,000 people</strong>, each one a dot. We are about to screen them for a disease, but nobody knows yet who is sick.' },
+      { part: 'Part 1 · Natural frequencies', t: 'Only 1% are sick', dur: 3200,
+        d: 'The disease is rare: the <strong>prevalence</strong> (the base rate, your prior) is 1%. That makes <strong>10 sick</strong> people and 990 healthy ones. Hold on to that small number.' },
+      { part: 'Part 1 · Natural frequencies', t: 'The test catches 90% of the sick', dur: 3400,
+        d: 'The test\'s <strong>sensitivity</strong>, P(positive | sick), is 90%. So <strong>9 of the 10</strong> sick people test positive (cyan) and one is missed (amber).' },
+      { part: 'Part 1 · Natural frequencies', t: 'It also flags 8% of the healthy', dur: 4000,
+        d: 'No test is perfect. The <strong>false-positive rate</strong>, P(positive | healthy), is 8%. Of 990 healthy people about <strong>79</strong> are flagged by mistake (pink). They look exactly like the 9 real cases.' },
+      { part: 'Part 1 · Natural frequencies', t: 'Look only at the positives', dur: 3400,
+        d: 'You tested positive. That removes everyone who tested negative from the picture. What is left is <strong>9 + 79 = 88</strong> people, and the question is how many of them are really sick.' },
+      { part: 'Part 1 · Natural frequencies', t: '9 out of 88', dur: 3600,
+        d: 'Only <strong>9 of the 88</strong> positives are sick: about <strong>10.2%</strong>. The test is 90% sensitive, yet a positive result is far more likely to be a false alarm, because the healthy crowd is so much bigger than the sick one.' },
+      { part: 'Part 2 · The formula', t: 'The same sum, written as Bayes\' theorem', dur: 5200,
+        d: 'Divide the sick people who test positive by everyone who tests positive. In probabilities: <strong>posterior = likelihood × prior / evidence</strong>. The denominator adds up both ways to be positive, which is exactly the 88.' },
+      { part: 'Part 2 · The formula', t: 'The base rate decides', dur: 4200,
+        d: 'Keep the same test (90% sensitive, 8% false positives) and change only the prevalence. A positive result means about <strong>1%</strong> when the disease is very rare and about <strong>92%</strong> when half the people are sick. Same test, very different answer.' },
+      { part: 'Part 2 · The formula', t: 'A second positive test', dur: 4600,
+        d: 'Evidence accumulates. Today\'s posterior becomes tomorrow\'s prior: after one positive the chance is 10.2%, after a second independent positive it is about <strong>56%</strong>. Each positive multiplies the odds by 0.90 / 0.08 = 11.25.' },
+    ];
+    player(el, {
+      title: 'Watch it work · Bayes\' theorem with 1,000 people', steps,
+      draw(g, s, p) {
+        const e = ease(p);
+        if (s < 6) g.text('Illustrative example: 1% sick · test catches 90% · 8% false alarms', GX, 26, { size: 11, color: T.dim, align: 'left' });
+        if (s <= 5) dots(g, s, p);
+        const cap = (a, b, colA) => { g.text(a, 320, 322, { size: 17, color: colA || T.ink, sans: true, weight: 600, a: s === 0 ? e : 1 }); if (b) g.text(b, 320, 352, { size: 13, color: T.muted, sans: true }); };
+        if (s === 0) cap('1,000 people', 'nobody knows yet who is sick');
+        if (s === 1) cap('1% are sick: 10 people', '990 are healthy', T.amber);
+        if (s === 2) cap('9 of the 10 sick test positive', 'sensitivity 90% · one sick person is missed', T.cyan);
+        if (s === 3) cap('79 of the 990 healthy test positive', 'false-positive rate 8% · these are false alarms', T.pink);
+        if (s === 4) cap('Positive tests: 9 + 79 = 88 people', 'everyone else fades away');
+        if (s === 5) {
+          const x0 = 120, W2 = 400, y = 312, wt = W2 * 9 / 88 * e;
+          g.rr(x0, y, W2, 22, 5, { stroke: 'rgba(255,255,255,0.2)' });
+          g.rr(x0, y, wt, 22, 5, { fill: alpha(T.cyan, 0.5), stroke: T.cyan });
+          g.rr(x0 + W2 * 9 / 88, y, (W2 - W2 * 9 / 88) * e, 22, 5, { fill: alpha(T.pink, 0.3), stroke: T.pink, a: e });
+          g.text('9 sick', x0 + W2 * 4.5 / 88, y + 38, { size: 12, color: T.cyan, a: e });
+          g.text('79 healthy (false alarms)', x0 + W2 * 48.5 / 88, y + 38, { size: 12, color: T.pink, a: e });
+          g.text('9 / 88 ≈ 10.2% of positives are really sick', 320, 380, { size: 16, color: T.ink, sans: true, weight: 600, a: e });
+        }
+        if (s === 6) {
+          const L = [
+            ['P(sick | +)  =  P(+ | sick) × P(sick) / P(+)', T.ink, 16, 62],
+            ['=  0.90 × 0.01  /  (0.90 × 0.01 + 0.08 × 0.99)', T.soft, 16, 118],
+            ['=  0.009 / 0.0882', T.soft, 16, 174],
+            ['≈  0.102   (10.2%)', T.amber, 22, 232],
+          ];
+          L.forEach(([t, c, sz, y], i) => g.text(t, 320, y, { size: sz, color: c, a: clamp01(p * 5 - i * 1.1) }));
+          g.text('numerator: sick people who test positive (9 in 1,000)', 320, 296, { size: 12.5, color: T.cyan, sans: true, a: clamp01(p * 5 - 3.6) });
+          g.text('denominator: everyone who tests positive (88 in 1,000)', 320, 322, { size: 12.5, color: T.muted, sans: true, a: clamp01(p * 5 - 4) });
+        }
+        if (s === 7) {
+          const base = 322, X = [110, 240, 370, 500], pr = ['0.1%', '1%', '10%', '50%'], po = [0.0111, 0.102, 0.5556, 0.9184];
+          g.text('Same test, different base rate: P(sick | positive)', 320, 30, { size: 13, color: T.soft, sans: true });
+          po.forEach((v, i) => bar(g, X[i], base, 74, 220 * v * e, i === 1 ? T.amber : T.cyan, pr[i], `${(v * 100).toFixed(v < 0.1 ? 1 : 1)}%`, clamp01(p * 3 - i * 0.4)));
+          g.text('prevalence of the disease', 320, 372, { size: 12, color: T.dim, sans: true });
+        }
+        if (s === 8) {
+          const base = 322, X = [150, 320, 490], po = [0.01, 0.102, 0.5611], lab = ['before any test', 'after 1 positive', 'after 2 positives'];
+          g.text('Each independent positive multiplies the odds by 0.90 / 0.08 = 11.25', 320, 30, { size: 13, color: T.soft, sans: true });
+          po.forEach((v, i) => bar(g, X[i], base, 90, 220 * v * ease(clamp01(p * 2.2 - i * 0.55)), T.cyan, lab[i], `${(v * 100).toFixed(i === 0 ? 0 : 1)}%`, clamp01(p * 3 - i * 0.6)));
+          [[0, 1], [1, 2]].forEach(([i, j], n) => {
+            const a2 = clamp01(p * 3 - 1 - n * 0.8);
+            g.line([[X[i] + 56, 296], [X[j] - 56, 296]], { color: T.violet, arrow: true, a: a2 });
+            g.text('× 11.25 odds', (X[i] + X[j]) / 2, 280, { size: 11, color: T.violet, a: a2 });
+          });
+          g.text('assumes the two tests err independently', 320, 382, { size: 11, color: T.dim, sans: true });
+        }
+      },
+    });
+  };
+
   root.Labs = root.Labs || {};
   root.Labs.explainers = ex;
 })(window);

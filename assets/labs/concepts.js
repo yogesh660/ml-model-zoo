@@ -432,6 +432,67 @@
     flip(10);
   };
 
+  // ------------------------------------------------------------------ probability
+  labs['probability-rules-and-bayes-theorem'] = el => {
+    const COLS = 40, ROWS = 25, N = COLS * ROWS;
+    const L = mount(el, {
+      title: 'Live lab · a positive test, a base rate and the real probability',
+      main: { x: [0, 1], y: [0, 1], pad: [10, 10, 10, 10] },
+      side: ['P(sick | positive tests) against prevalence'], sideOpts: [{ pad: [40, 14, 30, 42] }],
+      legend: [{ c: T.cyan, l: 'sick, tested positive' }, { c: T.pink, l: 'healthy, false alarm' }, { c: T.violet, l: 'sick, missed' }, { c: 'rgba(255,255,255,0.35)', l: 'healthy, negative' }],
+      hint: 'Each dot is one of 1,000 people. The bright dots tested positive.',
+      controls: [
+        { type: 'range', key: 'prev', label: 'Prevalence (base rate)', min: -3, max: Math.log10(0.5), step: 0.01, value: Math.log10(0.01), log: true, fmt: v => (v < 0.1 ? `${(v * 100).toFixed(1)}%` : `${(v * 100).toFixed(0)}%`) },
+        { type: 'range', key: 'sens', label: 'Sensitivity P(+ | sick)', min: 0.5, max: 0.99, step: 0.01, value: 0.9, fmt: v => `${(v * 100).toFixed(0)}%` },
+        { type: 'range', key: 'fpr', label: 'False-positive rate P(+ | healthy)', min: 0.005, max: 0.3, step: 0.005, value: 0.08, fmt: v => `${(v * 100).toFixed(1)}%` },
+        { type: 'range', key: 'tests', label: 'Independent positive tests', min: 1, max: 5, step: 1, value: 1, fmt: v => `${v}` },
+        { type: 'buttons', items: [{ key: 'rare', label: 'Rare disease 0.1%' }, { key: 'screen', label: 'Screening 1%' }, { key: 'clinic', label: 'Clinic 20%', kind: 'ghost' }] },
+      ],
+      readouts: [{ key: 'tp', label: 'Sick and positive, per 10,000' }, { key: 'fp', label: 'Healthy and positive, per 10,000' }, { key: 'post', label: 'P(sick | positive)' }, { key: 'neg', label: 'P(sick | negative)' }],
+    });
+    const P = L.main, S = L.side[0];
+    const lg = v => Math.log10(v);
+    S.setRange([-3, lg(0.5)], [0, 1]);
+    const post = (prev, sens, fpr, k) => (prev * sens ** k) / (prev * sens ** k + (1 - prev) * fpr ** k);
+    const upd = () => {
+      const { prev, sens, fpr } = L.val, k = Math.round(L.val.tests);
+      const sick = Math.max(1, Math.round(N * prev)), healthy = N - sick;
+      const sp = Math.round(sick * sens), hp = Math.round(healthy * fpr), sn = sick - sp;
+      const pk = post(prev, sens, fpr, k), neg = (prev * (1 - sens)) / (prev * (1 - sens) + (1 - prev) * (1 - fpr));
+      L.set('tp', (1e4 * prev * sens).toFixed(1)); L.set('fp', (1e4 * (1 - prev) * fpr).toFixed(0));
+      L.set('post', `${(pk * 100).toFixed(pk < 0.1 ? 1 : 0)}%`, pk > 0.5 ? 'good' : '');
+      L.set('neg', `${(neg * 100).toFixed(neg < 0.01 ? 2 : 1)}%`);
+      P.render = p => {
+        const cw = Math.abs(p.sx(1 / COLS) - p.sx(0)), ch = Math.abs(p.sy(1 / ROWS) - p.sy(0)), rad = Math.max(1.6, Math.min(cw, ch) * 0.36);
+        const pts = [], kind = [];
+        for (let i = 0; i < N; i++) {
+          pts.push([((i % COLS) + 0.5) / COLS, 1 - (Math.floor(i / COLS) + 0.5) / ROWS]);
+          kind.push(i < sp ? 0 : i < sp + hp ? 1 : i < sp + hp + sn ? 2 : 3);
+        }
+        const col = [T.cyan, T.pink, alpha(T.violet, 0.85), 'rgba(255,255,255,0.2)'];
+        p.points(pts, { color: i => col[kind[i]], r: rad, stroke: 'rgba(7,7,9,0.5)' });
+      };
+      S.render = p => {
+        const r = p.range;
+        p.grid({ step: 1, stepY: 0.25 });
+        const xs = Array.from({ length: 120 }, (_, i) => -3 + (i * (lg(0.5) + 3)) / 119);
+        p.path(xs, xs.map(x => 10 ** x), { color: 'rgba(255,255,255,0.25)', width: 1.2, dash: [4, 4] });
+        for (let j = 1; j <= 5; j++) if (j !== k) p.path(xs, xs.map(x => post(10 ** x, sens, fpr, j)), { color: 'rgba(255,255,255,0.18)', width: 1.2 });
+        p.path(xs, xs.map(x => post(10 ** x, sens, fpr, k)), { color: T.cyan, width: 2.6 });
+        p.seg(lg(prev), 0, lg(prev), pk, { color: alpha(T.amber, 0.6), width: 1.2, dash: [3, 3] });
+        p.points([[lg(prev), pk]], { color: T.amber, r: 5.5 });
+        [[-3, '0.1%'], [-2, '1%'], [-1, '10%'], [lg(0.5), '50%']].forEach(([v, t]) => p.text(t, p.sx(v), r.pt + r.h + 15, { align: v === -3 ? 'left' : v > -1 ? 'right' : 'center', size: 10, color: T.dim }));
+        [[0, '0'], [0.5, '50%'], [1, '100%']].forEach(([v, t]) => p.text(t, r.pl - 6, p.sy(v) + 3, { align: 'right', size: 10, color: T.dim }));
+        p.text(`${k} positive test${k > 1 ? 's' : ''}`, r.pl + 8, r.pt + 14, { size: 11, color: T.cyan });
+        p.text('dashed: the prior', r.pl + r.w - 6, p.sy(0) - 8, { align: 'right', size: 10, color: T.dim });
+      };
+      L.redraw();
+    };
+    const preset = v => () => { L.el('prev').set(v); L.fire('prev'); };
+    L.button('rare', preset(0.001)); L.button('screen', preset(0.01)); L.button('clinic', preset(0.2));
+    L.on(upd); upd();
+  };
+
   // ------------------------------------------------------------------ generalisation
   labs['bias-variance-tradeoff'] = el => {
     const L = mount(el, {
