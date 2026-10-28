@@ -1878,4 +1878,444 @@ print(f"Drift introduced at step 100 -> Alarm raised at step {alarm_step}")`,
     related: ['train-validation-test-splits-group-and-time-based', 'time-series-cross-validation', 'forecast-metrics-mae-mase-smape-wape'],
     keywords: 'concept drift performance monitoring covariate shift page hinkley adwin label delay model decay continuous evaluation',
   },
+  {
+    id: 'metric-design-and-north-star-metrics',
+    short: 'Metric design and north-star',
+    title: 'Metric Design and North-Star Metrics',
+    task: 'concepts',
+    module: 'Product analytics',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Architecting primary, proxy, and guardrail metric frameworks to align algorithmic optimisation with sustainable user value and business health.`,
+    lead: r`Every machine learning model and product feature relentlessly optimises whatever quantitative objective function it is given. If you define a naive metric like daily clicks or raw sign-ups, algorithms exploit clickbait, spam notifications, and deceptive UI patterns, causing long-term churn—an outcome known as Goodhart's Law. Robust metric design constructs a balanced hierarchy: a single North-Star Metric capturing core customer value exchange, supported by sensitive input proxies and strictly enforced guardrails.`,
+    intuition: [
+      r`Imagine leading product data science for a video streaming service. The executive committee announces that the primary target for the recommendation engine is "Total Video Plays". Your team tunes the recommender to autoplay 5-second teaser clips whenever a user hovers their mouse over a thumbnail. Total video plays triple within two weeks, and the leadership dashboard looks euphoric. Six months later, paid subscription renewals drop by 25%. Users were exasperated by unexpected blaring audio and irrelevant recommendations. The metric skyrocketed while genuine customer satisfaction and long-term lifetime value cratered.`,
+      r`A true North-Star Metric (NSM) represents the precise intersection of customer-experienced value and long-term enterprise sustainability. It is rarely raw revenue (which is a lagging accounting output) or top-of-funnel activity (which is easily gamed). For Spotify, it is "Time Spent Listening to Music" (not app launches or search clicks). For Airbnb, it is "Nights Booked" (not total search queries). For Slack, it is "Daily Active Teams Sending Messages" (measuring collaborative network utility). When the North-Star Metric increases honestly, both user utility and enterprise value expand simultaneously.`,
+      r`Because a North-Star Metric is often slow and lagging—measuring 90-day retention takes 90 days—teams decompose it into two operational pillars: leading input proxies and guardrails. Input proxies are sensitive, fast-moving metrics in early lifecycle stages (e.g. streaming 3 songs in the first 24 hours) that statistically correlate with downstream retention. Guardrail metrics are non-negotiable boundaries that protect customer trust and system integrity, such as page latency ceilings, unsubscribe rates, and customer support ticket frequency.`,
+    ],
+    analogy: r`A ship navigating open ocean: the North Star indicates the true navigational destination, responsive helm adjustments serve as leading input proxies, and hull depth sensors act as non-negotiable guardrails against submerged reefs.`,
+    steps: [
+      r`Identify core value exchange: isolate the fundamental transaction where the user derives genuine utility from the product.`,
+      r`Formulate the North-Star Metric: define a measurable rate or composite volume that reflects successful value exchanges (e.g. Weekly Active Users Streaming > 1 hour).`,
+      r`Derive leading input proxies: run regression and correlation analyses to find sensitive behavioural actions in days 1 to 7 that predict long-term 90-day retention.`,
+      r`Establish non-negotiable guardrails: fix strict operational thresholds on user trust and engineering reliability (e.g. p99 latency < 250ms, spam reports < 0.1%).`,
+      r`Conduct Goodhart adversarial review: stress-test metrics by hypothesising how automated algorithms or rogue incentives could inflate numbers without creating customer value.`,
+    ],
+    math: [
+      {
+        h: 'Proxy metric statistical sensitivity and predictive power',
+        tex: r`R^2 = \frac{\text{Cov}(M_{\text{proxy}}, Y_{\text{long-term}})^2}{\text{Var}(M_{\text{proxy}}) \cdot \text{Var}(Y_{\text{long-term}})}, \qquad \text{SNR} = \frac{\Delta \bar{M}_{\text{proxy}}}{\sqrt{\text{Var}(\Delta M_{\text{proxy}})}}`,
+        p: r`Where $M_{\text{proxy}}$ is an early behavioural signal, $Y_{\text{long-term}}$ is ultimate customer retention or lifetime value, and $\text{SNR}$ is the signal-to-noise ratio in A/B test horizons. A valid operational proxy must maximise both correlation with long-term value and statistical sensitivity to short-term product changes.`,
+      },
+      {
+        h: 'Multi-objective constrained metric optimisation',
+        tex: r`\max_{\boldsymbol{\theta}} \mathbb{E}\left[ M_{\text{north-star}}(\boldsymbol{\theta}) \right] \quad \text{subject to} \quad G_j(\boldsymbol{\theta}) \le c_j \quad \forall j \in \{1, \dots, J\}`,
+        p: r`Where $\boldsymbol{\theta}$ represents algorithmic hyperparameters or UI design variants, and $G_j(\boldsymbol{\theta}) \le c_j$ enforces $J$ guardrail constraints such as user unsubscribe rates, technical latency budgets, or regulatory compliance limits.`,
+      },
+      {
+        h: 'Goodhart divergence decomposition',
+        tex: r`\Delta \text{TrueValue} = \beta_1 \Delta M + \beta_2 (\Delta M)^2 + \epsilon`,
+        p: r`When an indicator $M$ is converted into an aggressive target, unmodelled feedback loops induce quadratic penalties ($\beta_2 < 0$). Beyond an optimal threshold, incremental metric gains erode real customer value through annoyance, fatigue, or spam.`,
+      },
+    ],
+    keyPoints: [
+      r`Goodhart's Law dictates that any metric transformed into a sole target ceases to be a reliable measure due to systemic gaming.`,
+      r`A North-Star Metric captures the reciprocal delivery of customer value and sustainable business growth.`,
+      r`Pairing primary goals with non-negotiable guardrails prevents models from cannibalising customer trust or degrading infrastructure.`,
+    ],
+    pitfalls: [
+      r`Targeting top-of-funnel vanity metrics (e.g. app downloads, page views) that exhibit zero correlation with recurring customer retention.`,
+      r`Using long-lagging metrics directly as A/B test criteria, delaying decision velocity by months rather than using validated leading proxies.`,
+      r`Omitting negative guardrail constraints, allowing recommendation engines to inflate click numbers via clickbait or notification bombardment.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n_users = 200
+# User early engagement: meaningful content hours vs notification clicks
+meaningful_hours = np.random.exponential(2.0, size=n_users)
+notification_clicks = np.random.poisson(15, size=n_users)
+
+# True 90-day retention driven strongly by meaningful hours, weakly by clicks
+retention_logit = -1.5 + 0.8 * meaningful_hours + 0.02 * notification_clicks + np.random.normal(0, 0.3, size=n_users)
+retained_90d = (1 / (1 + np.exp(-retention_logit)) > 0.5).astype(int)
+
+corr_meaningful = np.corrcoef(meaningful_hours, retained_90d)[0, 1]
+corr_clicks = np.corrcoef(notification_clicks, retained_90d)[0, 1]
+
+print(f"Proxy correlation with 90-day retention: meaningful hours = {corr_meaningful:.3f}")
+print(f"Vanity metric correlation with retention: notification clicks = {corr_clicks:.3f}")
+print(f"Recommended North-Star input proxy: meaningful hours (R2={corr_meaningful**2:.2f})")`,
+    quiz: [
+      {
+        q: r`What does Goodhart's Law imply in the context of machine learning product optimisation?`,
+        o: [
+          r`Models automatically converge faster when metrics are continuous`,
+          r`When a statistical measure is chosen as an operational target, models and teams game the metric, breaking its correlation with true business health`,
+          r`The number of training parameters must always exceed the number of features`,
+          r`Cross-validation error is strictly equal to test error`,
+        ],
+        a: 1,
+        why: r`Goodhart's Law states that when a measure becomes a target, it ceases to be a good measure because optimisation processes exploit loopholes (e.g. clickbait to drive clicks).`,
+      },
+      {
+        q: r`Why is raw monthly revenue generally unsuitable as an operational North-Star Metric for iterative A/B testing?`,
+        o: [
+          r`Revenue cannot be measured in digital products`,
+          r`Revenue is a lagging accounting metric that takes too long to respond to product changes and fails to measure whether users found genuine value`,
+          r`Revenue is always negatively correlated with customer happiness`,
+          r`Revenue violates the central limit theorem`,
+        ],
+        a: 1,
+        why: r`Revenue is an output outcome that lags product interventions by months. A North-Star Metric should capture the leading value exchange that ultimately drives revenue.`,
+      },
+      {
+        q: r`What is the primary architectural purpose of a guardrail metric in an experimentation framework?`,
+        o: [
+          r`To double the sample size of control groups`,
+          r`To protect organizational health by setting non-negotiable boundaries on parameters like latency, error rates, and unsubscribe frequency`,
+          r`To convert discrete variables into continuous floating-point numbers`,
+          r`To ensure all A/B tests achieve p-values below 0.001`,
+        ],
+        a: 1,
+        why: r`Guardrail metrics act as protective safety checks, ensuring that interventions designed to improve a primary metric do not quietly inflict unacceptable harm elsewhere.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['exploratory-data-analysis', 'correlation-pearson-spearman-kendall'],
+    related: ['cohort-and-funnel-analysis', 'customer-segmentation-with-rfm', 'data-visualisation-principles'],
+    keywords: 'metric design north star metric goodhart law proxy metrics guardrail metrics product analytics user retention a b testing',
+  },
+  {
+    id: 'cohort-and-funnel-analysis',
+    short: 'Cohort and funnel analysis',
+    title: 'Cohort and Funnel Analysis',
+    task: 'concepts',
+    module: 'Product analytics',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Tracking user lifecycle progression over time through acquisition cohorts and diagnosing drop-off bottlenecks along multi-step conversion funnels.`,
+    lead: r`Aggregate business metrics like monthly active users or overall conversion rate combine veteran power users with newly acquired visitors, concealing underlying product decay. Cohort analysis isolates groups of users who joined during the same time window to track how their retention evolves over their lifecycle. Funnel analysis maps the sequential conversion journey, identifying the precise friction points where prospective users abandon the product.`,
+    intuition: [
+      r`Consider an e-commerce subscription box business that reports 10,000 active subscribers in January and 10,000 active subscribers in June. A superficial glance at the total active user chart suggests healthy stability. But underneath the surface, the business is suffering catastrophic attrition: out of 10,000 January users, 8,000 cancelled their subscriptions by March. The business masked this collapse by spending aggressively on advertising to acquire 8,000 replacement users. This leaky bucket business is burning capital and will collapse the moment customer acquisition costs rise. Cohort analysis reveals this immediately by plotting retention curves for each signup month independently.`,
+      r`In a cohort retention matrix, rows represent acquisition cohorts (e.g. users registered in January, February, or March) and columns represent lifecycle age (Month 0, Month 1, Month 2). If a product has achieved product-market fit, its retention curve decays initially but eventually flattens into a stable horizontal shelf (e.g. retaining a loyal 30% indefinitely). If the curve slopes continuously toward zero, the product lacks long-term value. Comparing cohorts vertically reveals whether product redesigns or onboarding improvements increased retention across successive customer generations.`,
+      r`While cohort analysis monitors retention across months, funnel analysis diagnoses micro-conversions across minutes along a designated pathway: (1) Visit Landing Page to (2) View Product Details to (3) Add to Basket to (4) Enter Shipping Info to (5) Complete Purchase. If 1,000 users add items to their basket but only 100 complete shipping details, the 90% drop-off points directly to friction: hidden shipping fees, checkout bugs, or cumbersome form fields.`,
+    ],
+    analogy: r`A hospital tracking recovery: cohort analysis monitors how patients admitted in January recuperate over subsequent months, while funnel analysis tracks the sequential intake journey from emergency triage to doctor consultation to discharge.`,
+    steps: [
+      r`Assign acquisition cohort timestamp: tag every user with their initial activation or registration period (e.g. Year-Month or Year-Week).`,
+      r`Calculate relative lifecycle periods: compute the elapsed interval between each transaction and the user's cohort inception date ($\Delta t = t_{\text{event}} - t_{\text{cohort}}$).`,
+      r`Construct cohort retention matrix: pivot customer activity counts into a matrix of cohort inception dates versus relative lifecycle periods, computing percentage retention.`,
+      r`Map multi-step conversion funnel: define sequential steps along the user conversion journey with explicit completion criteria and time-to-convert attribution limits.`,
+      r`Identify highest-leverage drop-off: evaluate step-to-step drop-off percentages and prioritize product fixes where the absolute lost volume is greatest.`,
+    ],
+    math: [
+      {
+        h: 'Cohort retention rate at lifecycle period k',
+        tex: r`R_c(k) = \frac{|\mathcal{U}_c \cap \mathcal{A}_{c, k}|}{|\mathcal{U}_c|}`,
+        p: r`Where $\mathcal{U}_c$ is the set of unique users acquired in cohort $c$, and $\mathcal{A}_{c, k}$ is the subset of those users who engaged in qualifying activity during lifecycle period $k$ ($k=0, 1, 2, \dots$).`,
+      },
+      {
+        h: 'Funnel step-to-step and cumulative conversion rates',
+        tex: r`\text{CR}_{s \to s+1} = \frac{N_{s+1}}{N_s}, \qquad \text{CR}_{\text{cumulative}} = \frac{N_S}{N_1} = \prod_{s=1}^{S-1} \text{CR}_{s \to s+1}`,
+        p: r`Where $N_s$ is the number of distinct users who successfully completed stage $s$ within allowed time window $\tau$, and $S$ is the final terminal funnel step.`,
+      },
+      {
+        h: 'Product-market fit retention asymptote',
+        tex: r`\lim_{k \to \infty} R_c(k) = r_{\infty} > 0`,
+        p: r`A strictly positive horizontal asymptote $r_{\infty} > 0$ demonstrates that a core percentage of users retain indefinitely, proving product-market fit and distinguishing sustainable businesses from churn treadmills.`,
+      },
+    ],
+    keyPoints: [
+      r`Cohort analysis unmasks true retention dynamics by separating user lifecycle age from external calendar seasonality.`,
+      r`A flattening retention curve proves product-market fit; a curve that decays to zero indicates a leaky-bucket product.`,
+      r`Funnel analysis pinpoints exact friction bottlenecks along sequential multi-step user conversion pathways.`,
+    ],
+    pitfalls: [
+      r`Evaluating funnels without enforcing chronological sequence: counting users who visited a confirmation page prior to viewing a product.`,
+      r`Omitting time-to-convert attribution windows: attributing a purchase made six months later to an initial promotional funnel.`,
+      r`Blending heterogeneous acquisition channels into a single cohort, obscuring the fact that paid ads retain poorly while organic search retains strongly.`,
+    ],
+    code: r`import numpy as np
+
+# 1. 3 acquisition cohorts across lifecycle months
+cohort_sizes = np.array([1000, 1200, 1500])
+m1_retention = np.array([0.42, 0.39, 0.41])
+m2_retention = np.array([0.30, 0.28])
+
+# 2. 4-step conversion funnel: Visits -> Product Views -> Add to Cart -> Purchase
+funnel_counts = np.array([10000, 4500, 1200, 360])
+step_conversion = funnel_counts[1:] / funnel_counts[:-1]
+cumulative_conversion = funnel_counts[-1] / funnel_counts[0]
+
+print(f"Cohort Month 1 average retention: {np.mean(m1_retention):.1%}")
+print(f"Funnel stage conversions: Views/Visits={step_conversion[0]:.1%}, Cart/Views={step_conversion[1]:.1%}, Buy/Cart={step_conversion[2]:.1%}")
+print(f"End-to-end cumulative funnel conversion: {cumulative_conversion:.1%}")`,
+    quiz: [
+      {
+        q: r`Why is looking solely at aggregate Monthly Active Users (MAU) potentially dangerous for an online platform?`,
+        o: [
+          r`Because MAU requires knowing user demographic data`,
+          r`Because high user acquisition spending can mask severe underlying user churn, hiding a leaky-bucket product`,
+          r`Because MAU cannot be calculated in SQL`,
+          r`Because active user counts are strictly non-stationary`,
+        ],
+        a: 1,
+        why: r`Aggregate MAU conflates incoming new users with retaining old users. If churn is high, aggressive marketing can maintain top-line numbers while the underlying product fails to retain anyone.`,
+      },
+      {
+        q: r`What does a flattening horizontal retention curve signify in cohort analysis?`,
+        o: [
+          r`The product has achieved zero user churn across all cohorts`,
+          r`The product has achieved product-market fit for a core group of users who find recurring value and continue using the product indefinitely`,
+          r`The dataset has too few rows to calculate statistics`,
+          r`All users have permanently uninstalled the application`,
+        ],
+        a: 1,
+        why: r`A retention curve that flattens into an asymptote above zero proves that a stable percentage of users derive ongoing utility, establishing a solid foundation for sustainable growth.`,
+      },
+      {
+        q: r`In funnel analysis, what is the significance of measuring step-to-step conversion rather than only cumulative top-to-bottom conversion?`,
+        o: [
+          r`It guarantees that all users complete the checkout flow`,
+          r`It isolates the exact stage where the largest drop-off occurs, allowing engineering and product teams to target the specific friction point`,
+          r`It allows the funnel to be calculated backwards from purchase to visit`,
+          r`It eliminates the need for user tracking cookies`,
+        ],
+        a: 1,
+        why: r`Step-to-step conversion pinpoints the specific friction bottleneck (e.g. payment gateway or address entry) where users abandon, directing engineering resources to the highest-impact fix.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['sql-for-analysis-joins-and-window-functions', 'pandas-and-polars-patterns'],
+    related: ['metric-design-and-north-star-metrics', 'customer-segmentation-with-rfm', 'data-visualisation-principles'],
+    keywords: 'cohort analysis funnel analysis retention curve product analytics churn conversion rate product market fit lifecycle drop off',
+  },
+  {
+    id: 'customer-segmentation-with-rfm',
+    short: 'Customer segmentation: RFM',
+    title: 'Customer Segmentation with RFM',
+    task: 'concepts',
+    module: 'Product analytics',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Segmenting customer portfolios by Recency, Frequency, and Monetary value to identify VIPs, at-risk accounts, and targeted retention opportunities.`,
+    lead: r`Treating all customers identically in marketing and product communication wastes budget on churned users while neglecting high-value advocates. Recency, Frequency, and Monetary value (RFM) analysis is a classic behavioural segmentation technique that translates transaction logs into actionable customer tiers. By scoring how recently a customer purchased, how often they purchase, and how much they spend, businesses can tailor messaging, automate win-back campaigns, and nurture customer lifetime value.`,
+    intuition: [
+      r`Consider an online retail store with 100,000 customers. Customer Alice spent £1,200 on three designer coats 18 months ago, but has not visited the website or opened an email since. Customer Bob spends £35 on coffee beans every three weeks, most recently two days ago (total historical spend £420). If you sort your customer database purely by total revenue, Alice appears to be your VIP. In reality, Alice has almost certainly churned, whereas Bob is an active, highly engaged brand advocate. RFM analysis separates these critical dynamics.`,
+      r`The three RFM pillars represent distinct behavioural traits: Recency (R) measures the elapsed days since the customer's last purchase; customers who bought recently remain in an active buying mindset and respond warmly to communications. Frequency (F) measures the total count of distinct purchasing transactions over the observation window, reflecting loyalty and habitual brand trust. Monetary value (M) sums total expenditure, identifying high-margin revenue drivers.`,
+      r`Customers are scored along each dimension from 1 to 5 (or 1 to 3) using quantile ranks. Combining scores creates actionable personas: a customer scored 5-5-5 is an elite Champion (bought recently, buys frequently, spends heavily). A customer scored 1-5-5 is a high-value customer At Risk (used to buy frequently and spend heavily, but has lapsed). Targeted CRM workflows can trigger personalised concierge check-ins or win-back incentives for at-risk accounts, while champions receive VIP previews and loyalty rewards.`,
+    ],
+    analogy: r`A restaurant manager greeting regulars: welcoming the patron who dined yesterday and visits weekly differently from someone who hosted an expensive private party two years ago and never returned.`,
+    steps: [
+      r`Select observation window and reference anchor date: set $T_{\text{ref}}$ as the day following the latest observed transaction in the log.`,
+      r`Aggregate transaction histories per customer: calculate Recency ($T_{\text{ref}} - \max(t_i)$), Frequency (count of distinct orders), and Monetary value (sum of spend).`,
+      r`Discretise metrics into ranked quantile tiers: assign scores from 1 to 5 using quantile thresholds, inverting Recency so lower elapsed days receive higher scores.`,
+      r`Map score combinations to customer segments: cluster scores into actionable personas (e.g. Champions, Loyal Customers, At Risk, Hibernating).`,
+      r`Deploy targeted marketing interventions: route segmented customer lists into automated email flows, loyalty tiers, or win-back discount campaigns.`,
+    ],
+    math: [
+      {
+        h: 'RFM raw metric formulations',
+        tex: r`R_i = T_{\text{ref}} - \max_{j \in \mathcal{T}_i} t_{i, j}, \qquad F_i = |\mathcal{T}_i|, \qquad M_i = \sum_{j \in \mathcal{T}_i} v_{i, j}`,
+        p: r`Where $\mathcal{T}_i$ is the set of completed orders for customer $i$, $t_{i, j}$ is the timestamp of transaction $j$, $v_{i, j}$ is the net revenue of that transaction, and $T_{\text{ref}}$ is the fixed reference evaluation date.`,
+      },
+      {
+        h: 'Quantile ranking and scoring transformation',
+        tex: r`S_{R, i} = K - \text{rank}_{\text{quantile}}(R_i; K) + 1, \qquad S_{F, i} = \text{rank}_{\text{quantile}}(F_i; K), \qquad S_{M, i} = \text{rank}_{\text{quantile}}(M_i; K)`,
+        p: r`Where $K$ is the number of quantile tiers (typically $K=5$ or $K=3$). Recency ranking is inverted so that smaller elapsed durations map to higher scores ($S_{R}=K$ represents the freshest purchasers).`,
+      },
+      {
+        h: 'Weighted composite RFM index',
+        tex: r`\text{RFM\_Index}_i = w_R \cdot \tilde{R}_i + w_F \cdot \tilde{F}_i + w_M \cdot \tilde{M}_i, \qquad w_R + w_F + w_M = 1`,
+        p: r`Where $\tilde{R}_i, \tilde{F}_i, \tilde{M}_i$ represent normalised continuous scores and weights $w_R, w_F, w_M$ are calibrated based on statistical correlation with 12-month forward customer retention.`,
+      },
+    ],
+    keyPoints: [
+      r`Recency is almost universally the single most predictive feature of future customer purchasing probability.`,
+      r`Quantile binning establishes balanced segment cohorts and insulates scoring from extreme monetary outliers.`,
+      r`RFM delivers immediate, interpretable customer segmentation without complex unsupervised machine learning infrastructure.`,
+    ],
+    pitfalls: [
+      r`Treating Frequency as total unit quantity rather than distinct orders: purchasing 20 pairs of socks in a single transaction is frequency 1, not 20.`,
+      r`Overweighting Monetary value over Recency: spending heavily two years ago does not make a customer active today.`,
+      r`Using shifting calendar boundaries instead of a static reference anchor date, distorting recency metrics across customer cohorts.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n_cust = 150
+recency = np.random.exponential(30, size=n_cust) + 1       # 1 to 150 days
+frequency = np.random.poisson(4, size=n_cust) + 1          # 1 to 12 orders
+monetary = frequency * np.random.gamma(40, 2, size=n_cust) # total spend
+
+r33, r67 = np.percentile(recency, [33.3, 66.7])
+r_score = np.where(recency <= r33, 3, np.where(recency <= r67, 2, 1))
+
+f33, f67 = np.percentile(frequency, [33.3, 66.7])
+f_score = np.where(frequency <= f33, 1, np.where(frequency <= f67, 2, 3))
+
+m33, m67 = np.percentile(monetary, [33.3, 66.7])
+m_score = np.where(monetary <= m33, 1, np.where(monetary <= m67, 2, 3))
+
+champions = (r_score == 3) & (f_score == 3) & (m_score == 3)
+at_risk = (r_score == 1) & (m_score >= 2)
+
+print(f"Total customers: {n_cust}")
+print(f"Champions (recent, frequent, high spend): {np.sum(champions)} users, avg spend {np.mean(monetary[champions]):.1f}")
+print(f"At-Risk VIPs (high past spend, lapsed):    {np.sum(at_risk)} users, avg spend {np.mean(monetary[at_risk]):.1f}")`,
+    quiz: [
+      {
+        q: r`In empirical retail studies, which of the three RFM dimensions is consistently the strongest predictor of a customer making another purchase?`,
+        o: [
+          r`Monetary value (total spend)`,
+          r`Recency (time elapsed since last purchase)`,
+          r`Frequency (total order count)`,
+          r`Customer age in years`,
+        ],
+        a: 1,
+        why: r`Recency is consistently the most predictive factor: customers who bought recently remain engaged in the buying cycle and demonstrate far higher responsiveness than lapsed customers.`,
+      },
+      {
+        q: r`Why is Recency scoring inverted during RFM quantile transformation so that smaller elapsed day values receive higher scores?`,
+        o: [
+          r`To make the numbers negative for accounting purposes`,
+          r`Because lower elapsed days represent more recent activity, which corresponds to higher customer engagement and buying propensity`,
+          r`Because computers cannot sort numbers in ascending order`,
+          r`To eliminate all customers who bought in the last 7 days`,
+        ],
+        a: 1,
+        why: r`Higher RFM scores denote more desirable customer attributes. A customer who purchased yesterday (small elapsed days) is more valuable and engaged than one who purchased a year ago.`,
+      },
+      {
+        q: r`How should a marketing team handle customers classified in the 'At Risk' segment (low Recency score, high Frequency and Monetary scores)?`,
+        o: [
+          r`Immediately delete their accounts from the database`,
+          r`Trigger proactive win-back email sequences, special discounts, or personal outreach to re-engage valuable customers before they permanently churn`,
+          r`Send them identical standard marketing emails sent to brand-new leads`,
+          r`Charge them an additional subscription fee`,
+        ],
+        a: 1,
+        why: r`At-Risk customers have proven high lifetime value and loyalty in the past, but their lack of recent activity warns of impending churn. Proactive win-back campaigns can recover significant revenue.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['exploratory-data-analysis', 'sql-for-analysis-joins-and-window-functions'],
+    related: ['cohort-and-funnel-analysis', 'metric-design-and-north-star-metrics', 'kmeans_clustering'],
+    keywords: 'rfm analysis customer segmentation recency frequency monetary value customer lifetime value crm product analytics retail segmentation',
+  },
+  {
+    id: 'data-visualisation-principles',
+    short: 'Data visualisation principles',
+    title: 'Data Visualisation Principles',
+    task: 'concepts',
+    module: 'Communication',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Designing truthful, perceptually effective charts that exploit human visual encoding channels, minimise chartjunk, and prevent statistical distortion.`,
+    lead: r`The most sophisticated machine learning model or analytical insight is useless if stakeholders misunderstand or distrust the visual communication. Data visualisation is not decorative graphic design; it is the science of mapping statistical numbers onto human visual perceptual channels in accordance with cognitive processing limits. Grounded in Edward Tufte's data-ink ratio and Cleveland and McGill's graphical perception hierarchy, disciplined visualisation ensures visual signals communicate truth with clarity and efficiency.`,
+    intuition: [
+      r`Imagine a corporate dashboard presenting quarterly sales. In Q1, revenue was £100M; in Q2, it rose to £105M—a modest 5% increase. The designer creates a bar chart with the vertical axis truncated to start at £95M rather than £0. On screen, the Q2 bar appears exactly twice as tall as the Q1 bar! Stakeholders glancing at the slide perceive an explosive 100% boom rather than a subtle 5% uptick. Truncating the baseline on length-encoded charts violates visual proportionality, misleading decision-makers and permanently eroding the data team's credibility.`,
+      r`Humans do not decode all visual attributes with equal precision. Psychophysical experiments by William Cleveland and Robert McGill proved that human perception ranks visual encodings in a strict hierarchy of quantitative accuracy: (1) Position along a common aligned scale (scatter plots, dot plots) is decoded with the highest accuracy; (2) Length along a common scale (bar charts); (3) Angle and slope (line charts, pie charts); (4) 2D Area (bubble charts); and (5) Colour saturation and hue (heatmaps). Pie charts force human eyes to compare angles and 2D areas—a perceptual task humans perform notoriously poorly compared to evaluating aligned bar lengths.`,
+      r`Edward Tufte formulated the central guideline of analytical design: maximise the data-ink ratio. Every pixel of ink or colour on the screen must serve an informative purpose. Non-data ink—decorative 3D shadowing, gratuitous dark gridlines, redundant legends, and rainbow colour palettes—creates visual clutter (chartjunk) that exhausts viewer working memory. Ruthlessly eliminating non-essential ink allows patterns, anomalies, and relationships to stand out effortlessly.`,
+    ],
+    analogy: r`An aircraft cockpit display: every altimeter, artificial horizon, and airspeed indicator uses high-contrast position encoding to deliver instant, unambiguous comprehension without decorative distraction.`,
+    steps: [
+      r`Map data types to appropriate perceptual channels: use position along an aligned scale for primary quantitative metrics, and distinct spatial clusters or restrained hue palettes for categories.`,
+      r`Enforce zero baselines on bar charts: always anchor bar chart quantitative axes at zero to preserve physical length-to-magnitude proportionality.`,
+      r`Maximise the Data-Ink Ratio: remove non-data borders, heavy background fills, dark gridlines, and redundant legends.`,
+      r`Employ accessible, perceptually uniform colour maps: use monotonic luminance palettes (e.g. Viridis, Cividis) for ordered data, avoiding uncalibrated red-green contrasts that hinder colour-blind viewers.`,
+      r`Provide direct inline annotation: label trend lines and data series directly at their endpoints rather than forcing viewers to cross-reference distant legends.`,
+    ],
+    math: [
+      {
+        h: 'Tufte data-ink ratio',
+        tex: r`\text{Data-Ink Ratio} = \frac{\text{Data-Ink}}{\text{Total Ink Used to Print the Graphic}} = 1 - \frac{\text{Non-Data-Ink}}{\text{Total Ink}}`,
+        p: r`Where Data-Ink is the non-redundant visual ink dedicated directly to displaying statistical data. Designing graphics to approach a ratio of $1.0$ minimises cognitive load and visual distraction.`,
+      },
+      {
+        h: 'Lie factor (visual proportionality metric)',
+        tex: r`\text{Lie Factor} = \frac{\text{Size of Effect Shown in Graphic}}{\text{Size of Effect in Data}} = \frac{\frac{\Delta \text{Graphic}}{\text{Graphic}_{\text{initial}}}}{\frac{\Delta \text{Data}}{\text{Data}_{\text{initial}}}}`,
+        p: r`A truthful graphic exhibits a $\text{Lie Factor} = 1.0$. Values substantially greater than $1.0$ (such as truncating bar axes or scaling 2D areas as radii) exaggerate statistical differences; values less than $1.0$ understate effects.`,
+      },
+      {
+        h: 'Stevens psychophysical power law of perceptual scaling',
+        tex: r`S = k \cdot I^{\alpha}`,
+        p: r`Where perceived subjective sensation $S$ scales with physical stimulus intensity $I$ raised to exponent $\alpha$. For line length $\alpha \approx 1.0$ (accurate linear perception), whereas for 2D area $\alpha \approx 0.7$ and 3D volume $\alpha \approx 0.5$ (severe perceptual compression), explaining why humans systematically misjudge area and volume encodings.`,
+      },
+    ],
+    keyPoints: [
+      r`Position along an aligned scale is decoded with the highest perceptual accuracy; area, angle, and colour saturation are significantly less precise.`,
+      r`Bar charts must always start at zero because human vision decodes bar magnitude as proportional to bar length.`,
+      r`Maximising the data-ink ratio strips non-essential chartjunk, reducing cognitive burden and clarifying core analytical signals.`,
+    ],
+    pitfalls: [
+      r`Truncating the baseline on bar charts, producing Lie Factors far greater than 1.0 that mislead stakeholders.`,
+      r`Using pseudo-3D bar or pie charts: 3D perspective adds artificial occlusion and distorts angle and area perception.`,
+      r`Using rainbow colour palettes (e.g. Jet) where non-uniform perceptual luminance creates artificial boundaries in smooth continuous data.`,
+    ],
+    code: r`import numpy as np
+
+# Lie Factor demonstration: Truthful bar baseline vs Deceptive truncated axis
+data_v1, data_v2 = 100.0, 105.0  # True 5% increase
+delta_data_pct = (data_v2 - data_v1) / data_v1
+
+# 1. Truthful graphic: axis starts at 0
+graphic_truth_v1, graphic_truth_v2 = data_v1, data_v2
+lie_factor_truth = ((graphic_truth_v2 - graphic_truth_v1) / graphic_truth_v1) / delta_data_pct
+
+# 2. Deceptive graphic: y-axis truncated to start at 95
+y_min = 95.0
+graphic_trunc_v1 = data_v1 - y_min  # bar height = 5
+graphic_trunc_v2 = data_v2 - y_min  # bar height = 10 (2x taller on screen)
+delta_graphic_pct = (graphic_trunc_v2 - graphic_trunc_v1) / graphic_trunc_v1
+lie_factor_deceptive = delta_graphic_pct / delta_data_pct
+
+print(f"True statistical increase: {delta_data_pct:.1%}")
+print(f"Truthful axis Lie Factor:  {lie_factor_truth:.2f} (1.0 = perfectly truthful)")
+print(f"Truncated axis Lie Factor: {lie_factor_deceptive:.2f} (20.0 = 20x visual exaggeration)")`,
+    quiz: [
+      {
+        q: r`According to the Cleveland and McGill perceptual hierarchy, which visual encoding channel allows humans to compare quantitative numbers with the highest accuracy?`,
+        o: [
+          r`Colour saturation and hue`,
+          r`Position along a common aligned scale (e.g. scatter plots, dot plots)`,
+          r`Angle and slope (e.g. pie charts)`,
+          r`2D bubble area`,
+        ],
+        a: 1,
+        why: r`Cleveland and McGill proved that position along a common aligned scale is decoded with the lowest perceptual error, whereas area, angle, and colour saturation suffer significantly higher cognitive error.`,
+      },
+      {
+        q: r`Why is truncating the quantitative axis to a non-zero baseline considered acceptable on line charts but strictly unacceptable on bar charts?`,
+        o: [
+          r`Line charts encode values via position in 2D space, whereas bar charts encode values via physical bar length, which must be proportional to magnitude`,
+          r`Bar charts can only display negative numbers`,
+          r`Line charts cannot be printed in black and white`,
+          r`There is no difference; line charts must also always start at zero`,
+        ],
+        a: 0,
+        why: r`Bar charts use length as the visual encoding, so human perception compares the physical length of bars. Truncating the axis distorts the length-to-value ratio. Line charts encode position, where displaying fine fluctuations around a high baseline is valid.`,
+      },
+      {
+        q: r`What does a Lie Factor of 5.0 indicate about a data visualisation?`,
+        o: [
+          r`The chart took 5 hours to design`,
+          r`The visual effect displayed on screen exaggerates the true statistical difference in the data by a factor of 5`,
+          r`The data is five times more accurate than normal`,
+          r`The chart contains five distinct data series`,
+        ],
+        a: 1,
+        why: r`Tufte's Lie Factor is the ratio of the visual percentage change shown in the graphic to the true statistical percentage change in the data. A value of 5.0 means the graphic magnifies the effect fivefold.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['exploratory-data-analysis', 'metric-design-and-north-star-metrics'],
+    related: ['cohort-and-funnel-analysis', 'customer-segmentation-with-rfm', 'data-cleaning-and-validation'],
+    keywords: 'data visualisation principles data ink ratio lie factor edward tufte cleveland mcgill chartjunk perceptual hierarchy visual encoding',
+  },
 ];
