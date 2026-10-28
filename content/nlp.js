@@ -2701,4 +2701,773 @@ for title, emb in database_embeddings.items():
     related: ['distributional-semantics', 'glove-and-fasttext', 'bm25-and-search-ranking'],
     keywords: 'sbert sentence bert sentence embeddings siamese network bi-encoder cross-encoder mean pooling natural language inference semantic search',
   },
+
+// ------------------------------------------------------------------ 1. BERT and masked language models
+  {
+    id: 'bert-and-masked-language-models',
+    short: 'BERT & Masked LMs',
+    title: 'BERT and masked language models',
+    task: 'concepts',
+    module: '4 · Language models',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`BERT (Bidirectional Encoder Representations from Transformers) transformed natural language processing by enabling deep bidirectional pre-training from unlabelled text. Prior language models were constrained to left-to-right or right-to-left causal masking to prevent tokens from indirectly seeing themselves in deep multi-layer networks. BERT introduced Masked Language Modelling (MLM)—masking 15% of input tokens at random and training the Transformer encoder to predict the original words based simultaneously on left and right context. Fine-tuning a single pre-trained BERT model with minimal task-specific layers established state-of-the-art results across eleven diverse NLP benchmarks.`,
+    lead: r`In the sentence "The bank can guarantee the deposit because of the river bank's stability", the word "bank" appears twice with completely different meanings. A left-to-right language model processing the first "bank" has only seen "The"; it cannot know whether financial or geographical concepts follow. BERT solves this fundamental bottleneck: by masking words and training with deep bidirectional self-attention across the entire sequence, every token embedding incorporates rich semantic signals from both its past and its future.`,
+    intuition: [
+      r`The dilemma of deep bidirectional representations: Standard language models cannot use bidirectional self-attention because allowing tokens to look left and right in multi-layer networks leads to cyclic cheating: token i in layer 2 could attend to token i+1 in layer 1, which has already attended to token i in layer 0, trivialising next-token prediction. BERT breaks this cycle with the Cloze task (Masked LM): by corrupting a small fraction of input words with [MASK], the model must use the uncorrupted surrounding context to reconstruct the missing information.`,
+      r`The 80/10/10 masking schedule: If BERT only encountered the artificial [MASK] token during pre-training, fine-tuning would suffer from distribution shift because real-world downstream tasks never contain [MASK] tokens. BERT mitigates this with an ingenious 80/10/10 schedule for the 15% selected tokens: 80% are replaced with [MASK], 10% are replaced with a random vocabulary token (injecting noise and forcing the model to verify every token), and 10% are left unchanged (biasing representations towards actual observed words).`,
+      r`Pre-train once, fine-tune everywhere: Before BERT, transfer learning in NLP was limited to static word embeddings (Word2Vec, GloVe) or feature-based LSTM representations (ELMo). BERT introduced the modern pre-train and fine-tune paradigm: pre-train a massive 110M (Base) or 340M (Large) parameter encoder on hundreds of millions of words of unlabelled text once, and then fine-tune all parameters end-to-end on task-specific labelled datasets with a single classification head in just a few epochs.`,
+    ],
+    analogy: r`Think of learning a foreign language by completing crossword puzzles or fill-in-the-blank exam questions. If you read a book from left to right, you can only guess what comes next based on what you have already read. But on a crossword puzzle, a word like "b _ _ k" has both preceding clues ("deposited funds in the") and trailing clues ("to earn compound interest"). By looking at both sides of the sentence simultaneously, your brain effortlessly resolves the blank as "bank". BERT trains a neural network on billions of fill-in-the-blank puzzles until it acquires an intuitive mastery of human grammar, idiom, and semantics.`,
+    steps: [
+      {
+        title: r`Construct composite input embeddings`,
+        desc: r`Sum token, segment, and positional embeddings for each sequence position.`,
+        detail: r`Tokenise text using WordPiece subwords. Prepend [CLS] and separate sentence pairs with [SEP]. For each token, construct input representation e_i = TokenEmbedding(w_i) + SegmentEmbedding(s_i) + PositionEmbedding(i).`,
+      },
+      {
+        title: r`Apply 80/10/10 Masked LM corruption`,
+        desc: r`Randomly select 15% of token positions and apply masking rules.`,
+        detail: r`Select 15% of tokens uniformly at random. Of these chosen positions: replace 80% with [MASK], 10% with a random vocabulary token, and leave 10% unchanged. Record target label identities for the selected positions.`,
+      },
+      {
+        title: r`Process bidirectional self-attention across Transformer layers`,
+        desc: r`Pass unmasked and masked tokens through deep bidirectional multi-head self-attention.`,
+        detail: r`Feed embeddings through L stacked Transformer encoder layers (L = 12 for Base, L = 24 for Large). Unconstrained attention allows every token to attend to all other tokens in the sequence simultaneously.`,
+      },
+      {
+        title: r`Compute cross-entropy loss exclusively on masked tokens`,
+        desc: r`Project final encoder hidden states through an MLM prediction head over vocabulary V.`,
+        detail: r`Pass hidden states h_i corresponding strictly to the selected 15% masked positions through a linear layer with GeLU activation and layer normalisation, projected to vocabulary size |V|. Compute cross-entropy loss against original target words.`,
+      },
+      {
+        title: r`Fine-tune end-to-end on downstream tasks`,
+        desc: r`Attach task-specific output heads and update all network weights with AdamW.`,
+        detail: r`For sentence classification, pass the [CLS] embedding to a linear classification head. For token classification (NER, POS), attach heads to each token position. Fine-tune all Transformer parameters with small learning rates (e.g. 2e-5 to 5e-5) for 3 to 5 epochs.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Masked Language Model (MLM) objective function`,
+        tex: r`\mathcal{L}_{\text{MLM}}(\theta) = -\sum_{i \in \mathcal{M}} \log P(w_i \mid \tilde{W}; \theta)`,
+        p: r`Here $\mathcal{M}$ is the subset of randomly selected masked positions (15% of all tokens), $\tilde{W}$ is the corrupted input sequence, and $w_i$ is the true original token. Cross-entropy loss is computed exclusively on masked positions, avoiding loss computation on unmasked tokens.`,
+      },
+      {
+        h: r`Prediction head token probability distribution`,
+        tex: r`P(w \mid \tilde{W}; \theta) = \operatorname{softmax}\left( \mathbf{W}_v \operatorname{GELU}(\mathbf{W}_h \mathbf{h}_i + \mathbf{b}_h) + \mathbf{b}_v \right)_w`,
+        p: r`Here $\mathbf{h}_i \in \mathbb{R}^d$ is the final encoder output vector at masked position $i$, $\mathbf{W}_h \in \mathbb{R}^{d \times d}$, and $\mathbf{W}_v \in \mathbb{R}^{|V| \times d}$ is the vocabulary projection matrix (often tied with input token embeddings to conserve parameters).`,
+      },
+      {
+        h: r`Next Sentence Prediction (NSP) binary objective`,
+        tex: r`\mathcal{L}_{\text{NSP}}(\theta) = -\log P(\text{IsNext} \in \{0, 1\} \mid \mathbf{h}_{[\text{CLS}]}; \theta)`,
+        p: r`In original BERT, a binary classification loss was applied to the special pooled $[\text{CLS}]$ token to predict whether sentence B naturally followed sentence A (50% actual continuation, 50% random sentence). Later architectures (RoBERTa) proved NSP was unnecessary when training on contiguous text blocks.`,
+      },
+    ],
+    keyPoints: [
+      r`BERT uses bidirectional self-attention to encode left and right linguistic context simultaneously across all layers.`,
+      r`Masked Language Modelling (MLM) corrupts 15% of tokens, training the encoder on a fill-in-the-blank Cloze task without trivial autoregressive leakage.`,
+      r`The 80/10/10 masking rule prevents distribution mismatch between pre-training and downstream inference where [MASK] tokens never appear.`,
+      r`Input representations combine WordPiece token embeddings, segment embeddings (sentence A vs B), and learned absolute position embeddings.`,
+      r`BERT established the pre-train and fine-tune paradigm: pre-training on unlabelled text produces representations that specialise to downstream tasks in just a few epochs.`,
+    ],
+    pitfalls: [
+      r`Pre-training vs inference mismatch: If you only replace masked words with [MASK], the model learns that representations only need updating when [MASK] is visible, degrading performance on downstream clean text. Always adhere to the 80/10/10 corruption schedule.`,
+      r`Using BERT for autoregressive text generation: BERT is an encoder designed for representation learning and classification, not generation. Generating text by iteratively masking and predicting is orders of magnitude slower and less coherent than decoder-only models (like GPT).`,
+      r`Exceeding the 512-token maximum sequence length: Standard BERT uses fixed absolute positional embeddings capped at 512 tokens. Longer documents must be chunked or processed with sliding window strategies.`,
+      r`Catastrophic forgetting during fine-tuning: Fine-tuning with learning rates that are too high (> 1e-4) destroys pre-trained representations in the lower layers. Use gentle learning rates (2e-5 to 5e-5) with linear warm-up.`,
+    ],
+    code: r`import numpy as np
+import random
+
+class MLMMasker:
+    """
+    Simulation of BERT 80/10/10 Masked Language Modeling (MLM)
+    corruption schedule on tokenised sequences.
+    """
+    def __init__(self, vocab, mask_prob=0.15):
+        self.vocab = vocab
+        self.mask_prob = mask_prob
+        self.mask_token = "[MASK]"
+        
+    def mask_sequence(self, tokens):
+        """
+        Apply BERT 80/10/10 masking rule to tokens.
+        Returns corrupted tokens, masked indices, and ground truth labels.
+        """
+        corrupted = list(tokens)
+        masked_indices = []
+        labels = []
+        
+        for i, token in enumerate(tokens):
+            # Skip special boundary tokens
+            if token in ["[CLS]", "[SEP]"]:
+                continue
+                
+            if random.random() < self.mask_prob:
+                masked_indices.append(i)
+                labels.append(token)
+                
+                rand_val = random.random()
+                if rand_val < 0.80:
+                    # 80% of time: Replace with [MASK]
+                    corrupted[i] = self.mask_token
+                elif rand_val < 0.90:
+                    # 10% of time: Replace with random vocabulary word
+                    corrupted[i] = random.choice(self.vocab)
+                else:
+                    # 10% of time: Keep unchanged
+                    corrupted[i] = token
+                    
+        return corrupted, masked_indices, labels
+
+def softmax(x):
+    e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
+    return e_x / np.sum(e_x, axis=-1, keepdims=True)
+
+# Vocabulary and sample sentence
+vocab = ["the", "quick", "brown", "fox", "jumps", "over", "lazy", "dog", "bank", "river", "capital"]
+tokens = ["[CLS]", "the", "brown", "fox", "jumps", "over", "the", "river", "bank", "[SEP]"]
+
+random.seed(42)
+masker = MLMMasker(vocab, mask_prob=0.30)  # Elevated probability for demonstration
+corrupted_tokens, masked_idx, gold_labels = masker.mask_sequence(tokens)
+
+print("Original Tokens:")
+print(" ", " ".join(tokens))
+print("\nCorrupted Tokens (after 80/10/10 masking):")
+print(" ", " ".join(corrupted_tokens))
+print("\nMasked Positions & Targets:")
+for idx, target in zip(masked_idx, gold_labels):
+    print(f"  Pos {idx}: observed '{corrupted_tokens[idx]}' -> Target: '{target}'")
+
+# Simulate MLM prediction head logits over vocabulary
+V = len(vocab)
+mock_logits = np.random.randn(len(masked_idx), V)
+mock_probs = softmax(mock_logits)
+
+# Compute Cross-Entropy Loss over masked positions
+loss = 0.0
+for i, target in enumerate(gold_labels):
+    target_idx = vocab.index(target) if target in vocab else 0
+    prob = mock_probs[i, target_idx]
+    loss -= np.log(max(prob, 1e-9))
+loss /= len(masked_idx)
+
+print(f"\nSimulated Cross-Entropy MLM Loss across {len(masked_idx)} positions: {loss:.4f}")
+`,
+    quiz: [
+      {
+        q: r`Why did BERT introduce the 80/10/10 masking rule instead of replacing all 15% masked words with the [MASK] token?`,
+        o: [
+          r`To prevent a distribution discrepancy between pre-training and downstream fine-tuning, where the [MASK] token never appears in real-world task text`,
+          r`Because replacing 15% of tokens with [MASK] would cause numerical overflow in the softmax denominator`,
+          r`Because WordPiece tokenisers cannot encode the [MASK] token more than five times`,
+          r`To reduce the number of Transformer attention heads required`,
+        ],
+        a: 0,
+        why: r`If BERT only trained on [MASK] tokens, the network would never learn to contextualise clean, uncorrupted words at test time. Replacing 10% with random words forces the model to maintain contextual representations for every token, and keeping 10% unchanged biases embeddings towards actual observed words.`,
+      },
+      {
+        q: r`What makes bidirectional self-attention in BERT fundamentally different from the causal attention used in decoder-only models like GPT?`,
+        o: [
+          r`BERT allows every token to attend simultaneously to both left and right tokens in the sequence, whereas causal attention strictly forbids tokens from attending to future positions`,
+          r`BERT attention can only process text written in English`,
+          r`BERT does not use query, key, and value matrices`,
+          r`BERT eliminates the need for matrix multiplication`,
+        ],
+        a: 0,
+        why: r`In causal attention, an upper-triangular mask of negative infinities forces token i to attend only to tokens j <= i. BERT does not apply a causal mask, allowing full bidirectional attention across all positions.`,
+      },
+      {
+        q: r`How does BERT format sentence pairs (such as question-answering or premise-hypothesis pairs) for fine-tuning?`,
+        o: [
+          r`It concatenates them into a single sequence formatted as [CLS] Sentence A [SEP] Sentence B [SEP] with segment embeddings indicating sentence identity`,
+          r`It processes each sentence on a separate GPU without communication`,
+          r`It translates sentence B into French before comparison`,
+          r`It discards all words in sentence A that do not appear in sentence B`,
+        ],
+        a: 0,
+        why: r`BERT concatenates both sentences into a single continuous sequence with segment embeddings E_A and E_B. This enables full cross-attention between every token in Sentence A and Sentence B across all Transformer layers.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['sentence-embeddings-and-sbert', 'transformer_networks'],
+    related: ['sentence-embeddings-and-sbert', 'transformer_networks', 'word-and-sentence-tokenization'],
+    keywords: 'bert masked language model mlm cloze devlin roberta transformer bidirectional encoder wordpiece pre-training fine-tuning nsp',
+  },
+
+  // ------------------------------------------------------------------ 2. GPT and decoder-only models
+  {
+    id: 'gpt-and-decoder-only-models',
+    short: 'GPT & Decoder-Only Models',
+    title: 'GPT and decoder-only models',
+    task: 'concepts',
+    module: '4 · Language models',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Generative Pre-trained Transformer (GPT) models established the decoder-only architecture as the dominant paradigm for modern Large Language Models (LLMs). By training on the standard autoregressive language modelling objective—predicting the next token given preceding context—GPT models scale cleanly with compute, data, and parameters. Using causal lower-triangular attention masking to enforce temporal directionality, GPT unifies natural language generation, reasoning, and few-shot in-context learning without requiring task-specific architecture modifications.`,
+    lead: r`Before GPT-3, the dominant paradigm in machine learning was task-specific fine-tuning: you pre-trained a model, threw away its output head, and trained a new classifier on thousands of human-annotated examples for each specific task. GPT proved a startling alternative: if you train a sufficiently large decoder-only Transformer on the simple task of predicting the next word across internet-scale text, the model spontaneously develops the ability to translate languages, answer factual questions, write computer code, and reason through logic puzzles purely by prompting it with a few demonstration examples.`,
+    intuition: [
+      r`Autoregressive factorization and the chain rule of probability: The joint probability of any sequence of words factorises exactly using the chain rule of probability: P(w_1, ..., w_T) = prod_{t=1}^T P(w_t | w_<t). By conditioning each token strictly on its predecessors, autoregressive models solve both training and generation seamlessly. During training, teacher forcing evaluates all T token predictions in parallel; during generation, the model predicts one token at a time, feeding its output back as input.`,
+      r`Causal attention masking: In standard self-attention, token i computes dot products with all tokens j in the sequence. To prevent information leakage from future tokens (w_{i+1}, ..., w_T), causal attention adds an upper-triangular mask of negative infinity (-inf) to the attention logits before the softmax step. Because exp(-inf) = 0, every token is mathematically prevented from looking ahead, guaranteeing valid autoregressive generation.`,
+      r`The emergence of in-context learning through scale: As language models grew from GPT-1 (117M parameters) to GPT-2 (1.5B) and GPT-3 (175B), their capabilities underwent a qualitative shift. Rather than updating model weights via gradient descent, users could steer the model's behaviour at inference time simply by prepending natural language instructions and a few input-output demonstrations (few-shot prompting). The model recognizes the pattern and completes the prompt accordingly.`,
+    ],
+    analogy: r`Think of reading an enthralling mystery novel. As you turn each page, you constantly anticipate what happens next based strictly on the clues you have read so far. You are never allowed to peek ahead at the final chapter (causal masking). If you read ten thousand mystery novels in this manner, you do not merely learn vocabulary: you learn the laws of physics, human psychology, forensic detective procedure, and dramatic narrative structure—because accurately guessing the next word requires understanding the world that generated the text.`,
+    steps: [
+      {
+        title: r`Tokenise text with Byte Pair Encoding (BPE)`,
+        desc: r`Segment continuous text into subword token IDs using byte-level BPE.`,
+        detail: r`Process input text into an array of subword integers using byte-level Byte Pair Encoding. Prepend positional encodings to token embeddings to track linear word order.`,
+      },
+      {
+        title: r`Apply causal lower-triangular attention mask`,
+        desc: r`Mask upper-triangular attention dot products with negative infinity.`,
+        detail: r`Compute query-key attention matrix Q * K^T / sqrt(d_k). Add additive causal mask M, where M_{i, j} = 0 for j <= i and M_{i, j} = -inf for j > i. Applying softmax ensures zero attention weight on future positions.`,
+      },
+      {
+        title: r`Pass hidden states through stacked decoder Transformer blocks`,
+        desc: r`Process features through masked multi-head self-attention and MLP feedforward layers.`,
+        detail: r`Pass representations through L stacked decoder blocks using pre-layer normalisation (Pre-LN) and residual connections: x = x + Attention(LN(x)); x = x + MLP(LN(x)).`,
+      },
+      {
+        title: r`Compute next-token cross-entropy loss across all positions`,
+        desc: r`Project final layer states to vocabulary dimension and calculate shifted cross-entropy.`,
+        detail: r`Project hidden states to logits over vocabulary |V|. Shift target labels by one position: state at position t predicts token w_{t+1}. Compute cross-entropy loss across all sequence positions simultaneously in parallel.`,
+      },
+      {
+        title: r`Generate text autoregressively with KV caching`,
+        desc: r`Predict next token iteratively while caching key and value tensors to accelerate inference.`,
+        detail: r`Sample next token w_{t+1} using temperature, top-k, or top-p (nucleus) sampling. Store precomputed K and V projections in a KV cache to avoid recomputing past tokens, reducing per-token generation latency from O(T^2) to O(T).`,
+      },
+    ],
+    math: [
+      {
+        h: r`Autoregressive sequence log-likelihood objective`,
+        tex: r`\mathcal{L}_{\text{AR}}(\theta) = -\sum_{t=1}^T \log P(w_t \mid w_1, w_2, \dots, w_{t-1}; \theta)`,
+        p: r`The causal language modelling objective trains network parameters $\theta$ to maximise the log-probability of every token conditioned strictly on its preceding context tokens, evaluated across the entire training corpus.`,
+      },
+      {
+        h: r`Causal masked multi-head self-attention`,
+        tex: r`\operatorname{Attention}(Q, K, V) = \operatorname{softmax}\left( \frac{Q K^T}{\sqrt{d_k}} + M \right) V, \quad M_{i, j} = \begin{cases} 0 & j \le i \\ -\infty & j > i \end{cases}`,
+        p: r`The additive mask $M \in \mathbb{R}^{T \times T}$ contains $-\infty$ in its strict upper triangle. When passed through the softmax exponentiation, $\exp(-\infty) = 0$, ensuring future tokens receive exactly zero attention weight.`,
+      },
+      {
+        h: r`Temperature-scaled next-token sampling distribution`,
+        tex: r`P(w_t = v \mid w_{<t}) = \frac{\exp(z_v / \tau)}{\sum_{j=1}^{|V|} \exp(z_j / \tau)}`,
+        p: r`Here $z_v$ is the raw unnormalised logit for token $v$, and $\tau > 0$ is the sampling temperature. Lower temperatures ($\tau \to 0$) approach greedy argmax decoding; higher temperatures ($\tau > 1$) flatten the distribution, increasing diversity.`,
+      },
+    ],
+    keyPoints: [
+      r`GPT models use a decoder-only Transformer architecture trained autoregressively on next-token prediction.`,
+      r`Causal lower-triangular masking prevents tokens from attending to future positions, ensuring temporal validity.`,
+      r`During training, teacher forcing enables parallel evaluation of all sequence positions in a single forward pass.`,
+      r`Scaling model parameters, dataset volume, and training compute yields emergent capabilities like few-shot in-context learning.`,
+      r`At inference time, Key-Value (KV) caching preserves past key and value vectors, avoiding redundant O(T^2) recomputations.`,
+    ],
+    pitfalls: [
+      r`Neglecting causal masking in decoder training: Forgetting to apply the upper-triangular mask allows the model to see future tokens during self-attention, causing training loss to drop to zero while rendering generation completely broken.`,
+      r`Quadratic inference slowdown without KV caching: Generating a sequence of length T by re-encoding all preceding tokens at every step takes O(T^2) operations. Always maintain a KV cache during generation to achieve O(1) step complexity.`,
+      r`Greedy decoding degradation: Pure greedy argmax decoding (temperature = 0) frequently causes generative models to enter degenerate repetitive loops. Use nucleus (top-p) sampling with p in [0.9, 0.95] for creative text.`,
+      r`Context window truncation without sliding buffers: Passing prompts longer than the model's context window (e.g. 2,048 or 4,096 tokens) triggers out-of-bounds indexing; ensure prompts are truncated or use rotary positional embeddings (RoPE) with context extension.`,
+    ],
+    code: r`import numpy as np
+
+class MiniCausalAttention:
+    """
+    Simulation of Causal (Autoregressive) Multi-Head Self-Attention
+    with lower-triangular masking and next-token generation.
+    """
+    def __init__(self, d_model=4):
+        self.d_model = d_model
+        
+    def causal_attention(self, Q, K, V):
+        """
+        Compute causal masked self-attention.
+        Q, K, V shapes: (seq_len, d_model)
+        """
+        T = Q.shape[0]
+        # Scaled dot-product: (T x T)
+        scores = np.dot(Q, K.T) / np.sqrt(self.d_model)
+        
+        # Upper-triangular mask of -inf
+        mask = np.triu(np.full((T, T), -np.inf), k=1)
+        masked_scores = scores + mask
+        
+        # Softmax over columns
+        exp_scores = np.exp(masked_scores - np.max(masked_scores, axis=-1, keepdims=True))
+        attn_weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)
+        
+        output = np.dot(attn_weights, V)
+        return output, attn_weights
+
+def sample_next_token(logits, temperature=0.7):
+    """Temperature sampling over vocabulary logits."""
+    scaled = logits / max(temperature, 1e-5)
+    exp_l = np.exp(scaled - np.max(scaled))
+    probs = exp_l / np.sum(exp_l)
+    return np.random.choice(len(probs), p=probs), probs
+
+# Sample sequence of 4 tokens
+vocab = ["The", "neural", "network", "generates", "text", "smoothly"]
+tokens = ["The", "neural", "network", "generates"]
+T = len(tokens)
+
+np.random.seed(42)
+d = 4
+mock_embeddings = np.random.randn(T, d)
+
+attn_layer = MiniCausalAttention(d_model=d)
+output, weights = attn_layer.causal_attention(mock_embeddings, mock_embeddings, mock_embeddings)
+
+print(f"Causal Attention Weights Matrix (shape {T}x{T}):")
+print("Notice strict zeros in upper triangle (tokens cannot look to the future):\n")
+for i, tok in enumerate(tokens):
+    row_str = " ".join([f"{w:6.3f}" for w in weights[i]])
+    print(f"  Token {i} ('{tok:<9}'): [ {row_str} ]")
+
+# Next-token prediction head simulation
+mock_head_weights = np.random.randn(d, len(vocab))
+last_hidden_state = output[-1]  # Representation of last token ('generates')
+next_token_logits = np.dot(last_hidden_state, mock_head_weights)
+
+sampled_idx, probs = sample_next_token(next_token_logits, temperature=0.7)
+print(f"\nNext Token Predictions given: '{' '.join(tokens)}'")
+for v_idx, word in enumerate(vocab):
+    print(f"  P('{word}'): {probs[v_idx]:.4f}")
+print(f"\nSampled next token: '{vocab[sampled_idx]}'")
+`,
+    quiz: [
+      {
+        q: r`Why do decoder-only GPT models apply a causal lower-triangular mask to the self-attention matrix?`,
+        o: [
+          r`To prevent each token from attending to future tokens, preserving strict autoregressive directionality so predictions depend only on past context`,
+          r`To invert the matrix during backpropagation`,
+          r`To double the throughput of floating-point operations on tensor cores`,
+          r`To eliminate the need for training data`,
+        ],
+        a: 0,
+        why: r`If tokens could attend to future positions, next-token prediction would be trivial because the model would simply copy the answer from position t+1. The causal mask forces attention weights on positions j > i to zero.`,
+      },
+      {
+        q: r`What is the primary operational advantage of maintaining a Key-Value (KV) cache during autoregressive inference?`,
+        o: [
+          r`It stores precomputed key and value vectors for past tokens, avoiding redundant re-encoding of the entire prompt and reducing per-token generation complexity from O(T^2) to O(1)`,
+          r`It compresses model weights from 16-bit to 4-bit precision`,
+          r`It translates the output text into multiple languages simultaneously`,
+          r`It allows the model to train without gradient updates`,
+        ],
+        a: 0,
+        why: r`Because past tokens never change, their K and V projections are identical at every generation step. Storing them in a KV cache allows the model to compute attention for just the single newly generated token, yielding massive inference speedups.`,
+      },
+      {
+        q: r`How does few-shot in-context learning in GPT-3 differ from standard fine-tuning?`,
+        o: [
+          r`In-context learning steers model outputs purely by providing natural language instructions and demonstration examples in the prompt without modifying any network weights via backpropagation`,
+          r`In-context learning requires retraining the embedding layer on the test set`,
+          r`In-context learning only works on classification tasks with two classes`,
+          r`In-context learning requires access to model weight gradients`,
+        ],
+        a: 0,
+        why: r`In-context learning is entirely gradient-free at inference time. The model relies on its pre-trained pattern recognition capabilities to condition on prompt demonstrations and infer the required mapping without parameter updates.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bert-and-masked-language-models', 'transformer_networks'],
+    related: ['bert-and-masked-language-models', 'transformer_networks', 'sentence-embeddings-and-sbert'],
+    keywords: 'gpt generative pre-trained transformer autoregressive causal attention decoder language model radford in-context learning kv cache temperature sampling',
+  },
+
+  // ------------------------------------------------------------------ 3. Text classification and sentiment
+  {
+    id: 'text-classification-and-sentiment',
+    short: 'Text Classification & Sentiment',
+    title: 'Text classification and sentiment',
+    task: 'concepts',
+    module: '5 · Tasks and evaluation',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Text classification maps variable-length natural language documents into discrete categorical classes, serving as the backbone for sentiment analysis, spam detection, topic tagging, and intent routing. Modern text classification encompasses a spectrum of techniques: from fast linear baselines (TF-IDF with Naive Bayes, Logistic Regression, or Support Vector Machines) to fine-tuned contextual Transformers using pooled [CLS] representations. Handling linguistic subtleties such as negation, sarcasm, class imbalance, and domain shift is essential for reliable production systems.`,
+    lead: r`Is the customer review "The hotel room was not bad, but I definitely wouldn't call it luxurious" positive, negative, or neutral? To a naive keyword spotter, the word "bad" flags negative, while "luxurious" flags positive. Effective text classification requires looking past isolated surface words to model compositionality, scope of negation, and subjective stance across whole sentences.`,
+    intuition: [
+      r`The spectrum of text classification: Text classification problems vary widely in cardinality and structure:
+- Binary Classification: Spam vs Ham, Positive vs Negative sentiment.
+- Multi-Class Classification: Routing customer support tickets to one of 20 departments (mutually exclusive).
+- Multi-Label Classification: Tagging an academic paper with multiple research topics (e.g. both 'Computer Science' and 'Quantitative Biology').
+- Fine-Grained Sentiment & Aspect-Based Sentiment Analysis (ABSA): Extracting sentiment targets and associated polarities independently (e.g. food: positive, price: negative).`,
+      r`Linear baselines versus deep contextual encoders: A simple TF-IDF representation combined with a linear classifier (Logistic Regression or SVM) provides an extraordinarily competitive baseline: it trains in seconds, evaluates in microseconds, and requires minimal compute. However, bag-of-words linear models fail when word order alters meaning ("not good" vs "good"). Pre-trained Transformer models (BERT, RoBERTa) capture subtle syntactic negation and long-range dependencies, delivering top accuracy when computational budget permits.`,
+      r`The challenge of linguistic negation and sarcasm: Negation words ("not", "never", "hardly", "no") invert the emotional polarity of subsequent terms. In classical pipelines, bigrams or negation tagging (appending a _NEG suffix to words between a negative particle and subsequent punctuation) are required to capture polarity shifts. In ironic or sarcastic prose, literal sentiment words contradict intended meaning, posing severe challenges even for advanced neural architectures.`,
+    ],
+    analogy: r`Think of sorting mail in a bustling corporate post room. A simple linear classifier is like an automated sorting arm that glances at key return addresses or stamped labels ("INVOICE", "URGENT", "LEGAL") and tosses envelopes into corresponding bins at lightning speed. It works brilliantly for 90% of routine mail. A deep Transformer classifier is like an experienced executive assistant who reads the actual letter, detects subtle diplomatic tone, notices that a polite compliment was delivered with veiled frustration, and routes the document to the Chief Executive with an urgent warning flag.`,
+    steps: [
+      {
+        title: r`Normalise and tokenise input documents`,
+        desc: r`Clean text, handle contractions, and segment into word or subword tokens.`,
+        detail: r`Clean raw text, expand contractions, and remove unwanted artifacts. For linear models, generate n-grams (unigrams and bigrams); for neural models, tokenise with WordPiece or BPE.`,
+      },
+      {
+        title: r`Extract document feature representations`,
+        desc: r`Convert text into numerical vectors via TF-IDF or deep Transformer pooling.`,
+        detail: r`In linear pipelines: fit TF-IDF vectoriser on training text and compute normalised sparse vectors. In neural pipelines: feed tokens through a Transformer encoder and extract pooled [CLS] or mean token embeddings.`,
+      },
+      {
+        title: r`Mitigate class imbalance in training splits`,
+        desc: r`Apply class weighting or focal loss to balance skewed categorical distributions.`,
+        detail: r`Calculate inverse class frequencies w_c = N / (C * N_c) and pass class weights to cross-entropy loss. Alternatively, tune decision thresholds or apply SMOTE on continuous dense vectors to prevent minority class neglect.`,
+      },
+      {
+        title: r`Train classifier and optimise decision boundaries`,
+        desc: r`Fit linear weights or fine-tune neural parameters on categorical cross-entropy.`,
+        detail: r`Train classification parameters using convex optimisation (L-BFGS for Logistic Regression) or AdamW for neural fine-tuning. Monitor macro-averaged F1 score on validation splits to select early stopping checkpoints.`,
+      },
+      {
+        title: r`Evaluate comprehensive performance metrics`,
+        desc: r`Compute precision, recall, confusion matrices, and calibration curves.`,
+        detail: r`Evaluate test performance using Macro F1 (unweighted class average) and Micro F1 (overall token accuracy). Inspect confusion matrices to identify systematic misclassifications between adjacent classes (e.g. 2-star vs 3-star ratings).`,
+      },
+    ],
+    math: [
+      {
+        h: r`Multinomial Logistic Regression classification probability`,
+        tex: r`P(y = c \mid \mathbf{x}) = \frac{\exp(\mathbf{w}_c^T \mathbf{x} + b_c)}{\sum_{j=1}^C \exp(\mathbf{w}_j^T \mathbf{x} + b_j)}`,
+        p: r`Here $\mathbf{x} \in \mathbb{R}^d$ is the document feature vector (TF-IDF or pooled Transformer embedding), $\mathbf{w}_c \in \mathbb{R}^d$ is the learned weight vector for category $c$, and $C$ is the total number of classes.`,
+      },
+      {
+        h: r`Cross-entropy loss with inverse class weighting`,
+        tex: r`\mathcal{L}_{\text{CE}}(\theta) = -\sum_{i=1}^N \sum_{c=1}^C \alpha_c \, y_{i, c} \log \hat{y}_{i, c}, \quad \alpha_c = \frac{N}{C \cdot N_c}`,
+        p: r`Here $N_c$ is the number of training samples in class $c$. Weighting factor $\alpha_c$ scales the penalty for errors on rare classes, counteracting severe majority class bias.`,
+      },
+      {
+        h: r`Macro-averaged versus Micro-averaged F1 metrics`,
+        tex: r`\operatorname{Macro-}F_1 = \frac{1}{C} \sum_{c=1}^C F_{1, c}, \quad \operatorname{Micro-}F_1 = \frac{2 \sum_{c} \operatorname{TP}_c}{2 \sum_c \operatorname{TP}_c + \sum_c \operatorname{FP}_c + \sum_c \operatorname{FN}_c}`,
+        p: r`Macro-F1 assigns equal weight to every category regardless of sample frequency, making it the essential metric for imbalanced text classification. Micro-F1 pools global counts, mirroring overall accuracy.`,
+      },
+    ],
+    keyPoints: [
+      r`Text classification maps variable-length natural language text into discrete categorical labels.`,
+      r`TF-IDF paired with linear classifiers (Logistic Regression, SVM) provides a formidable, fast baseline for production systems.`,
+      r`Fine-tuned Transformer models (BERT, RoBERTa) capture syntactic negation, idioms, and long-range semantic dependencies.`,
+      r`Negation words alter the polarity of subsequent phrases; capturing negation requires bigrams, suffix tagging, or bidirectional attention.`,
+      r`Always evaluate imbalanced text classification using Macro-averaged F1 and confusion matrices rather than overall accuracy.`,
+    ],
+    pitfalls: [
+      r`Evaluating on overall accuracy under severe class imbalance: If 95% of customer emails are spam, a dummy model predicting "spam" achieves 95% accuracy while completely failing on authentic emails. Always report Macro-F1 and per-class recall.`,
+      r`Data leakage via global TF-IDF fitting: Fitting TF-IDF vectorisers on the combined train and test set leaks test vocabulary statistics into model features. Always fit vectorisers exclusively on training data.`,
+      r`Ignoring domain shift in sentiment models: A sentiment model trained on IMDb film reviews fails on financial news (e.g. "shares plummeted" vs "a terrifying thriller"). Always validate models on representative in-domain text.`,
+      r`Stripping negation stop words: Generic stop word removal lists frequently discard words like "not", "no", "never", completely reversing the sentiment polarity of sentences. Always preserve negation particles.`,
+    ],
+    code: r`import math
+import re
+from collections import defaultdict, Counter
+
+class SimpleTextClassifier:
+    """
+    Multinomial Naive Bayes text classifier from scratch
+    with Laplace smoothing and n-gram feature extraction.
+    """
+    def __init__(self, alpha=1.0):
+        self.alpha = alpha
+        self.classes = set()
+        self.class_counts = Counter()
+        self.word_counts = defaultdict(Counter)
+        self.total_words_in_class = Counter()
+        self.vocab = set()
+        
+    def _tokenize(self, text):
+        # Extract unigrams and bigrams
+        words = [w.lower() for w in re.findall(r'\b[a-zA-Z]+\b', text)]
+        bigrams = [f"{words[i]}_{words[i+1]}" for i in range(len(words)-1)]
+        return words + bigrams
+
+    def fit(self, texts, labels):
+        for text, label in zip(texts, labels):
+            self.classes.add(label)
+            self.class_counts[label] += 1
+            tokens = self._tokenize(text)
+            
+            for token in tokens:
+                self.vocab.add(token)
+                self.word_counts[label][token] += 1
+                self.total_words_in_class[label] += 1
+
+    def predict(self, text):
+        tokens = self._tokenize(text)
+        total_docs = sum(self.class_counts.values())
+        V = len(self.vocab)
+        
+        best_class = None
+        best_log_prob = -float('inf')
+        
+        for c in self.classes:
+            # Prior log P(c)
+            log_prob = math.log(self.class_counts[c] / total_docs)
+            
+            # Likelihood sum log P(w|c) with Laplace smoothing
+            denom = self.total_words_in_class[c] + self.alpha * V
+            for token in tokens:
+                if token in self.vocab:
+                    count = self.word_counts[c][token]
+                    prob_w = (count + self.alpha) / denom
+                    log_prob += math.log(prob_w)
+                    
+            if log_prob > best_log_prob:
+                best_log_prob = log_prob
+                best_class = c
+                
+        return best_class
+
+# Sample sentiment training corpus
+train_reviews = [
+    ("This movie was absolutely wonderful and charming", "positive"),
+    ("Great acting, brilliant script, and delightful humor", "positive"),
+    ("An inspiring masterpiece with unforgettable performances", "positive"),
+    ("Terrible waste of time, boring and poorly directed", "negative"),
+    ("Awful dialogue, horrible acting, completely predictable", "negative"),
+    ("Dull, uninspired, and thoroughly disappointing experience", "negative")
+]
+
+texts, labels = zip(*train_reviews)
+clf = SimpleTextClassifier(alpha=1.0)
+clf.fit(texts, labels)
+
+test_sentences = [
+    "A wonderful performance with delightful acting",
+    "Completely terrible and horribly boring",
+    "Great script but poorly directed"
+]
+
+print("Text Classification & Sentiment Predictions:")
+for test in test_sentences:
+    pred = clf.predict(test)
+    print(f"  Review: '{test}' -> Sentiment: {pred.upper()}")
+`,
+    quiz: [
+      {
+        q: r`Why is Macro-averaged F1 preferred over accuracy or Micro-averaged F1 for evaluating imbalanced text classification?`,
+        o: [
+          r`Because Macro-F1 calculates F1 for each class independently and averages them equally, ensuring rare minority classes contribute just as much to the final score as dominant majority classes`,
+          r`Because Macro-F1 cannot be computed if any class has zero samples`,
+          r`Because Macro-F1 is identical to Mean Squared Error`,
+          r`Because Macro-F1 only evaluates binary classification`,
+        ],
+        a: 0,
+        why: r`When one category contains 90% of samples, overall accuracy and Micro-F1 mirror performance on the dominant class. Macro-F1 computes unweighted arithmetic mean across all categories, penalising models that ignore minority classes.`,
+      },
+      {
+        q: r`Why does naive stop word removal often degrade sentiment analysis model accuracy?`,
+        o: [
+          r`Because standard stop word lists frequently discard negation particles like "not", "never", and "hardly", inverting the intended semantic sentiment of phrases`,
+          r`Because stop words are required to calculate cosine similarity`,
+          r`Because Python cannot process strings without stop words`,
+          r`Because stop words contain all the vowels in the English language`,
+        ],
+        a: 0,
+        why: r`Stripping "not" turns "not bad" into "bad" and "not good" into "good", completely flipping sentiment polarity. Text classification pipelines for sentiment must preserve negation words or use bigrams.`,
+      },
+      {
+        q: r`What advantage does fine-tuning a pre-trained Transformer (like BERT) offer over a TF-IDF + Logistic Regression baseline for complex sentiment classification?`,
+        o: [
+          r`The Transformer captures word order, compositional syntax, and long-range negation dependencies, whereas bag-of-words TF-IDF models discard all word sequence order`,
+          r`The Transformer trains in fewer clock cycles on a single CPU core`,
+          r`The Transformer does not require training labels`,
+          r`The Transformer eliminates the need for tokenisation`,
+        ],
+        a: 0,
+        why: r`TF-IDF treats text as an unordered bag of tokens, making it difficult to distinguish "not bad at all" from "bad not at all". Bidirectional self-attention encodes full syntactic compositionality and negation scope across the entire sentence.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bag-of-words-and-tf-idf', 'bert-and-masked-language-models'],
+    related: ['bag-of-words-and-tf-idf', 'bert-and-masked-language-models', 'stop-words-and-n-grams'],
+    keywords: 'text classification sentiment analysis polarity multinomial naive bayes logistic regression macro f1 negation handling absa class imbalance',
+  },
+
+  // ------------------------------------------------------------------ 4. Machine translation
+  {
+    id: 'machine-translation',
+    short: 'Machine Translation',
+    title: 'Machine translation',
+    task: 'concepts',
+    module: '5 · Tasks and evaluation',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Machine Translation (MT) automates the conversion of text from one natural language into another while preserving semantic fidelity and grammatical fluency. Modern Neural Machine Translation (NMT) relies on the encoder-decoder Transformer architecture: a bidirectional encoder constructs deep contextual representations of the source sentence, while an autoregressive decoder generates the target translation word by word via cross-attention. Search strategies like beam search explore multiple candidate hypotheses, and translations are evaluated using metrics such as BLEU and chrF.`,
+    lead: r`Translating between human languages is vastly more complex than substituting words from a bilingual dictionary. Word order shifts across linguistic families (e.g. English Subject-Verb-Object versus Japanese Subject-Object-Verb), grammatical gender must be reconciled across articles and adjectives, and idioms cannot be translated literally. Neural Machine Translation solves these challenges by mapping sentences into a universal semantic geometry and generating target text guided by cross-attention.`,
+    intuition: [
+      r`The Sequence-to-Sequence (Seq2Seq) challenge: In text classification, a variable-length sentence maps to a single discrete class. In machine translation, an input sequence of length S in language X must map to an output sequence of variable length T in language Y. Because S and T are rarely equal, translation requires an encoder to compress the source into continuous vectors and a decoder to unpack those vectors into target tokens until a stop token ([EOS]) is emitted.`,
+      r`Cross-attention: The bridge between languages: In the original Transformer, cross-attention acts as the dynamic alignment engine. The queries Q come from the target language decoder (representing what the model wants to write next), while the keys K and values V come from the source language encoder (representing what the original sentence said). The attention softmax dynamically highlights which source words the decoder should focus on at each translation step, directly replicating human bilingual alignment.`,
+      r`Beam search versus greedy translation: When generating a target sentence, picking the single most probable word at each step (greedy search) is risky: an early poor choice can trap the model in a dead end. Full combinatorial search across all |V|^T possible translations is impossible. Beam search maintains a fixed pool of the top B most promising hypotheses (the beam width, typically B = 4 to 8), expanding and pruning candidates at each step to discover globally fluent translations.`,
+    ],
+    analogy: r`Think of an expert simultaneous interpreter at the United Nations. As a French delegate speaks, the interpreter does not wait for a complete dictionary lookup of each word. The interpreter listens to the French phrase, absorbs its holistic meaning into their working memory (the encoder), and begins speaking fluent English (the decoder). As they speak, their mental cross-attention constantly glances back at key nouns and verbs in the French statement to ensure no diplomatic nuance is lost, while their internal grammar monitors ensure natural English phrasing.`,
+    steps: [
+      {
+        title: r`Tokenise source and target text with shared subwords`,
+        desc: r`Segment multilingual corpora using joint Byte Pair Encoding (BPE).`,
+        detail: r`Train a shared subword tokeniser across source and target languages. Shared vocabularies align common roots, numbers, and proper nouns (e.g. international names) across languages.`,
+      },
+      {
+        title: r`Encode source sentence with bidirectional Transformer encoder`,
+        desc: r`Transform source tokens into rich contextual representations.`,
+        detail: r`Pass source tokens x_1, ..., x_S through stacked encoder blocks. Multi-head self-attention allows all source words to interact bidirectionally, producing contextual output states H_src of shape (S, d_model).`,
+      },
+      {
+        title: r`Decode target tokens using causal and cross-attention`,
+        desc: r`Generate target words autoregressively while querying source encoder states.`,
+        detail: r`Feed previously generated target tokens y_1, ..., y_{t-1} through decoder blocks. Causal self-attention prevents future leakage, while cross-attention attends over H_src using decoder states as queries Q.`,
+      },
+      {
+        title: r`Explore translation hypotheses via Beam Search`,
+        desc: r`Track top B candidate sequences and prune hypotheses using length penalisation.`,
+        detail: r`At each step t, expand the B current hypotheses by evaluating all vocabulary tokens. Retain the top B candidates with the highest cumulative log-probability scaled by length normalisation factor: ((5 + t) / 6)^alpha.`,
+      },
+      {
+        title: r`Evaluate translation quality with BLEU and chrF`,
+        desc: r`Measure n-gram precision against human reference translations.`,
+        detail: r`Compute modified n-gram precisions p_n for n in [1, 4] between candidate translations and gold human references. Multiply by brevity penalty BP = min(1, exp(1 - r/c)) to penalise artificially short outputs.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Encoder-decoder cross-attention formulation`,
+        tex: r`\operatorname{CrossAttention}(Q_{\text{tgt}}, K_{\text{src}}, V_{\text{src}}) = \operatorname{softmax}\left( \frac{Q_{\text{tgt}} K_{\text{src}}^T}{\sqrt{d_k}} \right) V_{\text{src}}`,
+        p: r`Here $Q_{\text{tgt}} \in \mathbb{R}^{T \times d_k}$ is projected from target decoder hidden states, while $K_{\text{src}}, V_{\text{src}} \in \mathbb{R}^{S \times d_k}$ are projected from source encoder states. This allows target tokens to query source representations dynamically.`,
+      },
+      {
+        h: r`Bilingual Evaluation Understudy (BLEU) score`,
+        tex: r`\operatorname{BLEU} = \operatorname{BP} \cdot \exp\left( \sum_{n=1}^N w_n \ln p_n \right), \quad \operatorname{BP} = \begin{cases} 1 & \text{if } c > r \\ \exp\left(1 - \frac{r}{c}\right) & \text{if } c \le r \end{cases}`,
+        p: r`Here $p_n$ is clipped $n$-gram precision, $w_n = 1/N$ (typically $N = 4$), $c$ is candidate translation length, and $r$ is effective reference corpus length. The brevity penalty $\operatorname{BP}$ penalises candidates shorter than reference translations.`,
+      },
+      {
+        h: r`Beam search length normalisation objective`,
+        tex: r`\operatorname{Score}(Y) = \frac{1}{\operatorname{LP}(Y)} \sum_{t=1}^T \log P(y_t \mid y_{<t}, X), \quad \operatorname{LP}(Y) = \frac{(5 + |Y|)^\alpha}{(5 + 1)^\alpha}`,
+        p: r`Because summing negative log-probabilities naturally favours shorter sequences, length penalty $\operatorname{LP}(Y)$ with parameter $\alpha \in [0.6, 0.8]$ normalises hypothesis scores to prevent premature termination.`,
+      },
+    ],
+    keyPoints: [
+      r`Neural Machine Translation maps variable-length source sentences to variable-length target sentences across languages.`,
+      r`The encoder-decoder Transformer uses bidirectional source encoding and causal target decoding linked via cross-attention.`,
+      r`Cross-attention dynamically aligns target generation steps with relevant source words, replacing heuristic statistical phrase tables.`,
+      r`Beam search tracks multiple high-probability translation hypotheses with length normalisation to avoid greedy sub-optimal traps.`,
+      r`BLEU evaluates translation quality by combining modified n-gram precision (n=1 to 4) with an exponential brevity penalty.`,
+    ],
+    pitfalls: [
+      r`Evaluating translation without a brevity penalty: Without the brevity penalty, a candidate translation that outputs a single high-confidence word ("the") achieves 100% n-gram precision. Always enforce the BLEU brevity penalty.`,
+      r`Setting beam width too large: In beam search, setting beam width B too large (e.g. B > 30) paradoxically degrades BLEU scores by biasing search towards unnaturally short, generic hypotheses. Optimal beam width is typically B in [4, 8].`,
+      r`Tokenising languages with whitespace splitting: Languages such as Chinese, Japanese, and Thai do not use spaces between words. Naive tokenisation fails completely; use sentence-piece or character-level subword models (BPE/Unigram).`,
+      r`Hallucination under low-resource or out-of-domain input: Seq2Seq decoders can detach from source cross-attention when encountering unknown words or noisy text, generating fluent but completely fabricated target sentences.`,
+    ],
+    code: r`import math
+from collections import Counter
+
+class BLEUEvaluator:
+    """
+    Sentence-level BLEU score calculation with modified n-gram
+    precision and brevity penalty from scratch.
+    """
+    @staticmethod
+    def modified_precision(candidate, reference, n):
+        # Extract n-grams
+        cand_ngrams = [tuple(candidate[i:i+n]) for i in range(len(candidate) - n + 1)]
+        ref_ngrams = [tuple(reference[i:i+n]) for i in range(len(reference) - n + 1)]
+        
+        if not cand_ngrams:
+            return 0.0
+            
+        cand_counts = Counter(cand_ngrams)
+        ref_counts = Counter(ref_ngrams)
+        
+        # Clipped counts: count cannot exceed maximum occurrences in reference
+        clipped_matches = sum(min(count, ref_counts.get(ng, 0)) for ng, count in cand_counts.items())
+        total_cand = len(cand_ngrams)
+        
+        return clipped_matches / total_cand
+
+    @classmethod
+    def compute_bleu(cls, candidate_tokens, reference_tokens, max_n=4):
+        c = len(candidate_tokens)
+        r = len(reference_tokens)
+        
+        if c == 0:
+            return 0.0
+            
+        # 1. Compute Brevity Penalty (BP)
+        if c > r:
+            bp = 1.0
+        else:
+            bp = math.exp(1.0 - (r / c))
+            
+        # 2. Geometric mean of precisions p_1 .. p_max_n
+        log_prec_sum = 0.0
+        weights = 1.0 / max_n
+        
+        for n in range(1, max_n + 1):
+            p_n = cls.modified_precision(candidate_tokens, reference_tokens, n)
+            if p_n == 0.0:
+                # Smoothing: avoid log(0)
+                p_n = 1e-9
+            log_prec_sum += weights * math.log(p_n)
+            
+        bleu = bp * math.exp(log_prec_sum)
+        return bleu, bp
+
+# Example candidate translation and reference
+reference = ["the", "cat", "sat", "on", "the", "mat"]
+candidate_good = ["the", "cat", "was", "sitting", "on", "the", "mat"]
+candidate_bad = ["the", "the", "the", "the", "the", "the"]
+
+print("Reference Translation:  ", " ".join(reference))
+print("Candidate 1 (Good):     ", " ".join(candidate_good))
+print("Candidate 2 (Repeated): ", " ".join(candidate_bad))
+
+bleu1, bp1 = BLEUEvaluator.compute_bleu(candidate_good, reference)
+bleu2, bp2 = BLEUEvaluator.compute_bleu(candidate_bad, reference)
+
+print("\nEvaluation Results:")
+print(f"Candidate 1 -> BLEU: {bleu1 * 100:.2f}% (Brevity Penalty: {bp1:.4f})")
+print(f"Candidate 2 -> BLEU: {bleu2 * 100:.2f}% (Brevity Penalty: {bp2:.4f})")
+print("Notice how clipped precision prevents repeated 'the' from cheating!")
+`,
+    quiz: [
+      {
+        q: r`What is the primary role of the cross-attention mechanism in the encoder-decoder Transformer for Machine Translation?`,
+        o: [
+          r`It enables the target language decoder to dynamically query and attend over source language representations, aligning target words with corresponding source concepts`,
+          r`It translates text by looking up words in an offline SQLite database`,
+          r`It prevents the GPU from overheating during matrix multiplication`,
+          r`It forces the target translation to have identical token length to the source`,
+        ],
+        a: 0,
+        why: r`Cross-attention uses queries from the target decoder and keys/values from the source encoder. This allows the decoder to focus dynamically on the relevant source words as it generates each target token, replacing classical word alignment tables.`,
+      },
+      {
+        q: r`Why does the BLEU metric include a Brevity Penalty (BP)?`,
+        o: [
+          r`To prevent degenerate short translations (such as outputting just a single correct word like "the") from achieving artificially high n-gram precision`,
+          r`To ensure translations contain at least fifty words`,
+          r`To convert negative scores into positive percentages`,
+          r`To penalise translations that contain punctuation marks`,
+        ],
+        a: 0,
+        why: r`Precision only measures the fraction of proposed words that are correct. Without a brevity penalty, translating a 30-word sentence into just "The" yields 100% precision. The Brevity Penalty penalises candidates shorter than the reference: BP = exp(1 - r/c).`,
+      },
+      {
+        q: r`Why is Beam Search preferred over simple greedy decoding in Neural Machine Translation?`,
+        o: [
+          r`Greedy decoding makes irrevocable local choices that frequently trap generation in sub-optimal paths, whereas Beam Search maintains a pool of B diverse hypotheses to find globally higher-probability translations`,
+          r`Beam Search runs in O(1) constant time regardless of vocabulary size`,
+          r`Beam Search eliminates the need for an encoder`,
+          r`Beam Search produces translations without using GPU memory`,
+        ],
+        a: 0,
+        why: r`Greedy search picks the highest-probability word at each step independently. If that choice forces poor options later, greedy search cannot backtrack. Beam search explores the top B paths simultaneously, discovering globally fluent translations.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bert-and-masked-language-models', 'gpt-and-decoder-only-models'],
+    related: ['bert-and-masked-language-models', 'gpt-and-decoder-only-models', 'transformer_networks'],
+    keywords: 'machine translation nmt seq2seq encoder decoder cross-attention beam search bleu brevety penalty chrf bpe subwords',
+  },
 ];
