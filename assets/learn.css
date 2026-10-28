@@ -426,3 +426,19 @@
 .ex-part { display: block; font: 400 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--violet-2); margin-bottom: 6px; min-height: 14px; }
 @media (max-width: 760px) { .arch-card dl { grid-template-columns: 1fr; } .arch-card { min-height: 280px; } .arch-hint { display: none; } }
 .arch-card .tagline { height: auto; min-height: 24px; padding: 4px 10px; white-space: normal; line-height: 1.4; }
+/* BPE tokenizer lab */
+.bpe .tok b { font: 500 13px var(--mono); white-space: pre; }
+.bpe .tok em { color: var(--dim); }
+.bpe-merges { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: #ffffff03; }
+.bpe-merges ol { list-style: none; margin: 10px 0 6px; padding: 0; display: grid; gap: 6px; }
+.bpe-merges li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 400 12px var(--mono); color: var(--muted); opacity: .75; }
+.bpe-merges li.new { opacity: 1; color: var(--soft); }
+.bpe-merges code { padding: 2px 7px; border-radius: 6px; background: #ffffff0a; color: var(--soft); white-space: pre; }
+.bpe-merges code.res { background: #8c7cff26; color: var(--violet-2); }
+.bpe-merges .m-n { color: var(--dim); min-width: 34px; }
+.bpe-merges .m-c { margin-left: auto; color: var(--dim); }
+.bpe-merges .note { margin: 6px 0 0; }
+.bpe-corpus summary { cursor: pointer; }
+.tok-flow { margin-top: 10px; font: 400 12.5px/2 var(--mono); color: var(--soft); word-break: break-word; }
+.tok-flow span { padding: 2px 1px; margin-right: 1px; border-radius: 4px; white-space: pre-wrap; }
+.bpe > .note, .bpe-merges .note, .bpe-corpus summary { font: 400 12.5px/1.6 var(--sans); color: var(--muted); letter-spacing: 0; }

@@ -1201,6 +1201,742 @@
     });
   };
 
+  // ================================================================== Tokenization: byte-pair encoding
+  ex.bpe = el => {
+    const WORDS = [['low', 5], ['lower', 2], ['newest', 6], ['widest', 3]];
+    // run BPE on the classic toy corpus; "_" marks the end of a word
+    const states = [WORDS.map(([w, n]) => [[...w, '_'], n])], merges = [], pairCounts = [];
+    for (let k = 0; k < 10; k++) {
+      const cur = states[k], pc = new Map();
+      cur.forEach(([s, n]) => { for (let i = 0; i < s.length - 1; i++) { const key = s[i] + ' ' + s[i + 1]; pc.set(key, (pc.get(key) || 0) + n); } });
+      pairCounts.push([...pc].sort((a, b) => b[1] - a[1]));
+      let best = null, bc = 0; pc.forEach((n, key) => { if (n > bc) { bc = n; best = key; } });
+      const [a, b] = best.split(' ');
+      merges.push([a, b, bc]);
+      states.push(cur.map(([s, n]) => { const o = []; for (let i = 0; i < s.length; i++) { if (i < s.length - 1 && s[i] === a && s[i + 1] === b) { o.push(a + b); i++; } else o.push(s[i]); } return [o, n]; }));
+    }
+    const BASE = ['_', 'd', 'e', 'i', 'l', 'n', 'o', 'r', 's', 't', 'w'];
+    const VOCAB = [...BASE, ...merges.map(([a, b]) => a + b)];
+    // encode "lowest" step by step with the learned merges
+    const encSteps = [[...'lowest', '_']];
+    merges.forEach(([a, b]) => { const s = encSteps[encSteps.length - 1]; if (!s.some((x, i) => x === a && s[i + 1] === b)) return; const o = []; for (let i = 0; i < s.length; i++) { if (i < s.length - 1 && s[i] === a && s[i + 1] === b) { o.push(a + b); i++; } else o.push(s[i]); } encSteps.push(o); encSteps[encSteps.length - 1].rule = a + ' + ' + b; });
+    const colorOf = s => (s.length === 1 ? 'rgba(255,255,255,0.5)' : T.pal[(VOCAB.indexOf(s) * 3) % T.pal.length]);
+    const chipW = s => 12 + 8.4 * s.length;
+    const chip = (g, x, y, s, a = 1, o = {}) => {
+      const w = chipW(s), c = o.color || colorOf(s);
+      if (o.glow) g.glow(x + w / 2, y, 30, T.amber, a);
+      g.rr(x, y - 13, w, 26, 7, { fill: alpha(c === 'rgba(255,255,255,0.5)' ? '#ffffff' : c, s.length === 1 ? 0.06 : 0.2), stroke: o.glow ? T.amber : (s.length === 1 ? 'rgba(255,255,255,0.25)' : alpha(c, 0.8)), a });
+      g.text(s, x + w / 2, y + 1, { size: 12, color: T.ink, a });
+      return w;
+    };
+    const row = (g, syms, x, y, a = 1, o = {}) => { let cx = x; syms.forEach((s, i) => { cx += chip(g, cx, y, s, a, { glow: o.hl && o.hl(s, i) }) + 4; }); return cx; };
+    const words = (g, k, a = 1, o = {}) => {
+      states[k].forEach(([s, n], i) => {
+        const y = (o.y || 92) + i * 50;
+        g.text(`${n}×`, (o.x || 44), y, { size: 12, color: T.amber, align: 'right', a });
+        row(g, s, (o.x || 44) + 14, y, a, { hl: o.hl });
+      });
+    };
+    const note = (g, lines, x, y, a = 1, o = {}) => lines.forEach((l, i) => g.text(l, x, y + i * (o.lh || 20), { size: o.size || 12.5, color: (o.colors && o.colors[i]) || o.color || T.soft, align: 'left', a, sans: !o.mono }));
+    const fade = p => ease(clamp01(p * 2.5));
+
+    const steps = [
+      { part: 'Part 1 · Why tokens?', t: 'A model only reads numbers', dur: 4200,
+        d: 'A neural network multiplies and adds numbers; it cannot read letters. Before anything else, text must be cut into pieces called <strong>tokens</strong>, and every token is replaced by its number (its <strong>id</strong>) in a fixed vocabulary. The program that does this is the <strong>tokenizer</strong>.' },
+      { part: 'Part 1 · Why tokens?', t: 'Characters, words or something in between?', dur: 6000,
+        d: '<strong>Characters</strong>: tiny vocabulary, nothing is ever unknown, but sequences get very long. <strong>Whole words</strong>: short sequences, but a gigantic vocabulary, and any word not seen in training becomes [UNK]. <strong>Subwords</strong> are the compromise: common words stay whole, rare words are built from common pieces.' },
+      { part: 'Part 2 · Learning the pieces (training)', t: 'Start from single characters', dur: 4800,
+        d: 'A toy corpus with four words and their counts. Split every word into characters, with <strong>_</strong> marking the end of a word. The starting vocabulary is just the 11 distinct symbols.' },
+      { part: 'Part 2 · Learning the pieces (training)', t: 'Count every neighbouring pair', dur: 5600,
+        d: 'Go through the corpus and count each pair of adjacent symbols, weighted by how often the word occurs. “e s” appears in newest (6×) and widest (3×): 9 times in total, tied for the most. Ties are broken by whichever pair was seen first.' },
+      { part: 'Part 2 · Learning the pieces (training)', t: 'Merge the winner into a new token', dur: 5200,
+        d: '“e” + “s” becomes one symbol <strong>es</strong>, everywhere it occurs. The vocabulary grows by one, and merge #1 is written down. Then the pairs are counted again on the new segmentation.' },
+      { part: 'Part 2 · Learning the pieces (training)', t: 'Repeat, repeat, repeat', dur: 6400,
+        d: 'The next winners are <strong>es + t → est</strong> and <strong>est + _ → est_</strong>, then <strong>l + o</strong> and <strong>lo + w</strong>. Every merge builds on earlier ones, so pieces grow from letters into syllables and whole words.' },
+      { part: 'Part 2 · Learning the pieces (training)', t: 'The ordered list of merges is the tokenizer', dur: 5600,
+        d: 'After 10 merges, the frequent word “low” is one token and “newest” is “new” + “est_”. Real tokenizers stop at a target vocabulary size: GPT-2 learned <strong>50,000 merges</strong>. The merge list and the vocabulary are saved and never change again.' },
+      { part: 'Part 3 · Using the tokenizer', t: 'Encode a word it has never seen', dur: 7000,
+        d: '“lowest” was not in the corpus. Split it into characters and replay the merges <strong>in the order they were learned</strong>, applying each one wherever it fits. It ends up as two known pieces, <strong>low</strong> + <strong>est_</strong>: no [UNK] needed.' },
+      { part: 'Part 3 · Using the tokenizer', t: 'Pieces become ids', dur: 5000,
+        d: 'Each final piece is looked up in the vocabulary to get its integer id. These ids are all the model ever receives; the next step, the <strong>embedding</strong> layer, turns each id into a vector.' },
+      { part: 'Part 4 · Real tokenizers', t: 'Byte-level BPE: nothing is ever unknown', dur: 6400,
+        d: 'GPT-2, GPT-4 and Llama 3 run BPE on <strong>bytes</strong> of UTF-8 text, not characters. The 256 byte values are the starting vocabulary, so accents, emoji and every script can always be encoded. GPT-2’s vocabulary: 256 bytes + 50,000 merges + 1 end-of-text token = <strong>50,257</strong>.' },
+      { part: 'Part 4 · Real tokenizers', t: 'Why some text costs more tokens', dur: 6400,
+        d: 'A Devanagari letter takes 3 bytes in UTF-8, so “नमस्ते” is 18 bytes. If the tokenizer saw little Hindi during training, few of those bytes were merged and the word costs many tokens, while a common English word is often one. More tokens means a fuller context window, slower generation and a higher API bill.' },
+      { part: 'Part 4 · Real tokenizers', t: 'Tokenizer quirks you will meet', dur: 6800,
+        d: 'Spaces belong to the token that follows, so “Hello” and “ Hello” have different ids. Long numbers are cut into uneven chunks, which makes arithmetic harder. And a word like “strawberry” arrives as a few pieces, not letters, which is why counting its r’s is surprisingly hard for an LLM. (Splits shown are examples.)' },
+    ];
+    player(el, {
+      title: 'Tokenization and BPE, step by step',
+      steps,
+      draw(g, s, p, time) {
+        const a = fade(p);
+        if (s === 0) {
+          g.rr(40, 150, 220, 56, 12, { fill: 'rgba(255,255,255,0.04)', stroke: 'rgba(255,255,255,0.2)', a });
+          g.text('“Transformers read tokens”', 150, 179, { size: 14, color: T.ink, sans: true, a });
+          g.line([[272, 178], [348, 178]], { color: T.amber, a: ease(clamp01(p * 2 - 0.4)), arrow: true, w: 2 });
+          g.text('tokenizer', 310, 162, { size: 11, color: T.amber, a: ease(clamp01(p * 2 - 0.4)) });
+          const ids = ['8291', '364', '1100', '16326'], pieces = ['Transform', 'ers', ' read', ' tokens'];
+          pieces.forEach((pc, i) => {
+            const t = ease(clamp01(p * 2.4 - 1 - i * 0.15));
+            g.rr(364 + i * 66, 150, 60, 56, 8, { fill: alpha(T.pal[i], 0.16), stroke: alpha(T.pal[i], 0.8), a: t });
+            g.text(pc.replace(' ', '▁'), 394 + i * 66, 168, { size: 10.5, color: T.ink, a: t });
+            g.text(ids[i], 394 + i * 66, 190, { size: 12, color: T.amber, a: t });
+          });
+          g.text('pieces and ids are illustrative', 494, 224, { size: 10, color: T.dim, a: ease(clamp01(p * 2 - 1)) });
+          note(g, ['The model never sees letters,', 'only a list of integers.'], 40, 290, ease(clamp01(p * 2 - 1.1)), { size: 15, colors: [T.soft, T.cyan] });
+        }
+        if (s === 1) {
+          const rows = [
+            ['characters', [...'unbelievably'], 'vocabulary ≈ 100s', 'sequence: long', T.cyan],
+            ['whole words', ['[UNK]'], 'vocabulary: millions', 'unseen word → [UNK]', T.pink],
+            ['subwords', ['un', 'believ', 'ably'], 'vocabulary ≈ 30k–200k', 'sequence: short', T.green],
+          ];
+          rows.forEach(([name, toks, v, q, c], i) => {
+            const t = ease(clamp01(p * 2.2 - i * 0.35)), y = 90 + i * 100;
+            g.text(name, 40, y - 26, { size: 12, color: c, align: 'left', a: t });
+            let x = 40; toks.forEach(tk => { const w = 12 + 8.4 * tk.length; g.rr(x, y - 13, w, 26, 7, { fill: alpha(c, 0.14), stroke: alpha(c, 0.7), a: t }); g.text(tk, x + w / 2, y + 1, { size: 12, color: T.ink, a: t }); x += w + 4; });
+            g.text(`${toks.length} token${toks.length > 1 ? 's' : ''}`, 440, y - 8, { size: 12, color: T.soft, align: 'left', a: t });
+            g.text(v, 440, y + 10, { size: 10.5, color: T.muted, align: 'left', a: t });
+            g.text(q, 440, y + 26, { size: 10.5, color: T.muted, align: 'left', a: t });
+          });
+          g.text('the word: “unbelievably”', 40, 32, { size: 12, color: T.dim, align: 'left', a });
+        }
+        if (s === 2) {
+          words(g, 0, a);
+          g.text('vocabulary', 470, 70, { size: 12, color: T.muted, a });
+          BASE.forEach((ch, i) => { const t = ease(clamp01(p * 2 - 0.3 - i * 0.05)); const x = 420 + (i % 4) * 34, y = 104 + Math.floor(i / 4) * 36; g.rr(x, y - 13, 28, 26, 7, { fill: 'rgba(255,255,255,0.06)', stroke: 'rgba(255,255,255,0.25)', a: t }); g.text(ch, x + 14, y + 1, { size: 12, color: T.ink, a: t }); });
+          g.text('11 symbols', 470, 230, { size: 12, color: T.amber, a: ease(clamp01(p * 2 - 1)) });
+        }
+        if (s === 3) {
+          const top = pairCounts[0].slice(0, 8), maxN = top[0][1];
+          words(g, 0, 1, { hl: (sym, i) => false });
+          g.text('pair counts', 520, 66, { size: 12, color: T.muted, a });
+          top.forEach(([pr, n], i) => {
+            const t = ease(clamp01(p * 1.8 - i * 0.08)), y = 92 + i * 30, best = i === 0;
+            g.text(pr, 448, y, { size: 12, color: best ? T.amber : T.soft, align: 'right', a: t });
+            g.rr(458, y - 9, (n / maxN) * 120 * t, 18, 4, { fill: alpha(best ? T.amber : T.violet2, best ? 0.9 : 0.5) });
+            g.text(String(n), 584, y, { size: 12, color: best ? T.amber : T.muted, align: 'left', a: t });
+          });
+          // underline every "e s" in the words
+          if (p > 0.55) states[0].forEach(([sy], wi) => { let x = 58; sy.forEach((c, i) => { const w = chipW(c); if (c === 'e' && sy[i + 1] === 's') g.rr(x - 3, 92 + wi * 50 - 17, w + chipW('s') + 10, 34, 9, { stroke: T.amber, w: 1.6, a: ease(clamp01((p - 0.55) * 4)) }); x += w + 4; }); });
+        }
+        if (s === 4) {
+          const k = p < 0.35 ? 0 : 1, t = p < 0.35 ? 1 : ease(clamp01((p - 0.35) * 3));
+          words(g, k, k ? t : 1, { hl: s2 => k === 1 && s2 === 'es' });
+          g.rr(400, 90, 200, 70, 12, { fill: alpha(T.amber, 0.08), stroke: alpha(T.amber, 0.6), a });
+          g.text('merge #1', 500, 108, { size: 11, color: T.muted, a });
+          g.text('e + s → es', 500, 134, { size: 16, color: T.amber, a });
+          g.text(`vocabulary: 11 → ${11 + k}`, 500, 196, { size: 12, color: T.soft, a: t });
+        }
+        if (s === 5) {
+          const raw = p * 5.2, k = 1 + Math.min(4, Math.floor(raw)), t = k === 5 ? ease(clamp01((raw - 4) * 2)) : ease(clamp01((raw % 1) * 2));
+          words(g, k, 1, { hl: s2 => s2 === merges[k - 1][0] + merges[k - 1][1] });
+          g.text('merges so far', 500, 66, { size: 12, color: T.muted });
+          merges.slice(0, k).forEach(([a1, b1, n], i) => {
+            const y = 94 + i * 28, last = i === k - 1;
+            g.text(`#${i + 1}  ${a1} + ${b1} → ${a1 + b1}`, 420, y, { size: 12, color: last ? T.amber : T.soft, align: 'left', a: last ? t : 1 });
+            g.text(`${n}×`, 600, y, { size: 11, color: T.dim, align: 'right', a: last ? t : 1 });
+          });
+        }
+        if (s === 6) {
+          words(g, 10, 1);
+          g.text('the tokenizer = this ordered list', 500, 50, { size: 11.5, color: T.amber, a });
+          merges.forEach(([a1, b1], i) => {
+            const t = ease(clamp01(p * 2.4 - i * 0.07)), y = 76 + i * 25;
+            g.text(`#${String(i + 1).padStart(2, ' ')}  ${a1} + ${b1} → ${a1 + b1}`, 420, y, { size: 11.5, color: T.soft, align: 'left', a: t });
+          });
+          g.text('vocabulary: 11 + 10 = 21', 44, 310, { size: 12.5, color: T.cyan, align: 'left', a: ease(clamp01(p * 2 - 0.8)) });
+        }
+        if (s === 7) {
+          const n = encSteps.length, k = Math.min(n - 1, Math.floor(p * (n + 0.6)));
+          g.text('encode “lowest” (not in the corpus)', 40, 34, { size: 12, color: T.muted, align: 'left' });
+          for (let i = 0; i <= k; i++) {
+            const y = 70 + i * 44, t = i === k ? ease(clamp01((p * (n + 0.6)) % 1 * 2.5)) : 1;
+            const end = row(g, encSteps[i], 40, y, i === k ? t : 0.55);
+            if (i) g.text(`apply  ${encSteps[i].rule}`, Math.max(end + 16, 250), y, { size: 11.5, color: i === k ? T.amber : T.dim, align: 'left', a: t });
+            else g.text('start: characters', 250, y, { size: 11.5, color: T.dim, align: 'left' });
+          }
+          if (k === n - 1) g.text('→ 2 tokens, both known', 40, 70 + (k + 1) * 44, { size: 13, color: T.green, align: 'left', a: ease(clamp01((p - 0.85) * 6)) });
+        }
+        if (s === 8) {
+          g.text('vocabulary (piece → id)', 40, 40, { size: 12, color: T.muted, align: 'left', a });
+          VOCAB.forEach((v, i) => {
+            const x = 40 + (i % 3) * 112, y = 74 + Math.floor(i / 3) * 34, on = v === 'low' || v === 'est_';
+            g.rr(x, y - 13, 104, 26, 7, { fill: on ? alpha(T.amber, 0.2) : 'rgba(255,255,255,0.04)', stroke: on ? T.amber : 'rgba(255,255,255,0.14)', a });
+            g.text(v, x + 10, y + 1, { size: 12, color: T.ink, align: 'left', a });
+            g.text(String(i), x + 94, y + 1, { size: 11, color: on ? T.amber : T.dim, align: 'right', a });
+          });
+          const t = ease(clamp01(p * 2 - 0.6));
+          row(g, ['low', 'est_'], 420, 120, t);
+          g.line([[456, 140], [456, 182]], { color: T.amber, a: t, arrow: true }); g.line([[510, 140], [510, 182]], { color: T.amber, a: t, arrow: true });
+          g.rr(426, 190, 56, 30, 7, { fill: alpha(T.cyan, 0.15), stroke: T.cyan, a: t }); g.text(String(VOCAB.indexOf('low')), 454, 206, { size: 14, color: T.ink, a: t });
+          g.rr(482, 190, 56, 30, 7, { fill: alpha(T.cyan, 0.15), stroke: T.cyan, a: t }); g.text(String(VOCAB.indexOf('est_')), 510, 206, { size: 14, color: T.ink, a: t });
+          g.text('“lowest” → [15, 13]', 480, 252, { size: 13, color: T.cyan, a: t });
+          g.text('→ embedding layer', 480, 280, { size: 11.5, color: T.muted, a: ease(clamp01(p * 2 - 1.1)) });
+        }
+        if (s === 9) {
+          const bytes = [['M', '4D'], ['o', '6F'], ['d', '64'], ['è', 'C3 A8'], ['l', '6C'], ['e', '65'], [' ', '20'], ['🙂', 'F0 9F 99 82']];
+          g.text('“Modèle 🙂” as UTF-8 bytes', 40, 40, { size: 12, color: T.muted, align: 'left', a });
+          let x = 40;
+          bytes.forEach(([ch, hx], i) => {
+            const t = ease(clamp01(p * 2.2 - i * 0.1)), parts = hx.split(' '), w = parts.length * 30 + (parts.length - 1) * 3;
+            g.text(ch === ' ' ? '▁' : ch, x + w / 2, 76, { size: 15, color: T.ink, a: t, sans: true });
+            parts.forEach((b, j) => { g.rr(x + j * 33, 94, 30, 26, 6, { fill: alpha(parts.length > 1 ? T.amber : T.violet2, 0.16), stroke: alpha(parts.length > 1 ? T.amber : T.violet2, 0.7), a: t }); g.text(b, x + j * 33 + 15, 108, { size: 11, color: T.ink, a: t }); });
+            x += w + 10;
+          });
+          g.text('one character can be 1 to 4 bytes', 40, 146, { size: 11.5, color: T.dim, align: 'left', a });
+          const t2 = ease(clamp01(p * 2 - 0.8));
+          const seg = [['256 byte tokens', 256, T.violet2], ['50,000 merges', 50000, T.cyan], ['1 special', 1, T.amber]];
+          g.text('GPT-2 vocabulary = 50,257 tokens', 40, 200, { size: 13, color: T.soft, align: 'left', a: t2 });
+          let bx = 40; seg.forEach(([lab, n, c], i) => { const w = Math.max(8, (n / 50257) * 560); g.rr(bx, 216, w * t2, 26, 4, { fill: alpha(c, 0.6) }); g.text(lab, i === 1 ? 320 : i === 2 ? 600 : 40, 262 + (i === 2 ? 18 : 0), { size: 11, color: c, align: i === 1 ? 'center' : i === 2 ? 'right' : 'left', a: t2 }); bx += w; });
+          note(g, ['Every possible input is some sequence of bytes,', 'so it can always be encoded.'], 40, 318, ease(clamp01(p * 2 - 1.2)), { size: 13, colors: [T.soft, T.green] });
+        }
+        if (s === 10) {
+          const t1 = ease(clamp01(p * 2)), t2 = ease(clamp01(p * 2 - 0.7));
+          g.text('English, a common word', 40, 50, { size: 12, color: T.muted, align: 'left', a: t1 });
+          g.rr(40, 66, 90, 30, 7, { fill: alpha(T.green, 0.18), stroke: T.green, a: t1 }); g.text('▁hello', 85, 82, { size: 13, color: T.ink, a: t1 });
+          g.text('1 token (typical)', 150, 82, { size: 12, color: T.green, align: 'left', a: t1 });
+          g.text('Hindi “नमस्ते”: 6 characters, 18 bytes', 40, 140, { size: 12, color: T.muted, align: 'left', a: t2 });
+          const hx = ['E0 A4 A8', 'E0 A4 AE', 'E0 A4 B8', 'E0 A5 8D', 'E0 A4 A4', 'E0 A5 87'], chars = ['न', 'म', 'स', '्', 'त', 'े'];
+          hx.forEach((h3, i) => h3.split(' ').forEach((b, j) => { const tt = ease(clamp01(p * 2.4 - 1 - i * 0.08)); const x = 40 + i * 96 + j * 30; g.rr(x, 166, 27, 24, 5, { fill: alpha(T.pink, 0.14), stroke: alpha(T.pink, 0.6), a: tt }); g.text(b, x + 13.5, 179, { size: 10, color: T.ink, a: tt }); if (j === 1) g.text(chars[i], x + 13.5, 208, { size: 16, color: T.soft, a: tt, sans: true }); }));
+          g.text('worst case: up to 18 tokens if few of these bytes were ever merged', 40, 246, { size: 12, color: T.pink, align: 'left', a: ease(clamp01(p * 2 - 1.2)) });
+          note(g, ['Same meaning, many more tokens: less fits in the context window,', 'generation is slower and API costs are higher.'], 40, 300, ease(clamp01(p * 2 - 1.4)), { size: 13 });
+        }
+        if (s === 11) {
+          const panels = [
+            ['leading spaces', [['Hello'], ['▁Hello']], 'two different tokens, two ids', T.cyan],
+            ['numbers', [['123', '45', '678']], 'chunks do not follow place value', T.amber],
+            ['spelling', [['str', 'aw', 'berry']], 'the model sees pieces, not letters', T.pink],
+          ];
+          panels.forEach(([h1, rowsP, sub, c], i) => {
+            const t = ease(clamp01(p * 2 - i * 0.3)), y = 60 + i * 110;
+            g.text(h1, 40, y, { size: 12.5, color: c, align: 'left', a: t });
+            rowsP.forEach((r, j) => { let x = 40 + j * 150; r.forEach(tk => { const w = 14 + 8.6 * tk.length; g.rr(x, y + 18, w, 28, 7, { fill: alpha(c, 0.15), stroke: alpha(c, 0.7), a: t }); g.text(tk, x + w / 2, y + 33, { size: 12.5, color: T.ink, a: t }); x += w + 4; }); });
+            g.text(sub, 340, y + 33, { size: 12, color: T.soft, align: 'left', a: t });
+          });
+          g.text('example splits, for illustration', 600, 384, { size: 10, color: T.dim, align: 'right', a });
+        }
+      },
+    });
+  };
+
+  // ================================================================== Embeddings and positional encoding
+  ex.embed = el => {
+    const VOC = ['the', 'cat', 'dog', 'sat', 'on', 'mat', 'king', 'queen'];
+    const R = (() => { let a = 11; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
+    const E = VOC.map(() => Array.from({ length: 4 }, () => +(R() * 2 - 1).toFixed(2)));
+    // a hand-made 2-D picture of an embedding space (directions chosen so the analogy is exact)
+    const MAP = {
+      cat: [96, 118, 'animals'], dog: [150, 96, 'animals'], kitten: [104, 172, 'animals'], puppy: [160, 156, 'animals'],
+      apple: [96, 300, 'food'], mango: [150, 286, 'food'], bread: [222, 318, 'food'], rice: [262, 296, 'food'],
+      man: [390, 104, 'people'], woman: [500, 104, 'people'], boy: [400, 162, 'people'], girl: [510, 162, 'people'],
+      king: [410, 246, 'royals'], queen: [520, 246, 'royals'], prince: [420, 304, 'royals'], princess: [530, 304, 'royals'],
+    };
+    const GC = { animals: T.green, food: T.amber, people: T.cyan, royals: T.violet2 };
+    const START = Object.fromEntries(Object.keys(MAP).map(w => [w, [60 + R() * 520, 60 + R() * 290]]));
+    const note = (g, lines, x, y, a = 1, o = {}) => lines.forEach((l, i) => g.text(l, x, y + i * (o.lh || 20), { size: o.size || 12.5, color: (o.colors && o.colors[i]) || o.color || T.soft, align: 'left', a, sans: !o.mono }));
+    const fade = p => ease(clamp01(p * 2.5));
+    const cell = (g, x, y, w, h, v, a = 1, o = {}) => { g.rr(x, y, w, h, 3, { fill: o.fill || g.cellColor(v), stroke: o.stroke, w: o.sw, a }); if (o.label !== false) g.text(o.text ?? (Math.abs(v) < 0.005 ? '0' : v.toFixed(o.dp ?? 2)), x + w / 2, y + h / 2 + 1, { size: o.size || 10, color: T.ink, a }); };
+    const space = (g, pos, a = 1, o = {}) => {
+      Object.entries(MAP).forEach(([w, [x0, y0, grp]]) => {
+        const [x, y] = pos ? pos(w) : [x0, y0], c = GC[grp], dim = o.only && !o.only.includes(w);
+        g.dot(x, y, 5, c, a * (dim ? 0.25 : 1));
+        g.text(w, x + 9, y - 9, { size: 11, color: c, align: 'left', a: a * (dim ? 0.25 : 1), sans: true });
+      });
+    };
+    const ORI = [320, 390];
+    const cosOf = (u, v) => { const a1 = [MAP[u][0] - ORI[0], MAP[u][1] - ORI[1]], b1 = [MAP[v][0] - ORI[0], MAP[v][1] - ORI[1]]; return (a1[0] * b1[0] + a1[1] * b1[1]) / (Math.hypot(...a1) * Math.hypot(...b1)); };
+    const PE = (t, i, d = 32) => { const f = 1 / Math.pow(10000, (2 * Math.floor(i / 2)) / d); return i % 2 ? Math.cos(t * f) : Math.sin(t * f); };
+
+    const steps = [
+      { part: 'Part 1 · From ids to vectors', t: 'One-hot vectors: every word equally far apart', dur: 5600,
+        d: 'The simplest way to give a network an id is a <strong>one-hot</strong> vector: all zeros except a 1 at the id’s position. With GPT-2’s vocabulary that is 50,257 numbers per token. Worse, the dot product of any two different one-hot vectors is 0, so “cat” is no closer to “dog” than to “queen”.' },
+      { part: 'Part 1 · From ids to vectors', t: 'An embedding is a lookup table', dur: 5600,
+        d: 'Multiply a one-hot vector by a weight matrix E (vocabulary × d) and every row but one is multiplied by 0: the result is simply <strong>row id of E</strong>. So frameworks skip the multiplication and look the row up. E is the embedding table; its rows are learned.' },
+      { part: 'Part 1 · From ids to vectors', t: 'A sentence becomes a matrix', dur: 4800,
+        d: 'Look up one row per token and stack them: T tokens give a <strong>T × d</strong> matrix. Here T = 3 and d = 4; GPT-2 small uses d = 768, and its table holds 50,257 × 768 ≈ 38.6 million numbers.' },
+      { part: 'Part 2 · Meaning as geometry', t: 'Similar words end up close together', dur: 5200,
+        d: 'After training, words used in similar ways sit near each other: animals in one region, food in another, people and royals elsewhere. (A 2-D sketch; real embeddings live in hundreds of dimensions and are projected down to be drawn.)' },
+      { part: 'Part 2 · Meaning as geometry', t: 'Similarity is the angle between vectors', dur: 5600,
+        d: '<strong>Cosine similarity</strong> = u·v / (|u||v|): 1 when two vectors point the same way, 0 at right angles, −1 opposite. “cat” and “dog” point almost the same way; “cat” and “queen” do not. Search engines and RAG systems rank documents with exactly this number.' },
+      { part: 'Part 2 · Meaning as geometry', t: 'How the space is learned', dur: 7200,
+        d: 'Every row starts as random noise. During training, the loss gradient nudges the rows of words that appear in similar contexts in similar directions (“you shall know a word by the company it keeps”), and the clusters form on their own. The lab below this animation does exactly that, live.' },
+      { part: 'Part 2 · Meaning as geometry', t: 'Directions can carry meaning', dur: 6000,
+        d: 'The step from <em>man</em> to <em>woman</em> is roughly the same arrow as from <em>king</em> to <em>queen</em>, so <strong>king − man + woman ≈ queen</strong>. Such regularities emerge from word statistics; they hold for some relations, fail for others, and also absorb the biases of the training text.' },
+      { part: 'Part 3 · Where is each word?', t: 'Attention cannot see word order', dur: 5600,
+        d: 'Self-attention compares every token with every other token, but nothing in that comparison says who came first. “dog bites man” and “man bites dog” contain the same three vectors, so without extra information a Transformer would treat them identically.' },
+      { part: 'Part 3 · Where is each word?', t: 'Sinusoidal positional encoding', dur: 6400,
+        d: 'The original Transformer adds a fixed pattern for each position: dimension pairs are sine and cosine waves of different wavelengths. Early dimensions flip quickly from token to token, late ones change slowly, like the hands of a clock. Every position gets a unique fingerprint, and a shift by k positions is the same rotation everywhere.' },
+      { part: 'Part 3 · Where is each word?', t: 'Token vector + position vector', dur: 5200,
+        d: 'The input to the first Transformer block is the sum of the token’s embedding and its position’s vector. The same word at position 1 and position 3 now gives two different inputs. GPT-2 and BERT learn their position vectors instead; Llama-style models rotate queries and keys by a position-dependent angle (RoPE).' },
+      { part: 'Part 4 · Beyond the input layer', t: 'Static vectors become contextual', dur: 6400,
+        d: 'The input embedding of “bank” is the same in “the river bank” and “the bank loan”. Attention layers mix in the surrounding words, so after a few layers the two vectors move apart, one towards water, one towards money. These <strong>contextual</strong> vectors are what the rest of the model works with.' },
+      { part: 'Part 4 · Beyond the input layer', t: 'Sentence embeddings power semantic search', dur: 6000,
+        d: 'Models trained for similarity pool the contextual vectors of a whole sentence into one vector. Embed every document once, embed the question, and return the documents with the highest cosine similarity. This is the retrieval step of retrieval-augmented generation (RAG). It matches meaning, not exact words.' },
+    ];
+    player(el, {
+      title: 'Embeddings, step by step',
+      steps,
+      draw(g, s, p, time) {
+        const a = fade(p);
+        if (s === 0) {
+          g.text('vocabulary', 90, 40, { size: 11, color: T.muted, a });
+          VOC.forEach((w, i) => g.text(`${i}  ${w}`, 50, 70 + i * 34, { size: 12, color: T.soft, align: 'left', a }));
+          [['cat', 1, T.green, 230], ['dog', 2, T.cyan, 310]].forEach(([w, id, c, x], k) => {
+            const t = ease(clamp01(p * 2.2 - k * 0.4));
+            g.text(`“${w}”`, x + 15, 40, { size: 12, color: c, a: t });
+            VOC.forEach((_, i) => cell(g, x, 56 + i * 34, 30, 28, i === id ? 1 : 0, t, { fill: i === id ? alpha(c, 0.75) : 'rgba(255,255,255,0.05)', text: i === id ? '1' : '0', size: 11 }));
+          });
+          const t3 = ease(clamp01(p * 2 - 1));
+          g.text('cat · dog = 0', 420, 140, { size: 15, color: T.amber, align: 'left', a: t3 });
+          g.text('cat · queen = 0', 420, 170, { size: 15, color: T.amber, align: 'left', a: t3 });
+          note(g, ['Every pair is equally', 'unrelated, and each vector', 'is as long as the vocabulary', '(50,257 for GPT-2).'], 420, 220, t3, { size: 12.5 });
+        }
+        if (s === 1) {
+          const id = 1, sweep = clamp01(p * 1.6 - 0.2);
+          g.text('one-hot “cat”', 70, 44, { size: 11, color: T.green, a });
+          VOC.forEach((w, i) => { cell(g, 40 + i * 30, 60, 26, 26, 0, a, { fill: i === id ? alpha(T.green, 0.75) : 'rgba(255,255,255,0.05)', text: i === id ? '1' : '0' }); g.text(w, 53 + i * 30, 98, { size: 8.5, color: T.dim, a }); });
+          g.text('×', 110, 112, { size: 18, color: T.muted, a });
+          g.text('E  (8 × 4)', 250, 112, { size: 11, color: T.muted, a });
+          E.forEach((r, i) => {
+            const on = i === id;
+            g.text(VOC[i], 142, 134 + i * 30, { size: 10.5, color: on ? T.green : T.dim, align: 'right', a });
+            r.forEach((v, j) => cell(g, 150 + j * 50, 120 + i * 30, 46, 26, v, a * (sweep > 0.3 && !on ? 0.3 : 1), { stroke: on && sweep > 0.3 ? T.amber : undefined, sw: 1.6 }));
+          });
+          if (sweep > 0.3) {
+            const t = ease(clamp01((sweep - 0.3) * 2.5));
+            g.line([[352, 163], [420, 163]], { color: T.amber, a: t, arrow: true });
+            E[id].forEach((v, j) => cell(g, 428 + j * 44, 150, 40, 26, v, t, { stroke: T.amber, sw: 1.2 }));
+            g.text('embedding of “cat”', 512, 196, { size: 11, color: T.amber, a: t });
+          }
+          g.text('only row 1 survives the multiplication → just read row 1', 40, 384, { size: 12, color: T.soft, align: 'left', a: ease(clamp01(p * 2 - 1)) });
+        }
+        if (s === 2) {
+          const sent = [['the', 0], ['cat', 1], ['sat', 3]];
+          sent.forEach(([w, id], k) => {
+            const t = ease(clamp01(p * 2.2 - k * 0.3)), y = 120 + k * 56;
+            g.rr(40, y - 15, 70, 30, 8, { fill: 'rgba(255,255,255,0.05)', stroke: 'rgba(255,255,255,0.25)', a: t });
+            g.text(w, 75, y + 1, { size: 13, color: T.ink, a: t, sans: true });
+            g.text(`id ${id}`, 150, y + 1, { size: 12, color: T.amber, a: t });
+            g.line([[190, y], [240, y]], { color: 'rgba(255,255,255,0.3)', a: t, arrow: true });
+            E[id].forEach((v, j) => cell(g, 252 + j * 52, y - 15, 48, 30, v, t));
+          });
+          const t2 = ease(clamp01(p * 2 - 1));
+          g.rr(246, 96, 220, 176, 10, { stroke: T.cyan, w: 1.4, a: t2 });
+          g.text('T × d = 3 × 4', 356, 300, { size: 14, color: T.cyan, a: t2 });
+          note(g, ['GPT-2 small:', 'T × 768 per sentence,', 'table 50,257 × 768'], 490, 150, t2, { size: 12.5, colors: [T.muted, T.soft, T.soft] });
+        }
+        if (s === 3) space(g, null, a);
+        if (s === 4) {
+          space(g, null, 0.35);
+          const t = ease(clamp01(p * 2 - 0.2));
+          const vec = (w, c) => { g.line([ORI, [MAP[w][0], MAP[w][1]]], { color: c, w: 2.2, a: t, arrow: true }); };
+          g.dot(ORI[0], ORI[1], 3, T.ink, t);
+          vec('cat', T.green); vec('dog', T.green); vec('queen', T.violet2);
+          g.rr(196, 22, 236, 64, 10, { fill: '#0e0d16', stroke: 'rgba(255,255,255,0.15)', a: t });
+          g.text(`cos(cat, dog)   = ${cosOf('cat', 'dog').toFixed(2)}`, 210, 44, { size: 12.5, color: T.green, align: 'left', a: t });
+          g.text(`cos(cat, queen) = ${cosOf('cat', 'queen').toFixed(2)}`, 210, 66, { size: 12.5, color: T.violet2, align: 'left', a: ease(clamp01(p * 2 - 0.7)) });
+          g.text('angles measured from the origin of this sketch', 620, 384, { size: 10, color: T.dim, align: 'right', a });
+        }
+        if (s === 5) {
+          const q = ease(clamp01((p - 0.12) / 0.75));
+          space(g, w => { const j = Math.sin(time * 0.004 + w.length) * 3 * (1 - q); return [lerp(START[w][0], MAP[w][0], q) + j, lerp(START[w][1], MAP[w][1], q) + j]; }, 1);
+          g.text(q < 0.05 ? 'random start' : q < 0.98 ? `training… ${Math.round(q * 100)}%` : 'trained', 620, 384, { size: 12, color: q < 0.98 ? T.amber : T.green, align: 'right' });
+        }
+        if (s === 6) {
+          space(g, null, 1, { only: ['man', 'woman', 'king', 'queen'] });
+          const t1 = ease(clamp01(p * 2.4)), t2 = ease(clamp01(p * 2.4 - 0.8)), t3 = ease(clamp01(p * 2.4 - 1.6));
+          const m = MAP.man, w = MAP.woman, k = MAP.king, qn = MAP.queen;
+          g.line([[m[0], m[1]], [lerp(m[0], w[0], t1), lerp(m[1], w[1], t1)]], { color: T.cyan, w: 2.4, arrow: t1 > 0.1 });
+          g.text('man → woman', (m[0] + w[0]) / 2, m[1] + 22, { size: 11, color: T.cyan, a: t1 });
+          g.line([[m[0], m[1]], [lerp(m[0], k[0], t2), lerp(m[1], k[1], t2)]], { color: 'rgba(255,255,255,0.35)', w: 1.6, dash: [4, 4], a: t2, arrow: t2 > 0.1 });
+          g.line([[k[0], k[1]], [lerp(k[0], k[0] + w[0] - m[0], t3), lerp(k[1], k[1] + w[1] - m[1], t3)]], { color: T.amber, w: 2.4, arrow: t3 > 0.1 });
+          if (t3 > 0.9) { g.ring(qn[0], qn[1], 13, T.amber, 1.8, ease(clamp01((p - 0.75) * 5))); g.text('king − man + woman ≈ queen', 330, 370, { size: 14, color: T.amber, a: ease(clamp01((p - 0.75) * 5)) }); }
+        }
+        if (s === 7) {
+          const vecs = { dog: [0.8, -0.3, 0.5, 0.1], bites: [-0.2, 0.9, -0.4, 0.3], man: [0.3, 0.2, -0.7, 0.8] };
+          [['dog bites man', 60], ['man bites dog', 360]].forEach(([sen, x], k) => {
+            const t = ease(clamp01(p * 2.2 - k * 0.4));
+            g.text(`“${sen}”`, x + 100, 60, { size: 14, color: T.ink, a: t, sans: true });
+            sen.split(' ').forEach((w, i) => { g.text(w, x + 20, 104 + i * 44, { size: 11, color: T.muted, align: 'left', a: t }); vecs[w].forEach((v, j) => cell(g, x + 70 + j * 34, 90 + i * 44, 30, 28, v, t, { label: false })); });
+          });
+          const t3 = ease(clamp01(p * 2 - 1));
+          g.text('=', 320, 160, { size: 30, color: T.amber, a: t3 });
+          note(g, ['Same three vectors, just listed in a different order.', 'Attention treats its input as a set, so both get the same result.'], 60, 300, t3, { size: 13, colors: [T.soft, T.amber] });
+        }
+        if (s === 8) {
+          const NP = 32, ND = 32, cs = 7.4, x0 = 360, y0 = 70, rev = clamp01(p * 1.5);
+          g.text('position →', x0 + 4, y0 - 12, { size: 10.5, color: T.dim, align: 'left', a });
+          g.text('dimension ↓', x0 + 240, y0 - 12, { size: 10.5, color: T.dim, align: 'right', a });
+          for (let t = 0; t < NP; t++) for (let i = 0; i < ND; i++) { if (t > rev * NP) continue; g.rr(x0 + t * cs, y0 + i * cs, cs - 0.8, cs - 0.8, 1, { fill: g.cellColor(PE(t, i) * 0.9) }); }
+          [[0, T.cyan], [8, T.amber], [20, T.pink]].forEach(([i, c], k) => {
+            const yb = 80 + k * 92, t2 = ease(clamp01(p * 2 - k * 0.25));
+            g.text(`dimension ${i}`, 40, yb - 8, { size: 11, color: c, align: 'left', a: t2 });
+            const pts = []; for (let t = 0; t <= 31; t += 0.25) pts.push([40 + t * 8.6, yb + 30 - PE(t, i) * 24]);
+            g.line(pts, { color: c, w: 1.8, a: t2 });
+            g.line([[40, yb + 30], [310, yb + 30]], { color: 'rgba(255,255,255,0.12)', a: t2 });
+            g.line([[x0 - 4, y0 + i * cs + cs / 2], [x0 - 14, y0 + i * cs + cs / 2]], { color: c, w: 2, a: t2 });
+          });
+          g.text('PE(t, 2i) = sin(t / 10000^(2i/d)),  PE(t, 2i+1) = cos(…)', 320, 384, { size: 11.5, color: T.soft, a: ease(clamp01(p * 2 - 0.8)) });
+        }
+        if (s === 9) {
+          const tok = [0.6, -0.4, 0.2, 0.7, -0.5, 0.3], posv = t => tok.map((_, i) => +(PE(t, i, 6) * 0.5).toFixed(2));
+          [[1, 70], [3, 230]].forEach(([pos, y], k) => {
+            const t = ease(clamp01(p * 2.2 - k * 0.5)), pv = posv(pos), sum = tok.map((v, i) => v + pv[i]);
+            g.text(`“dog” at position ${pos}`, 40, y - 18, { size: 12, color: T.ink, align: 'left', a: t, sans: true });
+            tok.forEach((v, i) => cell(g, 40 + i * 30, y, 28, 26, v, t, { label: false }));
+            g.text('+', 236, y + 13, { size: 18, color: T.muted, a: t });
+            pv.forEach((v, i) => cell(g, 256 + i * 30, y, 28, 26, v, t, { label: false, stroke: alpha(T.amber, 0.7), sw: 1 }));
+            g.text('=', 452, y + 13, { size: 18, color: T.muted, a: t });
+            sum.forEach((v, i) => cell(g, 470 + i * 26, y, 24, 26, v, t, { label: false }));
+            g.text('token embedding', 130, y + 44, { size: 10.5, color: T.dim, a: t });
+            g.text(`position ${pos} vector`, 346, y + 44, { size: 10.5, color: T.amber, a: t });
+            g.text('input to block 1', 548, y + 44, { size: 10.5, color: T.cyan, a: t });
+          });
+          g.text('same word, different position → different input', 320, 370, { size: 13, color: T.green, a: ease(clamp01(p * 2 - 1.2)) });
+        }
+        if (s === 10) {
+          const q = ease(clamp01((p - 0.25) / 0.6));
+          [['water', 470, 90, T.cyan], ['river', 530, 130, T.cyan], ['money', 430, 330, T.amber], ['loan', 566, 306, T.amber]].forEach(([w, x, y, c]) => { g.dot(x, y, 4, c, 0.8); g.text(w, x + 8, y - 8, { size: 11, color: c, align: 'left', sans: true }); });
+          [['“the river bank”', T.cyan, [500, 120]], ['“the bank loan”', T.amber, [500, 284]]].forEach(([sen, c, tgt], k) => {
+            const y = 120 + k * 150;
+            g.text(sen, 40, y - 30, { size: 13, color: T.ink, align: 'left', sans: true });
+            [0.5, -0.3, 0.7, 0.1].forEach((v, i) => cell(g, 40 + i * 30, y - 12, 28, 26, v, 1, { label: false }));
+            g.text('input: identical', 40, y + 30, { size: 10.5, color: T.dim, align: 'left' });
+            const sx = 300, sy = 205, x = lerp(sx, tgt[0], q), yy = lerp(sy, tgt[1], q);
+            g.line([[sx, sy], [x, yy]], { color: c, w: 2, a: 0.8, arrow: q > 0.05 });
+            g.dot(x, yy, 6, c);
+          });
+          g.dot(300, 205, 6, T.ink); g.text('“bank” before attention', 286, 228, { size: 11, color: T.soft, align: 'right' });
+          g.text(q < 0.98 ? 'through the attention layers…' : 'two different contextual vectors', 620, 384, { size: 11.5, color: T.amber, align: 'right' });
+        }
+        if (s === 11) {
+          const docs = [['Reset your password from the login page', 520, 110, 0.93], ['Change the email linked to your account', 470, 170, 0.71], ['Our office opening hours', 150, 300, 0.12], ['Refund policy for annual plans', 260, 320, 0.21]];
+          const qx = 560, qy = 150, t = ease(clamp01(p * 2.2));
+          docs.forEach(([d, x, y], i) => { g.dot(x, y, 5, T.violet2, a); g.text(d, x + (x > 400 ? -10 : 10), y - 12, { size: 10.5, color: T.soft, align: x > 400 ? 'right' : 'left', a, sans: true }); });
+          g.dot(qx, qy, 6, T.amber, t); g.glow(qx, qy, 26, T.amber, t);
+          g.text('query: “how do I recover my login?”', 620, 210, { size: 11, color: T.amber, align: 'right', a: t, sans: true });
+          docs.forEach(([d, x, y, c], i) => { const tt = ease(clamp01(p * 2.2 - 0.8 - i * 0.12)); g.line([[qx, qy], [x, y]], { color: alpha(T.amber, 0.15 + c * 0.6), w: 1 + c * 2, a: tt }); });
+          const t3 = ease(clamp01(p * 2 - 1.2));
+          g.rr(36, 26, 268, 112, 10, { fill: '#0e0d16', stroke: 'rgba(255,255,255,0.15)', a: t3 });
+          g.text('ranked by cosine similarity', 50, 46, { size: 11, color: T.muted, align: 'left', a: t3 });
+          docs.slice().sort((x, y) => y[3] - x[3]).forEach(([d, , , c], i) => g.text(`${c.toFixed(2)}  ${d.slice(0, 26)}${d.length > 26 ? '…' : ''}`, 50, 70 + i * 18, { size: 10.5, color: i === 0 ? T.green : T.soft, align: 'left', a: t3 }));
+          g.text('scores illustrative', 620, 384, { size: 10, color: T.dim, align: 'right', a });
+        }
+      },
+    });
+  };
+
+  // ================================================================== Transformer (GPT-style), in depth
+  ex.transformer = el => {
+    const toks = ['The', 'animal', 'crossed', 'because', 'it'], n = toks.length, Q = 4;
+    const softmax = r => { const m = Math.max(...r.filter(isFinite)), e = r.map(v => (isFinite(v) ? Math.exp(v - m) : 0)), z = e.reduce((a, b) => a + b, 0); return e.map(v => v / z); };
+    const R = (() => { let a = 5; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
+    const vec = k => Array.from({ length: k }, () => +(R() * 2 - 1).toFixed(2));
+    const EMB = toks.map(() => vec(8)), POS = toks.map((_, t) => Array.from({ length: 8 }, (_, i) => +(0.45 * (i % 2 ? Math.cos(t / Math.pow(10, i / 4)) : Math.sin(t / Math.pow(10, (i - 0) / 4)))).toFixed(2)));
+    const X = EMB.map((e, t) => e.map((v, i) => v + POS[t][i]));
+    const Qv = toks.map(() => vec(4)), Kv = toks.map(() => vec(4)), Vv = toks.map(() => vec(4));
+    // illustrative scores (already divided by √d), row = query, column = key
+    const S = [
+      [2.0, 0.6, 0.1, 0, 0.2], [0.8, 2.0, 0.6, 0.1, 0.3], [0.3, 2.4, 1.2, 0.2, 0.3], [0.2, 0.6, 1.6, 1.4, 0.8], [0.3, 3.0, 0.5, 0.2, 1.2],
+    ];
+    const A = S.map(softmax);
+    const causal = S.map((r, i) => softmax(r.map((v, j) => (j > i ? -Infinity : v))));
+    const PREV = toks.map((_, i) => softmax(toks.map((__, j) => (j === i - 1 ? 2.6 : j === i ? 1 : j > i ? -Infinity : -1))));
+    const FIRST = toks.map((_, i) => softmax(toks.map((__, j) => (j === 0 ? 2.2 : j > i ? -Infinity : 0))));
+    const note = (g, lines, x, y, a = 1, o = {}) => lines.forEach((l, i) => g.text(l, x, y + i * (o.lh || 20), { size: o.size || 12.5, color: (o.colors && o.colors[i]) || o.color || T.soft, align: 'left', a, sans: !o.mono }));
+    const fade = p => ease(clamp01(p * 2.5));
+    const cells = (g, v, x, y, cw, ch, a = 1, o = {}) => v.forEach((val, i) => g.rr(o.vertical ? x : x + i * (cw + 2), o.vertical ? y + i * (ch + 2) : y, cw, ch, 2.5, { fill: o.color ? alpha(o.color, 0.12 + 0.75 * Math.min(1, Math.abs(val))) : g.cellColor(val), stroke: o.stroke, a }));
+    const TX = k => 70 + k * 125, TY = 40;
+    const tokenRow = (g, a = 1, hl = -1, y = TY) => toks.forEach((t, k) => {
+      const on = k === hl;
+      if (on) g.glow(TX(k), y, 44, T.amber, 0.8 * a);
+      g.rr(TX(k) - 46, y - 15, 92, 30, 15, { fill: on ? alpha(T.amber, 0.22) : 'rgba(255,255,255,0.06)', stroke: on ? T.amber : 'rgba(255,255,255,0.22)', a });
+      g.text(t, TX(k), y + 1, { size: 13, color: T.ink, a, sans: true });
+    });
+    const grid = (g, M, x0, y0, cs, a = 1, o = {}) => {
+      if (o.title) g.text(o.title, x0 + (cs * n) / 2, y0 - (o.labels ? 40 : 12), { size: 11.5, color: o.tc || T.soft, a });
+      for (let i = 0; i < n; i++) {
+        if (o.labels) g.text(toks[i], x0 - 6, y0 + i * cs + cs / 2, { size: 10, color: T.dim, align: 'right', a });
+        for (let j = 0; j < n; j++) {
+          const masked = o.mask && j > i, v = M[i][j], show = o.prog === undefined || i * n + j < o.prog * n * n;
+          g.rr(x0 + j * cs + 1, y0 + i * cs + 1, cs - 2, cs - 2, 3, { fill: masked ? 'rgba(255,255,255,0.03)' : show ? alpha(o.color || T.violet, 0.08 + 0.92 * Math.min(1, v * 1.5)) : 'rgba(255,255,255,0.03)', a });
+          if (masked && o.cross) g.text('−∞', x0 + j * cs + cs / 2, y0 + i * cs + cs / 2 + 1, { size: 9, color: T.dim, a });
+          else if (o.nums && show) g.text(v.toFixed(2).replace(/^0/, ''), x0 + j * cs + cs / 2, y0 + i * cs + cs / 2 + 1, { size: 9, color: T.ink, a });
+        }
+      }
+      if (o.labels) for (let j = 0; j < n; j++) { g.c.save(); g.c.translate(x0 + j * cs + cs / 2, y0 - 6); g.c.rotate(-0.7); g.text(toks[j], 0, 0, { size: 10, color: T.dim, align: 'left', a }); g.c.restore(); }
+    };
+
+    const steps = [
+      { part: 'Part 1 · Text in', t: 'Text becomes tokens, tokens become ids', dur: 4800,
+        d: 'The prompt is cut into tokens by the tokenizer and each token is replaced by its id. GPT-2 has 50,257 possible tokens and reads at most 1,024 at once (its <strong>context window</strong>). Our example: five tokens, and the model must predict the sixth.' },
+      { part: 'Part 1 · Text in', t: 'Embedding + position = the input matrix X', dur: 5600,
+        d: 'Each id selects a row of the embedding table (a vector of d numbers; d = 768 in GPT-2 small) and a position vector is added. The result is a matrix <strong>X</strong> with one row per token: T × d. Everything after this point is matrix arithmetic on X.' },
+      { part: 'Part 2 · Self-attention, one head', t: 'Every token makes a query, a key and a value', dur: 6000,
+        d: 'Three learned weight matrices project each token’s vector: <strong>q = x W<sub>Q</sub></strong> (what am I looking for?), <strong>k = x W<sub>K</sub></strong> (what do I offer?), <strong>v = x W<sub>V</sub></strong> (what do I pass on?). In GPT-2 each head projects 768 numbers down to 64.' },
+      { part: 'Part 2 · Self-attention, one head', t: 'Score: compare one query with every key', dur: 5600,
+        d: 'For the token “it”, take its query and compute a dot product with the key of every token, itself included. A large score means “this token has what I am looking for”. Distance does not matter: “animal” is three tokens back and gets the top score.' },
+      { part: 'Part 2 · Self-attention, one head', t: 'Scale by √d, then softmax', dur: 6000,
+        d: 'Scores are divided by √d<sub>k</sub> (√64 = 8) so they do not grow with the vector size, then <strong>softmax</strong> turns them into weights that are positive and add up to 1. Without the scaling, large scores make the softmax almost one-hot and training stalls. (Numbers here are illustrative.)' },
+      { part: 'Part 2 · Self-attention, one head', t: 'Blend the values', dur: 6000,
+        d: 'The output for “it” is the weighted sum of all value vectors: about 73% of “animal”, a little of everything else. The token “it” now carries information about what it refers to. That is the whole trick of attention.' },
+      { part: 'Part 2 · Self-attention, one head', t: 'All tokens at once: softmax(QKᵀ/√d)·V', dur: 6800,
+        d: 'Stack all queries into Q, all keys into K and all values into V. One matrix product <strong>QKᵀ</strong> gives every score at once (a T × T grid), a row-wise softmax gives the attention matrix, and multiplying by V gives every output. No loop over time steps, which is why GPUs train Transformers so fast. The cost: T² scores.' },
+      { part: 'Part 2 · Self-attention, one head', t: 'The causal mask: no peeking at the future', dur: 5600,
+        d: 'A text generator must predict each token from the tokens <em>before</em> it. So scores above the diagonal are set to −∞ before the softmax, and their weights become exactly 0. Each row now spreads its attention over the past only. Encoder models such as BERT skip the mask and look both ways.' },
+      { part: 'Part 3 · Multi-head attention', t: 'Many heads look for different things', dur: 6400,
+        d: 'GPT-2 small runs <strong>12 heads</strong> side by side, each with its own W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub> of size 768 × 64. Different heads learn different patterns, for example linking a pronoun to its noun, looking at the previous token, or resting on the first token. The 12 outputs (12 × 64 = 768) are concatenated and mixed by one more matrix, W<sub>O</sub>.' },
+      { part: 'Part 4 · The rest of the block', t: 'Residual connections: add, don’t replace', dur: 5600,
+        d: 'Attention’s output is <strong>added</strong> to its input: x + Attention(LN(x)). The original vector flows straight through on a “residual stream”, and each layer only writes a correction onto it. This direct path lets gradients reach the bottom of a deep stack, so dozens of blocks can be trained.' },
+      { part: 'Part 4 · The rest of the block', t: 'Layer normalisation', dur: 5600,
+        d: 'Before each sub-layer, every token’s vector is rescaled to mean 0 and standard deviation 1, then stretched and shifted by two learned vectors γ and β. This keeps the numbers in a stable range however deep the network is. GPT-2 normalises before each sub-layer (“pre-norm”).' },
+      { part: 'Part 4 · The rest of the block', t: 'The feed-forward network, one token at a time', dur: 6000,
+        d: 'Attention moves information <em>between</em> tokens. The feed-forward network then processes each token <em>on its own</em>: 768 → 3,072 → 768 with a GELU non-linearity in between. It holds about two-thirds of each block’s 7.1 million weights and is often described as where much of the model’s stored knowledge lives.' },
+      { part: 'Part 4 · The rest of the block', t: 'Stack the block 12 times', dur: 6000,
+        d: 'One block = LN → attention → add → LN → feed-forward → add. GPT-2 small stacks <strong>12</strong> identical-shaped blocks (each with its own weights); larger models use dozens. The vector of every token is refined on the way up: lower layers tend to capture local and syntactic patterns, higher layers more abstract ones.' },
+      { part: 'Part 5 · Text out', t: 'From the last vector to the next token', dur: 6400,
+        d: 'Take the final vector at the last position, normalise it, and multiply by the transposed embedding table: one score (<strong>logit</strong>) for each of the 50,257 tokens. Softmax turns them into probabilities for the next token. GPT-2 reuses (ties) the embedding matrix here, so there are no extra weights. (Probabilities illustrative.)' },
+      { part: 'Part 5 · Text out', t: 'Generation: sample, append, repeat', dur: 6400,
+        d: 'Pick a token from those probabilities (the <strong>temperature</strong> sharpens or flattens them), append it to the input and run the model again for the next one. Text is produced one token per forward pass. A <strong>KV cache</strong> keeps the keys and values of earlier tokens so each new step does not recompute them.' },
+      { part: 'Part 5 · Text out', t: 'Training: predict every next token at once', dur: 6400,
+        d: 'For training, the target sequence is the input shifted by one. Thanks to the causal mask, every position predicts its own next token in the same forward pass, and the loss is the average <strong>cross-entropy</strong>, −log p(correct token). Backpropagation then updates all 124 million weights a little, over billions of tokens.' },
+    ];
+    player(el, {
+      title: 'Inside a Transformer, step by step',
+      steps,
+      draw(g, s, p, time) {
+        const a = fade(p);
+        if (s === 0) {
+          g.rr(150, 60, 340, 44, 12, { fill: 'rgba(255,255,255,0.04)', stroke: 'rgba(255,255,255,0.2)', a });
+          g.text('“The animal crossed because it …”', 320, 83, { size: 14, color: T.ink, a, sans: true });
+          const t = ease(clamp01(p * 2 - 0.4));
+          g.line([[320, 112], [320, 150]], { color: T.amber, a: t, arrow: true });
+          g.text('tokenizer', 360, 132, { size: 11, color: T.amber, a: t, align: 'left' });
+          tokenRow(g, t, -1, 178);
+          ['464', '5044', '12606', '780', '340'].forEach((id, k) => { const tt = ease(clamp01(p * 2.4 - 1.1 - k * 0.1)); g.line([[TX(k), 198], [TX(k), 226]], { color: 'rgba(255,255,255,0.3)', a: tt, arrow: true }); g.rr(TX(k) - 30, 232, 60, 28, 7, { fill: alpha(T.cyan, 0.15), stroke: T.cyan, a: tt }); g.text(id, TX(k), 247, { size: 13, color: T.ink, a: tt }); });
+          g.text('ids illustrative', 620, 280, { size: 10, color: T.dim, align: 'right', a });
+          g.text('? next token', 320, 330, { size: 15, color: T.amber, a: ease(clamp01(p * 2 - 1.3)) });
+        }
+        if (s === 1) {
+          g.text('embedding', 170, 32, { size: 11, color: T.muted, a }); g.text('position', 362, 32, { size: 11, color: T.amber, a }); g.text('x = row of X', 548, 32, { size: 11, color: T.cyan, a });
+          toks.forEach((t, k) => {
+            const tt = ease(clamp01(p * 2.2 - k * 0.15)), y = 56 + k * 56;
+            g.text(t, 50, y + 10, { size: 12, color: T.ink, align: 'right', a: tt, sans: true });
+            cells(g, EMB[k], 70, y, 22, 20, tt);
+            g.text('+', 268, y + 10, { size: 16, color: T.muted, a: tt });
+            cells(g, POS[k], 282, y, 18, 20, tt, { stroke: alpha(T.amber, 0.6) });
+            g.text('=', 454, y + 10, { size: 16, color: T.muted, a: tt });
+            cells(g, X[k], 470, y, 18, 20, tt);
+          });
+          const t2 = ease(clamp01(p * 2 - 1.1));
+          g.rr(462, 46, 170, 274, 10, { stroke: T.cyan, w: 1.4, a: t2 });
+          g.text('X: T × d  (here 5 × 8, GPT-2: T × 768)', 620, 352, { size: 12, color: T.cyan, align: 'right', a: t2 });
+        }
+        if (s === 2) {
+          tokenRow(g, 0.35);
+          const k = Q, y0 = 110;
+          g.text('x(it)', 73, y0 - 16, { size: 11, color: T.ink, a });
+          cells(g, X[k], 60, y0, 26, 16, a, { vertical: true });
+          [['W_Q', 'q', T.amber, Qv[k]], ['W_K', 'k', T.cyan, Kv[k]], ['W_V', 'v', T.green, Vv[k]]].forEach(([wn, ln, c, out], i) => {
+            const t = ease(clamp01(p * 2.4 - 0.3 - i * 0.3)), y = 104 + i * 92;
+            g.line([[94, y0 + 70], [212, y + 22]], { color: alpha(c, 0.5), a: t, arrow: true });
+            for (let r = 0; r < 8; r++) for (let cc = 0; cc < 4; cc++) g.rr(222 + cc * 13, y + r * 6, 11, 5, 1, { fill: alpha(c, 0.15 + 0.6 * ((r * 7 + cc * 3 + i) % 5) / 5), a: t });
+            g.text(wn.replace('_', ' '), 248, y - 10, { size: 11, color: c, a: t });
+            g.line([[282, y + 24], [320, y + 24]], { color: alpha(c, 0.6), a: t, arrow: true });
+            cells(g, out, 330, y + 12, 26, 24, t, { color: c });
+            g.text(`${ln}(it)`, 460, y + 24, { size: 13, color: c, align: 'left', a: t });
+          });
+          note(g, ['8 numbers in, 4 out here;', 'GPT-2: 768 in, 64 out per head'], 396, 360, ease(clamp01(p * 2 - 1.2)), { size: 11.5, colors: [T.muted, T.muted] });
+        }
+        if (s === 3 || s === 4) {
+          tokenRow(g, 1, Q);
+          const QY = 96;
+          toks.forEach((_, k) => {
+            g.rr(TX(k) + 14 - 9, QY - 9, 18, 18, 4, { fill: alpha(T.cyan, 0.6), stroke: T.cyan });
+            g.text('k', TX(k) + 14, QY + 1, { size: 10, color: '#101018' });
+            if (k === Q) { g.rr(TX(k) - 14 - 9, QY - 9, 18, 18, 4, { fill: alpha(T.amber, 0.7), stroke: T.amber }); g.text('q', TX(k) - 14, QY + 1, { size: 10, color: '#101018' }); }
+          });
+          toks.forEach((_, k) => {
+            const t = s === 3 ? ease(clamp01(p * 1.8 - k * 0.12)) : 1, x0 = TX(Q) - 14, x1 = TX(k) + 14, cy = QY + 40 + Math.abs(k - Q) * 14;
+            g.c.beginPath(); g.c.moveTo(x0, QY + 10); g.c.quadraticCurveTo((x0 + x1) / 2, cy, x1, QY + 10);
+            g.c.strokeStyle = T.amber; g.c.lineWidth = s === 4 ? 1 + A[Q][k] * 9 : 1.3; g.c.globalAlpha = (s === 4 ? 0.2 + A[Q][k] * 0.8 : 0.6) * t; g.c.stroke(); g.c.globalAlpha = 1;
+          });
+          if (s === 3) {
+            toks.forEach((_, k) => { const t = ease(clamp01(p * 1.8 - k * 0.12)); g.text(`${(S[Q][k] * 8).toFixed(1)}`, TX(k), 196, { size: 15, color: T.amber, a: t }); });
+            g.text('q(it) · k(each token)', 320, 236, { size: 12, color: T.muted, a });
+            note(g, ['“animal” scores highest, even though', 'it is three tokens away.'], 40, 300, ease(clamp01(p * 2 - 1)), { size: 13 });
+          } else {
+            const t = ease(clamp01(p * 1.6 - 0.1));
+            toks.forEach((_, k) => {
+              g.text(`${(S[Q][k] * 8).toFixed(1)} → ÷8 → ${S[Q][k].toFixed(2)}`, TX(k), 196, { size: 11, color: T.muted, a });
+              const hgt = A[Q][k] * 130 * t;
+              g.rr(TX(k) - 18, 360 - hgt, 36, hgt, 4, { fill: alpha(T.pal[k], 0.85) });
+              g.text(`${Math.round(A[Q][k] * 100)}%`, TX(k), 350 - hgt, { size: 13, color: T.ink, a: t });
+            });
+            g.text('softmax → weights that sum to 100%', 320, 384, { size: 12, color: T.soft, a: t });
+          }
+        }
+        if (s === 5) {
+          tokenRow(g, 0.6, Q);
+          const ox = 540, oy = 250;
+          toks.forEach((_, k) => {
+            const y = 100;
+            cells(g, Vv[k], TX(k) - 30, y, 13, 18, 1, { color: T.green });
+            g.text(`× ${A[Q][k].toFixed(2)}`, TX(k), 140, { size: 11, color: T.green });
+            g.flow([[TX(k), 152], [ox, oy - 26]], time + k * 140, { n: 2, color: T.pal[k], speed: 0.0006, r: 1.5 + A[Q][k] * 6 });
+          });
+          const out = [0, 1, 2, 3].map(i => Vv.reduce((s2, v, k) => s2 + A[Q][k] * v[i], 0));
+          g.rr(ox - 76, oy - 22, 152, 44, 10, { fill: '#0e0d16', stroke: T.amber });
+          cells(g, out, ox - 64, oy - 10, 29, 20, 1, { color: T.amber });
+          g.text('new vector for “it”', ox, oy + 40, { size: 12, color: T.amber });
+          let x = 40; A[Q].forEach((w, k) => { g.rr(x, 320, 400 * w, 22, 3, { fill: alpha(T.pal[k], 0.85) }); if (w > 0.08) g.text(toks[k], x + 200 * w, 332, { size: 11, color: '#101018' }); x += 400 * w; });
+          g.text('what “it” is now made of', 40, 300, { size: 11, color: T.muted, align: 'left' });
+        }
+        if (s === 6) {
+          const t1 = ease(clamp01(p * 3)), t2 = ease(clamp01(p * 3 - 0.8)), t3 = ease(clamp01(p * 3 - 1.6));
+          const mat = (rows, cols, x, y, cw, ch, c, a1, lab) => { for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) g.rr(x + j * cw, y + i * ch, cw - 2, ch - 2, 2, { fill: alpha(c, 0.25 + 0.4 * (((i * 3 + j * 5) % 4) / 4)), a: a1 }); g.text(lab, x + (cols * cw) / 2, y - 12, { size: 12, color: c, a: a1 }); };
+          mat(5, 4, 30, 90, 18, 22, T.amber, t1, 'Q  (T × d)');
+          g.text('×', 118, 145, { size: 18, color: T.muted, a: t1 });
+          mat(4, 5, 136, 102, 22, 18, T.cyan, t1, 'Kᵀ  (d × T)');
+          g.text('=', 260, 145, { size: 18, color: T.muted, a: t2 });
+          grid(g, S.map(r => r.map(v => v / 3)), 280, 90, 22, t2, { title: 'scores (T × T)', tc: T.soft, color: T.pink });
+          g.text('softmax', 422, 132, { size: 11, color: T.muted, a: t3 }); g.line([[400, 145], [450, 145]], { color: 'rgba(255,255,255,0.35)', a: t3, arrow: true });
+          grid(g, A, 462, 90, 22, t3, { title: 'attention A', tc: T.violet2 });
+          g.text('then  A × V  →  one new vector per token', 320, 260, { size: 13, color: T.soft, a: t3 });
+          g.text('softmax( QKᵀ / √d ) · V', 320, 310, { size: 18, color: T.ink, a: t3 });
+          g.text('T² scores: doubling the context quadruples this work', 320, 350, { size: 11.5, color: T.pink, a: ease(clamp01(p * 2 - 1.3)) });
+        }
+        if (s === 7) {
+          const t = ease(clamp01(p * 2 - 0.2));
+          grid(g, A, 70, 110, 40, 1 - t * 0.6, { labels: true, title: 'without mask (encoder, e.g. BERT)', nums: true });
+          grid(g, causal, 380, 110, 40, t, { labels: true, title: 'causal mask (decoder, e.g. GPT)', mask: true, cross: true, nums: true, color: T.cyan });
+          g.text('each row still sums to 1, over the past only', 420, 340, { size: 12, color: T.cyan, a: t });
+        }
+        if (s === 8) {
+          const t = ease(clamp01(p * 2.2));
+          grid(g, causal, 50, 90, 26, t, { title: 'head 1: pronoun → noun', mask: true, color: T.violet });
+          grid(g, PREV, 240, 90, 26, ease(clamp01(p * 2.2 - 0.3)), { title: 'head 2: previous token', mask: true, color: T.cyan });
+          grid(g, FIRST, 430, 90, 26, ease(clamp01(p * 2.2 - 0.6)), { title: 'head 3: first token', mask: true, color: T.green });
+          g.text('… 12 heads in GPT-2 small', 320, 248, { size: 12, color: T.muted, a: t });
+          const t3 = ease(clamp01(p * 2 - 1));
+          for (let i = 0; i < 12; i++) g.rr(80 + i * 40, 282, 38, 22, 3, { fill: alpha(T.pal[i % T.pal.length], 0.55), a: t3 });
+          g.text('concatenate: 12 × 64 = 768', 320, 324, { size: 12, color: T.soft, a: t3 });
+          g.line([[320, 336], [320, 356]], { color: 'rgba(255,255,255,0.35)', a: t3, arrow: true });
+          g.text('× W_O  (768 × 768)  →  attention output', 320, 372, { size: 12, color: T.amber, a: t3 });
+        }
+        if (s === 9) {
+          const X0 = 120, top = 360, bot = 30;
+          g.line([[X0, top], [X0, bot]], { color: alpha(T.cyan, 0.6), w: 6 });
+          g.text('residual stream', X0 - 18, 200, { size: 11, color: T.cyan, align: 'right' });
+          [[290, 'LN → attention', T.amber], [150, 'LN → feed-forward', T.green]].forEach(([y, lab, c], i) => {
+            const t = ease(clamp01(p * 2.2 - i * 0.5));
+            g.line([[X0, y + 50], [X0 + 90, y + 50], [X0 + 90, y + 34]], { color: alpha(c, 0.7), w: 2, a: t });
+            g.rr(X0 + 40, y - 6, 210, 40, 10, { fill: alpha(c, 0.14), stroke: c, a: t });
+            g.text(lab, X0 + 145, y + 14, { size: 12.5, color: T.ink, a: t });
+            g.line([[X0 + 250, y + 14], [X0 + 290, y + 14], [X0 + 290, y - 30], [X0 + 12, y - 30]], { color: alpha(c, 0.7), w: 2, a: t, arrow: true });
+            g.ring(X0, y - 30, 11, c, 2, t); g.text('+', X0, y - 29, { size: 16, color: c, a: t });
+            g.flow([[X0, y + 50], [X0 + 90, y + 50], [X0 + 90, y + 34]], time + i * 300, { n: 2, color: c, speed: 0.0007 });
+            g.flow([[X0 + 250, y + 14], [X0 + 290, y + 14], [X0 + 290, y - 30], [X0 + 12, y - 30]], time + i * 300, { n: 3, color: c, speed: 0.0005 });
+          });
+          g.flow([[X0, top], [X0, bot]], time, { n: 6, color: T.cyan, speed: 0.0004, r: 3.5 });
+          g.text('x', X0, top + 18, { size: 13, color: T.cyan }); g.text('to the next block', X0, bot - 14, { size: 11, color: T.cyan });
+          note(g, ['h = x + Attn(LN(x))', 'y = h + FFN(LN(h))', '', 'each sub-layer adds', 'a correction;', 'nothing is overwritten'], 446, 90, a, { size: 12, mono: true, colors: [T.amber, T.green, T.soft, T.soft, T.soft, T.soft] });
+        }
+        if (s === 10) {
+          const v = [2.4, -0.6, 1.8, 3.1, -1.4, 0.9, 2.2, -0.2], mu = v.reduce((x, y) => x + y, 0) / v.length, sd = Math.sqrt(v.reduce((x, y) => x + (y - mu) ** 2, 0) / v.length);
+          const nv = v.map(x => (x - mu) / sd), t = ease(clamp01((p - 0.2) * 2));
+          const base = 230, sc = 40;
+          g.line([[40, base], [600, base]], { color: 'rgba(255,255,255,0.2)' });
+          v.forEach((x, i) => {
+            const val = lerp(x, nv[i], t), bx = 70 + i * 66;
+            g.rr(bx, val >= 0 ? base - val * sc : base, 40, Math.abs(val) * sc, 4, { fill: alpha(val >= 0 ? T.cyan : T.pink, 0.75) });
+          });
+          g.line([[40, base - lerp(mu, 0, t) * sc], [600, base - lerp(mu, 0, t) * sc]], { color: T.amber, dash: [5, 4], w: 1.4 });
+          g.text(`mean ${lerp(mu, 0, t).toFixed(2)}   std ${lerp(sd, 1, t).toFixed(2)}`, 600, 40, { size: 13, color: T.amber, align: 'right' });
+          g.text('(x − mean) / std,  then × γ + β (learned)', 320, 372, { size: 13, color: T.soft, a: ease(clamp01(p * 2 - 0.8)) });
+        }
+        if (s === 11) {
+          const L1 = [...Array(6)].map((_, i) => [120, 90 + i * 44]), L2 = [...Array(14)].map((_, i) => [320, 44 + i * 23]), L3 = [...Array(6)].map((_, i) => [520, 90 + i * 44]);
+          const t = ease(clamp01(p * 2));
+          L1.forEach(a1 => L2.forEach(b => g.line([a1, b], { color: alpha(T.violet2, 0.12), w: 1, a: t })));
+          L2.forEach(a1 => L3.forEach(b => g.line([a1, b], { color: alpha(T.green, 0.12), w: 1, a: ease(clamp01(p * 2 - 0.5)) })));
+          L1.forEach(([x, y]) => g.dot(x, y, 7, T.violet2)); L2.forEach(([x, y], i) => g.dot(x, y, 6, alpha(T.amber, 0.4 + 0.6 * Math.abs(Math.sin(i * 1.7 + time * 0.002))), t)); L3.forEach(([x, y]) => g.dot(x, y, 7, T.green, ease(clamp01(p * 2 - 0.5))));
+          g.text('768', 120, 370, { size: 13, color: T.violet2 }); g.text('3,072  (GELU)', 320, 384, { size: 13, color: T.amber, a: t }); g.text('768', 520, 370, { size: 13, color: T.green, a: ease(clamp01(p * 2 - 0.5)) });
+          const gx = 588, gy = 316; const pts = []; for (let z = -3; z <= 3; z += 0.1) pts.push([gx + z * 12, gy + 26 - (z * 0.5 * (1 + Math.tanh(0.7978845608 * (z + 0.044715 * z ** 3)))) * 9]);
+          g.line(pts, { color: T.amber, w: 1.8, a: t }); g.text('GELU', gx, gy + 46, { size: 10, color: T.amber, a: t });
+          g.text('same weights for every token', 120, 50, { size: 11, color: T.muted, a });
+        }
+        if (s === 12) {
+          const bx = 230, bw = 180, bh = 22;
+          for (let L = 0; L < 12; L++) {
+            const y = 340 - L * 26, t = ease(clamp01(p * 2.4 - L * 0.06));
+            g.rr(bx, y, bw, bh, 6, { fill: alpha(L % 2 ? T.violet : T.cyan, 0.16), stroke: alpha(L % 2 ? T.violet : T.cyan, 0.7), a: t });
+            g.text(`block ${L + 1}`, bx + bw / 2, y + bh / 2 + 1, { size: 10.5, color: T.ink, a: t });
+          }
+          const lvl = Math.min(11.99, ((time * 0.0012) % 14)), yy = 340 - Math.min(11, lvl) * 26 + 11;
+          g.glow(bx - 30, yy, 18, T.amber); g.dot(bx - 30, yy, 5, T.amber);
+          const mix = Math.min(1, lvl / 11), vv = X[Q].map((x0, i) => lerp(x0, [0.2, 0.9, -0.3, 0.6, 0.1, -0.7, 0.8, 0.4][i], mix));
+          cells(g, vv, 40, yy - 9, 16, 18);
+          g.text('vector of “it”', 108, yy - 22, { size: 10.5, color: T.amber });
+          note(g, ['inside each block:', 'LN → attention → add', 'LN → feed-forward → add', '', '7.1 M weights per block', '× 12 = 85 M'], 440, 120, a, { size: 12, colors: [T.muted, T.amber, T.green, T.soft, T.soft, T.soft] });
+          g.text('lower layers: more local patterns   ·   higher layers: more abstract', 320, 384, { size: 11, color: T.dim, a });
+        }
+        if (s === 13) {
+          const cand = [['was', 0.38], ['is', 0.12], ['had', 0.07], ['did', 0.05], ['seemed', 0.04], ['wanted', 0.03]];
+          g.text('final vector (last position)', 110, 40, { size: 11, color: T.amber, a });
+          cells(g, [0.2, 0.9, -0.3, 0.6, 0.1, -0.7, 0.8, 0.4], 40, 52, 16, 18, a);
+          const t = ease(clamp01(p * 2 - 0.3));
+          g.text('LN, then × Eᵀ  (768 × 50,257)', 110, 100, { size: 12, color: T.soft, a: t });
+          g.line([[110, 112], [110, 140]], { color: 'rgba(255,255,255,0.35)', a: t, arrow: true });
+          for (let i = 0; i < 60; i++) { const v = Math.abs(Math.sin(i * 12.9898) * 0.6) + (i === 7 ? 0.9 : 0); g.rr(40 + i * 3.8, 200 - v * 50, 2.6, v * 50, 1, { fill: alpha(T.violet2, 0.6), a: t }); }
+          g.text('50,257 logits', 150, 220, { size: 11, color: T.muted, a: t });
+          const t2 = ease(clamp01(p * 2 - 0.9));
+          g.text('softmax → probability of the next token', 470, 40, { size: 12, color: T.soft, a: t2 });
+          cand.forEach(([w, pr], i) => {
+            const y = 70 + i * 40;
+            g.text(`“${w}”`, 380, y + 11, { size: 13, color: i ? T.soft : T.green, align: 'right', a: t2, sans: true });
+            g.rr(392, y, pr * 480 * t2, 22, 4, { fill: alpha(i ? T.violet2 : T.green, 0.8) });
+            g.text(`${Math.round(pr * 100)}%`, 400 + pr * 480 * t2, y + 11, { size: 11, color: T.ink, align: 'left', a: t2 });
+          });
+          g.text('… and 50,251 more, adding up to 100%', 392, 318, { size: 11, color: T.dim, align: 'left', a: t2 });
+        }
+        if (s === 14) {
+          const seq = [...toks, 'was', 'tired', '.'], k = Math.min(3, Math.floor(p * 3.6));
+          seq.slice(0, 5 + k).forEach((w, i) => {
+            const x = 50 + i * 72, gen = i >= 5, t = gen && i === 4 + k ? ease(clamp01((p * 3.6) % 1 * 2)) : 1;
+            g.rr(x, 80, 66, 30, 15, { fill: gen ? alpha(T.green, 0.2) : 'rgba(255,255,255,0.06)', stroke: gen ? T.green : 'rgba(255,255,255,0.22)', a: t });
+            g.text(w, x + 33, 96, { size: 12.5, color: T.ink, a: t, sans: true });
+          });
+          g.rr(150, 160, 340, 60, 12, { fill: alpha(T.violet, 0.12), stroke: T.violet });
+          g.text('Transformer (12 blocks)', 320, 190, { size: 13, color: T.ink });
+          g.flow([[320, 116], [320, 156]], time, { n: 3, color: T.cyan, speed: 0.0012 });
+          g.flow([[490, 190], [590, 190], [590, 96], [565, 96]], time, { n: 3, color: T.green, speed: 0.0008 });
+          g.text('sample', 600, 150, { size: 11, color: T.green, align: 'right' });
+          note(g, ['one forward pass per new token', 'temperature < 1: safer, more repetitive', 'temperature > 1: more varied, more mistakes', 'KV cache: reuse earlier keys and values'], 150, 270, a, { size: 12.5, colors: [T.soft, T.muted, T.muted, T.cyan] });
+        }
+        if (s === 15) {
+          const inp = [...toks, 'was'], tgt = ['animal', 'crossed', 'because', 'it', 'was', 'tired'], lp = [2.9, 4.1, 2.2, 1.3, 0.97, 1.8];
+          inp.forEach((w, i) => {
+            const x = 40 + i * 98, t = ease(clamp01(p * 2.2 - i * 0.1));
+            g.rr(x, 70, 90, 28, 14, { fill: 'rgba(255,255,255,0.06)', stroke: 'rgba(255,255,255,0.22)', a: t });
+            g.text(w, x + 45, 85, { size: 12, color: T.ink, a: t, sans: true });
+            g.line([[x + 45, 102], [x + 45, 142]], { color: alpha(T.amber, 0.5), a: t, arrow: true });
+            g.rr(x, 148, 90, 28, 14, { fill: alpha(T.green, 0.15), stroke: alpha(T.green, 0.8), a: t });
+            g.text(tgt[i], x + 45, 163, { size: 12, color: T.ink, a: t, sans: true });
+            const h2 = lp[i] * 22 * ease(clamp01(p * 2 - 0.7));
+            g.rr(x + 30, 326 - h2, 30, h2, 4, { fill: alpha(T.pink, 0.7) });
+            g.text(lp[i].toFixed(1), x + 45, 316 - h2, { size: 10.5, color: T.pink, a: ease(clamp01(p * 2 - 0.9)) });
+          });
+          g.text('input', 30, 56, { size: 11, color: T.muted, align: 'left', a }); g.text('target = input shifted by one', 30, 194, { size: 11, color: T.green, align: 'left', a });
+          g.text('−log p(target) at each position (illustrative)', 30, 348, { size: 11, color: T.pink, align: 'left', a: ease(clamp01(p * 2 - 0.7)) });
+          g.text(`loss = average = ${(lp.reduce((x, y) => x + y, 0) / lp.length).toFixed(2)}`, 610, 378, { size: 14, color: T.amber, align: 'right', a: ease(clamp01(p * 2 - 1.1)) });
+        }
+      },
+    });
+  };
+
   root.Labs = root.Labs || {};
   root.Labs.explainers = ex;
 })(window);

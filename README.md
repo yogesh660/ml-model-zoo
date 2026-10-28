@@ -1,6 +1,6 @@
 # Learn · machine learning from first principles
 
-An interactive learning hub with 67 lessons: 50 machine learning models and 17 statistics and theory concepts, arranged into five learning paths. Every lesson explains the idea in plain words, works through the maths, shows runnable code and includes a live lab where the algorithm actually trains in your browser.
+An interactive learning hub with 69 lessons: 50 machine learning models and 19 statistics, theory and language-model concepts, arranged into five learning paths. Every lesson explains the idea in plain words, works through the maths, shows runnable code and includes a live lab where the algorithm actually trains in your browser.
 
 It is meant to sit at `yogesh660.github.io/ml-model-zoo/` and uses the same design system as the portfolio: same tokens, nav, reveals, card spotlight and footer.
 
@@ -12,9 +12,9 @@ It is meant to sit at `yogesh660.github.io/ml-model-zoo/` and uses the same desi
 | 02 Regression | 17 | OLS to polynomial, ridge, lasso, elastic net, robust and Bayesian regression, k-NN, SVR, Gaussian processes, trees, random forests, GBM, XGBoost, LightGBM, CatBoost, MLP |
 | 03 Classification | 12 | Logistic regression, LDA, QDA, naive Bayes, SVM, k-NN, trees, random forests, AdaBoost, gradient boosting, stacking |
 | 04 Clustering | 14 | k-means, k-means++, k-medoids, fuzzy c-means, agglomerative, divisive, BIRCH, DBSCAN, HDBSCAN, OPTICS, mean shift, GMM, spectral, affinity propagation |
-| 05 Neural networks | 7 | Perceptron, MLP, CNNs, RNNs, GRUs, LSTMs, Transformers |
+| 05 Neural networks | 9 | Perceptron, MLP, CNNs, RNNs, GRUs, LSTMs, tokenization (BPE), embeddings and positional encoding, Transformers |
 
-Each lesson follows the same structure: the idea, how it works, an interactive architecture diagram and an animated walkthrough (for linear regression, CNNs and the sequence models), a live lab, the maths, hyperparameters (or key takeaways), when to use it, code with common pitfalls, results on a dataset (models), a short quiz and related lessons.
+Each lesson follows the same structure: the idea, how it works, an interactive architecture diagram and an animated walkthrough (for linear regression, CNNs, the sequence models, tokenization, embeddings and Transformers), a live lab, the maths, hyperparameters (or key takeaways), when to use it, code with common pitfalls, results on a dataset (models), a short quiz and related lessons.
 
 ## Structure
 
@@ -22,7 +22,7 @@ Each lesson follows the same structure: the idea, how it works, an interactive a
 content/              every word on the site
   curriculum.js       paths, modules and lesson order
   concepts.js         the 17 foundation lessons
-  regression.js       classification.js  clustering.js  neural.js  sequences.js
+  regression.js       classification.js  clustering.js  neural.js  sequences.js  language.js
 assets/
   site.css, site.js   straight copies of the portfolio's stylesheet and script
   learn.css, learn.js what Learn adds: paths, syllabus, lesson layout, labs, quiz, progress
@@ -32,8 +32,9 @@ assets/
     models.js         one lab per model lesson
     concepts.js       one lab per concept lesson
     sequences.js      labs for the RNN, GRU, LSTM and Transformer lessons
-    explainers.js     step-by-step animated explainers shown above the labs (linear regression, CNN and sequence lessons)
-    architecture.js   interactive architecture diagrams with hover/tap explanations (linear regression and CNN lessons)
+    language.js       a BPE tokenizer and a word-embedding trainer, both running in the browser
+    explainers.js     step-by-step animated explainers shown above the labs (linear regression, CNN, sequence and language lessons)
+    architecture.js   interactive architecture diagrams with hover/tap explanations (linear regression, CNN, tokenizer, embedding and Transformer lessons)
 scripts/build.js      content -> index.html, models/<id>/index.html, concepts/<id>/index.html
 models/<id>/          train.py (scikit-learn or PyTorch) and the metrics.json it writes
 datasets/raw/         small synthetic teaching samples modelled on well-known datasets

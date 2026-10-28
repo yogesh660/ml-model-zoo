@@ -47,12 +47,13 @@ module.exports = [
   },
   {
     id: 'neural', num: '05', title: 'Neural networks', kicker: 'From one neuron to attention',
-    blurb: 'From a single neuron to CNNs, RNNs, GRUs, LSTMs and Transformers: the ideas behind modern deep learning, one step at a time.',
+    blurb: 'From a single neuron to CNNs, RNNs, GRUs, LSTMs, tokenizers, embeddings and Transformers: the ideas behind modern deep learning, one step at a time.',
     tasks: ['classification'],
     modules: [
       { title: 'From neurons to networks', lessons: ['perceptron', 'mlp_classifier'] },
       { title: 'Seeing: convolution', lessons: ['convolutional_neural_networks'] },
-      { title: 'Sequences', lessons: ['recurrent_neural_networks', 'gru_networks', 'lstm_networks', 'transformer_networks'] },
+      { title: 'Sequences', lessons: ['recurrent_neural_networks', 'gru_networks', 'lstm_networks'] },
+      { title: 'Language and Transformers', lessons: ['tokenization', 'embeddings', 'transformer_networks'] },
     ],
   },
 ];

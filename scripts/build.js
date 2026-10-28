@@ -16,6 +16,7 @@ const LESSONS = [
   ...require('../content/clustering'),
   ...require('../content/neural'),
   ...require('../content/sequences'),
+  ...require('../content/language'),
 ];
 
 const SITE = 'https://yogesh660.github.io/';
@@ -515,9 +516,9 @@ function lessonPage(l) {
           <dt>Training cost</dt><dd>${R(l.complexity[0])}</dd>
           <dt>Prediction cost</dt><dd>${R(l.complexity[1])}</dd>
           ${api ? `<dt>In code</dt><dd><code class="no-math">${esc(api).replace(/\./g, '.<wbr>')}</code></dd>` : ''}` : `
-          <dt>Path</dt><dd>Foundations · ${esc(l.module)}</dd>
+          <dt>Path</dt><dd>${esc(l.path.title)} · ${esc(l.module)}</dd>
           <dt>Level</dt><dd>${LEVELS[l.level]}</dd>
-          <dt>Used by</dt><dd>${(l.usedBy || []).length} model lessons</dd>`;
+          <dt>Used by</dt><dd>${(l.usedBy || []).length} model lesson${(l.usedBy || []).length === 1 ? '' : 's'}</dd>`;
 
   const prereq = (l.prereq || []).length ? `<span class="prereq">Before this: ${(l.prereq || []).map(id => `<a href="${link(id)}">${esc(byId[id].short)}</a>`).join(' ')}</span>` : '';
 
@@ -560,7 +561,7 @@ function lessonPage(l) {
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 `;
-  const labScripts = ['core', 'algos', 'models', ...(l.kind === 'concepts' ? ['concepts'] : ['sequences']), ...(l.explainer ? ['explainers'] : []), ...(l.architecture ? ['architecture'] : [])].map(f => `<script src="${rootRel}assets/labs/${f}.js?v=${VERSION}" defer></script>\n`).join('');
+  const labScripts = ['core', 'algos', 'models', ...(l.kind === 'concepts' ? ['concepts'] : ['sequences']), ...(l.labFile ? [l.labFile] : []), ...(l.explainer ? ['explainers'] : []), ...(l.architecture ? ['architecture'] : [])].map(f => `<script src="${rootRel}assets/labs/${f}.js?v=${VERSION}" defer></script>\n`).join('');
 
   return shell({
     rootRel, bodyClass: 'page-lesson', lessonId: l.id,
