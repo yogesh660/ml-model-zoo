@@ -4,20 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#070709">
-<title>Chi-square tests (planned) · Learn · Yogesh Awate</title>
-<meta name="description" content="Chi-square tests: a planned lesson in the Statistics path.">
-<meta property="og:title" content="Chi-square tests (planned) · Learn · Yogesh Awate">
-<meta property="og:description" content="Chi-square tests: a planned lesson in the Statistics path.">
+<title>Chi-Square Tests · Learn · Yogesh Awate</title>
+<meta name="description" content="Test categorical distributions using goodness-of-fit and contingency table tests of independence, comparing observed counts against expected frequencies.">
+<meta property="og:title" content="Chi-Square Tests · Learn · Yogesh Awate">
+<meta property="og:description" content="Test categorical distributions using goodness-of-fit and contingency table tests of independence, comparing observed counts against expected frequencies.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsdrzg4">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsdrzg4">
+<link rel="stylesheet" href="../../assets/site.css?v=mvse1hbt">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvse1hbt">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 <script>document.documentElement.classList.add('js')</script>
 </head>
-<body class="page-lesson">
+<body class="page-lesson" data-lesson="chi-square-tests">
 <a class="skip" href="#main">Skip to content</a>
 
 <nav id="nav">
@@ -39,31 +42,111 @@
   <header class="page-head lesson-head">
     <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
     <span class="tag rise" style="--d:2"><a href="../../#path-statistics">Path 02 · Statistics</a> / Hypothesis testing / Lesson 15 of 51</span>
-    <h1 class="case-title">Chi-square tests</h1>
-    <p class="lede rise" style="--d:3">This lesson is planned but not written yet. When it lands it will follow the same steps as the others: the idea in plain words, the maths, the trade-offs, code and a short quiz.</p>
+    <h1 class="case-title">Chi-Square Tests</h1>
+    <p class="lede rise" style="--d:3">Test categorical distributions using goodness-of-fit and contingency table tests of independence, comparing observed counts against expected frequencies.</p>
     <div class="lesson-meta rise" style="--d:4">
-      <span class="tagline">Planned</span><span class="tagline">Core</span>
+      <span class="tagline"><span class="lvl" data-l="2"><i><b></b></i>Intermediate</span></span>
+      <span class="tagline">16 min</span>
+      
+      <span class="prereq">Before this: <a href="../../concepts/hypothesis-testing-and-p-values/">Hypothesis Tests &amp; p-Values</a> <a href="../../concepts/random-variables-and-distributions/">Random variables</a></span>
     </div>
   </header>
+
   <div class="case-body lesson-body">
     <aside class="glance reveal">
       <h4>At a glance</h4>
       <dl>
-        <dt>Status</dt><dd>Planned</dd>
-        <dt>Path</dt><dd>Statistics · Hypothesis testing</dd>
-        <dt>Tier</dt><dd>Core: written in the first pass.</dd>
+          <dt>Path</dt><dd>Statistics · Hypothesis testing</dd>
+          <dt>Level</dt><dd>Intermediate</dd>
+          <dt>Used by</dt><dd>2 model lessons</dd>
       </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>Step by step</a></li><li><a href="#maths"><span>03</span>The maths</a></li><li><a href="#takeaways"><span>04</span>Key takeaways</a></li><li><a href="#code"><span>05</span>In code</a></li><li><a href="#quiz"><span>06</span>Check yourself</a></li><li><a href="#related"><span>07</span>Where it shows up</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
     </aside>
+
     <div class="story">
-      <section class="reveal" id="module">
-        <h2 class="h3"><span>01</span> In this module</h2>
-        <ol class="soon-list"><li><a href="../../concepts/hypothesis-testing-and-p-values/">Hypothesis testing and p-values</a><em>Planned</em></li><li><a href="../../concepts/type-i-ii-errors-power-and-sample-size/">Type I/II errors, power and sample size</a><em>Planned</em></li><li><a href="../../concepts/z-test-and-t-tests/">z-test and t-tests</a><em>Planned</em></li><li class="here"><a href="../../concepts/chi-square-tests/">Chi-square tests</a><em>Planned</em></li><li><a href="../../concepts/anova-and-post-hoc-tests/">ANOVA and post-hoc tests</a><em>Planned</em></li><li><a href="../../concepts/non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis/">Non-parametric tests: Mann–Whitney, Wilcoxon, Kruskal–Wallis</a><em>Planned</em></li><li><a href="../../concepts/normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling/">Normality tests: Shapiro–Wilk, Kolmogorov–Smirnov, Anderson–Darling</a><em>Planned</em></li><li><a href="../../concepts/multiple-testing-bonferroni-holm-benjamini-hochberg/">Multiple testing: Bonferroni, Holm, Benjamini–Hochberg</a><em>Planned</em></li><li><a href="../../concepts/effect-sizes-cohens-d-cramers-v/">Effect sizes: Cohen's d, Cramér's V</a><em>Planned</em></li><li><a href="../../concepts/permutation-tests/">Permutation tests</a><em>Planned</em></li><li><a href="../../concepts/likelihood-ratio-wald-and-score-tests/">Likelihood-ratio, Wald and score tests</a><em>Planned</em></li></ol>
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">While t-tests evaluate continuous measurements, many empirical problems involve counts of categorical occurrences. Pearson's chi-square ($\chi^2$) tests assess whether observed categorical frequencies conform to a theoretical distribution (goodness-of-fit) or whether two categorical variables are statistically independent.</p>
+        <p>Suppose an engineering team tests whether user device type (Desktop vs Mobile) is independent of subscription tier choice (Free, Pro, Enterprise). Over a week, 500 new users register: Desktop users comprise 120 Free, 80 Pro, and 50 Enterprise (250 total); Mobile users comprise 180 Free, 50 Pro, and 20 Enterprise (250 total). Overall, 300 users choose Free (60%), 130 choose Pro (26%), and 70 choose Enterprise (14%).</p>
+        <p>If device type had zero influence on subscription choice (the null hypothesis of independence), both Desktop and Mobile users should mirror these overall 60%, 26%, and 14% shares. We would expect $250 \times 0.60 = 150.0$ Free Desktop users, $250 \times 0.26 = 65.0$ Pro Desktop users, and $250 \times 0.14 = 35.0$ Enterprise Desktop users. The exact same expected counts would apply to Mobile users.</p>
+        <p>Comparing observed counts to expected frequencies reveals clear discrepancies: Free Desktop count is 120 (30 fewer than expected), while Enterprise Desktop is 50 (15 more than expected). Pearson's chi-square test tallies the normalised squared discrepancy $(O - E)^2 / E$ across all six table cells. Squaring prevents positive and negative deviations from cancelling out, while dividing by $E$ scales each residual relative to its baseline magnitude. For this table, the sum of residuals yields $\chi^2 = 31.78$ with 2 degrees of freedom, producing a p-value of $1.26 \times 10^{-7}$. Because this is vastly smaller than $\alpha = 0.05$, we reject independence and confirm that subscription choice is strongly linked to device type.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Pearson's chi-square test is like auditing a casino roulette wheel: you compare how often the ball lands in each pocket against how often it should land if the wheel were perfectly balanced.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> Step by step</h2>
+        <ol class="steps"><li>Compile observed data into a two-way contingency table of raw frequency counts across $R$ rows and $C$ columns.</li><li>Compute row totals $R_i$, column totals $C_j$, and the grand total sample size $N = \sum O_{ij}$.</li><li>Under the null hypothesis of independence, calculate expected cell frequencies: $E_{ij} = (R_i \times C_j) / N$.</li><li>Check Cochran's sample size criteria: ensure all $E_{ij} \ge 1$ and at least 80% of cells have $E_{ij} \ge 5$.</li><li>Sum Pearson residuals $\sum (O_{ij} - E_{ij})^2 / E_{ij}$ to obtain the test statistic $\chi^2$ with degrees of freedom $\nu = (R - 1)(C - 1)$.</li><li>Calculate the p-value from the $\chi^2(\nu)$ distribution and decide whether to reject the null hypothesis of independence.</li></ol>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>03</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Pearson's Chi-Square Test Statistic</h3><div class="formula">$$\chi^2 = \sum_{i=1}^R \sum_{j=1}^C \frac{(O_{ij} - E_{ij})^2}{E_{ij}} \sim \chi^2(\nu)$$</div><p>Here $O_{ij}$ is the observed integer frequency in row $i$ and column $j$, and $E_{ij}$ is the expected frequency under $H_0$. Under the null hypothesis, as sample size $N \to \infty$, this sum of normalised squared deviations converges asymptotically to a chi-square distribution with $\nu$ degrees of freedom.</p></li>
+          <li><h3>Expected Frequencies and Degrees of Freedom</h3><div class="formula">$$E_{ij} = \frac{R_i C_j}{N}, \qquad \nu = (R - 1)(C - 1)$$</div><p>Here $R_i$ is the $i$-th row marginal sum, $C_j$ is the $j$-th column marginal sum, and $N$ is total sample size. In an $R \times C$ contingency table, fixing row and column totals leaves $(R - 1)(C - 1)$ cells free to vary independently, determining the degrees of freedom $\nu$. For a 1D goodness-of-fit test with $K$ categories, $\nu = K - 1$.</p></li>
+          <li><h3>Goodness-of-Fit Test Statistic</h3><div class="formula">$$\chi^2 = \sum_{k=1}^K \frac{(O_k - n p_k)^2}{n p_k} \sim \chi^2(K - 1 - m)$$</div><p>In goodness-of-fit testing, observed counts $O_k$ across $K$ categories are compared to theoretical expected counts $n p_k$, where $p_k$ is the hypothesised probability of category $k$. If $m$ parameters of the theoretical distribution are estimated from the sample data (such as fitting a Poisson rate $\lambda$), the degrees of freedom are reduced to $\nu = K - 1 - m$.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="takeaways">
+        <h2 class="h3"><span>04</span> Key takeaways</h2>
+        <div class="box use"><ul><li>Chi-square tests require raw integer counts; never run chi-square calculations on percentages, fractions, or normalised rates.</li><li>Degrees of freedom in contingency tables depend exclusively on table dimensions $(R - 1)(C - 1)$, entirely independent of sample size $N$.</li><li>Cochran's guideline requires expected cell counts to equal or exceed 5 in at least 80% of cells; when counts are smaller, use Fisher's exact test.</li><li>A significant chi-square test confirms an association exists, but standardised residuals must be examined to identify which specific cells drive the divergence.</li></ul></div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>05</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> scipy.stats <span class="k">as</span> stats
+
+<span class="c"># Contingency table: Device (Desktop, Mobile) vs Tier (Free, Pro, Enterprise)</span>
+observed = np.<span class="f">array</span>([
+    [<span class="n">120</span>, <span class="n">80</span>, <span class="n">50</span>],   <span class="c"># Desktop</span>
+    [<span class="n">180</span>, <span class="n">50</span>, <span class="n">20</span>],   <span class="c"># Mobile</span>
+])
+
+<span class="c"># Pearson's chi-square test of independence</span>
+chi2_stat, p_val, dof, expected = stats.<span class="f">chi2_contingency</span>(observed)
+
+<span class="k">print</span>(<span class="s">&quot;Observed table:\n&quot;</span>, observed)
+<span class="k">print</span>(<span class="s">f&quot;Expected counts:\n{np.round(expected, 1)}&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;Chi-square statistic: {chi2_stat:.3f}&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;Degrees of freedom:   {dof}&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;p-value:              {p_val:.4e}&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;Independence rejected at alpha=0.05: {p_val &lt;= 0.05}&quot;</span>)</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Inputting percentages or conversion rates instead of raw integer counts, which destroys the underlying multinomial sampling variance model.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Applying standard chi-square tests to repeated measures or paired categorical data (such as user choices before and after an update); use McNemar's test instead.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Ignoring low expected cell frequencies ($E_{ij} &lt; 5$), where the continuous chi-square approximation fails and produces inaccurate p-values.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Confusing statistical association with causal direction: a significant chi-square test indicates dependence between variables, not that one variable causes the other.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>06</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>Why is it invalid to run a chi-square test on percentages or proportions (e.g. 0.40 and 0.60) rather than raw counts?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because chi-square algorithms only accept floating-point numbers</span></button><button class="opt" type="button"><b>B</b><span>Because percentages disguise sample size, destroying the relationship between count variance and expected frequencies</span></button><button class="opt" type="button"><b>C</b><span>Because percentages always sum to 100</span></button><button class="opt" type="button"><b>D</b><span>Because proportions follow a Student's t-distribution</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Chi-square test statistics rely on Poisson or multinomial sampling variance, where the variance of a count is proportional to $N$. Converting counts to proportions eliminates sample size information.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q2</span>How many degrees of freedom does a $3 \times 4$ contingency table have in a test of independence?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>12</span></button><button class="opt" type="button"><b>B</b><span>11</span></button><button class="opt" type="button"><b>C</b><span>6</span></button><button class="opt" type="button"><b>D</b><span>7</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Degrees of freedom for an $R \times C$ table are $(R - 1)(C - 1)$. For a $3 \times 4$ table, $(3 - 1)(4 - 1) = 2 \times 3 = 6$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q3</span>When expected cell counts $E_{ij}$ in a $2 \times 2$ table fall below 5, which test should be used instead of Pearson's chi-square test?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Paired t-test</span></button><button class="opt" type="button"><b>B</b><span>Fisher's exact test</span></button><button class="opt" type="button"><b>C</b><span>One-way ANOVA</span></button><button class="opt" type="button"><b>D</b><span>Mann-Whitney U test</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When cell counts are small ($E_{ij} &lt; 5$), the continuous chi-square approximation breaks down. Fisher's exact test computes exact hypergeometric probabilities without relying on asymptotic approximations.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>What does a statistically significant result ($p &lt; 0.001$) in a chi-square test of independence demonstrate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>One categorical variable directly causes the other</span></button><button class="opt" type="button"><b>B</b><span>The two categorical variables are statistically dependent in the sampled population</span></button><button class="opt" type="button"><b>C</b><span>All categories have identical frequencies</span></button><button class="opt" type="button"><b>D</b><span>The expected cell counts are all greater than 5</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Rejecting the null hypothesis of independence indicates that the row and column classifications are statistically dependent, though it does not imply causal direction.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>07</span> Where it shows up</h2>
+        <div class="related"><a href="../../concepts/type-i-ii-errors-power-and-sample-size/"><small class="kicker">Concept</small><b>Errors, Power and Sample Size</b></a><a href="../../concepts/z-test-and-t-tests/"><small class="kicker">Concept</small><b>z-Test and Student's t-Tests</b></a><a href="../../concepts/confusion-matrix/"><small class="kicker">Concept</small><b>Confusion matrix</b></a><a href="../../models/decision_tree_classifier/"><small class="kicker">Classification</small><b>Decision tree classifier</b></a><a href="../../concepts/feature-selection/"><small class="kicker">Concept</small><b>Feature selection</b></a></div>
       </section>
     </div>
   </div>
+
   <div class="pager" role="navigation" aria-label="Previous and next lesson">
-    <a href="../../concepts/z-test-and-t-tests/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Statistics</small><b>z-test and t-tests</b></a>
-    <a class="pager-next" href="../../concepts/anova-and-post-hoc-tests/"><small>Next · Statistics <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>ANOVA and post-hoc tests</b></a>
+    <a href="../../concepts/z-test-and-t-tests/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Statistics</small><b>z-Test and Student's t-Tests</b></a>
+    <a class="pager-next" href="../../models/ols_linear_regression/"><small>Next · Regression <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>Linear regression (OLS)</b></a>
   </div>
 </article>
 </main>
@@ -86,7 +169,11 @@
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsdrzg4" defer></script>
-<script src="../../assets/learn.js?v=mvsdrzg4" defer></script>
+<script src="../../assets/site.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/core.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/algos.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/models.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvse1hbt" defer></script>
+<script src="../../assets/learn.js?v=mvse1hbt" defer></script>
 </body>
 </html>

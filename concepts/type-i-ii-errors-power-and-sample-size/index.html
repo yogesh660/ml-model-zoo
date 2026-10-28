@@ -4,20 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#070709">
-<title>Type I/II errors, power and sample size (planned) · Learn · Yogesh Awate</title>
-<meta name="description" content="Type I/II errors, power and sample size: a planned lesson in the Statistics path.">
-<meta property="og:title" content="Type I/II errors, power and sample size (planned) · Learn · Yogesh Awate">
-<meta property="og:description" content="Type I/II errors, power and sample size: a planned lesson in the Statistics path.">
+<title>Type I/II Errors, Power and Sample Size · Learn · Yogesh Awate</title>
+<meta name="description" content="Master the trade-off between false alarms (Type I error) and missed detections (Type II error). Size experiments to guarantee adequate statistical power.">
+<meta property="og:title" content="Type I/II Errors, Power and Sample Size · Learn · Yogesh Awate">
+<meta property="og:description" content="Master the trade-off between false alarms (Type I error) and missed detections (Type II error). Size experiments to guarantee adequate statistical power.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsdrzg4">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsdrzg4">
+<link rel="stylesheet" href="../../assets/site.css?v=mvse1hbt">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvse1hbt">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 <script>document.documentElement.classList.add('js')</script>
 </head>
-<body class="page-lesson">
+<body class="page-lesson" data-lesson="type-i-ii-errors-power-and-sample-size">
 <a class="skip" href="#main">Skip to content</a>
 
 <nav id="nav">
@@ -39,31 +42,118 @@
   <header class="page-head lesson-head">
     <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
     <span class="tag rise" style="--d:2"><a href="../../#path-statistics">Path 02 · Statistics</a> / Hypothesis testing / Lesson 13 of 51</span>
-    <h1 class="case-title">Type I/II errors, power and sample size</h1>
-    <p class="lede rise" style="--d:3">This lesson is planned but not written yet. When it lands it will follow the same steps as the others: the idea in plain words, the maths, the trade-offs, code and a short quiz.</p>
+    <h1 class="case-title">Type I/II Errors, Power and Sample Size</h1>
+    <p class="lede rise" style="--d:3">Master the trade-off between false alarms (Type I error) and missed detections (Type II error). Size experiments to guarantee adequate statistical power.</p>
     <div class="lesson-meta rise" style="--d:4">
-      <span class="tagline">Planned</span><span class="tagline">Core</span>
+      <span class="tagline"><span class="lvl" data-l="2"><i><b></b></i>Intermediate</span></span>
+      <span class="tagline">18 min</span>
+      
+      <span class="prereq">Before this: <a href="../../concepts/hypothesis-testing-and-p-values/">Hypothesis Tests &amp; p-Values</a> <a href="../../concepts/sampling-and-standard-error/">Sampling &amp; standard error</a> <a href="../../concepts/confidence-intervals/">Confidence intervals</a></span>
     </div>
   </header>
+
   <div class="case-body lesson-body">
     <aside class="glance reveal">
       <h4>At a glance</h4>
       <dl>
-        <dt>Status</dt><dd>Planned</dd>
-        <dt>Path</dt><dd>Statistics · Hypothesis testing</dd>
-        <dt>Tier</dt><dd>Core: written in the first pass.</dd>
+          <dt>Path</dt><dd>Statistics · Hypothesis testing</dd>
+          <dt>Level</dt><dd>Intermediate</dd>
+          <dt>Used by</dt><dd>2 model lessons</dd>
       </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>Step by step</a></li><li><a href="#maths"><span>03</span>The maths</a></li><li><a href="#takeaways"><span>04</span>Key takeaways</a></li><li><a href="#code"><span>05</span>In code</a></li><li><a href="#quiz"><span>06</span>Check yourself</a></li><li><a href="#related"><span>07</span>Where it shows up</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
     </aside>
+
     <div class="story">
-      <section class="reveal" id="module">
-        <h2 class="h3"><span>01</span> In this module</h2>
-        <ol class="soon-list"><li><a href="../../concepts/hypothesis-testing-and-p-values/">Hypothesis testing and p-values</a><em>Planned</em></li><li class="here"><a href="../../concepts/type-i-ii-errors-power-and-sample-size/">Type I/II errors, power and sample size</a><em>Planned</em></li><li><a href="../../concepts/z-test-and-t-tests/">z-test and t-tests</a><em>Planned</em></li><li><a href="../../concepts/chi-square-tests/">Chi-square tests</a><em>Planned</em></li><li><a href="../../concepts/anova-and-post-hoc-tests/">ANOVA and post-hoc tests</a><em>Planned</em></li><li><a href="../../concepts/non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis/">Non-parametric tests: Mann–Whitney, Wilcoxon, Kruskal–Wallis</a><em>Planned</em></li><li><a href="../../concepts/normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling/">Normality tests: Shapiro–Wilk, Kolmogorov–Smirnov, Anderson–Darling</a><em>Planned</em></li><li><a href="../../concepts/multiple-testing-bonferroni-holm-benjamini-hochberg/">Multiple testing: Bonferroni, Holm, Benjamini–Hochberg</a><em>Planned</em></li><li><a href="../../concepts/effect-sizes-cohens-d-cramers-v/">Effect sizes: Cohen's d, Cramér's V</a><em>Planned</em></li><li><a href="../../concepts/permutation-tests/">Permutation tests</a><em>Planned</em></li><li><a href="../../concepts/likelihood-ratio-wald-and-score-tests/">Likelihood-ratio, Wald and score tests</a><em>Planned</em></li></ol>
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">Every statistical decision risks two fundamental mistakes: raising a false alarm when no effect exists (Type I error), or missing a genuine effect when one is present (Type II error). Statistical power measures a test's ability to detect true differences, and pre-experiment sample size planning guarantees that studies are neither underpowered nor wastefully oversized.</p>
+        <p>Think of a commercial smoke alarm system installed in an office. A Type I error ($\alpha$) is a false alarm: someone burns toast in the kitchen, triggering sirens and evacuating the entire building even though there is no actual blaze. A Type II error ($\beta$) is a missed detection: a genuine electrical fire starts in the server room, but the sensor fails to register the smoke. Statistical power ($1 - \beta$) is the system's true positive rate: the probability that the siren sounds given that a real fire has erupted.</p>
+        <p>Dialling up sensor sensitivity makes the alarm trigger at the faintest wisp of smoke, reducing missed detections (lowering $\beta$, boosting power) but causing more false alarms from routine cooking (increasing $\alpha$). Conversely, making the sensor less sensitive suppresses false alarms but leaves real fires undetected. In hypothesis testing, researchers fix the maximum acceptable false alarm rate in advance, typically setting $\alpha = 0.05$.</p>
+        <p>Once $\alpha$ is locked at 5%, how can an experimenter detect subtle effects without increasing false alarms? The only universal lever is collecting more data. Increasing sample size shrinks standard errors, sharpening the separation between the null and alternative distributions. For example, detecting a subtle uplift of Cohen's $d = 0.35$ with 80% power at $\alpha = 0.05$ requires exactly 129 participants per group. With only 30 participants per group, power plunges below 28%, meaning you are more than twice as likely to miss the true effect as to detect it.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Balancing Type I and Type II errors is like setting the sensitivity on an airport metal detector: tune it too high and every belt buckle triggers an inspection; tune it too low and contraband passes through unnoticed.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> Step by step</h2>
+        <ol class="steps"><li>Specify the significance threshold $\alpha$ (the maximum tolerable false positive rate, typically 0.05).</li><li>Determine the minimum detectable effect (MDE) $\delta$ that is commercially or scientifically worthwhile to discover.</li><li>Choose the desired statistical power $1 - \beta$ (typically 0.80 or 0.90, accepting a 10% to 20% risk of a false negative).</li><li>Estimate baseline variance $\sigma^2$ from historical records or an exploratory pilot sample.</li><li>Calculate the required per-group sample size $n$ using the analytical power equation prior to collecting any live data.</li><li>Run the experiment to the full calculated sample size without early stopping or opportunistic peeking.</li></ol>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>03</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>The Decision Matrix and Error Probabilities</h3><div class="formula">$$\alpha = P(\text{Reject } H_0 \mid H_0 \text{ true}), \qquad \beta = P(\text{Fail to reject } H_0 \mid H_1 \text{ true})$$</div><p>Type I error ($\alpha$, false positive rate) occurs when we reject a true null hypothesis. Type II error ($\beta$, false negative rate) occurs when we fail to reject a false null hypothesis. Statistical power is defined as the complement $1 - \beta = P(\text{Reject } H_0 \mid H_1 \text{ true})$, which corresponds to sensitivity or recall in binary classification.</p></li>
+          <li><h3>Two-Sample Mean Sample Size Formula</h3><div class="formula">$$n = \frac{2\left(z_{1 - \alpha/2} + z_{1 - \beta}\right)^2 \sigma^2}{\delta^2}$$</div><p>For a two-sample $z$-test comparing means with common variance $\sigma^2$ and true difference $\delta = |\mu_1 - \mu_2|$, the required sample size per group $n$ scales with the squared critical normal quantiles. At $\alpha = 0.05$ ($z_{0.975} \approx 1.960$) and 80% power ($z_{0.80} \approx 0.842$), the numerator multiplier $(1.960 + 0.842)^2 \approx 7.85$.</p></li>
+          <li><h3>Standardised Effect Size (Cohen's d)</h3><div class="formula">$$d = \frac{|\mu_1 - \mu_2|}{\sigma} \implies n \approx \frac{2\left(z_{1 - \alpha/2} + z_{1 - \beta}\right)^2}{d^2}$$</div><p>Cohen's $d$ expresses the effect size in units of standard deviations. Because $n$ is inversely proportional to $d^2$, detecting an effect half as large requires four times as many observations per group. Sizing studies to detect tiny effects without adequate sample sizes guarantees severe underpowering.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="takeaways">
+        <h2 class="h3"><span>04</span> Key takeaways</h2>
+        <div class="box use"><ul><li>Statistical power depends on four interconnected parameters: significance level $\alpha$, sample size $n$, effect size $\delta$, and population variance $\sigma^2$.</li><li>Required sample size scales inversely with the square of effect size: halving the target effect quadruples the required sample size.</li><li>Underpowered studies suffer from the winner's curse: when a small study does reach significance, its estimated effect size is substantially exaggerated.</li><li>Never compute retrospective or post-hoc power using observed p-values; power is an essential pre-experiment design tool, not an after-the-fact diagnostic.</li></ul></div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>05</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> scipy.stats <span class="k">as</span> stats
+
+<span class="c"># Required sample size for two-sample test (Cohen's d = 0.35)</span>
+alpha = <span class="n">0.05</span>
+target_power = <span class="n">0.80</span>
+d = <span class="n">0.35</span>
+
+z_alpha = stats.norm.<span class="f">ppf</span>(<span class="n">1.0</span> - alpha / <span class="n">2.0</span>)  <span class="c"># ~1.960</span>
+z_beta = stats.norm.<span class="f">ppf</span>(target_power)         <span class="c"># ~0.842</span>
+n_required = <span class="f">int</span>(np.<span class="f">ceil</span>(<span class="n">2.0</span> * ((z_alpha + z_beta) / d) ** <span class="n">2</span>))
+
+<span class="c"># Verify statistical power through Monte Carlo simulation</span>
+rng = np.random.<span class="f">default_rng</span>(<span class="n">42</span>)
+n_simulations = <span class="n">2000</span>
+group_a = rng.<span class="f">normal</span>(loc=<span class="n">0.0</span>, scale=<span class="n">1.0</span>, size=(n_simulations, n_required))
+group_b = rng.<span class="f">normal</span>(loc=d, scale=<span class="n">1.0</span>, size=(n_simulations, n_required))
+
+<span class="c"># Independent two-sample t-tests across all simulated trials</span>
+_, p_values = stats.<span class="f">ttest_ind</span>(group_b, group_a, axis=<span class="n">1</span>)
+empirical_power = <span class="f">float</span>(np.<span class="f">mean</span>(p_values &lt; alpha))
+
+<span class="k">print</span>(<span class="s">f&quot;Cohen's d: {d}, alpha: {alpha}, target power: {target_power}&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;Required sample size per group: {n_required}&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;Empirical power ({n_simulations} trials): {empirical_power:.3f}&quot;</span>)</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Interpreting a non-significant result ($p &gt; 0.05$) in an underpowered study as evidence of "no difference", when the study was simply blind to realistic effect sizes.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>The winner's curse: deploying an algorithm or feature based on a tiny significant pilot test, only to discover performance collapses in production.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Continuous peeking: repeatedly checking p-values as users arrive and stopping the test the moment $p &lt; 0.05$, which multiplies the true Type I error rate substantially above $\alpha$.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Confusing statistical power with sample representativeness: a huge sample size provides high power to detect differences, but cannot fix selection bias.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>06</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="1">
+            <p><span>Q1</span>In hypothesis testing, what constitutes a Type II error ($\beta$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Rejecting the null hypothesis when the null hypothesis is true</span></button><button class="opt" type="button"><b>B</b><span>Failing to reject the null hypothesis when the alternative hypothesis is true</span></button><button class="opt" type="button"><b>C</b><span>Choosing a significance threshold $\alpha$ that is too conservative</span></button><button class="opt" type="button"><b>D</b><span>Calculating a p-value using the wrong test statistic</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Type II error is a false negative: failing to reject $H_0$ despite a real effect existing in the underlying population.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q2</span>If you want to detect an effect size half as large as in a previous study (e.g. $d = 0.20$ instead of $0.40$) while keeping $\alpha$ and power constant, how does the required sample size change?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It doubles ($2\times$)</span></button><button class="opt" type="button"><b>B</b><span>It quadruples ($4\times$)</span></button><button class="opt" type="button"><b>C</b><span>It increases by $\sqrt{2}\approx 1.41\times$</span></button><button class="opt" type="button"><b>D</b><span>It remains unchanged</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because the required sample size is proportional to $1/d^2$, halving the effect size ($d \to d/2$) multiplies the required sample size by $(2)^2 = 4$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>What is the primary danger of the "winner's curse" in severely underpowered experiments?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Significant results from small studies systematically overestimate the true magnitude of the effect</span></button><button class="opt" type="button"><b>B</b><span>The Type I error rate drops to zero</span></button><button class="opt" type="button"><b>C</b><span>p-values become completely impossible to calculate</span></button><button class="opt" type="button"><b>D</b><span>Computations take excessive time to converge</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When power is low, only sample estimates that randomly overshoot the true mean by a huge margin cross the significance threshold, leading to severe upward bias in published effect estimates.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q4</span>How does continuous data peeking (checking p-values after every observation and stopping when $p &lt; 0.05$) affect the experiment?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It improves statistical power without affecting Type I error</span></button><button class="opt" type="button"><b>B</b><span>It drastically inflates the actual Type I error rate far above the nominal 5% level</span></button><button class="opt" type="button"><b>C</b><span>It reduces the required sample size with zero statistical penalty</span></button><button class="opt" type="button"><b>D</b><span>It converts a two-sided test into a paired t-test</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Repeatedly testing accumulating data provides multiple opportunities for random noise to cross the threshold, inflating false positive rates well beyond nominal $\alpha$.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>07</span> Where it shows up</h2>
+        <div class="related"><a href="../../concepts/z-test-and-t-tests/"><small class="kicker">Concept</small><b>z-Test and Student's t-Tests</b></a><a href="../../concepts/chi-square-tests/"><small class="kicker">Concept</small><b>Chi-Square Tests</b></a><a href="../../concepts/confusion-matrix/"><small class="kicker">Concept</small><b>Confusion matrix</b></a><a href="../../concepts/precision-recall-f1/"><small class="kicker">Concept</small><b>Precision, recall &amp; F1</b></a></div>
       </section>
     </div>
   </div>
+
   <div class="pager" role="navigation" aria-label="Previous and next lesson">
-    <a href="../../concepts/hypothesis-testing-and-p-values/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Statistics</small><b>Hypothesis testing and p-values</b></a>
-    <a class="pager-next" href="../../concepts/z-test-and-t-tests/"><small>Next · Statistics <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>z-test and t-tests</b></a>
+    <a href="../../concepts/hypothesis-testing-and-p-values/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Statistics</small><b>Hypothesis Tests &amp; p-Values</b></a>
+    <a class="pager-next" href="../../concepts/z-test-and-t-tests/"><small>Next · Statistics <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>z-Test and Student's t-Tests</b></a>
   </div>
 </article>
 </main>
@@ -86,7 +176,11 @@
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsdrzg4" defer></script>
-<script src="../../assets/learn.js?v=mvsdrzg4" defer></script>
+<script src="../../assets/site.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/core.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/algos.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/models.js?v=mvse1hbt" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvse1hbt" defer></script>
+<script src="../../assets/learn.js?v=mvse1hbt" defer></script>
 </body>
 </html>

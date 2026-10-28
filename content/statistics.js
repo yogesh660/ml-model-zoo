@@ -840,4 +840,509 @@ print(f"95% Percentile CI: [{ci_lower:.2f}, {ci_upper:.2f}]")`,
     related: ['cross-validation', 'bias-variance-tradeoff'],
     keywords: 'bootstrap jackknife resampling replacement out-of-bag oob non-parametric percentile',
   },
+  {
+    id: 'hypothesis-testing-and-p-values',
+    short: 'Hypothesis Tests & p-Values',
+    title: r`Hypothesis Testing and p-Values`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Establish null and alternative hypotheses, choose test statistics, and compute p-values to make principled scientific decisions under uncertainty.`,
+    lead: r`Hypothesis testing formalises empirical decision-making by evaluating whether observed data can be credibly explained by pure random chance. The p-value quantifies how extreme the observed evidence is under an assumed null hypothesis, providing an objective benchmark for rejecting baseline models.`,
+    intuition: [
+      r`Suppose an online store tests a checkout redesign intended to improve purchase completion above the historic 10% rate. In a test run of 500 shoppers using the new design, 65 complete their orders (13.0%). Is this 3 percentage point uplift genuine evidence that the new checkout converts better, or could it easily be a streak of good luck from 500 random customer decisions?`,
+      r`Hypothesis testing tackles this by adopting a sceptical devil's advocate stance known as the null hypothesis ($H_0$): assume the redesign made no difference and the true conversion probability remains exactly 10%, giving an expected count of 50 purchasers. We then construct the sampling distribution of outcomes that pure chance would generate under $H_0$ and ask: how likely is it to see 65 or more purchasers purely by random sampling noise?`,
+      r`Using the standard normal approximation with standard error $\sqrt{0.10 \times 0.90 / 500} \approx 0.0134$, an observed 13% rate sits $2.236$ standard errors above expectation. Under the null hypothesis, obtaining an outcome at least this extreme in either direction occurs with a probability of approximately 0.0253 (a p-value of 2.53%). Because this p-value falls below our pre-established significance threshold of 5% ($\alpha = 0.05$), we reject the null hypothesis and conclude that the conversion increase is statistically significant.`,
+    ],
+    analogy: r`A hypothesis test operates like a criminal trial: the defendant is presumed innocent (null hypothesis) until the prosecution presents evidence so improbable under innocence that guilt is established beyond reasonable doubt (the significance threshold $\alpha$).`,
+    steps: [
+      r`State the null hypothesis $H_0$ (baseline equality or absence of effect) and the alternative hypothesis $H_1$ (presence of an effect or difference).`,
+      r`Choose a significance threshold $\alpha$ (conventionally 0.05 or 0.01) before inspecting or collecting the experimental data.`,
+      r`Select an appropriate test statistic $T$ whose exact or asymptotic sampling distribution is known when $H_0$ is true.`,
+      r`Compute the observed test statistic $t_{\text{obs}}$ from the collected sample data.`,
+      r`Calculate the p-value: the probability under the null distribution of obtaining a test statistic at least as extreme as $t_{\text{obs}}$.`,
+      r`Make a formal decision: if $p \le \alpha$, reject $H_0$ in favour of $H_1$; if $p > \alpha$, fail to reject $H_0$.`,
+    ],
+    math: [
+      {
+        h: 'Null and Alternative Hypotheses',
+        tex: r`$$H_0: \theta = \theta_0 \quad \text{versus} \quad H_1: \theta \ne \theta_0 \quad (\text{or } H_1: \theta > \theta_0)$$`,
+        p: r`Here $\theta$ denotes the true population parameter and $\theta_0$ is the baseline null value. A two-sided alternative ($H_1: \theta \ne \theta_0$) tests for departures in either direction, whereas a one-sided alternative ($H_1: \theta > \theta_0$ or $\theta < \theta_0$) concentrates statistical power entirely on one pre-specified direction. One-sided tests must be justified on rigorous theoretical grounds prior to seeing the data.`,
+      },
+      {
+        h: 'The p-Value Definition',
+        tex: r`$$p = P(T(\mathbf{X}) \ge t_{\text{obs}} \mid H_0) \quad \text{or} \quad p = 2 \cdot \min\left(P(T \ge t_{\text{obs}} \mid H_0), \, P(T \le t_{\text{obs}} \mid H_0)\right)$$`,
+        p: r`The p-value is the conditional probability of obtaining a test statistic $T(\mathbf{X})$ at least as contradictory to $H_0$ as the observed value $t_{\text{obs}}$, calculated assuming $H_0$ is true. For symmetric distributions, a two-sided p-value doubles the one-sided tail probability. Crucially, the p-value is $P(\text{data} \mid H_0)$, not the posterior probability $P(H_0 \mid \text{data})$ of the hypothesis being true.`,
+      },
+      {
+        h: 'Uniformity under the Null',
+        tex: r`$$p \sim \text{Uniform}(0, 1) \quad \text{when } H_0 \text{ holds}$$`,
+        p: r`When the null hypothesis is true and the test statistic is continuous with cumulative distribution function $F_0$, the probability integral transform ensures that the p-value is uniformly distributed across the interval $[0, 1]$. Consequently, the probability of falsely rejecting a true null hypothesis at threshold $\alpha$ is identically $P(p \le \alpha \mid H_0) = \alpha$.`,
+      },
+    ],
+    keyPoints: [
+      r`The p-value measures compatibility between observed data and the null model; it is never the probability that the null hypothesis is true.`,
+      r`Statistical significance is not practical significance: massive datasets make negligible, irrelevant differences yield $p < 0.001$.`,
+      r`The decision threshold $\alpha$ must be fixed strictly in advance of data collection to prevent post-hoc rationalisation.`,
+      r`Failing to reject the null hypothesis does not prove the null is true; absence of evidence is not evidence of absence.`,
+    ],
+    pitfalls: [
+      r`The prosecutor's fallacy: treating $p = 0.02$ as a 2% probability that the null hypothesis is correct. Inverting conditional probabilities requires Bayes' theorem and prior odds.`,
+      r`Data dredging and p-hacking: testing dozens of subgroup combinations or stopping data collection early as soon as $p < 0.05$ emerges.`,
+      r`Treating $\alpha = 0.05$ as an ontological cliff: interpreting $p = 0.049$ as scientific truth and $p = 0.051$ as complete absence of an effect.`,
+      r`Reporting p-values without confidence intervals or effect sizes, hiding whether an effect is commercially or scientifically meaningful.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Test whether new checkout conversion exceeds historic 10%
+n = 500
+p0 = 0.10
+observed_conversions = 65
+p_hat = observed_conversions / n
+
+# Standard error under the null hypothesis H0
+se_null = np.sqrt(p0 * (1.0 - p0) / n)
+z_stat = (p_hat - p0) / se_null
+
+# Two-sided p-value from standard normal distribution
+p_value = 2.0 * (1.0 - stats.norm.cdf(abs(z_stat)))
+alpha = 0.05
+
+print(f"Observed rate: {p_hat:.1%} (n={n})")
+print(f"z-statistic: {z_stat:.3f}")
+print(f"p-value: {p_value:.4f}")
+print(f"Decision at alpha={alpha}: {'Reject H0' if p_value <= alpha else 'Fail to reject H0'}")`,
+    quiz: [
+      {
+        q: r`What does a p-value of 0.03 strictly mean in an experimental hypothesis test?`,
+        o: [
+          r`There is a 3% probability that the null hypothesis is true`,
+          r`If the null hypothesis were true, there is a 3% probability of observing data at least as extreme as the actual result`,
+          r`There is a 97% probability that the experimental intervention is effective`,
+          r`The experiment has an error rate of 3% across repeated trials`,
+        ],
+        a: 1,
+        why: r`The p-value is the conditional probability $P(\text{data as or more extreme} \mid H_0)$. It says nothing about $P(H_0 \mid \text{data})$ without specifying prior probabilities via Bayes' theorem.`,
+      },
+      {
+        q: r`Why does collecting an enormous sample size (e.g. $n = 1,000,000$) create a challenge for interpreting p-values?`,
+        o: [
+          r`Standard errors expand, making p-values unreliable`,
+          r`The central limit theorem ceases to apply`,
+          r`Tiny, practically meaningless differences between groups become statistically significant with $p < 0.001$`,
+          r`The test statistic no longer follows its theoretical null distribution`,
+        ],
+        a: 2,
+        why: r`Standard error shrinks as $1/\sqrt{n}$. With millions of observations, trivial deviations with zero practical importance easily generate massive test statistics and tiny p-values.`,
+      },
+      {
+        q: r`If an analyst carries out a hypothesis test at $\alpha = 0.05$ and finds $p = 0.22$, which conclusion is formally valid?`,
+        o: [
+          r`The null hypothesis is proven true`,
+          r`The sample data provides insufficient evidence to reject the null hypothesis at the 5% level`,
+          r`The probability that the alternative hypothesis is true is 0.22`,
+          r`The test should be switched to a one-sided test to achieve significance`,
+        ],
+        a: 1,
+        why: r`Failing to reject $H_0$ means the observed data is reasonably consistent with chance; it never proves the null hypothesis holds true.`,
+      },
+      {
+        q: r`Under the null hypothesis for a continuous test statistic, what probability distribution does the p-value follow?`,
+        o: [
+          r`Standard normal distribution $\mathcal{N}(0, 1)$`,
+          r`Student's $t$-distribution with $n-1$ degrees of freedom`,
+          r`Uniform distribution on $[0, 1]$`,
+          r`Exponential distribution with parameter $\lambda = 1$`,
+        ],
+        a: 2,
+        why: r`By the probability integral transform, any continuous random variable transformed by its own cumulative distribution function follows $\text{Uniform}(0, 1)$. Hence $P(p \le \alpha \mid H_0) = \alpha$.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'logistic_regression'],
+    prereq: ['random-variables-and-distributions', 'sampling-and-standard-error', 'confidence-intervals'],
+    related: ['type-i-ii-errors-power-and-sample-size', 'z-test-and-t-tests', 'chi-square-tests'],
+    keywords: 'hypothesis testing p-value null hypothesis alternative test statistic significance alpha level two-sided one-sided',
+  },
+  {
+    id: 'type-i-ii-errors-power-and-sample-size',
+    short: 'Errors, Power and Sample Size',
+    title: r`Type I/II Errors, Power and Sample Size`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Master the trade-off between false alarms (Type I error) and missed detections (Type II error). Size experiments to guarantee adequate statistical power.`,
+    lead: r`Every statistical decision risks two fundamental mistakes: raising a false alarm when no effect exists (Type I error), or missing a genuine effect when one is present (Type II error). Statistical power measures a test's ability to detect true differences, and pre-experiment sample size planning guarantees that studies are neither underpowered nor wastefully oversized.`,
+    intuition: [
+      r`Think of a commercial smoke alarm system installed in an office. A Type I error ($\alpha$) is a false alarm: someone burns toast in the kitchen, triggering sirens and evacuating the entire building even though there is no actual blaze. A Type II error ($\beta$) is a missed detection: a genuine electrical fire starts in the server room, but the sensor fails to register the smoke. Statistical power ($1 - \beta$) is the system's true positive rate: the probability that the siren sounds given that a real fire has erupted.`,
+      r`Dialling up sensor sensitivity makes the alarm trigger at the faintest wisp of smoke, reducing missed detections (lowering $\beta$, boosting power) but causing more false alarms from routine cooking (increasing $\alpha$). Conversely, making the sensor less sensitive suppresses false alarms but leaves real fires undetected. In hypothesis testing, researchers fix the maximum acceptable false alarm rate in advance, typically setting $\alpha = 0.05$.`,
+      r`Once $\alpha$ is locked at 5%, how can an experimenter detect subtle effects without increasing false alarms? The only universal lever is collecting more data. Increasing sample size shrinks standard errors, sharpening the separation between the null and alternative distributions. For example, detecting a subtle uplift of Cohen's $d = 0.35$ with 80% power at $\alpha = 0.05$ requires exactly 129 participants per group. With only 30 participants per group, power plunges below 28%, meaning you are more than twice as likely to miss the true effect as to detect it.`,
+    ],
+    analogy: r`Balancing Type I and Type II errors is like setting the sensitivity on an airport metal detector: tune it too high and every belt buckle triggers an inspection; tune it too low and contraband passes through unnoticed.`,
+    steps: [
+      r`Specify the significance threshold $\alpha$ (the maximum tolerable false positive rate, typically 0.05).`,
+      r`Determine the minimum detectable effect (MDE) $\delta$ that is commercially or scientifically worthwhile to discover.`,
+      r`Choose the desired statistical power $1 - \beta$ (typically 0.80 or 0.90, accepting a 10% to 20% risk of a false negative).`,
+      r`Estimate baseline variance $\sigma^2$ from historical records or an exploratory pilot sample.`,
+      r`Calculate the required per-group sample size $n$ using the analytical power equation prior to collecting any live data.`,
+      r`Run the experiment to the full calculated sample size without early stopping or opportunistic peeking.`,
+    ],
+    math: [
+      {
+        h: 'The Decision Matrix and Error Probabilities',
+        tex: r`$$\alpha = P(\text{Reject } H_0 \mid H_0 \text{ true}), \qquad \beta = P(\text{Fail to reject } H_0 \mid H_1 \text{ true})$$`,
+        p: r`Type I error ($\alpha$, false positive rate) occurs when we reject a true null hypothesis. Type II error ($\beta$, false negative rate) occurs when we fail to reject a false null hypothesis. Statistical power is defined as the complement $1 - \beta = P(\text{Reject } H_0 \mid H_1 \text{ true})$, which corresponds to sensitivity or recall in binary classification.`,
+      },
+      {
+        h: 'Two-Sample Mean Sample Size Formula',
+        tex: r`$$n = \frac{2\left(z_{1 - \alpha/2} + z_{1 - \beta}\right)^2 \sigma^2}{\delta^2}$$`,
+        p: r`For a two-sample $z$-test comparing means with common variance $\sigma^2$ and true difference $\delta = |\mu_1 - \mu_2|$, the required sample size per group $n$ scales with the squared critical normal quantiles. At $\alpha = 0.05$ ($z_{0.975} \approx 1.960$) and 80% power ($z_{0.80} \approx 0.842$), the numerator multiplier $(1.960 + 0.842)^2 \approx 7.85$.`,
+      },
+      {
+        h: 'Standardised Effect Size (Cohen\'s d)',
+        tex: r`$$d = \frac{|\mu_1 - \mu_2|}{\sigma} \implies n \approx \frac{2\left(z_{1 - \alpha/2} + z_{1 - \beta}\right)^2}{d^2}$$`,
+        p: r`Cohen's $d$ expresses the effect size in units of standard deviations. Because $n$ is inversely proportional to $d^2$, detecting an effect half as large requires four times as many observations per group. Sizing studies to detect tiny effects without adequate sample sizes guarantees severe underpowering.`,
+      },
+    ],
+    keyPoints: [
+      r`Statistical power depends on four interconnected parameters: significance level $\alpha$, sample size $n$, effect size $\delta$, and population variance $\sigma^2$.`,
+      r`Required sample size scales inversely with the square of effect size: halving the target effect quadruples the required sample size.`,
+      r`Underpowered studies suffer from the winner's curse: when a small study does reach significance, its estimated effect size is substantially exaggerated.`,
+      r`Never compute retrospective or post-hoc power using observed p-values; power is an essential pre-experiment design tool, not an after-the-fact diagnostic.`,
+    ],
+    pitfalls: [
+      r`Interpreting a non-significant result ($p > 0.05$) in an underpowered study as evidence of "no difference", when the study was simply blind to realistic effect sizes.`,
+      r`The winner's curse: deploying an algorithm or feature based on a tiny significant pilot test, only to discover performance collapses in production.`,
+      r`Continuous peeking: repeatedly checking p-values as users arrive and stopping the test the moment $p < 0.05$, which multiplies the true Type I error rate substantially above $\alpha$.`,
+      r`Confusing statistical power with sample representativeness: a huge sample size provides high power to detect differences, but cannot fix selection bias.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Required sample size for two-sample test (Cohen's d = 0.35)
+alpha = 0.05
+target_power = 0.80
+d = 0.35
+
+z_alpha = stats.norm.ppf(1.0 - alpha / 2.0)  # ~1.960
+z_beta = stats.norm.ppf(target_power)         # ~0.842
+n_required = int(np.ceil(2.0 * ((z_alpha + z_beta) / d) ** 2))
+
+# Verify statistical power through Monte Carlo simulation
+rng = np.random.default_rng(42)
+n_simulations = 2000
+group_a = rng.normal(loc=0.0, scale=1.0, size=(n_simulations, n_required))
+group_b = rng.normal(loc=d, scale=1.0, size=(n_simulations, n_required))
+
+# Independent two-sample t-tests across all simulated trials
+_, p_values = stats.ttest_ind(group_b, group_a, axis=1)
+empirical_power = float(np.mean(p_values < alpha))
+
+print(f"Cohen's d: {d}, alpha: {alpha}, target power: {target_power}")
+print(f"Required sample size per group: {n_required}")
+print(f"Empirical power ({n_simulations} trials): {empirical_power:.3f}")`,
+    quiz: [
+      {
+        q: r`In hypothesis testing, what constitutes a Type II error ($\beta$)?`,
+        o: [
+          r`Rejecting the null hypothesis when the null hypothesis is true`,
+          r`Failing to reject the null hypothesis when the alternative hypothesis is true`,
+          r`Choosing a significance threshold $\alpha$ that is too conservative`,
+          r`Calculating a p-value using the wrong test statistic`,
+        ],
+        a: 1,
+        why: r`Type II error is a false negative: failing to reject $H_0$ despite a real effect existing in the underlying population.`,
+      },
+      {
+        q: r`If you want to detect an effect size half as large as in a previous study (e.g. $d = 0.20$ instead of $0.40$) while keeping $\alpha$ and power constant, how does the required sample size change?`,
+        o: [
+          r`It doubles ($2\times$)`,
+          r`It quadruples ($4\times$)`,
+          r`It increases by $\sqrt{2}\approx 1.41\times$`,
+          r`It remains unchanged`,
+        ],
+        a: 1,
+        why: r`Because the required sample size is proportional to $1/d^2$, halving the effect size ($d \to d/2$) multiplies the required sample size by $(2)^2 = 4$.`,
+      },
+      {
+        q: r`What is the primary danger of the "winner's curse" in severely underpowered experiments?`,
+        o: [
+          r`Significant results from small studies systematically overestimate the true magnitude of the effect`,
+          r`The Type I error rate drops to zero`,
+          r`p-values become completely impossible to calculate`,
+          r`Computations take excessive time to converge`,
+        ],
+        a: 0,
+        why: r`When power is low, only sample estimates that randomly overshoot the true mean by a huge margin cross the significance threshold, leading to severe upward bias in published effect estimates.`,
+      },
+      {
+        q: r`How does continuous data peeking (checking p-values after every observation and stopping when $p < 0.05$) affect the experiment?`,
+        o: [
+          r`It improves statistical power without affecting Type I error`,
+          r`It drastically inflates the actual Type I error rate far above the nominal 5% level`,
+          r`It reduces the required sample size with zero statistical penalty`,
+          r`It converts a two-sided test into a paired t-test`,
+        ],
+        a: 1,
+        why: r`Repeatedly testing accumulating data provides multiple opportunities for random noise to cross the threshold, inflating false positive rates well beyond nominal $\alpha$.`,
+      },
+    ],
+    usedBy: ['confusion-matrix', 'precision-recall-f1'],
+    prereq: ['hypothesis-testing-and-p-values', 'sampling-and-standard-error', 'confidence-intervals'],
+    related: ['z-test-and-t-tests', 'chi-square-tests', 'confusion-matrix'],
+    keywords: 'type i error type ii error statistical power sample size beta alpha false positive false negative mde cohens d winners curse',
+  },
+  {
+    id: 'z-test-and-t-tests',
+    short: 'z-Test and Student\'s t-Tests',
+    title: r`z-Test and t-Tests`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Compare population means against benchmarks or between independent and paired groups using normal z-tests and Student's and Welch's t-tests.`,
+    lead: r`When testing hypotheses about population means, the choice of test statistic hinges on whether population variance is known and whether sample sizes justify asymptotic normal approximations. The z-test applies when variance is known or sample sizes are large, whereas Student's and Welch's t-tests account for the extra uncertainty of estimating variance from small samples.`,
+    intuition: [
+      r`Imagine an engineering team modifies a database query engine to reduce latency below the historic benchmark of 120 ms. They benchmark 25 query runs and record a sample mean latency of 112 ms with a sample standard deviation $s = 15$ ms. Is this 8 ms reduction convincing evidence of improvement, or could it be routine variance in server load?`,
+      r`If we knew with absolute certainty from millions of historic runs that the true population standard deviation was $\sigma = 15$ ms, the standard error would be exactly $\sigma / \sqrt{25} = 3.0$ ms. The standard score would be $z = (112 - 120) / 3.0 = -2.67$, giving a two-sided p-value of approximately 0.0076 under the standard normal distribution.`,
+      r`However, in realistic settings we do not know the true $\sigma$; we must estimate it using $s$ from the very same 25 queries. When William Gosset analysed this problem at the Guinness Brewery in 1908 (publishing under the pen name "Student"), he proved that dividing by an estimated $s$ inflates sampling variability. The resulting $t$-distribution has heavier tails than the normal curve. For 24 degrees of freedom, $t = -2.67$ yields a p-value of approximately 0.0134—nearly double the normal p-value! Relying naively on a $z$-test when $s$ is estimated causes overconfidence and elevated false alarms.`,
+    ],
+    analogy: r`Using a normal z-test when you only have sample variance s is like driving at top speed on a foggy morning: it assumes clarity where there is hidden uncertainty, which the t-distribution's heavier tails properly account for.`,
+    steps: [
+      r`Determine the test design: one-sample (mean vs standard), two-sample independent (group A vs group B), or paired (repeated measures on the same subjects).`,
+      r`Verify assumptions: continuous data, random independent sampling, and approximate normality of sample means (guaranteed by CLT for $n \ge 30$).`,
+      r`If population standard deviation $\sigma$ is known, compute the $z$-statistic; if estimated via $s$, compute the $t$-statistic.`,
+      r`For two independent groups, adopt Welch's $t$-test by default to guard against unequal variances ($\sigma_1^2 \ne \sigma_2^2$).`,
+      r`For paired observations, compute unit-level differences $D_i = X_{1,i} - X_{2,i}$ and perform a one-sample $t$-test on the differences.`,
+      r`Evaluate the p-value against degrees of freedom $\nu$ and decide whether to reject the null hypothesis at threshold $\alpha$.`,
+    ],
+    math: [
+      {
+        h: 'One-Sample z-Statistic and Student\'s t-Statistic',
+        tex: r`$$z = \frac{\bar{X} - \mu_0}{\sigma / \sqrt{n}} \sim \mathcal{N}(0, 1), \qquad t = \frac{\bar{X} - \mu_0}{s / \sqrt{n}} \sim t(n - 1)$$`,
+        p: r`Here $\bar{X}$ is the sample mean, $\mu_0$ is the hypothesised benchmark, $\sigma$ is the known population standard deviation, and $s = \sqrt{\frac{1}{n-1}\sum (X_i - \bar{X})^2}$ is the sample standard deviation. Gosset's $t$-statistic follows Student's $t$-distribution with $\nu = n - 1$ degrees of freedom, converging to $\mathcal{N}(0, 1)$ as $n \to \infty$.`,
+      },
+      {
+        h: 'Welch\'s Two-Sample t-Test (Unequal Variances)',
+        tex: r`$$t = \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}, \qquad \nu \approx \frac{\left(\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}\right)^2}{\frac{(s_1^2 / n_1)^2}{n_1 - 1} + \frac{(s_2^2 / n_2)^2}{n_2 - 1}}$$`,
+        p: r`Welch's $t$-test compares two independent group means without assuming equal population variances ($\sigma_1^2 = \sigma_2^2$). The Welch–Satterthwaite equation approximates the effective degrees of freedom $\nu$. Welch's test maintains robust Type I error control under heteroscedasticity where Student's pooled $t$-test breaks down.`,
+      },
+      {
+        h: 'Paired t-Test for Dependent Samples',
+        tex: r`$$D_i = X_{1,i} - X_{2,i}, \qquad t = \frac{\bar{D} - 0}{s_D / \sqrt{n}} \sim t(n - 1)$$`,
+        p: r`For matched pairs or repeated measures (such as pre- and post-treatment values for the same users), between-subject variability is removed by taking differences $D_i$. Here $\bar{D}$ is the average difference and $s_D$ is the sample standard deviation of differences. Subtracting out subject baseline variation dramatically increases statistical power.`,
+      },
+    ],
+    keyPoints: [
+      r`Gosset's $t$-distribution accounts for the joint uncertainty of estimating both the population mean $\mu$ and population standard deviation $\sigma$.`,
+      r`Always prefer Welch's $t$-test over Student's pooled $t$-test for two independent samples; testing for equality of variances first creates pre-test bias.`,
+      r`Paired $t$-tests eliminate subject-to-subject variability by analysing intra-subject differences, providing far greater statistical power for matched cohorts.`,
+      r`Thanks to the central limit theorem, $t$-tests are remarkably robust to non-normal data once sample sizes exceed roughly 30 observations per group.`,
+    ],
+    pitfalls: [
+      r`Applying an independent two-sample $t$-test to paired or before-and-after data, throwing away subject pairing and crippling statistical power.`,
+      r`Using Student's pooled $t$-test when group sample sizes and variances are unequal, which severely inflates the false positive rate.`,
+      r`Running a $t$-test on small samples ($n < 20$) with extreme skewness or severe outliers where the sample mean is not approximately normal.`,
+      r`Using a $z$-test when sample size is small and $\sigma$ is estimated from the sample, producing falsely narrow confidence bounds and deflated p-values.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n_users = 30
+
+# Paired experiment: latency before and after database indexing
+pre_latency = rng.normal(loc=72.0, scale=8.0, size=n_users)
+# Each user improves by ~3.5 ms, plus individual variation
+post_latency = pre_latency - rng.normal(loc=3.5, scale=4.0, size=n_users)
+
+# 1. Paired t-test (correct: accounts for within-subject correlation)
+t_pair, p_pair = stats.ttest_rel(pre_latency, post_latency)
+
+# 2. Independent Welch t-test (incorrect: ignores pairing)
+t_welch, p_welch = stats.ttest_ind(pre_latency, post_latency, equal_var=False)
+
+mean_improvement = float(np.mean(pre_latency - post_latency))
+print(f"Mean improvement: {mean_improvement:.2f} ms")
+print(f"Paired t-test:    t={t_pair:.3f}, p-value={p_pair:.4e}")
+print(f"Welch t-test:     t={t_welch:.3f}, p-value={p_welch:.4f}")`,
+    quiz: [
+      {
+        q: r`Why does Student's $t$-distribution have heavier tails than the standard normal distribution?`,
+        o: [
+          r`Because data points in small samples are inherently non-normal`,
+          r`Because estimating the unknown population variance with the sample variance introduces additional random variability into the denominator`,
+          r`Because the degrees of freedom increase the variance of the numerator`,
+          r`Because Student's test assumes an exponential distribution`,
+        ],
+        a: 1,
+        why: r`The sample standard deviation $s$ fluctuates from sample to sample. Dividing the sample mean by a random denominator fattens the tails of the test statistic distribution.`,
+      },
+      {
+        q: r`When comparing means between two independent groups of different sizes, why is Welch's $t$-test preferred over Student's pooled $t$-test?`,
+        o: [
+          r`Welch's test does not require the assumption of equal population variances ($\sigma_1^2 = \sigma_2^2$)`,
+          r`Welch's test always produces a smaller p-value`,
+          r`Welch's test works on categorical data`,
+          r`Welch's test eliminates the need for random sampling`,
+        ],
+        a: 0,
+        why: r`Student's pooled test assumes homoscedasticity ($\sigma_1^2 = \sigma_2^2$). When variances differ and group sizes are unequal, the pooled test has severely distorted Type I error rates. Welch's test does not require equal variances.`,
+      },
+      {
+        q: r`In an experiment where 40 users complete tasks using Interface A and then Interface B, which test is appropriate to compare task completion times?`,
+        o: [
+          r`One-sample z-test`,
+          r`Independent two-sample Welch t-test`,
+          r`Paired t-test on the difference scores for each user`,
+          r`Chi-square goodness-of-fit test`,
+        ],
+        a: 2,
+        why: r`Because the same 40 users were tested under both conditions, observations are paired. Taking within-user differences removes user-to-user variability and isolates the interface effect.`,
+      },
+      {
+        q: r`As the degrees of freedom $\nu$ in Student's $t$-distribution approach infinity ($\nu \to \infty$), what does the distribution become?`,
+        o: [
+          r`A uniform distribution $\text{Uniform}(-1, 1)$`,
+          r`A chi-square distribution $\chi^2(1)$`,
+          r`The standard normal distribution $\mathcal{N}(0, 1)$`,
+          r`A Cauchy distribution`,
+        ],
+        a: 2,
+        why: r`As $n \to \infty$, the sample standard deviation $s$ converges in probability to the true population standard deviation $\sigma$ by the law of large numbers, so $t(\nu)$ converges to $\mathcal{N}(0, 1)$.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'logistic_regression'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'central-limit-theorem-and-law-of-large-numbers'],
+    related: ['sampling-and-standard-error', 'confidence-intervals', 'chi-square-tests'],
+    keywords: 'z-test t-test students t welchs t paired t test degrees of freedom two sample one sample difference in means',
+  },
+  {
+    id: 'chi-square-tests',
+    short: 'Chi-Square Tests',
+    title: r`Chi-Square Tests`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Test categorical distributions using goodness-of-fit and contingency table tests of independence, comparing observed counts against expected frequencies.`,
+    lead: r`While t-tests evaluate continuous measurements, many empirical problems involve counts of categorical occurrences. Pearson's chi-square ($\chi^2$) tests assess whether observed categorical frequencies conform to a theoretical distribution (goodness-of-fit) or whether two categorical variables are statistically independent.`,
+    intuition: [
+      r`Suppose an engineering team tests whether user device type (Desktop vs Mobile) is independent of subscription tier choice (Free, Pro, Enterprise). Over a week, 500 new users register: Desktop users comprise 120 Free, 80 Pro, and 50 Enterprise (250 total); Mobile users comprise 180 Free, 50 Pro, and 20 Enterprise (250 total). Overall, 300 users choose Free (60%), 130 choose Pro (26%), and 70 choose Enterprise (14%).`,
+      r`If device type had zero influence on subscription choice (the null hypothesis of independence), both Desktop and Mobile users should mirror these overall 60%, 26%, and 14% shares. We would expect $250 \times 0.60 = 150.0$ Free Desktop users, $250 \times 0.26 = 65.0$ Pro Desktop users, and $250 \times 0.14 = 35.0$ Enterprise Desktop users. The exact same expected counts would apply to Mobile users.`,
+      r`Comparing observed counts to expected frequencies reveals clear discrepancies: Free Desktop count is 120 (30 fewer than expected), while Enterprise Desktop is 50 (15 more than expected). Pearson's chi-square test tallies the normalised squared discrepancy $(O - E)^2 / E$ across all six table cells. Squaring prevents positive and negative deviations from cancelling out, while dividing by $E$ scales each residual relative to its baseline magnitude. For this table, the sum of residuals yields $\chi^2 = 31.78$ with 2 degrees of freedom, producing a p-value of $1.26 \times 10^{-7}$. Because this is vastly smaller than $\alpha = 0.05$, we reject independence and confirm that subscription choice is strongly linked to device type.`,
+    ],
+    analogy: r`Pearson's chi-square test is like auditing a casino roulette wheel: you compare how often the ball lands in each pocket against how often it should land if the wheel were perfectly balanced.`,
+    steps: [
+      r`Compile observed data into a two-way contingency table of raw frequency counts across $R$ rows and $C$ columns.`,
+      r`Compute row totals $R_i$, column totals $C_j$, and the grand total sample size $N = \sum O_{ij}$.`,
+      r`Under the null hypothesis of independence, calculate expected cell frequencies: $E_{ij} = (R_i \times C_j) / N$.`,
+      r`Check Cochran's sample size criteria: ensure all $E_{ij} \ge 1$ and at least 80% of cells have $E_{ij} \ge 5$.`,
+      r`Sum Pearson residuals $\sum (O_{ij} - E_{ij})^2 / E_{ij}$ to obtain the test statistic $\chi^2$ with degrees of freedom $\nu = (R - 1)(C - 1)$.`,
+      r`Calculate the p-value from the $\chi^2(\nu)$ distribution and decide whether to reject the null hypothesis of independence.`,
+    ],
+    math: [
+      {
+        h: 'Pearson\'s Chi-Square Test Statistic',
+        tex: r`$$\chi^2 = \sum_{i=1}^R \sum_{j=1}^C \frac{(O_{ij} - E_{ij})^2}{E_{ij}} \sim \chi^2(\nu)$$`,
+        p: r`Here $O_{ij}$ is the observed integer frequency in row $i$ and column $j$, and $E_{ij}$ is the expected frequency under $H_0$. Under the null hypothesis, as sample size $N \to \infty$, this sum of normalised squared deviations converges asymptotically to a chi-square distribution with $\nu$ degrees of freedom.`,
+      },
+      {
+        h: 'Expected Frequencies and Degrees of Freedom',
+        tex: r`$$E_{ij} = \frac{R_i C_j}{N}, \qquad \nu = (R - 1)(C - 1)$$`,
+        p: r`Here $R_i$ is the $i$-th row marginal sum, $C_j$ is the $j$-th column marginal sum, and $N$ is total sample size. In an $R \times C$ contingency table, fixing row and column totals leaves $(R - 1)(C - 1)$ cells free to vary independently, determining the degrees of freedom $\nu$. For a 1D goodness-of-fit test with $K$ categories, $\nu = K - 1$.`,
+      },
+      {
+        h: 'Goodness-of-Fit Test Statistic',
+        tex: r`$$\chi^2 = \sum_{k=1}^K \frac{(O_k - n p_k)^2}{n p_k} \sim \chi^2(K - 1 - m)$$`,
+        p: r`In goodness-of-fit testing, observed counts $O_k$ across $K$ categories are compared to theoretical expected counts $n p_k$, where $p_k$ is the hypothesised probability of category $k$. If $m$ parameters of the theoretical distribution are estimated from the sample data (such as fitting a Poisson rate $\lambda$), the degrees of freedom are reduced to $\nu = K - 1 - m$.`,
+      },
+    ],
+    keyPoints: [
+      r`Chi-square tests require raw integer counts; never run chi-square calculations on percentages, fractions, or normalised rates.`,
+      r`Degrees of freedom in contingency tables depend exclusively on table dimensions $(R - 1)(C - 1)$, entirely independent of sample size $N$.`,
+      r`Cochran's guideline requires expected cell counts to equal or exceed 5 in at least 80% of cells; when counts are smaller, use Fisher's exact test.`,
+      r`A significant chi-square test confirms an association exists, but standardised residuals must be examined to identify which specific cells drive the divergence.`,
+    ],
+    pitfalls: [
+      r`Inputting percentages or conversion rates instead of raw integer counts, which destroys the underlying multinomial sampling variance model.`,
+      r`Applying standard chi-square tests to repeated measures or paired categorical data (such as user choices before and after an update); use McNemar's test instead.`,
+      r`Ignoring low expected cell frequencies ($E_{ij} < 5$), where the continuous chi-square approximation fails and produces inaccurate p-values.`,
+      r`Confusing statistical association with causal direction: a significant chi-square test indicates dependence between variables, not that one variable causes the other.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Contingency table: Device (Desktop, Mobile) vs Tier (Free, Pro, Enterprise)
+observed = np.array([
+    [120, 80, 50],   # Desktop
+    [180, 50, 20],   # Mobile
+])
+
+# Pearson's chi-square test of independence
+chi2_stat, p_val, dof, expected = stats.chi2_contingency(observed)
+
+print("Observed table:\n", observed)
+print(f"Expected counts:\n{np.round(expected, 1)}")
+print(f"Chi-square statistic: {chi2_stat:.3f}")
+print(f"Degrees of freedom:   {dof}")
+print(f"p-value:              {p_val:.4e}")
+print(f"Independence rejected at alpha=0.05: {p_val <= 0.05}")`,
+    quiz: [
+      {
+        q: r`Why is it invalid to run a chi-square test on percentages or proportions (e.g. 0.40 and 0.60) rather than raw counts?`,
+        o: [
+          r`Because chi-square algorithms only accept floating-point numbers`,
+          r`Because percentages disguise sample size, destroying the relationship between count variance and expected frequencies`,
+          r`Because percentages always sum to 100`,
+          r`Because proportions follow a Student's t-distribution`,
+        ],
+        a: 1,
+        why: r`Chi-square test statistics rely on Poisson or multinomial sampling variance, where the variance of a count is proportional to $N$. Converting counts to proportions eliminates sample size information.`,
+      },
+      {
+        q: r`How many degrees of freedom does a $3 \times 4$ contingency table have in a test of independence?`,
+        o: [
+          r`12`,
+          r`11`,
+          r`6`,
+          r`7`,
+        ],
+        a: 2,
+        why: r`Degrees of freedom for an $R \times C$ table are $(R - 1)(C - 1)$. For a $3 \times 4$ table, $(3 - 1)(4 - 1) = 2 \times 3 = 6$.`,
+      },
+      {
+        q: r`When expected cell counts $E_{ij}$ in a $2 \times 2$ table fall below 5, which test should be used instead of Pearson's chi-square test?`,
+        o: [
+          r`Paired t-test`,
+          r`Fisher's exact test`,
+          r`One-way ANOVA`,
+          r`Mann-Whitney U test`,
+        ],
+        a: 1,
+        why: r`When cell counts are small ($E_{ij} < 5$), the continuous chi-square approximation breaks down. Fisher's exact test computes exact hypergeometric probabilities without relying on asymptotic approximations.`,
+      },
+      {
+        q: r`What does a statistically significant result ($p < 0.001$) in a chi-square test of independence demonstrate?`,
+        o: [
+          r`One categorical variable directly causes the other`,
+          r`The two categorical variables are statistically dependent in the sampled population`,
+          r`All categories have identical frequencies`,
+          r`The expected cell counts are all greater than 5`,
+        ],
+        a: 1,
+        why: r`Rejecting the null hypothesis of independence indicates that the row and column classifications are statistically dependent, though it does not imply causal direction.`,
+      },
+    ],
+    usedBy: ['decision_tree_classifier', 'feature-selection'],
+    prereq: ['hypothesis-testing-and-p-values', 'random-variables-and-distributions'],
+    related: ['type-i-ii-errors-power-and-sample-size', 'z-test-and-t-tests', 'confusion-matrix'],
+    keywords: 'chi-square test contingency table goodness of fit independence pearsons test expected frequencies categorical',
+  },
 ];
