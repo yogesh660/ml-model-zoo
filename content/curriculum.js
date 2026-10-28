@@ -57,7 +57,7 @@ module.exports = [
       { title: 'Linear and probabilistic', lessons: ['logistic_regression', 'linear_discriminant_analysis', 'quadratic_discriminant_analysis', 'gaussian_naive_bayes', 'multinomial_bernoulli_nb'] },
       { title: 'Margin and instance-based', lessons: ['support_vector_classifier', 'knn_classifier'] },
       { title: 'Trees and ensembles', lessons: ['decision_tree_classifier', 'random_forest_classifier', 'adaboost_classifier', 'gradient_boosted_classifiers', 'stacking_voting_classifiers'] },
-      { title: 'Beyond the basics', lessons: [...C('Bagging and Extra-Trees', 'Multiclass strategies: one-vs-rest, one-vs-one, softmax', 'Class imbalance: weights, SMOTE, threshold moving', 'Probability calibration: Platt scaling, isotonic, reliability curves'), ...X('Ordinal classification', 'Multi-label classification', 'Cost-sensitive learning')] },
+      { title: 'Beyond the basics', lessons: ['bagging-and-extra-trees', 'multiclass-strategies-one-vs-rest-one-vs-one-softmax', 'class-imbalance-weights-smote-threshold-moving', 'probability-calibration-platt-scaling-isotonic-reliability-curves', ...X('Ordinal classification', 'Multi-label classification', 'Cost-sensitive learning')] },
     ],
   },
   {
