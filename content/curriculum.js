@@ -153,8 +153,8 @@ module.exports = [
     tasks: ['ai'],
     modules: [
       { title: 'Classical AI', lessons: ['intelligent-agents-and-environments', ...C('Search: BFS, DFS, A* ⚙', 'Adversarial search: minimax and alpha–beta ⚙'), ...X('Monte Carlo tree search', 'Constraint satisfaction', 'Logic and knowledge representation', 'Planning: STRIPS')] },
-      { title: 'Reinforcement learning', lessons: [...C('Multi-armed bandits ⚙'), 'mdps-and-bellman-equations', ...C('Dynamic programming: value and policy iteration', 'Q-learning and SARSA ⚙', 'Policy gradient: REINFORCE'), ...X('Deep Q-networks', 'Actor–critic and PPO', 'Model-based RL and AlphaZero')] },
-      { title: 'LLM foundations', lessons: [...C('Prompting and in-context learning', 'Tool use and function calling', 'Evaluating LLMs: benchmarks and judges', 'Hallucination and grounding'), ...X('Context windows and memory')] },
+      { title: 'Reinforcement learning', lessons: [...C('Multi-armed bandits ⚙'), 'mdps-and-bellman-equations', 'dynamic-programming-value-and-policy-iteration', ...C('Q-learning and SARSA ⚙'), 'policy-gradient-reinforce', ...X('Deep Q-networks', 'Actor–critic and PPO', 'Model-based RL and AlphaZero')] },
+      { title: 'LLM foundations', lessons: ['prompting-and-in-context-learning', 'tool-use-and-function-calling', ...C('Evaluating LLMs: benchmarks and judges', 'Hallucination and grounding'), ...X('Context windows and memory')] },
       { title: 'Retrieval and RAG', lessons: [...C('Chunking and embeddings for retrieval', 'Vector search: HNSW, IVF, PQ ⚙', 'Hybrid search and reranking', 'RAG architecture end to end', 'RAG evaluation'), ...X('GraphRAG and multi-hop retrieval')] },
       { title: 'Agents', lessons: [...C('The agent loop: ReAct', 'Agent evaluation and test harnesses'), ...X('Planning and task decomposition', 'Memory and state', 'Multi-agent systems', 'Agent protocols: MCP')] },
       { title: 'LLM systems', lessons: [...C('Inference: KV cache, batching, paged attention', 'Serving, latency and cost'), ...X('Speculative decoding', 'Caching and model routing', 'Observability and tracing')] },
