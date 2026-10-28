@@ -91,6 +91,34 @@ PATHS.forEach(p => {
   });
 });
 LESSONS.forEach(l => { if (!seen.has(l.id)) throw new Error(`lesson "${l.id}" is not placed in any path`); });
+// ------------------------------------------------------------------ lesson checks
+// Fails the build on a malformed lesson; spelling slips only warn. `noLab: true` lets a lesson skip the lab.
+const prose = v => (typeof v === 'string' ? [v] : Array.isArray(v) ? v.flatMap(prose) : v && typeof v === 'object' ? Object.values(v).flatMap(prose) : []);
+const US = /\b(normaliz\w*|optimiz\w*|regulariz\w*|generaliz\w*|visualiz\w*|summariz\w*|categoriz\w*|standardiz\w*|minimiz\w*|maximiz\w*|parameteriz\w*|behavior\w*|colors?|centers?|analyz\w*|labeled|modeling|modeled|neighbors?|favorite|license)\b/gi;
+function checkLesson(l) {
+  const e = [], need = (ok, msg) => { if (!ok) e.push(msg); };
+  const str = k => typeof l[k] === 'string' && l[k].trim().length > 0, arr = (k, min = 1) => Array.isArray(l[k]) && l[k].length >= min;
+  ['id', 'short', 'title', 'summary', 'lead', 'analogy', 'code', 'keywords'].forEach(k => need(str(k), `missing text field "${k}"`));
+  need(Number.isInteger(l.level) && l.level >= 1 && l.level <= 3, 'level must be 1, 2 or 3');
+  need(Number.isFinite(l.minutes) && l.minutes > 0, 'minutes must be a positive number');
+  need(arr('intuition', 1), 'intuition needs at least 1 paragraph');
+  need(arr('steps', 3), 'steps needs at least 3 items');
+  need(arr('math', 1) && l.math.every(m => m && m.h && m.tex && m.p), 'every math entry needs h, tex and p');
+  need(arr('pitfalls', 1), 'pitfalls needs at least 1 item');
+  need(arr('quiz', 1) && l.quiz.every(q => q && q.q && Array.isArray(q.o) && q.o.length === 4 && Number.isInteger(q.a) && q.a >= 0 && q.a < 4 && q.why), 'every quiz entry needs q, 4 options in o, a (0-3) and why; at least 1 question');
+  need(arr('related', 1), 'related needs at least 1 lesson id');
+  if (l.task === 'concepts') { need(arr('keyPoints', 2), 'concepts need keyPoints (at least 2)'); need(arr('usedBy', 0), 'concepts need usedBy (may be empty)'); }
+  else ['hyper', 'pros', 'cons'].forEach(k => need(arr(k), `models need "${k}"`));
+  if (!l.noLab) need(str('labIntro') && arr('tryThis', 1), 'a lesson with a lab needs labIntro and at least 1 tryThis item (or set noLab: true)');
+  const bad = [...new Set(prose([l.summary, l.lead, l.intuition, l.analogy, l.steps, l.math, l.pitfalls, l.quiz, l.keyPoints]).flatMap(t => (t.replace(/\[\[([^\]|]+)(\|[^\]]*)?\]\]/g, '$2').replace(/\$[^$]*\$/g, '').match(US) || []).map(w => w.toLowerCase())))];
+  return { errors: e, spelling: bad };
+}
+{
+  const problems = [], spelled = [];
+  LESSONS.forEach(l => { const r = checkLesson(l); if (r.errors.length) problems.push(`${l.id}:\n    - ${r.errors.join('\n    - ')}`); if (r.spelling.length) spelled.push(`${l.id}: ${r.spelling.join(', ')}`); });
+  if (spelled.length) console.warn(`spelling (British, please): ${spelled.join(' | ')}`);
+  if (problems.length) throw new Error(`lesson checks failed:\n  ${problems.join('\n  ')}`);
+}
 const hrefFromRoot = l => `${l.kind}/${l.id}/`;
 const totalMinutes = ORDER.reduce((s, l) => s + l.minutes, 0);
 const N_MODELS = ORDER.filter(l => l.kind === 'models').length, N_CONCEPTS = ORDER.filter(l => l.kind === 'concepts').length;
@@ -466,7 +494,7 @@ function lessonPage(l) {
   if (l.explainer) add('watch', 'Watch it work', `
         <p>Press play, or step through at your own pace. Each step adds one idea.</p>
         <div class="explainer" data-explainer="${l.explainer}" style="margin-top:18px"><noscript><p class="lab-noscript">The animation needs JavaScript.</p></noscript></div>`);
-  add('lab', 'Try it', `
+  if (!l.noLab) add('lab', 'Try it', `
         <p>${R(l.labIntro || 'Change the settings and watch the model respond.')}</p>
         <div class="lab" data-lab="${l.id}" data-kind="${l.kind}" style="margin-top:18px"><noscript><p class="lab-noscript">The live lab needs JavaScript.</p></noscript></div>
         ${l.tryThis && l.tryThis.length ? `<div class="try"><small class="kicker">Things to try</small><ol>${l.tryThis.map(t => `<li>${R(t)}</li>`).join('')}</ol></div>` : ''}`);
@@ -547,7 +575,7 @@ function lessonPage(l) {
     <div class="lesson-meta rise" style="--d:4">
       <span class="tagline">${level(l.level)}</span>
       <span class="tagline">${l.minutes} min</span>
-      <span class="tagline lab">Live lab</span>
+      ${l.noLab ? '' : '<span class="tagline lab">Live lab</span>'}
       ${prereq}
     </div>
   </header>
