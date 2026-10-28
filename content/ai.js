@@ -1996,4 +1996,1040 @@ for rank, (doc_idx, text, ce_score) in enumerate(final_results, 1):
     related: ['chunking-and-embeddings-for-retrieval', 'semantic-search-and-dense-retrieval', 'bm25-and-search-ranking'],
     keywords: 'hybrid search reranking reciprocal rank fusion rrf cross-encoder bi-encoder ndcg bm25 dense retrieval two-stage retrieval',
   },
+{
+    id: 'rag-architecture-end-to-end',
+    short: 'RAG Architecture',
+    title: 'RAG architecture end to end',
+    task: 'concepts',
+    module: 'Retrieval and RAG',
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: r`Retrieval-Augmented Generation (RAG) unites non-parametric external knowledge bases with parametric large language models to overcome knowledge obsolescence, hallucination, and lack of domain-specific context. An end-to-end production RAG system orchestrates four synchronised subsystems: query processing (reformulation, HyDE, multi-query expansion), hybrid retrieval (dense semantic vectors combined with sparse lexical BM25), post-retrieval reranking and context compression (mitigating the "lost-in-the-middle" attention phenomenon), and prompt synthesis with strict provenance and citation mechanisms.`,
+    lead: r`How do enterprise AI systems answer private questions about last week's proprietary financial reports or internal codebase commits when foundation models were trained months ago on generic public text? Fine-tuning is slow, brittle to updates, and prone to hallucinating factual numbers. Retrieval-Augmented Generation (RAG) solves this by fetching the exact relevant source passages at query time and injecting them into the model's context window. Building a reliable production RAG architecture requires far more than naive vector search: it demands robust query transformation, hybrid retrieval, cross-encoder reranking, and citation-enforced generation.`,
+    intuition: [
+      r`Parametric vs Non-Parametric Memory: Foundation LLMs store vast world knowledge inside trillions of static neural weights (parametric memory). However, parametric memory cannot be easily edited, expires the moment pretraining ends, and struggles with exact verbatim recall. RAG couples this parametric reasoning engine with an external, dynamic, verifiable non-parametric memory: searchable vector stores, document indices, and knowledge graphs that can be updated in real time.`,
+      r`The Four Pillars of Production RAG: Naive RAG (embed query -> top-k vector search -> inject passages into prompt) fails frequently in practice due to semantic mismatch, noisy context, and context overflow. Production RAG implements four distinct stages:
+- Query Transformation: Transforming ambiguous user queries into optimised search inputs using Hypothetical Document Embeddings (HyDE), step-back prompting, or query decomposition.
+- Multi-Modal / Hybrid Retrieval: Combining BM25 keyword matching (for exact acronyms, IDs, and part numbers) with dense embeddings (for semantic intent).
+- Context Curation and Reranking: Applying a cross-encoder to rescore top candidates, filtering irrelevant passages, and ordering them to avoid the "lost-in-the-middle" bias where LLMs ignore information placed in the middle of long prompts.
+- Grounded Synthesis: Formatting the prompt with explicit source identifiers ([Doc 1], [Doc 2]) and system constraints commanding the model to refuse to answer if the context is insufficient.`,
+      r`Managing Context and the Lost-in-the-Middle Effect: Research proves LLMs exhibit a U-shaped attention distribution: they attend strongly to documents placed at the very beginning and very end of their prompt context, while frequently missing critical facts buried in the middle. Context compression, deduplication, and placing highest-priority chunks at prompt boundaries are vital for grounded generation.`,
+    ],
+    analogy: r`Think of an open-book university examination. The student's brain (the LLM) possesses excellent reasoning capabilities, linguistic mastery, and problem-solving skills, but is not expected to memorise thousands of pages of obscure tax legislation or medical manuals. When presented with a complex question, the student does not answer from memory. First, they check the library catalogue and reference index (query routing and hybrid retrieval). Next, they select the three most promising textbooks, skim the pages, and highlight relevant paragraphs while discarding irrelevant fluff (cross-encoder reranking and context curation). Finally, they write a structured essay synthesising those highlighted passages, explicitly citing page numbers and footnotes (grounded prompt synthesis with provenance).`,
+    steps: [
+      {
+        title: r`Query transformation and routing`,
+        desc: r`Analyse incoming query intent, decompose complex questions, and formulate targeted search queries.`,
+        detail: r`Determine if the query requires retrieval or direct parametric reasoning. Rewrite ambiguous queries, generate hypothetical document embeddings (HyDE), or break multi-part questions into distinct retrieval sub-queries.`,
+      },
+      {
+        title: r`Hybrid multi-source retrieval`,
+        desc: r`Fetch candidate chunks using parallel dense vector cosine similarity and sparse BM25 keyword indexes.`,
+        detail: r`Query both a vector database (e.g. HNSW index over bi-encoder embeddings) and an inverted index. Fuse retrieved results using Reciprocal Rank Fusion (RRF) to capture both semantic meaning and exact keyword hits.`,
+      },
+      {
+        title: r`Reranking and context compression`,
+        desc: r`Score concatenated candidate pairs with a cross-encoder model and prune redundant or irrelevant text.`,
+        detail: r`Feed query-chunk pairs into a cross-encoder to compute fine-grained relevance scores. Discard chunks below relevance thresholds and extract the most pertinent sentences to minimise prompt token consumption.`,
+      },
+      {
+        title: r`Prompt augmentation and provenance tagging`,
+        desc: r`Assemble structured context with explicit document tags and strict grounding instructions.`,
+        detail: r`Organise passages into an anti-lost-in-the-middle order (alternating top documents at start and end). Wrap each passage in clear metadata delimiters (<doc id="1" title="...">...</doc>) and instruct the model to cite sources.`,
+      },
+      {
+        title: r`Grounded generation and verification`,
+        desc: r`Stream generated response with inline source citations and verify factual claims against retrieved evidence.`,
+        detail: r`The language model synthesises the final answer, referencing supporting passage IDs. An optional guardrail layer cross-checks generated claims against source passages to catch any residual hallucination before returning to the user.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Probabilistic Formulation of Retrieval-Augmented Generation`,
+        tex: r`p(y \mid x) = \sum_{z \in \mathcal{Z}} p_\eta(z \mid x) \, p_\theta(y \mid x, z) \approx \sum_{k=1}^K p_\eta(z_k \mid x) \, p_\theta(y \mid x, z_k)`,
+        p: r`In the foundational formulation of RAG (Lewis et al., 2020), generation probability for target sequence y given input prompt x is marginalised over latent retrieved documents z in document collection \mathcal{Z}. Retriever parameterised by \eta computes retrieval distribution p_\eta(z \mid x), and generator parameterised by \theta decodes tokens conditioned on both prompt x and retrieved context z. In practice, the intractable sum over all documents is truncated to the top-K retrieved candidates.`,
+      },
+      {
+        h: r`Hypothetical Document Embeddings (HyDE)`,
+        tex: r`\hat{d} \sim p_\theta(\cdot \mid x, \text{instruction}), \quad \mathbf{v}_{\text{query}} = \frac{1}{2}\Big(\phi(x) + \phi(\hat{d})\Big)`,
+        p: r`HyDE bridges the representation gap between questions and answers. Instead of encoding the short question x directly, an instruction-tuned LLM generates a zero-shot hypothetical answer \hat{d}. Even if \hat{d} contains factual errors, its embedding \phi(\hat{d}) occupies the dense representation space of documents rather than queries, dramatically improving vector search recall.`,
+      },
+      {
+        h: r`Context Ordering and Attention Decay (Lost-in-the-Middle)`,
+        tex: r`\text{AttnWeight}(pos) \propto \exp\left(-\gamma \cdot \min(pos, N - pos)\right), \quad \pi^* = [c_1, c_3, c_5, \dots, c_6, c_4, c_2]`,
+        p: r`Decoder-only transformers exhibit position-dependent attention biases, attending strongly to the start and end of prompt contexts while discounting the middle. To counteract this degradation, retrieved chunks ordered by relevance c_1 > c_2 > \dots > c_K are placed alternately at the outer boundaries of the prompt context: highest ranked chunks at the start and end, with lower ranked chunks placed in the interior.`,
+      },
+    ],
+    code: r`"""
+End-to-End Production RAG Architecture
+Demonstrating query rewriting, hybrid retrieval, cross-encoder reranking,
+context packing with source tags, and grounded answer synthesis.
+"""
+
+import math
+import re
+from typing import List, Dict, Tuple
+
+class DocumentChunk:
+    def __init__(self, doc_id: str, title: str, text: str):
+        self.doc_id = doc_id
+        self.title = title
+        self.text = text
+
+class EndToEndRAGPipeline:
+    def __init__(self, corpus: List[DocumentChunk]):
+        self.corpus = corpus
+        # Precompute vocabulary for inverted index (sparse retrieval)
+        self.inverted_index = {}
+        for idx, doc in enumerate(self.corpus):
+            tokens = set(self._tokenize(doc.text))
+            for tok in tokens:
+                self.inverted_index.setdefault(tok, []).append(idx)
+
+    def _tokenize(self, text: str) -> List[str]:
+        return re.findall(r'\b[a-z0-9]+\b', text.lower())
+
+    def _sparse_bm25_mock(self, query: str, top_k: int = 5) -> List[Tuple[int, float]]:
+        """Compute BM25-like lexical overlap scores."""
+        query_tokens = self._tokenize(query)
+        scores = [0.0] * len(self.corpus)
+        for tok in query_tokens:
+            if tok in self.inverted_index:
+                postings = self.inverted_index[tok]
+                idf = math.log((len(self.corpus) - len(postings) + 0.5) / (len(postings) + 0.5) + 1.0)
+                for doc_idx in postings:
+                    scores[doc_idx] += idf
+        ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
+        return [item for item in ranked[:top_k] if item[1] > 0]
+
+    def _dense_semantic_mock(self, query: str, top_k: int = 5) -> List[Tuple[int, float]]:
+        """Mock bi-encoder dense embedding cosine similarity."""
+        query_toks = set(self._tokenize(query))
+        scores = []
+        for idx, doc in enumerate(self.corpus):
+            doc_toks = set(self._tokenize(doc.text + " " + doc.title))
+            intersection = len(query_toks & doc_toks)
+            union = len(query_toks | doc_toks)
+            sim = (intersection / union) if union > 0 else 0.0
+            # Add semantic bias for conceptual terms
+            if "transformer" in query and "attention" in doc.text.lower():
+                sim += 0.35
+            if "rag" in query and "retrieval" in doc.text.lower():
+                sim += 0.40
+            scores.append((idx, round(sim, 4)))
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores[:top_k]
+
+    def hybrid_retrieve(self, query: str, k: int = 60, top_n: int = 4) -> List[int]:
+        """Combine sparse BM25 and dense retrieval using Reciprocal Rank Fusion (RRF)."""
+        sparse_hits = self._sparse_bm25_mock(query, top_k=5)
+        dense_hits = self._dense_semantic_mock(query, top_k=5)
+
+        rrf_scores = {}
+        for rank, (doc_idx, _) in enumerate(sparse_hits, 1):
+            rrf_scores[doc_idx] = rrf_scores.get(doc_idx, 0.0) + 1.0 / (k + rank)
+        for rank, (doc_idx, _) in enumerate(dense_hits, 1):
+            rrf_scores[doc_idx] = rrf_scores.get(doc_idx, 0.0) + 1.0 / (k + rank)
+
+        ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+        return [doc_idx for doc_idx, _ in ranked[:top_n]]
+
+    def cross_encoder_rerank(self, query: str, candidate_indices: List[int], top_n: int = 2) -> List[Tuple[int, float]]:
+        """Simulate cross-encoder joint scoring over full [Query; Chunk] pairs."""
+        scored = []
+        query_terms = set(self._tokenize(query))
+        for idx in candidate_indices:
+            doc = self.corpus[idx]
+            doc_terms = set(self._tokenize(doc.text))
+            # Exact overlap has high weight in cross-encoder
+            overlap = len(query_terms & doc_terms)
+            title_match = 1.5 if any(t in doc.title.lower() for t in query_terms) else 0.0
+            relevance = (overlap * 1.8) + title_match + (0.05 * len(doc.text.split()))
+            scored.append((idx, round(relevance, 2)))
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:top_n]
+
+    def build_prompt_with_context(self, query: str, selected_indices: List[int]) -> str:
+        """
+        Assemble prompt context using U-shaped layout (lost-in-the-middle defence)
+        and strict provenance XML delimiters.
+        """
+        # Reorder into [top_1, top_3, ..., top_2]
+        ordered_indices = []
+        left = True
+        for idx in selected_indices:
+            if left:
+                ordered_indices.insert(0, idx)
+            else:
+                ordered_indices.append(idx)
+            left = not left
+
+        context_blocks = []
+        for rank, idx in enumerate(ordered_indices, 1):
+            doc = self.corpus[idx]
+            context_blocks.append(
+                f'<source id="{doc.doc_id}" title="{doc.title}">\n{doc.text}\n</source>'
+            )
+
+        context_str = "\n\n".join(context_blocks)
+        prompt = (
+            "You are a factual AI assistant. Answer the user query strictly using the provided sources.\n"
+            "If the sources do not contain sufficient evidence to answer, state 'Insufficient information'.\n"
+            "Every statement must be grounded and cite source IDs in brackets, e.g. [DOC-1].\n\n"
+            f"=== CONTEXT ===\n{context_str}\n\n"
+            f"=== USER QUERY ===\n{query}\n\n"
+            "=== GROUNDED RESPONSE ==="
+        )
+        return prompt
+
+    def generate_grounded_answer(self, prompt: str, retrieved_docs: List[DocumentChunk]) -> str:
+        """Mock LLM generating response strictly adhering to cited sources."""
+        doc_ids = [d.doc_id for d in retrieved_docs]
+        return (
+            f"Production RAG combines hybrid search (lexical BM25 and dense bi-encoders) "
+            f"with cross-encoder reranking to accurately retrieve domain passages [{doc_ids[0]}]. "
+            f"To prevent attention decay, high-priority passages are placed at context boundaries [{doc_ids[-1]}]."
+        )
+
+# --- Demonstration Run ---
+knowledge_base = [
+    DocumentChunk("DOC-101", "Vector Databases", "Vector search uses approximate nearest neighbours like HNSW for dense semantic matching."),
+    DocumentChunk("DOC-102", "Hybrid Search and RAG", "Production RAG marries lexical BM25 with dense vectors using Reciprocal Rank Fusion and cross-encoder rerankers."),
+    DocumentChunk("DOC-103", "Lost in the Middle", "LLMs exhibit U-shaped attention curves, paying highest attention to documents at the beginning and end of long contexts."),
+    DocumentChunk("DOC-104", "Fine-Tuning LLMs", "LoRA trains low-rank adapter matrices to adapt foundation models to specific styles."),
+]
+
+rag = EndToEndRAGPipeline(knowledge_base)
+user_query = "How does production RAG retrieve and organise context to avoid lost in the middle?"
+
+print("User Query:", user_query)
+
+# 1. Hybrid Retrieval
+candidate_ids = rag.hybrid_retrieve(user_query, top_n=4)
+print("\nRetrieved Candidate Doc IDs:", [knowledge_base[i].doc_id for i in candidate_ids])
+
+# 2. Cross-Encoder Reranking
+reranked = rag.cross_encoder_rerank(user_query, candidate_ids, top_n=2)
+selected_indices = [idx for idx, _ in reranked]
+print("Reranked Top Candidates:", [(knowledge_base[i].doc_id, score) for i, score in reranked])
+
+# 3. Assemble Grounded Prompt
+prompt = rag.build_prompt_with_context(user_query, selected_indices)
+print("\n--- Generated Prompt Preview ---\n" + prompt[:400] + "\n...")
+
+# 4. Generate Response
+retrieved_docs = [knowledge_base[i] for i in selected_indices]
+response = rag.generate_grounded_answer(prompt, retrieved_docs)
+print("\n--- Synthesised Grounded Response ---\n" + response)
+`,
+    keyPoints: [
+      r`RAG couples an LLM's parametric reasoning capability with dynamic, non-parametric external document stores to prevent hallucination and provide up-to-date facts.`,
+      r`A production RAG pipeline consists of query reformulation, hybrid retrieval (BM25 + dense vectors), cross-encoder reranking, and citation-enforced synthesis.`,
+      r`LLMs exhibit a "lost-in-the-middle" attention degradation, requiring context curation, compression, and U-shaped prompt assembly (placing top passages at prompt extremes).`,
+      r`Strict prompt templates with source delimiters and citation constraints enable verifiable provenance and automated hallucination audits.`,
+    ],
+    pitfalls: [
+      r`Relying purely on dense vector similarity: Vector embeddings struggle with exact keywords, part numbers, and novel terminology; hybrid search with BM25 is essential.`,
+      r`Dumping too many unranked chunks into the prompt: Excessive context increases latency, inflates token costs, and distracts the LLM from key evidence.`,
+      r`Omitting citation guardrails: Without explicit instructions and format constraints requiring bracketed source IDs, LLMs seamlessly blend parametric hallucinations with context facts.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does naive top-k vector retrieval often fail in enterprise RAG systems?`,
+        o: [
+          r`Because vector embeddings struggle with exact keyword matches (such as product codes, error codes, and names), and unranked top-k lists introduce irrelevant noise and lost-in-the-middle attention degradation`,
+          r`Because vector databases cannot store text longer than 256 characters`,
+          r`Because bi-encoder models are strictly prohibited from calculating cosine similarity`,
+          r`Because vector embeddings only work for images and audio files`,
+        ],
+        a: 0,
+        why: r`Dense bi-encoders encode general semantic similarity but frequently fail on precise identifiers or rare acronyms. Furthermore, injecting raw top-k passages without reranking degrades generation quality through context distraction and lost-in-the-middle attention decay.`,
+      },
+      {
+        q: r`How does Hypothetical Document Embeddings (HyDE) improve retrieval performance?`,
+        o: [
+          r`By prompting an LLM to generate a hypothetical answer to the question first, then embedding the generated document to match candidate texts in document-document vector space`,
+          r`By deleting all stop words from the query before running search`,
+          r`By fine-tuning the transformer weights on Wikipedia during each search request`,
+          r`By converting all database documents into binary hashes`,
+        ],
+        a: 0,
+        why: r`HyDE bridges the semantic gap between questions and answers. Embedding the generated hypothetical document produces a vector that clusters naturally with genuine answer passages in document embedding space.`,
+      },
+      {
+        q: r`What is the "lost-in-the-middle" phenomenon in LLM context processing?`,
+        o: [
+          r`The empirical finding that decoder-only models attend most effectively to tokens at the very beginning and end of long prompts, frequently overlooking critical facts placed in the middle`,
+          r`A hardware failure where GPU memory banks drop middle matrix tiles`,
+          r`The tendency of LLMs to generate answers that end mid-sentence`,
+          r`A loss of network packets between the vector database and the application server`,
+        ],
+        a: 0,
+        why: r`Extensive empirical research (Liu et al.) demonstrates that language models have a U-shaped performance curve across context length: information located at the beginning or end of the input context is retrieved and synthesised with much higher fidelity than information in the middle.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['chunking-and-embeddings-for-retrieval', 'hybrid-search-and-reranking'],
+    related: ['chunking-and-embeddings-for-retrieval', 'hybrid-search-and-reranking', 'prompting-and-in-context-learning', 'hallucination-and-grounding'],
+    keywords: 'rag architecture retrieval augmented generation hyde hybrid search cross-encoder reranking lost-in-the-middle provenance citations',
+  },
+  {
+    id: 'rag-evaluation',
+    short: 'RAG Evaluation',
+    title: 'RAG evaluation',
+    task: 'concepts',
+    module: 'Retrieval and RAG',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Evaluating Retrieval-Augmented Generation (RAG) pipelines requires decomposing the system into distinct retrieval and generation components rather than relying solely on end-to-end black-box assessment. The standard industry methodology—formalised in frameworks like RAGAS and TruLens—evaluates the "RAG Triad": Context Relevance (did the retriever return pertinent chunks without extraneous noise?), Groundedness / Faithfulness (is the generated answer strictly supported by the retrieved context, devoid of hallucination?), and Answer Relevance (does the response directly address the user's initial question?).`,
+    lead: r`When an enterprise RAG application gives an unsatisfactory response, where did the failure occur? Did the retriever fail to find the necessary technical documents? Did the retriever bring back the right document alongside nine distracting paragraphs that led the model astray? Or did the LLM hallucinate an incorrect statistic despite having the correct facts in front of it? Evaluating RAG systems requires isolating each stage of the pipeline with dedicated metrics, synthetic evaluation datasets, and calibrated LLM-as-a-judge evaluators.`,
+    intuition: [
+      r`The RAG Triad: Three fundamental vectors govern RAG quality:
+- Context Relevance: High signal-to-noise ratio in retrieved passages. Evaluates precision of retriever: are the retrieved chunks actually relevant to answering the query, or is context space cluttered with irrelevant filler?
+- Faithfulness / Groundedness: Faithfulness measures whether every factual claim in the generated answer can be directly inferred from the retrieved context. A hallucinated statement receives a strict penalty.
+- Answer Relevance: Measures whether the generated text actually answers the user's inquiry, irrespective of whether the facts are true. A model that repeats the retrieved facts verbatim but ignores the user's specific question scores zero.`,
+      r`Component-Level vs End-to-End Metrics:
+- Retrieval metrics: Mean Reciprocal Rank (MRR), Hit Rate @ K, NDCG @ K, Context Recall (fraction of ground-truth reference points retrieved), and Context Precision (ranking relevant chunks higher than irrelevant ones).
+- Generation metrics: Faithfulness, Answer Semantic Similarity against golden references, and Semantic Answer Relevance (using directional query generation).`,
+      r`Synthetic Evaluation Data Generation: Building manual test datasets of hundreds of question-context-answer triples is prohibitively expensive. Modern RAG evaluation synthesises test sets by taking raw document chunks, using an LLM to generate candidate questions of varying complexity (factoid, reasoning, multi-hop), and identifying corresponding ground truth.`,
+    ],
+    analogy: r`Imagine a court trial involving a detective (the retriever), the evidence log (the context), and the prosecuting attorney (the generator). To evaluate the trial:
+1. Context Relevance: Did the detective bring relevant physical evidence to the courtroom, or did they dump boxes of irrelevant grocery receipts on the table?
+2. Faithfulness / Groundedness: Did the prosecutor base their closing speech strictly on the admitted evidence, or did they make up unsubstantiated accusations not found in the documents?
+3. Answer Relevance: Did the prosecutor actually answer the judge's specific legal question, or did they deliver a passionate monologue about a completely different topic?`,
+    steps: [
+      {
+        title: r`Construct evaluation triples and synthetic test set`,
+        desc: r`Assemble test dataset comprising queries, ground-truth reference answers, and target document collections.`,
+        detail: r`Curate golden question-answer pairs or synthesise them automatically from document chunks using LLM prompts covering simple factoid, conditional, and multi-hop reasoning questions.`,
+      },
+      {
+        title: r`Measure context relevance and retrieval precision`,
+        desc: r`Segment retrieved context into atomic sentences and evaluate semantic alignment with the query.`,
+        detail: r`Use an LLM evaluator or semantic similarity scorer to classify each retrieved sentence as relevant or irrelevant. Compute Context Precision by penalising systems that rank irrelevant chunks ahead of relevant ones.`,
+      },
+      {
+        title: r`Extract atomic claims from generated answer`,
+        desc: r`Decompose candidate response into discrete, testable factual propositions.`,
+        detail: r`Break the generated answer into atomic claims (e.g. 'Revenue was £5M' and 'Growth was 12%'). Each claim must contain a single factual assertion that can be independently verified.`,
+      },
+      {
+        title: r`Verify groundedness and faithfulness`,
+        desc: r`Cross-check each atomic claim against retrieved context to ensure empirical support.`,
+        detail: r`For each atomic proposition, evaluate whether it is logically entailed by the retrieved context passages. Faithfulness is the ratio of entailed claims to total claims made by the model.`,
+      },
+      {
+        title: r`Compute answer relevance and aggregate triad score`,
+        desc: r`Measure query-response alignment and calculate harmonic mean across the RAG triad.`,
+        detail: r`Prompt the judge LLM to reverse-engineer queries from the generated answer and measure embedding cosine similarity against the original query. Combine context relevance, faithfulness, and answer relevance into a holistic scorecard.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Context Precision and Context Recall`,
+        tex: r`\text{Context Precision@K} = \frac{\sum_{k=1}^K \text{Precision@}k \times v_k}{\sum_{k=1}^K v_k}, \quad \text{Context Recall} = \frac{|\mathcal{S}_{\text{ground\_truth}} \cap \mathcal{S}_{\text{retrieved}}|}{|\mathcal{S}_{\text{ground\_truth}}|`,
+        p: r`Context Precision evaluates whether relevant chunks are placed at the top of the retrieved ranking list. Here v_k \in \{0, 1\} indicates relevance of the chunk at rank k. Context Recall measures the proportion of key ground-truth factual statements \mathcal{S}_{\text{ground\_truth}} captured within the retrieved contexts.`,
+      },
+      {
+        h: r`Faithfulness / Groundedness Formulation`,
+        tex: r`\text{Faithfulness} = \frac{\sum_{i=1}^{|C(y)|} \mathbb{I}\Big(c_i \in \text{Entailment}(\mathcal{K})\Big)}{|C(y)|}`,
+        p: r`Let C(y) = \{c_1, c_2, \dots, c_m\} be the decomposed set of atomic factual claims extracted from generated answer y, and let \mathcal{K} denote the retrieved context. The indicator function equals 1 if claim c_i is logically entailed by \mathcal{K}, and 0 otherwise. A score of 1.0 indicates perfect groundedness devoid of hallucination.`,
+      },
+      {
+        h: r`Answer Relevance via Directional Embedding Similarity`,
+        tex: r`\text{Answer Relevance} = \frac{1}{M} \sum_{j=1}^M \frac{\mathbf{e}(q)^\top \mathbf{e}(\hat{q}_j)}{\|\mathbf{e}(q)\| \, \|\mathbf{e}(\hat{q}_j)\|}, \quad \hat{q}_j \sim p_{\text{judge}}(\cdot \mid y)`,
+        p: r`To prevent reward-hacking where a model repeats the context verbatim without addressing the user question, the judge model generates M candidate questions \hat{q}_j that the answer y would naturally address. Cosine similarity between generated question embeddings and the original user query q measures answer relevance.`,
+      },
+    ],
+    code: r`"""
+Comprehensive RAG Evaluation Framework (The RAG Triad)
+Calculates Context Relevance, Faithfulness (Groundedness),
+and Answer Relevance using structured claim verification.
+"""
+
+from typing import List, Dict, Tuple
+import re
+
+class RAGEvaluationSample:
+    def __init__(self, query: str, contexts: List[str], response: str, ground_truth: str = ""):
+        self.query = query
+        self.contexts = contexts
+        self.response = response
+        self.ground_truth = ground_truth
+
+class RAGEvaluator:
+    def __init__(self):
+        pass
+
+    def _tokenize(self, text: str) -> List[str]:
+        return re.findall(r'\b[a-z0-9]+\b', text.lower())
+
+    def extract_atomic_claims(self, text: str) -> List[str]:
+        """Decompose response into atomic factual claims."""
+        sentences = [s.strip() for s in re.split(r'[.!?]', text) if s.strip()]
+        claims = []
+        for s in sentences:
+            # Further split compound clauses joined by 'and' or 'while'
+            clauses = re.split(r'\b(?:and|while|furthermore)\b', s, flags=re.IGNORECASE)
+            for c in clauses:
+                clean = c.strip()
+                if len(clean.split()) >= 3:
+                    claims.append(clean)
+        return claims
+
+    def evaluate_context_relevance(self, query: str, contexts: List[str]) -> float:
+        """Measure fraction of context sentences relevant to the user query."""
+        query_words = set(self._tokenize(query))
+        all_sentences = []
+        for ctx in contexts:
+            sentences = [s.strip() for s in re.split(r'[.!?]', ctx) if s.strip()]
+            all_sentences.extend(sentences)
+
+        if not all_sentences:
+            return 0.0
+
+        relevant_count = 0
+        for s in all_sentences:
+            s_words = set(self._tokenize(s))
+            overlap = len(query_words & s_words)
+            # Sentence is relevant if it shares at least two content words with query
+            if overlap >= 2:
+                relevant_count += 1
+
+        return round(relevant_count / len(all_sentences), 3)
+
+    def evaluate_faithfulness(self, response: str, contexts: List[str]) -> Tuple[float, List[Tuple[str, bool]]]:
+        """Verify if each atomic claim in response is entailed by retrieved contexts."""
+        claims = self.extract_atomic_claims(response)
+        if not claims:
+            return 1.0, []
+
+        full_context_text = " ".join(contexts).lower()
+        context_words = set(self._tokenize(full_context_text))
+
+        entailment_results = []
+        entailed_count = 0
+
+        for claim in claims:
+            claim_words = self._tokenize(claim)
+            # Verify if key claim words exist within context
+            matched = sum(1 for w in claim_words if w in context_words)
+            support_ratio = matched / len(claim_words) if claim_words else 0.0
+            
+            # Deem entailed if >= 75% of content terms are substantiated by context
+            is_entailed = support_ratio >= 0.75
+            if is_entailed:
+                entailed_count += 1
+            entailment_results.append((claim, is_entailed))
+
+        score = round(entailed_count / len(claims), 3)
+        return score, entailment_results
+
+    def evaluate_answer_relevance(self, query: str, response: str) -> float:
+        """Measure semantic alignment between user query and generated response."""
+        query_words = set(self._tokenize(query))
+        resp_words = set(self._tokenize(response))
+        if not resp_words or not query_words:
+            return 0.0
+
+        overlap = len(query_words & resp_words)
+        # Jaccard semantic overlap proxy
+        sim = overlap / len(query_words | resp_words)
+        # Scale to 0.0 - 1.0 range based on expected keyword retention
+        scaled_relevance = min(1.0, sim * 4.0)
+        return round(scaled_relevance, 3)
+
+    def compute_triad_scorecard(self, sample: RAGEvaluationSample) -> Dict[str, float]:
+        """Compute full RAG Triad report with harmonic mean."""
+        ctx_rel = self.evaluate_context_relevance(sample.query, sample.contexts)
+        faith, claims_audit = self.evaluate_faithfulness(sample.response, sample.contexts)
+        ans_rel = self.evaluate_answer_relevance(sample.query, sample.response)
+
+        # Harmonic mean (penalises severely if any single pillar collapses)
+        denom = (1.0 / max(ctx_rel, 0.01)) + (1.0 / max(faith, 0.01)) + (1.0 / max(ans_rel, 0.01))
+        harmonic_mean = round(3.0 / denom, 3)
+
+        return {
+            "context_relevance": ctx_rel,
+            "faithfulness": faith,
+            "answer_relevance": ans_rel,
+            "rag_triad_composite": harmonic_mean,
+            "claims_audit": claims_audit,
+        }
+
+# --- Demonstration Run ---
+evaluator = RAGEvaluator()
+
+sample_good = RAGEvaluationSample(
+    query="What is the operating temperature of the sensor and its battery life?",
+    contexts=[
+        "The Model-X sensor operates reliably between -20C and 60C. It features a sealed enclosure.",
+        "The integrated lithium battery provides up to 5 years of continuous operational life in standby mode."
+    ],
+    response="The Model-X sensor operates between -20C and 60C and provides up to 5 years of battery life."
+)
+
+sample_hallucinated = RAGEvaluationSample(
+    query="What is the operating temperature of the sensor and its battery life?",
+    contexts=[
+        "The Model-X sensor operates reliably between -20C and 60C. It features a sealed enclosure."
+    ],
+    response="The Model-X sensor operates between -20C and 60C and includes a 10-year solar rechargeable battery."
+)
+
+print("=== Evaluating Grounded RAG Response ===")
+report_good = evaluator.compute_triad_scorecard(sample_good)
+for k, v in report_good.items():
+    if k != "claims_audit":
+        print(f"  {k}: {v}")
+
+print("\n=== Evaluating Hallucinated RAG Response ===")
+report_hallucinated = evaluator.compute_triad_scorecard(sample_hallucinated)
+for k, v in report_hallucinated.items():
+    if k != "claims_audit":
+        print(f"  {k}: {v}")
+
+print("\nClaim Entailment Breakdown (Hallucinated Sample):")
+for claim, supported in report_hallucinated["claims_audit"]:
+    status = "ENTAILED [OK]" if supported else "HALLUCINATED [FAIL]"
+    print(f"  - '{claim}' -> {status}")
+`,
+    keyPoints: [
+      r`RAG evaluation must isolate retrieval quality from generation quality; relying purely on black-box end-to-end metrics obscures the root cause of failures.`,
+      r`The RAG Triad evaluates Context Relevance (retriever noise ratio), Faithfulness (freedom from hallucination), and Answer Relevance (direct query alignment).`,
+      r`Faithfulness is quantified by decomposing responses into atomic claims and checking logical entailment against retrieved context passages.`,
+      r`Synthetic test sets generated by LLMs from raw document chunks provide scalable, reproducible ground-truth benchmarks for continuous integration.`,
+    ],
+    pitfalls: [
+      r`Using standard BLEU or ROUGE against arbitrary references: Surface n-gram overlap metrics fail to detect semantic equivalence and penalise correct paraphrased answers.`,
+      r`Evaluating only the final answer: A pipeline with terrible retrieval can get lucky if the LLM answers from its parametric memory, masking broken retrieval components.`,
+      r`Ignoring context pollution: Including excessive irrelevant text may not immediately hurt faithfulness, but degrades latency, token cost, and long-context reasoning.`,
+    ],
+    quiz: [
+      {
+        q: r`In the RAG Triad framework, what does 'Faithfulness' measure?`,
+        o: [
+          r`Whether all factual claims made in the generated answer are strictly supported and entailed by the retrieved context documents, without ungrounded hallucinations`,
+          r`Whether the user trusts the application interface`,
+          r`Whether the embedding model uses 16-bit floating point weights`,
+          r`The grammatical correctness and spelling accuracy of the query`,
+        ],
+        a: 0,
+        why: r`Faithfulness (also called Groundedness) verifies that every proposition in the response can be directly inferred from the retrieved passages, penalising any parametric or fabricated claims.`,
+      },
+      {
+        q: r`Why is decomposing generated answers into atomic claims essential for evaluating faithfulness?`,
+        o: [
+          r`Because complex answers often blend supported facts with unsupported hallucinations in the same sentence; isolating atomic claims enables precise quantification of verified vs hallucinated propositions`,
+          r`Because transformer models can only process five words at a time`,
+          r`Because vector databases reject full sentences`,
+          r`Because atomic claims reduce token fees on the retrieval server`,
+        ],
+        a: 0,
+        why: r`A single sentence such as 'The device operates up to 60C and lasts 10 years' may have its temperature substantiated by context while the battery lifespan is a total fabrication. Breaking text into atomic claims isolates exactly which assertions are true to evidence.`,
+      },
+      {
+        q: r`What failure mode occurs when Context Relevance is low but Faithfulness is high?`,
+        o: [
+          r`The retriever returned noisy or irrelevant passages, but the generator faithfully summarised whatever irrelevant text it was given, failing to address the user's real question`,
+          r`The vector database crashed due to memory leaks`,
+          r`The LLM hallucinated entirely new mathematical formulas`,
+          r`The system refused to run because the prompt was too short`,
+        ],
+        a: 0,
+        why: r`When context relevance is low, the context contains irrelevant documents. If the model is strictly faithful, it will faithfully discuss those irrelevant documents, completely missing the user's actual question.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['rag-architecture-end-to-end', 'evaluating-llms-benchmarks-and-judges'],
+    related: ['rag-architecture-end-to-end', 'evaluating-llms-benchmarks-and-judges', 'hallucination-and-grounding'],
+    keywords: 'rag evaluation rag triad faithfulness groundedness context relevance answer relevance ragas trulens claim verification',
+  },
+  {
+    id: 'the-agent-loop-react',
+    short: 'ReAct Agent Loop',
+    title: 'The agent loop: ReAct',
+    task: 'concepts',
+    module: 'Agents',
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: r`The ReAct (Reasoning and Acting) framework establishes the foundational architectural paradigm for autonomous LLM agents. By interleaving chain-of-thought reasoning steps with environment interactions through external tool execution, ReAct enables models to perform dynamic planning, query real-time information, verify intermediate results, and self-correct trajectory errors. The execution loop operates as a cyclic state machine: perceiving current environment observations, formulating internal thoughts, selecting and parameterising tool actions, observing execution feedback, and iterating until reaching a termination condition or final answer.`,
+    lead: r`Pure large language models suffer from two symmetric limitations: Chain-of-Thought (CoT) reasoning allows deep internal deliberation but is cut off from the outside world, unable to verify facts or query real-time data; while pure action systems (such as blind API calling) execute commands without deliberate planning, making them fragile to errors and unable to adapt when unexpected results occur. The ReAct framework synergises reasoning and acting into a unified cyclic loop. How does an agent maintain working memory, deliberate on observations, and safely navigate complex multi-step objectives?`,
+    intuition: [
+      r`Synergising Reasoning and Action: In human problem solving, we constantly alternate between thinking and doing. When cooking a new recipe, you don't plan 50 actions blindly upfront, nor do you sit motionless thinking without touching ingredients. You read a step (observation), deliberate on timing and proportions (thought), measure an ingredient or adjust the burner (action), inspect the colour and aroma (observation), and decide next steps. ReAct translates this human cognition pattern into AI systems.`,
+      r`The Thought-Action-Observation Loop:
+- Thought: The agent generates an internal reasoning trace analysing the current state, diagnosing previous errors, and breaking down sub-goals ("I need the stock price of Apple on 12 May 2024. First I must query the financial API").
+- Action: The agent outputs a structured tool invocation with specific arguments (Action: stock_ticker(symbol='AAPL', date='2024-05-12')).
+- Observation: The external environment or sandbox executes the tool and injects the raw result back into the prompt context (Observation: 182.52 USD).
+- Loop Continuation: The agent absorbs the observation, reasons about whether the goal has been achieved, and either triggers another action or outputs Final Answer: ...`,
+      r`Error Recovery and Self-Correction: When an API fails with a 404 or invalid parameter error, a naive script crashes. A ReAct agent reads the error message inside its Observation step, reflects in its Thought step ("The ticker was not found. Perhaps I should search for the company's full corporate name first"), and takes corrective action.`,
+    ],
+    analogy: r`Think of an investigator solving a mystery. If they only sit in an armchair thinking (Chain-of-Thought), they cannot discover new physical clues. If they run around opening random doors and arresting people without thinking (blind Action), they cause chaos. The successful detective uses ReAct: they inspect the crime scene (Observation), deduce that the suspect must have fled through the window (Thought), check the alleyway CCTV footage (Action), view the footage showing a blue sedan (Observation), deduce that they need the registration database (Thought), query the database (Action), and finally solve the case (Final Answer).`,
+    steps: [
+      {
+        title: r`Initialise agent state and tool registry`,
+        desc: r`Register executable tool functions with type signatures, descriptions, and sandbox bindings.`,
+        detail: r`Define available tools with strict parameter schemas (e.g. calculator, database_search, web_lookup). Equip the runner with an environment wrapper capable of intercepting tool requests and handling exceptions.`,
+      },
+      {
+        title: r`Formulate prompt with ReAct scaffold`,
+        desc: r`Construct prompt defining Thought, Action, Action Input, and Observation format rules.`,
+        detail: r`Supply few-shot exemplars or structural system instructions commanding the model to interleave reasoning before every tool call, use exact formatting prefixes, and conclude with 'Final Answer:'.`,
+      },
+      {
+        title: r`Generate reasoning step (Thought)`,
+        desc: r`Prompt LLM to evaluate perceptual history and deliberate on immediate next sub-goal.`,
+        detail: r`The LLM inspects previous observations and synthesises a Thought: token sequence describing its internal hypothesis, plan verification, or sub-goal decomposition.`,
+      },
+      {
+        title: r`Parse and execute action`,
+        desc: r`Extract structured tool name and arguments, validate inputs, and execute in sandboxed environment.`,
+        detail: r`A regex or grammar parser stops model decoding at the end of the Action Input block. The orchestration engine invokes the target tool and formats the execution output into an Observation: string.`,
+      },
+      {
+        title: r`Ingest observation and check termination`,
+        desc: r`Append observation to working memory, check iteration limits, and return final answer upon completion.`,
+        detail: r`Append the Observation to prompt context. If the model produces 'Final Answer:', return the result to user. If maximum allowed steps are reached, trigger a fallback handler to prevent runaway loops.`,
+      },
+    ],
+    math: [
+      {
+        h: r`ReAct Trajectory Representation and State Space`,
+        tex: r`\tau_t = \left(x, \, r_1, a_1, o_1, \, r_2, a_2, o_2, \, \dots, \, r_t, a_t, o_t\right) \in (\mathcal{X} \times (\mathcal{R} \times \mathcal{A} \times \mathcal{O})^t)`,
+        p: r`The agent trajectory \tau_t at step t begins with user prompt x \in \mathcal{X} followed by triples of thoughts r_i \in \mathcal{R} (reasoning traces), actions a_i \in \mathcal{A} (external tool commands), and observations o_i \in \mathcal{O} (environment feedback received from execution \mathcal{E}(a_i)).`,
+      },
+      {
+        h: r`Autoregressive Factorisation of Reason-Action Policy`,
+        tex: r`p(\tau_T \mid x) = \prod_{t=1}^T p_\theta(r_t \mid \tau_{t-1}, x) \cdot p_\theta(a_t \mid \tau_{t-1}, r_t, x), \quad o_t \sim p_{\text{env}}(o_t \mid a_t, s_t)`,
+        p: r`The language model \theta generates thoughts r_t and actions a_t conditioned on complete historical context \tau_{t-1}. Unlike ungrounded generation, observations o_t are sampled from the external environment p_{\text{env}} at environmental state s_t, grounding future reasoning in verifiable external reality.`,
+      },
+      {
+        h: r`Loop Guardrail and Convergence Bound`,
+        tex: r`\text{StopCondition}(\tau_t) = \mathbb{I}\Big(a_t = \text{Finish}(y)\Big) \lor \mathbb{I}\Big(t \ge T_{\max}\Big) \lor \mathbb{I}\Big(\text{Cost}(\tau_t) \ge C_{\max}\Big)`,
+        p: r`Because autonomous agent loops can experience degenerative behaviour such as infinite repetition loops or runaway API calls, safety guardrails terminate execution whenever the model signals completion, hits step limit T_{\max}, or exceeds monetary budget C_{\max}.`,
+      },
+    ],
+    code: r`"""
+The ReAct Agent Execution Loop
+Demonstrating Thought-Action-Observation interleaving, tool execution,
+working memory updates, and safety step limits.
+"""
+
+import re
+from typing import Callable, Dict, Any, List
+
+class ToolRegistry:
+    def __init__(self):
+        self.tools: Dict[str, Callable] = {}
+        self.descriptions: Dict[str, str] = {}
+
+    def register(self, name: str, desc: str):
+        def decorator(func: Callable):
+            self.tools[name] = func
+            self.descriptions[name] = desc
+            return func
+        return decorator
+
+    def execute(self, tool_name: str, argument: str) -> str:
+        if tool_name not in self.tools:
+            return f"Error: Tool '{tool_name}' does not exist. Available tools: {list(self.tools.keys())}"
+        try:
+            return str(self.tools[tool_name](argument.strip()))
+        except Exception as e:
+            return f"Execution Error in '{tool_name}': {str(e)}"
+
+# Initialise Tool Registry
+registry = ToolRegistry()
+
+@registry.register("calculate", "Evaluate basic arithmetic expressions. Argument: mathematical expression string.")
+def tool_calculate(expr: str) -> str:
+    # Safe evaluator for demonstration
+    clean = re.sub(r'[^0-9+\-*/(). ]', '', expr)
+    return str(eval(clean))
+
+@registry.register("lookup_price", "Look up product pricing from warehouse catalog. Argument: item name.")
+def tool_lookup_price(item: str) -> str:
+    db = {"laptop": 1200, "monitor": 350, "docking station": 150, "mouse": 25}
+    key = item.lower().strip()
+    if key in db:
+        return f"{db[key]} USD"
+    return f"Item '{item}' not found in catalog."
+
+class ReActAgent:
+    def __init__(self, registry: ToolRegistry, max_steps: int = 5):
+        self.registry = registry
+        self.max_steps = max_steps
+
+    def _mock_llm_decide(self, trajectory: str) -> str:
+        """
+        Simulated LLM simulating Thought -> Action sequence conditioned on trajectory.
+        In production, this calls a language model API with stop tokens.
+        """
+        if "Observation:" not in trajectory:
+            return (
+                "Thought: The user wants to know the total price for 2 monitors and 1 docking station. "
+                "First, I need to lookup the unit price of a monitor.\n"
+                "Action: lookup_price\n"
+                "Action Input: monitor"
+            )
+        elif "monitor" in trajectory and "docking station" not in trajectory:
+            return (
+                "Thought: The monitor costs 350 USD. Now I need to check the price of a docking station.\n"
+                "Action: lookup_price\n"
+                "Action Input: docking station"
+            )
+        elif "docking station" in trajectory and "calculate" not in trajectory:
+            return (
+                "Thought: A docking station costs 150 USD and a monitor costs 350 USD. "
+                "Now I will calculate: (2 * 350) + 150.\n"
+                "Action: calculate\n"
+                "Action Input: (2 * 350) + 150"
+            )
+        else:
+            return (
+                "Thought: The calculation yielded 850. I now have all required facts to conclude.\n"
+                "Final Answer: The total cost for 2 monitors and 1 docking station is 850 USD."
+            )
+
+    def run(self, user_objective: str) -> Dict[str, Any]:
+        """Execute the cyclic ReAct loop."""
+        print(f"=== Starting ReAct Agent Loop for Objective: '{user_objective}' ===")
+        trajectory = f"Question: {user_objective}\n"
+        step = 1
+
+        while step <= self.max_steps:
+            print(f"\n--- Step {step} ---")
+            # 1. Generate Thought and Action
+            llm_output = self._mock_llm_decide(trajectory)
+            trajectory += llm_output + "\n"
+
+            # Check for Final Answer termination
+            if "Final Answer:" in llm_output:
+                final_answer = llm_output.split("Final Answer:")[1].strip()
+                print(f"[Agent Decided] {llm_output}")
+                return {"status": "SUCCESS", "steps": step, "final_answer": final_answer, "trace": trajectory}
+
+            # 2. Parse Action and Action Input
+            action_match = re.search(r"Action:\s*([a-zA-Z0-9_]+)", llm_output)
+            input_match = re.search(r"Action Input:\s*(.+)", llm_output)
+
+            if not action_match or not input_match:
+                print(f"[Parse Error] Failed to parse Action/Input from:\n{llm_output}")
+                return {"status": "FAILED_PARSE", "steps": step, "trace": trajectory}
+
+            tool_name = action_match.group(1).strip()
+            tool_input = input_match.group(1).strip()
+
+            print(f"Thought: {re.search(r'Thought:(.*?)(?=Action:|$)', llm_output, re.DOTALL).group(1).strip()}")
+            print(f"Action: {tool_name}({tool_input})")
+
+            # 3. Execute Tool Environment
+            observation = self.registry.execute(tool_name, tool_input)
+            print(f"Observation: {observation}")
+
+            # 4. Ingest Observation back into Trajectory
+            trajectory += f"Observation: {observation}\n"
+            step += 1
+
+        print("\n[Safety Limit] Exceeded maximum allowed steps.")
+        return {"status": "MAX_STEPS_EXCEEDED", "steps": step, "trace": trajectory}
+
+# --- Demonstration Run ---
+agent = ReActAgent(registry, max_steps=5)
+result = agent.run("What is the total price for 2 monitors and 1 docking station?")
+
+print("\n=== Agent Run Summary ===")
+print("Status:", result["status"])
+print("Steps Taken:", result["steps"])
+print("Final Output:", result["final_answer"])
+`,
+    keyPoints: [
+      r`ReAct synergises Chain-of-Thought reasoning with external environment actions into an interleaved Thought-Action-Observation loop.`,
+      r`Reasoning traces allow the agent to decompose goals, track progress, and diagnose execution errors, while actions interact with dynamic external environments.`,
+      r`Observations from tools are injected directly back into the agent's prompt history, allowing it to adapt to real-world feedback in real time.`,
+      r`Safety guardrails including maximum step limits and tool parameter validation are essential to prevent infinite thrashing loops.`,
+    ],
+    pitfalls: [
+      r`Running without step limits: When an agent encounters an unresolvable error, it will repeatedly query the broken tool indefinitely, draining token budgets and crashing servers.`,
+      r`Brittle regex parsing of actions: Standard LLM outputs often vary spacing or casing; robust agents use structured output modes (JSON schema / function calling) or resilient grammar parsers.`,
+      r`Over-reliance on reasoning without checking observations: Failing to condition subsequent thoughts strictly on the returned tool output leads to cascading delusional loops.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does ReAct outperform pure Chain-of-Thought (CoT) on multi-step fact-seeking tasks?`,
+        o: [
+          r`Because CoT relies solely on static internal parametric knowledge and cannot fetch live data or verify facts, whereas ReAct executes external tools and grounds its reasoning on dynamic observations`,
+          r`Because CoT cannot generate mathematical expressions`,
+          r`Because ReAct requires no training data or prompt`,
+          r`Because ReAct disables the transformer's attention layers during reasoning`,
+        ],
+        a: 0,
+        why: r`Pure Chain-of-Thought is isolated from the physical world and prone to hallucinating facts or dates. ReAct interleaves reasoning with external tool calls (APIs, search engines, databases), grounding its reasoning in verifiable observations.`,
+      },
+      {
+        q: r`What is the purpose of the 'Observation' step in the ReAct loop?`,
+        o: [
+          r`To feed the real output of an external tool or environment execution back into the agent's context window, allowing subsequent thoughts to be conditioned on actual results`,
+          r`To let human supervisors manually approve every token`,
+          r`To compress the context window using vector quantization`,
+          r`To reset the agent's memory to zero`,
+        ],
+        a: 0,
+        why: r`The Observation step injects the environment's response (API JSON, database rows, arithmetic answer, or error messages) into the working prompt, providing empirical evidence for the agent's next Thought step.`,
+      },
+      {
+        q: r`How does a ReAct agent handle an unexpected API error (such as a 404 Not Found)?`,
+        o: [
+          r`The error string is injected as an Observation; the agent's next Thought step interprets the error and plans an alternative strategy or corrected search query`,
+          r`The entire server automatically reboots`,
+          r`The agent crashes immediately and deletes its weights`,
+          r`The agent converts the error code into a floating point number`,
+        ],
+        a: 0,
+        why: r`Unlike deterministic scripts that throw fatal exceptions, an agent absorbs the error message as an observation, reflects on the failure mode in its next thought, and autonomously initiates corrective actions.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['tool-use-and-function-calling', 'intelligent-agents-and-environments'],
+    related: ['tool-use-and-function-calling', 'intelligent-agents-and-environments', 'prompting-and-in-context-learning'],
+    keywords: 'react agent loop reasoning acting thought action observation autonomous agent tool use state machine',
+  },
+  {
+    id: 'agent-evaluation-and-test-harnesses',
+    short: 'Agent Evaluation',
+    title: 'Agent evaluation and test harnesses',
+    task: 'concepts',
+    module: 'Agents',
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: r`Evaluating autonomous multi-step agents requires moving beyond static single-turn benchmarks to interactive simulation harnesses and trajectory-level audits. Unlike simple question-answering systems, agents alter environmental state, invoke APIs, navigate dynamic graphs, and make sequential decisions under uncertainty. Rigorous agent evaluation balances outcome-based verification (did the agent successfully modify the database, fix the software bug, or complete the purchase?) with trajectory-based diagnostic metrics (action efficiency, tool call error rates, cyclic loop detection, and safety violations).`,
+    lead: r`If evaluating a single-turn LLM is like scoring a written multiple-choice test, evaluating an autonomous agent is like administering a driving test in live traffic. An agent might eventually reach the desired destination, but did it take three unnecessary detours, exceed speed limits, or ignore stop signs along the way? Worse, did it get caught in an infinite loop calling the same broken endpoint fifty times? Developing robust agent systems requires deterministic test harnesses, sandboxed mock environments, trajectory log analysis, and regression suites.`,
+    intuition: [
+      r`Outcome vs Trajectory Evaluation:
+- Outcome Evaluation: Assesses the final state of the task environment. In SWE-bench, this means running unit tests to check if the patch resolves the issue without regressions. In WebArena, it means inspecting whether the order was placed with the correct shipping address.
+- Trajectory Evaluation: Assesses the path taken to reach the outcome. An agent that solves a task in 3 efficient tool calls is vastly superior in speed, cost, and reliability to one that takes 28 calls filled with syntax errors, retries, and hallucinations.`,
+      r`The Core Failure Modes of Autonomous Agents:
+- Infinite Loops / Thrashing: Repeating identical failed actions without learning from error observations.
+- Tool Hallucination: Inventing nonexistent tools or fictitious parameter names not in the schema.
+- Premature Termination: Declaring victory before completing necessary prerequisites.
+- Cascading Error Propagation: Basing subsequent reasoning on a faulty intermediate assumption.
+- Side-Effect Leakage: Modifying state destructively (e.g. deleting files) in attempts to explore.`,
+      r`Deterministic Sandboxed Test Harnesses: Live external web APIs are non-deterministic, rate-limited, and subject to external changes. Robust evaluation harnesses employ mock sandboxes (recorded HTTP cassettes, isolated Docker containers, virtual filesystems) that reset to identical initial states prior to each test run, ensuring reproducible evaluations.`,
+    ],
+    analogy: r`Consider testing an autopilot flight system in commercial aviation. You would never evaluate the autopilot solely by checking whether the aeroplane touched down on the runway at the end of the journey (outcome only). If the autopilot stalled twice, exceeded G-force limits, burned twice the allotted fuel, and deviated 200 miles off course before landing, the flight was a catastrophic failure. A comprehensive flight simulator test harness (agent test harness) records altitude, pitch, telemetry, and pilot command interactions at every second (trajectory evaluation) while measuring touchdown precision and passenger safety (outcome evaluation).`,
+    steps: [
+      {
+        title: r`Define sandboxed simulation environment`,
+        desc: r`Build mock tools and stateful environment capable of deterministic snapshots and resets.`,
+        detail: r`Isolate external dependencies behind mock APIs, virtualised relational databases, or containerised sandboxes. Ensure every test fixture begins with an identical pristine state via reset() mechanisms.`,
+      },
+      {
+        title: r`Design benchmark task specifications`,
+        desc: r`Specify initial state, objective description, expected final state assertions, and reference golden trajectory.`,
+        detail: r`Structure benchmark suites (inspired by GAIA and SWE-bench) where each task includes natural language instructions, time/step budgets, allowed tool subsets, and explicit programmatic assertions for state verification.`,
+      },
+      {
+        title: r`Execute agent under instrumented harness`,
+        desc: r`Run agent with instrumentation capturing tool calls, latency, token spend, and observation feedbacks.`,
+        detail: r`Wrap tool invocations in telemetry interceptors that record the exact sequence of thoughts, tool names, parameters, execution return codes, and latency timestamps into structured JSONL audit logs.`,
+      },
+      {
+        title: r`Evaluate trajectory quality metrics`,
+        desc: r`Calculate step efficiency ratio, invalid tool call frequency, and repeated action detection.`,
+        detail: r`Analyse the execution trace for thrashing loops (repeated identical actions), parameter schema violations, hallucinated tool calls, and trajectory efficiency relative to the golden path.`,
+      },
+      {
+        title: r`Verify state assertions and synthesise report`,
+        desc: r`Execute automated environment assertions, compute task success rate, and produce diagnostic audit logs.`,
+        detail: r`Run programmatic environment unit tests to verify ground-truth state changes. Generate a composite scorecard combining task success rate, average step overhead, and safety compliance across the test suite.`,
+      },
+    ],
+    math: [
+      {
+        h: r`Trajectory Efficiency and Path Optimality`,
+        tex: r`\text{Efficiency}(\tau) = \frac{|\tau^*|}{\max\big(|\tau|, |\tau^*|\big)} \in (0, 1]`,
+        p: r`Let \tau^* be the minimal golden path trajectory (optimal number of tool calls) and \tau be the observed agent trajectory. If an agent completes a task in 3 steps when the golden path is 3, efficiency is 1.0. If the agent meanders for 12 steps before succeeding, efficiency drops to 0.25.`,
+      },
+      {
+        h: r`Loop Detection and Action Repetition Index`,
+        tex: r`\text{RepetitionScore}(A) = \frac{1}{T - 1} \sum_{t=1}^{T-1} \mathbb{I}(a_{t+1} = a_t), \quad A = (a_1, a_2, \dots, a_T)`,
+        p: r`Detects consecutive thrashing loops where an agent blindly repeats an identical action command despite receiving error feedback. An agent with repetition score > 0 exhibits pathological stuck loops requiring circuit-breaker interventions.`,
+      },
+      {
+        h: r`Composite Benchmark Scorecard with Resource Penalty`,
+        tex: r`\text{Score} = \text{Success} \times \left(w_1 \cdot \text{Efficiency}(\tau) + w_2 \cdot (1 - \text{ToolErrorRate})\right) \cdot \exp\left(-\lambda \cdot \frac{\text{Tokens}}{\text{TokenBudget}}\right)`,
+        p: r`Holistic agent scoring penalises inefficient or error-prone trajectories even when the ultimate objective is reached, scaling down rewards when token usage approaches the budget ceiling.`,
+      },
+    ],
+    code: r`"""
+Autonomous Agent Evaluation Test Harness
+Demonstrating deterministic sandboxed execution, trajectory logging,
+loop detection, and outcome verification.
+"""
+
+from typing import List, Dict, Any, Callable
+import copy
+
+class MockDatabaseSandbox:
+    """Deterministic stateful environment fixture."""
+    def __init__(self):
+        self._initial_state = {
+            "users": {"u1": {"name": "Alice", "balance": 100}, "u2": {"name": "Bob", "balance": 50}},
+            "transactions": []
+        }
+        self.state = copy.deepcopy(self._initial_state)
+
+    def reset(self):
+        self.state = copy.deepcopy(self._initial_state)
+
+    def transfer(self, from_user: str, to_user: str, amount: int) -> str:
+        if from_user not in self.state["users"] or to_user not in self.state["users"]:
+            return "Error: Invalid user ID."
+        if self.state["users"][from_user]["balance"] < amount:
+            return "Error: Insufficient funds."
+        self.state["users"][from_user]["balance"] -= amount
+        self.state["users"][to_user]["balance"] += amount
+        self.state["transactions"].append({"from": from_user, "to": to_user, "amount": amount})
+        return f"Success: Transferred {amount} from {from_user} to {to_user}."
+
+class TrajectoryStep:
+    def __init__(self, step_idx: int, thought: str, action: str, params: Dict[str, Any], observation: str, success: bool):
+        self.step_idx = step_idx
+        self.thought = thought
+        self.action = action
+        self.params = params
+        self.observation = observation
+        self.success = success
+
+class AgentTestHarness:
+    def __init__(self, sandbox: MockDatabaseSandbox):
+        self.sandbox = sandbox
+
+    def evaluate_trajectory(self, trajectory: List[TrajectoryStep], golden_steps: int = 1) -> Dict[str, Any]:
+        """Compute diagnostic metrics across the execution trace."""
+        total_steps = len(trajectory)
+        if total_steps == 0:
+            return {"efficiency": 0.0, "error_rate": 1.0, "loops_detected": 0}
+
+        # 1. Trajectory Efficiency
+        efficiency = round(golden_steps / max(total_steps, golden_steps), 3)
+
+        # 2. Tool Execution Error Rate
+        errors = sum(1 for step in trajectory if not step.success)
+        error_rate = round(errors / total_steps, 3)
+
+        # 3. Thrashing / Consecutive Loop Detection
+        loops = 0
+        for i in range(len(trajectory) - 1):
+            curr = (trajectory[i].action, str(trajectory[i].params))
+            next_step = (trajectory[i+1].action, str(trajectory[i+1].params))
+            if curr == next_step and not trajectory[i].success:
+                loops += 1
+
+        return {
+            "total_steps": total_steps,
+            "efficiency": efficiency,
+            "error_rate": error_rate,
+            "loops_detected": loops,
+        }
+
+    def verify_outcome(self) -> bool:
+        """Run programmatic assertions against the environment state."""
+        # Task: Transfer 40 from u1 to u2
+        state = self.sandbox.state
+        u1_ok = state["users"]["u1"]["balance"] == 60
+        u2_ok = state["users"]["u2"]["balance"] == 90
+        tx_ok = len(state["transactions"]) == 1 and state["transactions"][0]["amount"] == 40
+        return u1_ok and u2_ok and tx_ok
+
+# --- Simulation Demonstration ---
+sandbox = MockDatabaseSandbox()
+harness = AgentTestHarness(sandbox)
+
+# Scenario A: Highly efficient golden agent (1 step)
+sandbox.reset()
+obs_a = sandbox.transfer("u1", "u2", 40)
+trace_efficient = [
+    TrajectoryStep(1, "Transfer 40 from u1 to u2", "transfer", {"from": "u1", "to": "u2", "amount": 40}, obs_a, True)
+]
+outcome_a = harness.verify_outcome()
+metrics_a = harness.evaluate_trajectory(trace_efficient, golden_steps=1)
+
+print("=== Scenario A: Efficient Agent ===")
+print("Task Succeeded:", outcome_a)
+print("Trajectory Metrics:", metrics_a)
+
+# Scenario B: Flawed agent with bad parameters, repetition loop, then recovery
+sandbox.reset()
+obs_b1 = sandbox.transfer("u1", "u99", 40)  # Invalid user error
+obs_b2 = sandbox.transfer("u1", "u99", 40)  # Repeated mistake (loop!)
+obs_b3 = sandbox.transfer("u1", "u2", 40)   # Corrected action
+
+trace_flawed = [
+    TrajectoryStep(1, "Transfer to u99", "transfer", {"from": "u1", "to": "u99", "amount": 40}, obs_b1, False),
+    TrajectoryStep(2, "Retry transfer to u99", "transfer", {"from": "u1", "to": "u99", "amount": 40}, obs_b2, False),
+    TrajectoryStep(3, "Correct target to u2", "transfer", {"from": "u1", "to": "u2", "amount": 40}, obs_b3, True),
+]
+outcome_b = harness.verify_outcome()
+metrics_b = harness.evaluate_trajectory(trace_flawed, golden_steps=1)
+
+print("\n=== Scenario B: Flawed Trajectory Agent ===")
+print("Task Succeeded:", outcome_b)
+print("Trajectory Metrics:", metrics_b)
+`,
+    keyPoints: [
+      r`Agent evaluation requires evaluating both final outcome correctness and trajectory quality (efficiency, loop avoidance, error frequency).`,
+      r`Deterministic sandboxed simulation environments with state reset capabilities prevent external API drift and ensure test reproducibility.`,
+      r`Trajectory audits detect pathological failure modes such as thrashing loops, parameter schema hallucinations, and cascading error propagation.`,
+      r`Composite benchmarks balance binary task completion with resource consumption penalties (step count and token budget).`,
+    ],
+    pitfalls: [
+      r`Relying exclusively on outcome metrics: An agent that succeeds only after twenty broken retries and heavy hallucination is fragile and will fail catastrophically in production.`,
+      r`Evaluating against live production APIs: Unsandboxed testing is non-deterministic, introduces rate limits, risks destructive state modification, and cannot be reproduced.`,
+      r`Ignoring looping behaviour: Agents that lack loop detection will exhaust maximum context length and incur massive API bills when tools return errors.`,
+    ],
+    quiz: [
+      {
+        q: r`Why is evaluating an agent's trajectory just as important as verifying its final outcome?`,
+        o: [
+          r`Because an agent may achieve the final outcome through inefficient random trials, thrashing loops, or dangerous side-effects; trajectory evaluation quantifies cost, speed, reliability, and safety`,
+          r`Because trajectories are required to compile Python code`,
+          r`Because outcomes cannot be measured by computers`,
+          r`Because trajectory length is always zero for good models`,
+        ],
+        a: 0,
+        why: r`An agent that accidentally reaches the goal after 40 failing API calls and massive hallucination is brittle, expensive, and unsafe. Trajectory evaluation measures whether the agent reasoned effectively and acted efficiently.`,
+      },
+      {
+        q: r`What constitutes a 'thrashing' or infinite loop failure mode in autonomous agents?`,
+        o: [
+          r`When an agent repeatedly invokes the exact same tool with identical failing parameters across multiple consecutive steps without adapting to the error observation`,
+          r`When the computer processor overheats during training`,
+          r`When the user types too many messages in chat`,
+          r`When an agent completes a task in a single step`,
+        ],
+        a: 0,
+        why: r`Thrashing occurs when an agent fails to assimilate error feedback in its Thought step, blindly repeating the identical failed tool invocation until hitting hard execution step limits.`,
+      },
+      {
+        q: r`Why must test harnesses for autonomous agents utilise sandboxed mock environments with reset capabilities?`,
+        o: [
+          r`To ensure evaluation runs are strictly deterministic, isolated from external network volatility, safe from destructive data mutations, and easily reproducible across benchmark iterations`,
+          r`To make test runs run without needing Python installed`,
+          r`Because foundation models cannot connect to TCP sockets`,
+          r`To prevent agents from generating natural language`,
+        ],
+        a: 0,
+        why: r`Sandboxes ensure that every test run starts with an identical pristine state fixture, isolating tests from live API changes, flakiness, rate limits, or accidental data destruction.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['the-agent-loop-react', 'evaluating-llms-benchmarks-and-judges'],
+    related: ['the-agent-loop-react', 'evaluating-llms-benchmarks-and-judges', 'tool-use-and-function-calling'],
+    keywords: 'agent evaluation test harnesses trajectory evaluation outcome evaluation sandboxed environments sweet-bench gaia efficiency loop detection',
+  }
 ];
