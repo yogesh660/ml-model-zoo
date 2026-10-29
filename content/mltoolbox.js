@@ -5466,5 +5466,2069 @@ print(f"MAP@5:   {map_score:.4f}")`,
       "bayesian-networks"
     ],
     keywords: "markov random field, mrf, undirected graphical model, hammersley clifford, gibbs distribution, ising model, icm, partition function, image denoising"
-  }
+  },
+
+{
+  "id": "gaussian-process-classifier",
+  "short": "GP classifier",
+  "title": "Gaussian Process Classification",
+  "task": "concepts",
+  "module": "Probabilistic models",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Non-parametric Bayesian classification with principled uncertainty: master latent Gaussian processes, non-conjugate Bernoulli likelihoods, and the Laplace approximation.",
+  "lead": "While Gaussian Process Regression has a closed-form Gaussian posterior, GP classification involves a discrete non-Gaussian likelihood that destroys exact conjugacy. Approximate inference methods (Laplace approximation and Expectation Propagation) yield well-calibrated class probabilities and epistemic uncertainty.",
+  "intuition": [
+    "In safety-critical classification domains—such as autonomous vehicle pedestrian detection, medical radiology triage, or financial stress forecasting—predicting a class label is insufficient; the model must communicate how confident it is in its prediction, distinguishing between familiar operational regimes and alien out-of-distribution inputs (epistemic uncertainty).",
+    "Gaussian Process Classification (GPC) models classification non-parametrically by placing a Gaussian Process prior over an unobserved continuous latent function $f(x) \\sim \\mathcal{GP}(m(x), k(x, x'))$. This latent function $f(x)$ represents log-odds scores across input space. To transform latent real numbers into valid probabilities, $f(x)$ is squashed through a sigmoid or probit link function: $\\pi(x) = P(y = 1 \\mid f(x)) = \\sigma(f(x))$.",
+    "However, a fundamental mathematical hurdle arises: unlike Gaussian noise in regression, the discrete Bernoulli likelihood $p(y \\mid f) = \\prod_{i=1}^n \\sigma(y_i f_i)$ is non-Gaussian. Multiplying a Gaussian prior $p(f)$ by a non-Gaussian likelihood yields a non-Gaussian posterior distribution $p(f \\mid y) = p(y \\mid f) p(f) / p(y)$ whose normalising marginal evidence integral is analytically intractable.",
+    "To resolve this intractability, GPC employs deterministic approximations. The Laplace Approximation fits a Gaussian $\\mathcal{N}(\\hat{f}, \\Sigma)$ centred at the posterior mode $\\hat{f} = \\arg\\max \\log p(f \\mid y)$ by taking the second-order Taylor expansion (negative Hessian) of the unnormalized log posterior. Test predictions are obtained by integrating the sigmoid link over the resulting Gaussian predictive distribution."
+  ],
+  "analogy": "Imagine a sound engineer setting an audio volume threshold. The underlying acoustics of the room vary smoothly across different corners (the continuous latent Gaussian process f(x)). A red warning light blinks on whenever the noise exceeds a decibel threshold (the discrete binary observation y in {0, 1}). We cannot measure the exact decibel level directly, only whether the red light blinked. The Laplace approximation acts as an acoustic reconstruction tool, calculating the most probable decibel level and uncertainty bands at every coordinate in the room.",
+  "steps": [
+    {
+      "title": "1. Specify GP covariance kernel and latent prior",
+      "body": "Choose a valid kernel $k(x, x')$ (such as RBF/Squared Exponential) defining smooth correlation between points. Formulate prior $f \\sim \\mathcal{N}(0, K)$."
+    },
+    {
+      "title": "2. Compute posterior mode via Newton–Raphson",
+      "body": "Maximise unnormalized log-posterior $\\Psi(f) = -\\frac{1}{2} f^T K^{-1} f + \\sum_{i=1}^n \\log \\sigma(y_i f_i)$. Iterate Newton updates to find mode $\\hat{f}$."
+    },
+    {
+      "title": "3. Construct Laplace covariance at the mode",
+      "body": "Evaluate the negative Hessian: $W = -\\nabla^2 \\sum \\log p(y_i \\mid f_i) = \\operatorname{diag}(\\pi_i (1 - \\pi_i))$. Compute Laplace posterior covariance $\\Sigma = (K^{-1} + W)^{-1}$."
+    },
+    {
+      "title": "4. Compute predictive distribution and squash",
+      "body": "For test point $x_*$, compute predictive latent mean $\\mu_* = k_*^T \\nabla \\log p(y \\mid \\hat{f})$ and latent variance $\\sigma_*^2 = k(x_*, x_*) - k_*^T (K + W^{-1})^{-1} k_*$. Approximate test class probability $\\bar{\\pi}_* = \\int \\sigma(f_*) \\mathcal{N}(f_* \\mid \\mu_*, \\sigma_*^2) df_*$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Laplace Approximation Objective and Mode Finding",
+      "tex": "\\nabla \\Psi(f) = -K^{-1} f + (t - \\pi), \\quad \\nabla^2 \\Psi(f) = -(K^{-1} + W), \\quad W = \\operatorname{diag}(\\pi_i (1 - \\pi_i))",
+      "p": "Gradient and Hessian of unnormalized log posterior over latent vector f, where t_i = (y_i + 1)/2 and pi_i = sigma(f_i). Because W is positive semi-definite, the objective is strictly concave."
+    },
+    {
+      "h": "Newton Update for Posterior Mode",
+      "tex": "f^{\\mathrm{new}} = (K^{-1} + W)^{-1} (W f + t - \\pi) = K (I + W K)^{-1} (W f + t - \\pi)",
+      "p": "Numerically stable mode-finding iteration avoiding inversion of K directly, evaluating Cholesky factorisation on (B = I + W^{1/2} K W^{1/2})."
+    },
+    {
+      "h": "Probit Sigmoid Approximation for Predictive Class Probability",
+      "tex": "\\bar{\\pi}_* = \\mathbb{E}_{f_* \\sim \\mathcal{N}(\\mu_*, \\sigma_*^2)}[\\sigma(f_*)] \\approx \\sigma\\left(\\frac{\\mu_*}{\\sqrt{1 + \\frac{\\pi}{8} \\sigma_*^2}}\\right)",
+      "p": "Convoluting a Gaussian distribution with a sigmoid is analytically intractable, but substituting a cumulative probit link yields this accurate closed-form approximation."
+    }
+  ],
+  "code": "import numpy as np\n\n# Gaussian Process Classifier with Laplace Approximation from scratch\nclass GPClassifierLaplace:\n    def __init__(self, gamma=1.0, max_iters=30, tol=1e-6):\n        self.gamma = gamma\n        self.max_iters = max_iters\n        self.tol = tol\n        self.X_train = None\n        self.y_train = None\n        self.f_hat = None\n        self.K = None\n        self.W = None\n        \n    def _rbf_kernel(self, X1, X2):\n        dists_sq = np.sum(X1**2, axis=1)[:, None] + np.sum(X2**2, axis=1)[None, :] - 2 * (X1 @ X2.T)\n        return np.exp(-self.gamma * np.maximum(dists_sq, 0))\n        \n    def fit(self, X, y):\n        self.X_train = X\n        self.y_train = y  # y in {0, 1}\n        n = len(X)\n        \n        # 1. Compute kernel matrix with jitter for numerical stability\n        self.K = self._rbf_kernel(X, X) + 1e-6 * np.eye(n)\n        \n        # 2. Newton-Raphson iteration to find posterior mode f_hat\n        f = np.zeros(n)\n        for it in range(self.max_iters):\n            pi = 1.0 / (1.0 + np.exp(-np.clip(f, -30, 30)))\n            # W = diag(pi * (1 - pi))\n            w = pi * (1.0 - pi)\n            W = np.diag(w)\n            \n            # Stable Cholesky factorisation of (I + W^{1/2} K W^{1/2})\n            W_sqrt = np.diag(np.sqrt(w))\n            B = np.eye(n) + W_sqrt @ self.K @ W_sqrt\n            L = np.linalg.cholesky(B)\n            \n            grad = self.y_train - pi\n            b = W @ f + grad\n            # Solve (K^{-1} + W) f_new = b via Woodbury identity\n            a = b - W_sqrt @ np.linalg.solve(L.T, np.linalg.solve(L, W_sqrt @ self.K @ b))\n            f_new = self.K @ a\n            \n            diff = np.max(np.abs(f_new - f))\n            f = f_new\n            if diff < self.tol:\n                break\n                \n        self.f_hat = f\n        self.pi_hat = 1.0 / (1.0 + np.exp(-np.clip(f, -30, 30)))\n        self.w_hat = self.pi_hat * (1.0 - self.pi_hat)\n        \n    def predict_proba(self, X_test):\n        n_train = len(self.X_train)\n        n_test = len(X_test)\n        \n        K_star = self._rbf_kernel(self.X_train, X_test)\n        K_star_star = self._rbf_kernel(X_test, X_test) + 1e-6 * np.eye(n_test)\n        \n        # Predictive latent mean: mu_* = K_*^T (y - pi)\n        grad = self.y_train - self.pi_hat\n        mu_star = K_star.T @ grad\n        \n        # Predictive latent variance: sigma_*^2\n        W_sqrt = np.diag(np.sqrt(self.w_hat))\n        B = np.eye(n_train) + W_sqrt @ self.K @ W_sqrt\n        L = np.linalg.cholesky(B)\n        v = np.linalg.solve(L, W_sqrt @ K_star)\n        sigma2_star = np.diag(K_star_star) - np.sum(v**2, axis=0)\n        sigma2_star = np.maximum(sigma2_star, 1e-8)\n        \n        # Probit link approximation for predictive probability\n        kappa = 1.0 / np.sqrt(1.0 + np.pi * sigma2_star / 8.0)\n        p_star = 1.0 / (1.0 + np.exp(-kappa * mu_star))\n        \n        return p_star, sigma2_star\n\n# Synthetic non-linear classification dataset\nnp.random.seed(42)\nn_samples = 80\nX = np.random.uniform(-3, 3, (n_samples, 2))\n# True non-linear boundary: circle x1^2 + x2^2 < 3.0\ny = ((X[:, 0]**2 + X[:, 1]**2) < 3.0).astype(int)\n\ngpc = GPClassifierLaplace(gamma=0.5)\ngpc.fit(X, y)\n\n# Predict on inlier and far out-of-distribution point\ntest_points = np.array([\n    [0.0, 0.0],    # Firmly inside circle (Class 1)\n    [1.8, 1.8],    # Firmly outside circle (Class 0)\n    [10.0, 10.0],  # Far out-of-distribution point!\n])\n\nprobs, latent_vars = gpc.predict_proba(test_points)\n\nprint(\"Gaussian Process Classification (Laplace Approximation):\")\nprint(f\"Point [0, 0] (Inside):      P(Y=1) = {probs[0]:.4f}, Latent Var = {latent_vars[0]:.3f} (High certainty)\")\nprint(f\"Point [1.8, 1.8] (Outside):  P(Y=1) = {probs[1]:.4f}, Latent Var = {latent_vars[1]:.3f} (High certainty)\")\nprint(f\"Point [10, 10] (OOD Alien): P(Y=1) = {probs[2]:.4f}, Latent Var = {latent_vars[2]:.3f} (High uncertainty reverting to 0.50!)\")",
+  "keyPoints": [
+    "Non-parametric Bayesian classification placing a Gaussian Process prior over continuous latent log-odds function $f(x)$.",
+    "Discrete Bernoulli likelihood breaks conjugacy; exact posterior is non-Gaussian and intractable.",
+    "Laplace approximation fits a Gaussian distribution around the posterior mode $\\hat{f}$ using the negative Hessian of the log posterior.",
+    "Produces principled epistemic uncertainty: on distant out-of-distribution inputs, latent variance increases and probabilities revert toward 0.50.",
+    "Provides superior probability calibration compared to uncalibrated neural networks and support vector machines."
+  ],
+  "pitfalls": [
+    "Computational scaling: Mode finding and covariance inversion scale as $O(n^3)$ per Newton step, limiting vanilla GPC to a few thousand samples.",
+    "Laplace mode underestimation: The Laplace approximation fits the curvature at the mode; if the true posterior is skewed or multimodal, Expectation Propagation (EP) is more accurate.",
+    "Overfitting hyperparameter selection: Optimising marginal likelihood with respect to kernel lengthscales on small datasets can collapse onto narrow lengthscales."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Gaussian Process Classification require approximate inference (such as Laplace approximation) whereas GP Regression has a closed-form solution?",
+      "o": [
+        "The discrete Bernoulli/sigmoid likelihood is non-Gaussian, so the posterior distribution cannot be computed in closed form",
+        "Classification has no training labels",
+        "Kernel matrices cannot be computed for classification data",
+        "GP classification requires infinite samples"
+      ],
+      "a": 0,
+      "why": "In GP regression, Gaussian prior multiplied by Gaussian likelihood yields a Gaussian posterior. In classification, the Bernoulli likelihood is non-conjugate to the Gaussian prior, making the posterior integral intractable."
+    },
+    {
+      "q": "What occurs to the predicted class probability of a Gaussian Process Classifier when presented with an input far outside the training support?",
+      "o": [
+        "The latent variance increases toward prior variance, driving the probit scaling factor kappa down and reverting predicted probability toward 0.50 (maximum uncertainty)",
+        "It outputs exactly 1.0 with 100% confidence",
+        "The algorithm crashes with a division by zero error",
+        "It outputs negative probabilities"
+      ],
+      "a": 0,
+      "why": "Far from training data, latent variance sigma_*^2 explodes. The probit convolution factor 1/sqrt(1 + pi/8 * sigma^2) dampens the latent mean toward zero, reverting the probability safely to 0.50."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "bayesian_linear_regression",
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "gaussian_process_regressor",
+    "variational-inference",
+    "logistic_regression",
+    "kernel-pca"
+  ],
+  "keywords": "gaussian process classifier, gpc, laplace approximation, non conjugate inference, epistemic uncertainty, out of distribution, probit link"
+},
+
+{
+  "id": "coordinate-descent",
+  "short": "Coordinate descent",
+  "title": "Coordinate Descent and Cyclic Updates",
+  "task": "concepts",
+  "module": "Optimisation",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Minimise multi-variable objective functions by optimising one coordinate at a time: master soft-thresholding, Lasso path solving, and convergence guarantees.",
+  "lead": "Full gradient descent computes gradients across all p features at every step. Coordinate descent simplifies optimisation by cycling through parameters one by one, solving fast 1D sub-problems in closed form.",
+  "intuition": [
+    "When training high-dimensional machine learning models with thousands or millions of parameters, full gradient descent can be computationally unwieldy: each step requires evaluating gradients across all features and carefully selecting a global learning rate. If features vary in curvature, gradient descent oscillates wildly in steep directions while creeping in flat directions.",
+    "Coordinate Descent (CD) offers an alternative optimisation strategy: instead of updating all variables simultaneously along a combined gradient vector, update only one coordinate direction at a time while keeping all other $p - 1$ variables rigidly fixed.",
+    "At step $j$, the multi-variable problem collapses into a simple one-dimensional scalar optimisation: $\\beta_j^* = \\arg\\min_z f(\\beta_1, \\dots, \\beta_{j-1}, z, \\beta_{j+1}, \\dots, \\beta_p)$. For many common objectives, this 1D sub-problem has an exact closed-form algebraic minimiser, eliminating the need for line searches or learning rate tuning entirely.",
+    "Coordinate descent achieves its greatest triumph in $L_1$-regularised problems like Lasso and Elastic Net. The $L_1$ penalty $|\\beta_j|$ has a sharp non-differentiable kink at zero that invalidates standard gradient descent. However, along individual coordinate axes, the objective separates cleanly into 1D sub-problems solved analytically via the Soft-Thresholding Operator. This algorithmic breakthrough makes coordinate descent the core computational engine behind glmnet and scikit-learn Lasso."
+  ],
+  "analogy": "Imagine tuning an analog radio receiver with ten dials to eliminate background static. Trying to twist all ten dials simultaneously with both hands is clumsy and throws everything out of alignment. Instead, you hold nine dials completely steady with your fingers, twisting only the first dial back and forth until reception peaks. You freeze the first dial, move to the second dial, and repeat. By cycling through the dials one by one, the signal quickly becomes crystal clear.",
+  "steps": [
+    {
+      "title": "1. Initialise coefficient vector and precalculate residuals",
+      "body": "Set initial parameters $\\beta = 0$. Calculate initial partial residuals $r = y - X \\beta = y$. Standardise feature columns so that $X_j^T X_j = n$ (or 1)."
+    },
+    {
+      "title": "2. Iterate cyclically over coordinates",
+      "body": "For coordinate $j = 1, \\dots, p$, isolate feature $j$ by adding its contribution back to the residual: $r^{(j)} = r + \\beta_j X_j$."
+    },
+    {
+      "title": "3. Compute 1D closed-form minimiser via soft-thresholding",
+      "body": "Calculate OLS correlation with residual: $\\rho_j = X_j^T r^{(j)}$. Apply soft-thresholding: $\\beta_j^{\\mathrm{new}} = \\frac{S_{\\lambda}(\\rho_j)}{\\|X_j\\|^2} = \\frac{\\operatorname{sign}(\\rho_j) \\max(0, |\\rho_j| - \\lambda)}{\\|X_j\\|^2}$."
+    },
+    {
+      "title": "4. Update residual and check convergence",
+      "body": "Update residual $r \\leftarrow r^{(j)} - \\beta_j^{\\mathrm{new}} X_j$. Continue cycling across all coordinates until maximum parameter shift $\\max_j |\\beta_j^{\\mathrm{new}} - \\beta_j| < \\text{tolerance}$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Coordinate-Wise Lasso Decomposition",
+      "tex": "f(\\beta) = \\frac{1}{2n} \\sum_{i=1}^n \\left( y_i - \\sum_{k \\neq j} x_{ik} \\beta_k - x_{ij} \\beta_j \\right)^2 + \\lambda \\sum_{k \\neq j} |\\beta_k| + \\lambda |\\beta_j|",
+      "p": "Decomposes the objective into terms independent of beta_j plus a simple univariate quadratic and absolute value function in beta_j."
+    },
+    {
+      "h": "The Soft-Thresholding Operator",
+      "tex": "S_\\lambda(z) = \\operatorname{sign}(z) (|z| - \\lambda)_+ = \\begin{cases} z - \\lambda & \\text{if } z > \\lambda \\\\ 0 & \\text{if } |z| \\le \\lambda \\\\ z + \\lambda & \\text{if } z < -\\lambda \\end{cases}",
+      "p": "The exact analytical minimiser of 0.5 (beta_j - z)^2 + lambda |beta_j|. Pulls small coefficients strictly to zero, inducing structural sparsity."
+    },
+    {
+      "h": "Tseng Separability Convergence Condition",
+      "tex": "f(\\beta) = g(\\beta) + \\sum_{j=1}^p h_j(\\beta_j)",
+      "p": "Paul Tseng proved that cyclic coordinate descent is guaranteed to converge to a global minimum for composite functions where g is convex and smooth, and the non-smooth part h separates into coordinate-wise terms."
+    }
+  ],
+  "code": "import numpy as np\n\n# Cyclic Coordinate Descent for Lasso from scratch\ndef coordinate_descent_lasso(X, y, alpha=0.1, max_iters=500, tol=1e-6):\n    n, p = X.shape\n    beta = np.zeros(p)\n    \n    # Precalculate column squared norms\n    norm_sq = np.sum(X**2, axis=0)\n    \n    # Initial residual\n    r = y - X @ beta\n    \n    # Soft-thresholding operator\n    def soft_thresh(z, thresh):\n        return np.sign(z) * np.maximum(0.0, np.abs(z) - thresh)\n        \n    for it in range(max_iters):\n        max_change = 0.0\n        \n        for j in range(p):\n            beta_old = beta[j]\n            \n            # Partial residual without feature j\n            # r_j = r + beta_old * X[:, j]\n            # rho_j = X[:, j]^T r_j\n            rho_j = np.dot(X[:, j], r) + beta_old * norm_sq[j]\n            \n            # Analytical update via soft-thresholding\n            # Loss: (1 / (2n)) * ||y - X beta||^2 + alpha * ||beta||_1\n            # Scaling threshold by n\n            thresh = alpha * n\n            beta_new = soft_thresh(rho_j, thresh) / norm_sq[j]\n            \n            # Update residual vector: r <- r - (beta_new - beta_old) * X_j\n            delta = beta_new - beta_old\n            if delta != 0.0:\n                r -= delta * X[:, j]\n                beta[j] = beta_new\n                max_change = max(max_change, abs(delta))\n                \n        if max_change < tol:\n            break\n            \n    return beta\n\n# Generate sparse regression problem: 100 samples, 20 features, only 3 active\nnp.random.seed(42)\nn_samples = 150\nn_features = 25\nX = np.random.normal(0, 1, (n_samples, n_features))\ntrue_beta = np.zeros(n_features)\ntrue_beta[2] = 2.5\ntrue_beta[7] = -1.8\ntrue_beta[15] = 3.0\ny = X @ true_beta + np.random.normal(0, 0.5, n_samples)\n\n# Fit Lasso via Coordinate Descent\nlambda_reg = 0.15\nbeta_est = coordinate_descent_lasso(X, y, alpha=lambda_reg)\n\nn_nonzero = np.sum(beta_est != 0)\nmse = np.mean((y - X @ beta_est)**2)\n\nprint(f\"Dataset shape: {X.shape}\")\nprint(f\"True non-zero coefficients: indices 2 (2.5), 7 (-1.8), 15 (3.0)\")\nprint(f\"Recovered non-zero count:  {n_nonzero} / {n_features}\")\nprint(f\"Recovered beta[2]:         {beta_est[2]:.3f}\")\nprint(f\"Recovered beta[7]:         {beta_est[7]:.3f}\")\nprint(f\"Recovered beta[15]:        {beta_est[15]:.3f}\")\nprint(f\"All other 22 features zeroed out: {np.all(beta_est[np.setdiff1d(np.arange(n_features), [2, 7, 15])] == 0)}\")",
+  "keyPoints": [
+    "Optimises multi-variable objective functions by updating one coordinate at a time, keeping all other variables frozen.",
+    "Replaces complex multi-variable gradient steps with fast 1D sub-problems that frequently possess exact closed-form algebraic solutions.",
+    "The foundational solver for Lasso and Elastic Net, using the Soft-Thresholding operator to handle non-differentiable $L_1$ kinks.",
+    "Guaranteed to converge to the global minimum for convex functions with coordinate-wise separable non-smooth terms (Tseng condition).",
+    "Requires zero learning rate tuning or line searches when closed-form coordinate updates exist."
+  ],
+  "pitfalls": [
+    "Non-separable non-smooth penalties: Coordinate descent can get trapped in non-optimal points if non-smooth terms are non-separable (e.g. constraints like $|x_1 - x_2| \\le 1$).",
+    "Correlated features slowing convergence: Highly collinear features create elongated diagonal ravines where coordinate steps make slow zigzagging progress.",
+    "Memory access inefficiency on column-major data: Cycling across features requires efficient column-wise matrix memory layout; row-major memory causes CPU cache misses."
+  ],
+  "quiz": [
+    {
+      "q": "Why is coordinate descent uniquely suited for solving L1-regularised Lasso regression?",
+      "o": [
+        "The non-differentiable L1 penalty separates across coordinates, allowing each 1D coordinate sub-problem to be solved in closed form via soft-thresholding",
+        "Coordinate descent eliminates all noise from the dataset",
+        "It inverts the full p x p matrix in O(1) time",
+        "It requires no training samples"
+      ],
+      "a": 0,
+      "why": "While the L1 kink breaks joint gradient descent, along any single coordinate axis the sub-problem has an exact closed-form minimiser given by the soft-thresholding operator."
+    },
+    {
+      "q": "Under what condition can coordinate descent fail to converge to a stationary point?",
+      "o": [
+        "When the objective function has non-smooth terms that are non-separable across coordinates",
+        "When all variables are strictly positive",
+        "When the objective function is quadratic",
+        "When the dataset has more samples than features"
+      ],
+      "a": 0,
+      "why": "If a non-smooth term couples multiple variables (such as non-separable constraints), coordinate descent can get trapped at a corner point where no axis-aligned move reduces loss."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "lasso_regression"
+  ],
+  "related": [
+    "lasso_regression",
+    "elastic_net",
+    "proximal-gradient-methods",
+    "newtons-method"
+  ],
+  "keywords": "coordinate descent, cyclic updates, lasso, soft thresholding, l1 regularisation, glmnet, 1d optimisation, separable convex"
+},
+
+{
+  "id": "newtons-method",
+  "short": "Newton's method",
+  "title": "Newton's Method and Second-Order Optimisation",
+  "task": "concepts",
+  "module": "Optimisation",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Accelerate convergence using local quadratic curvature: master the Hessian matrix, Newton–Raphson updates, and Quasi-Newton approximations (BFGS).",
+  "lead": "First-order gradient descent crawls slowly along narrow ravines. Newton’s method uses the second derivative (Hessian matrix) to fit a local osculating paraboloid, jumping directly to the minimum with quadratic convergence.",
+  "intuition": [
+    "First-order optimisation methods like Gradient Descent navigate parameter space using only local slope information (the gradient vector $\\nabla f$). When an objective function has ill-conditioned curvature—such as a long, narrow canyon where one direction is 1,000 times steeper than another—gradient descent bounces helplessly between the canyon walls, requiring tens of thousands of tiny steps to make forward progress.",
+    "Newton’s method (also known as the Newton–Raphson method) solves this by incorporating second-order curvature information via the Hessian matrix $\\nabla^2 f(x)$, whose entries represent all second-order partial derivatives $\\frac{\\partial^2 f}{\\partial x_i \\partial x_j}$.",
+    "At each step, Newton’s method fits a second-order Taylor polynomial (a local quadratic bowl) to the objective function: $f(x + \\Delta x) \\approx f(x) + \\nabla f(x)^T \\Delta x + \\frac{1}{2} \\Delta x^T \\nabla^2 f(x) \\Delta x$. By calculating the exact stationary point of this quadratic approximation, the Newton step jumps directly to the bowl minimum: $\\Delta x = -[\\nabla^2 f(x)]^{-1} \\nabla f(x)$.",
+    "When near the minimum, Newton’s method achieves local quadratic convergence: the error at step $t+1$ is proportional to the square of the error at step $t$ ($\\|e_{t+1}\\| \\le M \\|e_t\\|^2$), doubling the number of correct decimal places at every single iteration. However, inverting the $p \\times p$ Hessian matrix costs $O(p^3)$ time, motivating Quasi-Newton algorithms like BFGS and L-BFGS that iteratively build curvature approximations from gradient changes."
+  ],
+  "analogy": "Imagine hiking down a foggy mountain peak at night. Gradient descent feels the slope beneath your boots and takes a step in the steepest downward direction, frequently stumbling into rocky gullies. Newton’s method shines a radar beam into the fog that scans the 3D bowl shape of the entire valley floor, calculating the exact GPS coordinates of the valley base and walking directly there in a few giant strides.",
+  "steps": [
+    {
+      "title": "1. Compute gradient and Hessian matrix",
+      "body": "Evaluate the gradient vector $g = \\nabla f(x) \\in \\mathbb{R}^p$ and the symmetric Hessian matrix $H = \\nabla^2 f(x) \\in \\mathbb{R}^{p \\times p}$."
+    },
+    {
+      "title": "2. Check positive definiteness and modify Hessian",
+      "body": "Ensure $H$ is strictly positive definite (all eigenvalues $\\lambda_i > 0$). If negative or near-zero eigenvalues exist, regularise via Levenberg–Marquardt: $H_{\\mathrm{reg}} = H + \\mu I$."
+    },
+    {
+      "title": "3. Solve Newton linear system",
+      "body": "Solve $H \\Delta x = -g$ for the Newton direction $\\Delta x$ using Cholesky factorisation ($O(p^3)$), avoiding explicit matrix inversion."
+    },
+    {
+      "title": "4. Perform backtracking line search (Damped Newton)",
+      "body": "Ensure global convergence: test step sizes $\\alpha = 1, \\beta, \\beta^2, \\dots$ until Armijo condition $f(x + \\alpha \\Delta x) \\le f(x) + c_1 \\alpha g^T \\Delta x$ is satisfied. Update $x \\leftarrow x + \\alpha \\Delta x$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Second-Order Taylor Approximation",
+      "tex": "f(x + \\Delta x) \\approx f(x) + \\nabla f(x)^T \\Delta x + \\frac{1}{2} \\Delta x^T \\nabla^2 f(x) \\Delta x",
+      "p": "Local quadratic model of the objective function. Differentiating with respect to Delta x and setting to zero yields the optimal step."
+    },
+    {
+      "h": "Newton Step Equation",
+      "tex": "\\Delta x = -[\\nabla^2 f(x)]^{-1} \\nabla f(x) = -H^{-1} g",
+      "p": "The unconstrained Newton step. Scales and rotates the gradient by the inverse Hessian, automatically compensating for anisotropic curvature."
+    },
+    {
+      "h": "Quadratic Convergence Rate",
+      "tex": "\\|x_{t+1} - x^*\\| \\le M \\|x_t - x^*\\|^2",
+      "p": "In the neighbourhood of a strict local minimum, the distance to the optimum squares at each iteration, achieving extreme precision in fewer than 10 steps."
+    }
+  ],
+  "code": "import numpy as np\n\n# Newton's Method vs Gradient Descent on the Rosenbrock Banana Function\n# f(x, y) = (1 - x)^2 + 100 * (y - x^2)^2 (classic ill-conditioned valley)\ndef rosenbrock(v):\n    x, y = v[0], v[1]\n    return (1.0 - x)**2 + 100.0 * (y - x**2)**2\n\ndef rosenbrock_grad(v):\n    x, y = v[0], v[1]\n    df_dx = -2.0 * (1.0 - x) - 400.0 * x * (y - x**2)\n    df_dy = 200.0 * (y - x**2)\n    return np.array([df_dx, df_dy])\n\ndef rosenbrock_hessian(v):\n    x, y = v[0], v[1]\n    d2f_dx2 = 2.0 - 400.0 * y + 1200.0 * x**2\n    d2f_dxdy = -400.0 * x\n    d2f_dy2 = 200.0\n    return np.array([[d2f_dx2, d2f_dxdy],\n                     [d2f_dxdy, d2f_dy2]])\n\n# 1. Newton's Method with Backtracking Line Search\nx_newton = np.array([-1.2, 1.0])\nnewton_history = [x_newton.copy()]\n\nfor it in range(30):\n    g = rosenbrock_grad(x_newton)\n    if np.linalg.norm(g) < 1e-8:\n        break\n    H = rosenbrock_hessian(x_newton)\n    \n    # Regularise Hessian if not positive definite\n    eigvals = np.linalg.eigvalsh(H)\n    if np.min(eigvals) <= 1e-4:\n        H += np.eye(2) * (1e-3 - np.min(eigvals))\n        \n    # Solve H delta_x = -g\n    delta_x = np.linalg.solve(H, -g)\n    \n    # Backtracking Armijo Line Search\n    alpha = 1.0\n    while rosenbrock(x_newton + alpha * delta_x) > rosenbrock(x_newton) + 1e-4 * alpha * np.dot(g, delta_x):\n        alpha *= 0.5\n        if alpha < 1e-10: break\n        \n    x_newton += alpha * delta_x\n    newton_history.append(x_newton.copy())\n\n# 2. Gradient Descent with Tuned Step Size\nx_gd = np.array([-1.2, 1.0])\nlr = 0.0015\ngd_history = [x_gd.copy()]\n\nfor it in range(1000):\n    g = rosenbrock_grad(x_gd)\n    if np.linalg.norm(g) < 1e-8:\n        break\n    x_gd -= lr * g\n    gd_history.append(x_gd.copy())\n\nprint(f\"True Global Minimum: [1.000, 1.000] with f = 0.000\")\nprint(f\"\nNewton's Method:\")\nprint(f\"  Converged to: {x_newton.round(5)} in {len(newton_history)-1} iterations!\")\nprint(f\"  Final value:  {rosenbrock(x_newton):.2e}\")\n\nprint(f\"\nGradient Descent:\")\nprint(f\"  Reached:      {x_gd.round(5)} after {len(gd_history)-1} iterations (struggling in curved valley)\")\nprint(f\"  Final value:  {rosenbrock(x_gd):.4f}\")",
+  "keyPoints": [
+    "Second-order optimisation algorithm that uses the Hessian matrix to capture local quadratic curvature.",
+    "Scales and rotates search directions by the inverse Hessian: $\\Delta x = -[\\nabla^2 f(x)]^{-1} \\nabla f(x)$.",
+    "Achieves quadratic local convergence ($\\|e_{t+1}\\| \\le M \\|e_t\\|^2$), doubling accuracy precision at each step near the minimum.",
+    "Eliminates the oscillations in narrow ravines that cripple first-order gradient descent.",
+    "Inverting the $p \\times p$ Hessian costs $O(p^3)$, motivating Quasi-Newton methods like BFGS and L-BFGS."
+  ],
+  "pitfalls": [
+    "Computational scaling with dimension: Computing and inverting the $p \\times p$ Hessian scales as $O(p^3)$ time and $O(p^2)$ memory, becoming unusable for millions of neural network weights.",
+    "Saddle points and maxima in non-convex functions: If the Hessian has negative eigenvalues, the standard Newton step jumps toward local maxima or saddle points; Hessian regularisation is mandatory.",
+    "Overshooting without line search: Pure Newton steps (step size $\\alpha = 1$) can jump across non-quadratic regions into explosive divergence; backtracking line search is required for global stability."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Newton’s method navigate narrow curved ravines vastly faster than Gradient Descent?",
+      "o": [
+        "By multiplying the gradient by the inverse Hessian, it rescales directions by their curvature, equalizing steep and flat dimensions",
+        "Newton’s method uses random exploration",
+        "Newton’s method sets all second derivatives to zero",
+        "Newton’s method operates only on linear functions"
+      ],
+      "a": 0,
+      "why": "In ill-conditioned ravines, the Hessian inverse H^{-1} shrinks steps along steep directions and expands steps along flat valleys, steering the update directly toward the minimum."
+    },
+    {
+      "q": "What is the primary computational drawback of Newton’s method in high-dimensional deep learning?",
+      "o": [
+        "Calculating and inverting the p x p Hessian matrix requires O(p^3) time and O(p^2) memory, which is intractable for millions of parameters",
+        "Newton’s method cannot compute gradients",
+        "Newton’s method works only when sample size n = 1",
+        "The learning rate must be tuned manually at every iteration"
+      ],
+      "a": 0,
+      "why": "For a neural network with 100 million parameters, storing the Hessian requires 40 petabytes of RAM, and inverting it would require 10^24 operations."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+  ],
+  "related": [
+    "coordinate-descent",
+    "proximal-gradient-methods",
+    "generalised-linear-models",
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "keywords": "newtons method, second order optimisation, hessian matrix, newton raphson, rosenbrock, quadratic convergence, bfgs, quasi newton"
+},
+
+{
+  "id": "proximal-gradient-methods",
+  "short": "Proximal gradient methods",
+  "title": "Proximal Gradient Methods and FISTA",
+  "task": "concepts",
+  "module": "Optimisation",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Optimise composite objectives with non-smooth penalties: master the proximal operator, ISTA, and Nesterov acceleration in FISTA.",
+  "lead": "Many modern regularised machine learning objectives take composite form: a smooth convex loss f(x) plus a non-smooth convex regulariser g(x). Proximal gradient algorithms split the optimisation, combining gradient descent on f with the proximal operator of g.",
+  "intuition": [
+    "In modern machine learning, objectives frequently take a composite structure: $\\min_x F(x) = f(x) + g(x)$, where $f(x)$ is a convex, continuously differentiable loss function (such as mean squared error, logistic loss, or neural cross-entropy), and $g(x)$ is a convex but non-smooth regulariser (such as the $L_1$ norm $\\|x\\|_1$ for feature sparsity, nuclear norm for matrix completion, or indicator functions for box constraints).",
+    "Standard gradient descent cannot be applied because $g(x)$ lacks derivatives at kinks (e.g. at $x=0$ in the $L_1$ norm). Subgradient methods can handle non-differentiable points, but suffer from a notoriously sluggish convergence rate of $O(1/\\sqrt{k})$ and rarely produce exact sparse zeros.",
+    "Proximal Gradient Methods resolve this by operator splitting. At each iteration, the algorithm takes a standard gradient step along the smooth loss $f$, and then passes the resulting intermediate point through the Proximal Operator of $g$: $x_{k+1} = \\operatorname{prox}_{\\gamma g}(x_k - \\gamma \\nabla f(x_k))$. The proximal operator $\\operatorname{prox}_{\\gamma g}(v) = \\arg\\min_x \\left( g(x) + \\frac{1}{2\\gamma} \\|x - v\\|^2 \\right)$ balances minimising the regulariser $g$ while staying close to the gradient step $v$.",
+    "When applied to $L_1$ regularisation, this yields the Iterative Shrinkage-Thresholding Algorithm (ISTA), which converges at rate $O(1/k)$. Amir Beck and Marc Teboulle (2009) introduced Fast ISTA (FISTA), which incorporates Nesterov momentum acceleration to achieve the optimal theoretical rate $O(1/k^2)$ for first-order composite optimisation."
+  ],
+  "analogy": "Imagine sculpting an intricate marble statue. The smooth loss function f is an artist using a coarse polishing cloth to buff out broad curves. The non-smooth regulariser g is an artisan wielding a sharp chisel that clips off unwanted chunks to carve sharp, crisp geometric edges. The proximal gradient method alternates between the two: polish smoothly with the cloth, then immediately chisel with the proximal operator.",
+  "steps": [
+    {
+      "title": "1. Formulate composite objective and evaluate Lipschitz constant",
+      "body": "Structure objective as $F(x) = f(x) + g(x)$. Compute the Lipschitz constant $L$ of $\\nabla f$ (for linear regression $\\|X^T X\\|_2$), setting step size $\\gamma \\le 1/L$."
+    },
+    {
+      "title": "2. Perform forward gradient step on smooth loss f",
+      "body": "Compute gradient of the smooth loss: $v_k = y_k - \\gamma \\nabla f(y_k)$."
+    },
+    {
+      "title": "3. Apply backward proximal step on non-smooth penalty g",
+      "body": "Compute proximal operator: $x_{k+1} = \\operatorname{prox}_{\\gamma g}(v_k)$. For $L_1$ regularisation, this is the element-wise soft-thresholding operator $S_{\\gamma \\lambda}(v_k)$."
+    },
+    {
+      "title": "4. Update Nesterov acceleration momentum (FISTA)",
+      "body": "Compute scalar momentum sequence: $t_{k+1} = \\frac{1 + \\sqrt{1 + 4 t_k^2}}{2}$. Update auxiliary extrapolation point: $y_{k+1} = x_{k+1} + \\left(\\frac{t_k - 1}{t_{k+1}}\\right) (x_{k+1} - x_k)$."
+    }
+  ],
+  "math": [
+    {
+      "h": "The Proximal Operator",
+      "tex": "\\operatorname{prox}_{\\gamma g}(v) = \\arg\\min_{x} \\left( g(x) + \\frac{1}{2 \\gamma} \\|x - v\\|_2^2 \\right)",
+      "p": "Resolves non-smooth objective by finding a compromise between minimising penalty g(x) and proximity to candidate vector v."
+    },
+    {
+      "h": "Proximal Gradient (ISTA) Update",
+      "tex": "x_{k+1} = \\operatorname{prox}_{\\gamma g}\\left(x_k - \\gamma \\nabla f(x_k)\\right)",
+      "p": "Iterative Shrinkage-Thresholding Algorithm. Alternates a gradient descent step on smooth term f with the proximal mapping of non-smooth term g."
+    },
+    {
+      "h": "FISTA Nesterov Momentum Acceleration",
+      "tex": "y_{k+1} = x_k + \\frac{t_{k-1} - 1}{t_k} (x_k - x_{k-1}), \\quad t_k = \\frac{1 + \\sqrt{1 + 4 t_{k-1}^2}}{2}",
+      "p": "Accelerates convergence rate from O(1/k) to the optimal Nesterov theoretical limit O(1/k^2) for first-order composite optimisation."
+    }
+  ],
+  "code": "import numpy as np\n\n# Proximal Gradient Methods: ISTA vs FISTA from scratch on Lasso\nnp.random.seed(42)\nn_samples = 200\nn_features = 80\n\n# True sparse signal (only 5 active coefficients)\nX = np.random.normal(0, 1, (n_samples, n_features))\ntrue_beta = np.zeros(n_features)\ntrue_beta[[5, 12, 28, 45, 60]] = [2.0, -1.5, 3.2, -2.8, 1.0]\ny = X @ true_beta + np.random.normal(0, 0.4, n_samples)\n\n# Smooth loss: f(beta) = 0.5 * ||y - X beta||^2\n# Non-smooth penalty: g(beta) = lambda * ||beta||_1\nlambda_reg = 15.0\n\n# Lipschitz constant of nabla f: L = max eigenvalue of X^T X\nL = np.linalg.norm(X.T @ X, 2)\ngamma = 1.0 / L  # Step size\n\ndef soft_threshold(v, thresh):\n    return np.sign(v) * np.maximum(0.0, np.abs(v) - thresh)\n\ndef objective(beta):\n    return 0.5 * np.sum((y - X @ beta)**2) + lambda_reg * np.sum(np.abs(beta))\n\n# 1. Standard ISTA (O(1/k) convergence)\nn_iters = 120\nbeta_ista = np.zeros(n_features)\nloss_ista = []\n\nfor k in range(n_iters):\n    # Gradient of smooth loss: nabla f(beta) = -X^T (y - X beta)\n    grad_f = -X.T @ (y - X @ beta_ista)\n    # Gradient step followed by proximal soft-thresholding\n    v = beta_ista - gamma * grad_f\n    beta_ista = soft_threshold(v, gamma * lambda_reg)\n    loss_ista.append(objective(beta_ista))\n\n# 2. Fast ISTA (FISTA) with Nesterov Momentum (O(1/k^2) convergence)\nbeta_fista = np.zeros(n_features)\nbeta_prev = np.zeros(n_features)\ny_aux = np.zeros(n_features)\nt = 1.0\nloss_fista = []\n\nfor k in range(n_iters):\n    # Gradient step evaluated at auxiliary momentum point y_aux\n    grad_f = -X.T @ (y - X @ y_aux)\n    v = y_aux - gamma * grad_f\n    beta_fista = soft_threshold(v, gamma * lambda_reg)\n    \n    # Nesterov momentum update\n    t_next = (1.0 + np.sqrt(1.0 + 4.0 * t**2)) / 2.0\n    y_aux = beta_fista + ((t - 1.0) / t_next) * (beta_fista - beta_prev)\n    \n    beta_prev = beta_fista.copy()\n    t = t_next\n    loss_fista.append(objective(beta_fista))\n\nmin_obj = min(loss_fista[-1], loss_ista[-1])\nprint(f\"Dataset: {n_samples} samples x {n_features} features (5 active)\")\nprint(f\"Step size gamma = 1/L = {gamma:.6f}\")\nprint(f\"\nAfter {n_iters} iterations:\")\nprint(f\"  ISTA Objective:  {loss_ista[-1]:.3f} (Distance to min: {loss_ista[-1] - min_obj:.4f})\")\nprint(f\"  FISTA Objective: {loss_fista[-1]:.3f} (Distance to min: {loss_fista[-1] - min_obj:.4f})\")\nprint(f\"Iterations to reach loss < {loss_ista[-1]:.1f}:\")\nprint(f\"  ISTA:  {n_iters} iterations\")\nfista_match_iter = next(i for i, l in enumerate(loss_fista) if l <= loss_ista[-1])\nprint(f\"  FISTA: {fista_match_iter} iterations ({n_iters / fista_match_iter:.1f}x speedup via momentum!)\")",
+  "keyPoints": [
+    "Optimises composite objectives $F(x) = f(x) + g(x)$ combining smooth convex loss $f$ with non-smooth convex regulariser $g$.",
+    "Alternates a forward gradient step on $f$ with the backward proximal operator of $g$: $x_{k+1} = \\operatorname{prox}_{\\gamma g}(x_k - \\gamma \\nabla f(x_k))$.",
+    "For $L_1$ regularisation, the proximal operator equals the analytical soft-thresholding operator (ISTA).",
+    "FISTA incorporates Nesterov momentum acceleration, boosting convergence rate from $O(1/k)$ to the optimal theoretical limit $O(1/k^2)$.",
+    "Applies broadly to Lasso, Elastic Net, group lasso, nuclear norm matrix completion, and constrained optimisation."
+  ],
+  "pitfalls": [
+    "Step size exceeding 1/L: Setting step size $\\gamma > 1/L$ (where $L$ is the Lipschitz constant of $\\nabla f$) causes proximal gradient steps to diverge.",
+    "Non-convex regularisers: If $g(x)$ is non-convex (e.g. $L_0$ pseudo-norm), the proximal operator may have multiple local solutions, forfeiting global convergence guarantees.",
+    "Non-monotone FISTA energy spikes: Standard Nesterov momentum in FISTA can produce temporary objective energy spikes; monotone FISTA (MFISTA) restores strict monotonic descent."
+  ],
+  "quiz": [
+    {
+      "q": "What is the theoretical convergence rate of FISTA compared to standard ISTA for composite convex optimisation?",
+      "o": [
+        "FISTA converges at O(1/k^2) while ISTA converges at O(1/k)",
+        "FISTA has exponential convergence while ISTA has linear convergence",
+        "FISTA converges at O(1/k) while ISTA converges at O(1/k^2)",
+        "Both algorithms have identical convergence rates"
+      ],
+      "a": 0,
+      "why": "By incorporating Nesterov momentum extrapolation, FISTA improves the convergence rate from O(1/k) to O(1/k^2), which is the proven optimal first-order bound."
+    },
+    {
+      "q": "What does the proximal operator prox_{gamma g}(v) compute geometrically?",
+      "o": [
+        "It balances minimising the penalty function g(x) with staying close to vector v via a quadratic proximity penalty",
+        "It calculates the projection onto the null space of the feature matrix",
+        "It computes the gradient of the loss function",
+        "It inverts the covariance matrix"
+      ],
+      "a": 0,
+      "why": "From its definition prox(v) = argmin_x { g(x) + (1/(2 gamma)) ||x - v||^2 }, it acts as an implicit step compromising between the regulariser g and distance to v."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "coordinate-descent",
+    "lasso_regression"
+  ],
+  "related": [
+    "coordinate-descent",
+    "newtons-method",
+    "lasso_regression",
+    "elastic_net"
+  ],
+  "keywords": "proximal gradient, fista, ista, proximal operator, soft thresholding, composite optimisation, nesterov momentum, l1 regularisation"
+},
+
+{
+  "id": "ensemble-theory-bagging-boosting-stacking-compared",
+  "short": "Ensemble theory",
+  "title": "Ensemble Theory: Bagging, Boosting, and Stacking Compared",
+  "task": "concepts",
+  "module": "Model selection",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Understand the mathematical foundations of ensemble learning: compare variance reduction in Bagging, bias reduction in Boosting, and meta-learning in Stacking.",
+  "lead": "Why do ensembles of diverse models consistently dominate competitive data science? Ensemble theory formalises how combining multiple learners manipulates the bias-variance trade-off.",
+  "intuition": [
+    "The foundational insight of ensemble learning traces back to the Condorcet Jury Theorem of 1785: if a group of independent decision-makers each has a probability $p > 0.5$ of being correct, the probability that a majority vote is correct approaches 1 as jury size grows. In machine learning, combining multiple individual learners produces predictions that are strictly superior to any single constituent model.",
+    "However, different ensemble paradigms attack the bias-variance trade-off through fundamentally different mathematical mechanisms. The three major pillars are Bagging, Boosting, and Stacking.",
+    "Bagging (Bootstrap Aggregation) attacks Variance. It trains high-variance, low-bias models (such as deep decision trees) independently in parallel on bootstrap resampled datasets. If each individual model has variance $\\sigma^2$ and pairwise prediction correlation $\\rho$, averaging $B$ models yields ensemble variance $\\rho \\sigma^2 + \\frac{1 - \\rho}{B} \\sigma^2$. Random Forests reduce $\\rho$ by randomly subsampling features at each split, driving variance down toward zero while preserving low bias.",
+    "Boosting attacks Bias. It trains shallow, high-bias \"weak learners\" sequentially. Each subsequent model is trained to predict the residual errors or reweighted mistakes of the preceding ensemble, effectively taking a step along the negative gradient of the loss function in function space.",
+    "Stacking (Stacked Generalisation) uses meta-learning. Instead of relying on hand-crafted voting rules, it trains heterogeneous base learners (e.g. a Support Vector Machine, a Random Forest, and a Neural Network) and uses their out-of-fold cross-validated predictions as input features to train a secondary \"meta-model\" (such as Ridge or Logistic regression)."
+  ],
+  "analogy": "Imagine diagnosing a complex medical illness. Bagging is consulting 20 independent cardiologists who each examine different subsets of the patient medical records; averaging their diagnoses cancels out individual eccentricities. Boosting is a consultation where Doctor 1 offers an initial assessment, Doctor 2 investigates only the symptoms Doctor 1 missed, and Doctor 3 resolves remaining ambiguities. Stacking is convening a cardiologist, a neurologist, and an oncologist, then having an experienced chief medical officer synthesize their divergent findings into a final diagnosis.",
+  "steps": [
+    {
+      "title": "1. Diagnose model error: bias vs variance",
+      "body": "Evaluate learning curves. If validation loss is high due to model underfitting, prioritize Boosting. If model exhibits severe overfitting, prioritize Bagging."
+    },
+    {
+      "title": "2. Bagging: train independent parallel learners",
+      "body": "Draw $B$ bootstrap samples $\\mathcal{D}_1, \\dots, \\mathcal{D}_B$ with replacement. Train deep trees independently. Average predictions (regression) or take majority vote (classification)."
+    },
+    {
+      "title": "3. Boosting: train sequential residual learners",
+      "body": "Fit base learner $h_1(x)$. Compute negative gradient residuals $r_i = -\\left[\\frac{\\partial L(y_i, f(x_i))}{\\partial f(x_i)}\\right]$. Fit subsequent learner $h_t(x)$ to predict residuals. Update $f_t(x) = f_{t-1}(x) + \\eta h_t(x)$."
+    },
+    {
+      "title": "4. Stacking: assemble out-of-fold meta-features",
+      "body": "Partition training data into $K$ folds. For each base learner, generate out-of-fold predictions. Assemble $n \\times M$ meta-feature matrix and fit a regularised blender model (e.g. Ridge or Logistic regression)."
+    }
+  ],
+  "math": [
+    {
+      "h": "Bagging Variance Reduction Formula",
+      "tex": "\\operatorname{Var}\\left(\\frac{1}{B} \\sum_{b=1}^B \\hat{f}_b(x)\\right) = \\rho(x) \\sigma^2(x) + \\frac{1 - \\rho(x)}{B} \\sigma^2(x)",
+      "p": "As ensemble size B -> infinity, the second term vanishes, leaving rho * sigma^2. Feature subsampling in Random Forests lowers correlation rho, drastically reducing irreducible ensemble variance."
+    },
+    {
+      "h": "Gradient Boosting Functional Gradient Step",
+      "tex": "f_m(x) = f_{m-1}(x) + \\eta \\arg\\min_{h} \\sum_{i=1}^n \\left( -\\left[\\frac{\\partial L(y_i, f_{m-1}(x_i))}{\\partial f_{m-1}(x_i)}\\right] - h(x_i) \\right)^2",
+      "p": "Each new weak learner h approximates the negative gradient of the loss function, performing functional gradient descent in prediction space."
+    },
+    {
+      "h": "Stacking Out-of-Fold Meta-Dataset",
+      "tex": "z_{i} = \\left[ \\hat{f}_1^{-k(i)}(x_i), \\; \\hat{f}_2^{-k(i)}(x_i), \\; \\dots, \\; \\hat{f}_M^{-k(i)}(x_i) \\right]^T, \\quad \\hat{y}_i = g(z_i)",
+      "p": "Meta-features z_i are generated strictly out-of-fold (using models trained on all folds except fold k containing sample i), preventing data leakage and target memorisation in meta-learner g."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.tree import DecisionTreeRegressor\nfrom sklearn.linear_model import Ridge\nfrom sklearn.model_selection import KFold\n\n# Comparing Bagging, Boosting, and Stacking from scratch\nnp.random.seed(42)\nn_samples = 400\n\n# Synthetic non-linear data with high noise\nX = np.random.uniform(-3, 3, (n_samples, 2))\ny = np.sin(X[:, 0]) * np.cos(X[:, 1]) + 0.5 * X[:, 0] + np.random.normal(0, 0.4, n_samples)\n\nn_train = 250\nX_train, X_test = X[:n_train], X[n_train:]\ny_train, y_test = y[:n_train], y[n_train:]\n\n# 1. Bagging (Variance Reduction)\nn_bags = 30\nbag_preds = np.zeros((len(X_test), n_bags))\nfor b in range(n_bags):\n    boot_idx = np.random.choice(n_train, size=n_train, replace=True)\n    tree = DecisionTreeRegressor(max_depth=8, random_state=b)\n    tree.fit(X_train[boot_idx], y_train[boot_idx])\n    bag_preds[:, b] = tree.predict(X_test)\npred_bagging = np.mean(bag_preds, axis=1)\n\n# 2. Gradient Boosting (Bias Reduction)\nn_boost_trees = 30\nlearning_rate = 0.1\npred_boost_train = np.full(n_train, np.mean(y_train))\npred_boost_test = np.full(len(X_test), np.mean(y_train))\n\nfor m in range(n_boost_trees):\n    residuals = y_train - pred_boost_train\n    shallow_tree = DecisionTreeRegressor(max_depth=3, random_state=m)\n    shallow_tree.fit(X_train, residuals)\n    pred_boost_train += learning_rate * shallow_tree.predict(X_train)\n    pred_boost_test += learning_rate * shallow_tree.predict(X_test)\n\n# 3. Stacking with Out-of-Fold Meta-Features\nkf = KFold(n_splits=5, shuffle=True, random_state=42)\noof_preds = np.zeros((n_train, 2))\ntest_base_preds = np.zeros((len(X_test), 2))\n\n# Base learner 1: Deep Tree; Base learner 2: Shallow Tree\nfor tr_idx, val_idx in kf.split(X_train):\n    m1 = DecisionTreeRegressor(max_depth=7, random_state=42)\n    m2 = DecisionTreeRegressor(max_depth=3, random_state=42)\n    m1.fit(X_train[tr_idx], y_train[tr_idx])\n    m2.fit(X_train[tr_idx], y_train[tr_idx])\n    oof_preds[val_idx, 0] = m1.predict(X_train[val_idx])\n    oof_preds[val_idx, 1] = m2.predict(X_train[val_idx])\n\n# Fit full base models on train, predict test\nm1_full = DecisionTreeRegressor(max_depth=7, random_state=42).fit(X_train, y_train)\nm2_full = DecisionTreeRegressor(max_depth=3, random_state=42).fit(X_train, y_train)\ntest_base_preds[:, 0] = m1_full.predict(X_test)\ntest_base_preds[:, 1] = m2_full.predict(X_test)\n\n# Meta-learner: Ridge regression on out-of-fold predictions\nmeta_learner = Ridge(alpha=1.0)\nmeta_learner.fit(oof_preds, y_train)\npred_stacking = meta_learner.predict(test_base_preds)\n\n# Single baseline tree\nsingle_tree = DecisionTreeRegressor(max_depth=5, random_state=42).fit(X_train, y_train)\npred_single = single_tree.predict(X_test)\n\ndef mse(y_true, y_pred): return np.mean((y_true - y_pred)**2)\n\nprint(\"--- Test Set MSE Comparison ---\")\nprint(f\"Single Decision Tree:  {mse(y_test, pred_single):.4f}\")\nprint(f\"Bagging (30 trees):    {mse(y_test, pred_bagging):.4f} (Variance reduced)\")\nprint(f\"Boosting (30 trees):   {mse(y_test, pred_boost_test):.4f} (Bias reduced)\")\nprint(f\"Stacking (Meta-Ridge): {mse(y_test, pred_stacking):.4f} (Optimal synthesis)\")",
+  "keyPoints": [
+    "Ensemble theory proves that combining diverse models produces predictions superior to any individual constituent.",
+    "Bagging attacks variance: averages independent models trained on bootstrap datasets; Random Forests reduce pairwise correlation $\\rho$.",
+    "Boosting attacks bias: trains weak learners sequentially along the negative gradient of the loss function.",
+    "Stacking combines heterogeneous models via a secondary meta-model trained on out-of-fold cross-validated predictions.",
+    "Diversity is paramount: combining identical or highly correlated models provides zero variance reduction and zero boosting gain."
+  ],
+  "pitfalls": [
+    "Target leakage in stacking: Training the meta-learner on in-sample predictions causes extreme overfitting; out-of-fold cross-validation is strictly mandatory.",
+    "Overfitting in boosting: Unlike bagging, running boosting for too many iterations continues driving training error to zero while test error explodes.",
+    "Computational latency: Ensembles require evaluating multiple models at inference time, increasing CPU and memory latency in real-time serving."
+  ],
+  "quiz": [
+    {
+      "q": "According to the bagging variance formula Var = rho * sigma^2 + ((1 - rho)/B) * sigma^2, why does Random Forest perform feature subsampling at each tree split?",
+      "o": [
+        "To reduce the correlation rho between individual trees, lowering the irreducible variance floor",
+        "To make the individual trees deeper",
+        "To convert regression trees into classification trees",
+        "To eliminate the need for training labels"
+      ],
+      "a": 0,
+      "why": "As tree count B -> infinity, the second term approaches zero, leaving rho * sigma^2. Randomly selecting feature subsets decorrelates trees (lowering rho), lowering overall ensemble variance."
+    },
+    {
+      "q": "Why must the meta-features in Stacking be generated strictly using out-of-fold cross-validation?",
+      "o": [
+        "If base models generate predictions on their own training data, the meta-model will overfit to the memorisation biases of the base learners",
+        "Because in-sample predictions cannot be stored in arrays",
+        "Because cross-validation eliminates the need for test sets",
+        "Because the meta-learner requires equal numbers of samples in each class"
+      ],
+      "a": 0,
+      "why": "In-sample predictions contain training memorization artifacts. Out-of-fold predictions replicate true test-time behaviour, allowing the meta-learner to learn reliable weights without target leakage."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "bias-variance-tradeoff",
+    "cross-validation"
+  ],
+  "related": [
+    "random_forest_regressor",
+    "gradient_boosting_regressor",
+    "stacking_voting_classifiers",
+    "bagging-and-extra-trees"
+  ],
+  "keywords": "ensemble theory, bagging, boosting, stacking, bias variance tradeoff, out of fold, meta learning, condorcet jury theorem"
+},
+
+{
+  "id": "conformal-prediction",
+  "short": "Conformal prediction",
+  "title": "Conformal Prediction and Distribution-Free Uncertainty",
+  "task": "concepts",
+  "module": "Model selection",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Construct prediction intervals with rigorous finite-sample coverage guarantees: master non-conformity scores, exchangeability, and inductive conformal prediction.",
+  "lead": "Standard confidence intervals rely on parametric Gaussian assumptions that fail when distributions are skewed or multimodal. Conformal prediction produces prediction sets with mathematically guaranteed 1 - alpha marginal coverage under any distribution, using any underlying model.",
+  "intuition": [
+    "Most machine learning models output point predictions: predicting a house price will be £450,000 or a patient will be diagnosed with Disease A. However, when deployed in medicine, finance, or automated hiring, point predictions hide risk: is the true house price guaranteed to lie between £440,000 and £460,000, or could it be anywhere from £200,000 to £700,000?",
+    "Traditional statistical methods construct confidence intervals using rigid parametric assumptions: assuming error residuals are identically normally distributed with constant variance. When real-world data is skewed, heteroscedastic, or multi-modal, these parametric intervals collapse and under-cover reality.",
+    "Pioneered by Vladimir Vovk, Alex Gammerman, and Glenn Shafer, Conformal Prediction provides a mathematically rigorous, distribution-free framework for uncertainty quantification. It constructs prediction intervals (in regression) or prediction sets (in classification) that satisfy an exact finite-sample coverage guarantee: $P(Y_{n+1} \\in C(X_{n+1})) \\ge 1 - \\alpha$, for any user-chosen significance level $\\alpha$ (e.g. 90% or 95%).",
+    "Astonishingly, conformal prediction requires zero parametric assumptions, works on top of any black-box machine learning model (Random Forests, XGBoost, or Deep Neural Networks), and holds for finite sample sizes $n$ without relying on asymptotic $n \\to \\infty$ limits. The only foundational mathematical assumption is exchangeability (satisfied whenever data is identically and independently distributed, i.i.d.)."
+  ],
+  "analogy": "Imagine a dart player practicing in an arcade. Rather than assuming the darts always land in a neat circular Gaussian bell curve around the bullseye, you watch the player throw 100 calibration darts and measure the exact physical distance of each dart from the bullseye. If you want a 90% guarantee for their next throw, you simply take the 90th largest throw distance. Drawing a circle with that exact radius around the next aimed target is guaranteed by pure permutation symmetry to contain the next dart 90% of the time.",
+  "steps": [
+    {
+      "title": "1. Partition data into training and calibration sets",
+      "body": "Split available data into a proper training set $\\mathcal{D}_{\\mathrm{train}}$ and an independent calibration set $\\mathcal{D}_{\\mathrm{cal}} = \\{(x_i, y_i)\\}_{i=1}^n$."
+    },
+    {
+      "title": "2. Train base predictive model",
+      "body": "Train any black-box model $\\hat{f}$ exclusively on $\\mathcal{D}_{\\mathrm{train}}$ (e.g. gradient-boosted trees or deep neural network)."
+    },
+    {
+      "title": "3. Compute non-conformity scores on calibration set",
+      "body": "For each calibration sample $i = 1, \\dots, n$, compute a non-conformity score $s_i$ measuring how unusual the true label is relative to model prediction (e.g. absolute residual $s_i = |y_i - \\hat{f}(x_i)|$)."
+    },
+    {
+      "title": "4. Compute calibrated empirical quantile and form intervals",
+      "body": "Calculate empirical quantile: $\\hat{q} = \\operatorname{Quantile}\\left(\\frac{\\lceil (n+1)(1-\\alpha) \\rceil}{n}, \\{s_1, \\dots, s_n\\}\\right)$. For any new test point $x_{n+1}$, form prediction interval $C(x_{n+1}) = [\\hat{f}(x_{n+1}) - \\hat{q}, \\; \\hat{f}(x_{n+1}) + \\hat{q}]$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Inductive Non-Conformity Score (Absolute Residual)",
+      "tex": "s_i = s(x_i, y_i) = |y_i - \\hat{f}(x_i)|",
+      "p": "Quantifies how poorly the model prediction matches the ground truth. Higher values denote points that conform poorly to model expectations."
+    },
+    {
+      "h": "Empirical Conformal Quantile Correction",
+      "tex": "\\hat{q} = \\operatorname{Quantile}\\left(\\frac{\\lceil(n + 1)(1 - \\alpha)\\rceil}{n}, \\; \\{s_1, \\dots, s_n\\}\\right)",
+      "p": "The finite-sample correction factor (n+1)/n accounts for the unobserved test sample, ensuring the theoretical coverage guarantee holds exactly in finite samples."
+    },
+    {
+      "h": "Conformal Validity Coverage Guarantee Theorem",
+      "tex": "1 - \\alpha \\le P\\left(Y_{n+1} \\in C(X_{n+1})\\right) \\le 1 - \\alpha + \\frac{1}{n + 1}",
+      "p": "Rigorous finite-sample mathematical guarantee. The true outcome falls inside the prediction set with probability at least 1 - alpha under exchangeability."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.ensemble import GradientBoostingRegressor\n\n# Split Conformal Prediction for Regression from scratch\nnp.random.seed(42)\nn_total = 1000\n\n# Synthetic non-linear data with heteroscedastic skewed noise\nx = np.random.uniform(0, 10, n_total)\n# Variance grows with x, and noise is heavily skewed (exponential)\ny_clean = 2.0 * np.sin(x) + 0.5 * x\nnoise = np.random.exponential(scale=0.3 * (1.0 + 0.2 * x)) - 0.3 * (1.0 + 0.2 * x)\ny = y_clean + noise\nX = x.reshape(-1, 1)\n\n# Split into: Train (50%), Calibration (25%), Test (25%)\nn_train = 500\nn_cal = 250\nX_train, y_train = X[:n_train], y[:n_train]\nX_cal, y_cal = X[n_train:n_train+n_cal], y[n_train:n_train+n_cal]\nX_test, y_test = X[n_train+n_cal:], y[n_train+n_cal:]\n\n# 1. Train black-box base model on training set\nmodel = GradientBoostingRegressor(n_estimators=100, random_state=42)\nmodel.fit(X_train, y_train)\n\n# 2. Compute non-conformity scores on calibration set\ncal_preds = model.predict(X_cal)\nnonconformity_scores = np.abs(y_cal - cal_preds)\n\n# 3. Calculate conformal quantile for 90% coverage (alpha = 0.10)\nalpha = 0.10\nn = len(X_cal)\n# Finite-sample index: ceil((n + 1) * (1 - alpha)) / n\nq_level = np.ceil((n + 1) * (1.0 - alpha)) / n\nq_hat = np.quantile(nonconformity_scores, q_level, method='higher')\n\n# 4. Form prediction intervals on test set\ntest_preds = model.predict(X_test)\nlower_bounds = test_preds - q_hat\nupper_bounds = test_preds + q_hat\n\n# Evaluate empirical coverage on test set\ncovered = (y_test >= lower_bounds) & (y_test <= upper_bounds)\nempirical_coverage = np.mean(covered)\n\nprint(f\"Target Coverage Level: { (1 - alpha) * 100:.1f}%\")\nprint(f\"Calibration set size:  {n_cal} samples\")\nprint(f\"Calibrated Conformal Margin (q_hat): ±{q_hat:.3f}\")\nprint(f\"Empirical Test Coverage: {empirical_coverage * 100:.1f}% (Guaranteed >= 90.0%!)\")\nprint(f\"Average Prediction Interval Width:   {2 * q_hat:.3f}\")",
+  "keyPoints": [
+    "Provides mathematically guaranteed finite-sample coverage $P(Y \\in C(X)) \\ge 1 - \\alpha$ without parametric assumptions.",
+    "Model-agnostic: wraps around any black-box machine learning model (neural nets, gradient boosting, random forests).",
+    "Relies solely on exchangeability (i.i.d. assumption), holding exactly for finite samples without asymptotic approximations.",
+    "In regression, outputs prediction intervals; in classification, outputs prediction sets of varying cardinality.",
+    "Adaptive non-conformity scores (e.g. Conformalized Quantile Regression, CQR) produce variable-width intervals reflecting local heteroscedasticity."
+  ],
+  "pitfalls": [
+    "Marginal coverage vs conditional coverage: Standard conformal prediction guarantees average coverage across the entire population, but may under-cover specific localized minority sub-populations.",
+    "Exchangeability violation in time series: If data exhibits temporal drift, non-stationarity, or autoregressive correlation, exchangeability fails and adaptive conformal prediction is required.",
+    "Calibration set data taxation: Split conformal prediction requires reserving a clean holdout calibration set, slightly reducing data available for model training."
+  ],
+  "quiz": [
+    {
+      "q": "What is the only foundational assumption required for Conformal Prediction coverage guarantees to hold?",
+      "o": [
+        "Data exchangeability (samples are identically and independently distributed or permutation symmetric)",
+        "Normally distributed Gaussian errors with homoscedastic variance",
+        "That the base model is a linear regression model",
+        "That the sample size approaches infinity"
+      ],
+      "a": 0,
+      "why": "Conformal prediction is distribution-free and finite-sample exact; its mathematical proof relies entirely on permutation symmetry (exchangeability) of the calibration and test instances."
+    },
+    {
+      "q": "Why is the quantile level calculated as ceil((n + 1)(1 - alpha)) / n rather than simply 1 - alpha?",
+      "o": [
+        "To account for the finite sample size and the fact that the unobserved test sample is the (n+1)-th observation in the exchangeable sequence",
+        "To round down to the nearest integer",
+        "To correct for heteroscedasticity in the features",
+        "To force the interval to be symmetric"
+      ],
+      "a": 0,
+      "why": "Because the calibration set has n samples and the test point is the (n+1)-th point, rank symmetry requires partitioning probability into n+1 intervals, yielding the exact finite-sample bound."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "confidence-intervals",
+    "cross-validation"
+  ],
+  "related": [
+    "confidence-intervals",
+    "ensemble-theory-bagging-boosting-stacking-compared",
+    "residual-diagnostics-and-heteroscedasticity"
+  ],
+  "keywords": "conformal prediction, distribution free uncertainty, prediction intervals, non conformity score, exchangeability, split conformal, finite sample coverage"
+},
+
+{
+  "id": "lime",
+  "short": "LIME",
+  "title": "Local Interpretable Model-Agnostic Explanations",
+  "task": "concepts",
+  "module": "Interpretability and fairness",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Explain individual predictions of any black-box model using local surrogate linear models: master perturbation sampling, exponential kernels, and local fidelity.",
+  "lead": "Complex models like deep neural networks or gradient-boosted trees are globally non-linear and uninterpretable. LIME explains why a model made a specific prediction on sample x by approximating the local decision boundary with an interpretable surrogate model.",
+  "intuition": [
+    "Modern machine learning architectures—such as 100-tree gradient boosted ensembles or deep neural networks—excel at predictive accuracy by learning highly complex, convoluted non-linear decision boundaries. However, in credit risk underwriting, healthcare pathology, and judicial sentencing, stakeholders demand to know why a specific decision was reached: \"Why was this customer denied a loan?\"",
+    "While explaining the global behaviour of a black-box model across all of multi-dimensional feature space is practically impossible, explaining a single localized prediction is entirely feasible. Marco Tulio Ribeiro, Sameer Singh, and Carlos Guestrin (2016) introduced LIME: Local Interpretable Model-Agnostic Explanations.",
+    "LIME is grounded in the geometric observation that even the most tortuous non-linear manifold looks flat and linear if you zoom in closely enough onto a tiny local neighbourhood. To explain prediction $f(x)$, LIME draws random perturbations in the immediate vicinity of $x$, observes the black-box outputs for these perturbed samples, weights each sample by its exponential distance to $x$, and fits a simple, interpretable surrogate model (typically a sparse linear model).",
+    "The learned surrogate weights $w$ represent local feature importances: showing which features pushed the model toward the prediction, which features pushed against it, and by how much, providing human-understandable explanations for any black-box model."
+  ],
+  "analogy": "Imagine looking at a globe of the Earth. Globally, the Earth is an intricate curved sphere covered in mountains and ocean trenches (the complex global black-box model). But if you step out of your front door and look down at your local town square, the ground is so locally flat that you can map it with a simple 2D architectural blueprint (the local linear surrogate). LIME constructs that local flat blueprint for any specific decision.",
+  "steps": [
+    {
+      "title": "1. Select instance and draw neighbourhood perturbations",
+      "body": "Take instance $x \\in \\mathbb{R}^p$ to explain. Draw $M$ perturbed samples $z_k \\sim \\mathcal{N}(x, \\sigma^2)$ in the continuous feature space around $x$."
+    },
+    {
+      "title": "2. Query black-box predictions for perturbations",
+      "body": "Pass all perturbed samples through the black-box model to obtain predictions $y_k = f(z_k)$."
+    },
+    {
+      "title": "3. Compute exponential proximity weights",
+      "body": "Calculate proximity weights: $\\pi_x(z_k) = \\exp(-D(x, z_k)^2 / \\sigma^2)$, assigning high weights to perturbations nearest to $x$ and vanishing weights to distant points."
+    },
+    {
+      "title": "4. Fit weighted sparse linear surrogate model",
+      "body": "Fit a weighted linear regression: $\\min_w \\sum_{k=1}^M \\pi_x(z_k) (f(z_k) - w^T z_k)^2 + \\Omega(w)$. Output weights $w$ as local feature attributions."
+    }
+  ],
+  "math": [
+    {
+      "h": "LIME General Optimisation Objective",
+      "tex": "\\operatorname{explanation}(x) = \\arg\\min_{g \\in \\mathcal{G}} \\mathcal{L}(f, g, \\pi_x) + \\Omega(g)",
+      "p": "Balances local fidelity loss L (how accurately surrogate g approximates black-box f weighted by proximity pi_x) with model complexity Omega(g) (e.g. limiting to K non-zero features)."
+    },
+    {
+      "h": "Exponential Proximity Kernel",
+      "tex": "\\pi_x(z) = \\exp\\left(-\\frac{D(x, z)^2}{\\sigma^2}\\right)",
+      "p": "Assigns decaying importance to perturbed samples based on their Euclidean distance D(x, z) to instance x, governed by kernel width parameter sigma."
+    },
+    {
+      "h": "Weighted Least Squares Surrogate Fit",
+      "tex": "w^* = \\left( Z^T W Z \\right)^{-1} Z^T W y_{\\mathrm{blackbox}}, \\quad W = \\operatorname{diag}(\\pi_x(z_1), \\dots, \\pi_x(z_M))",
+      "p": "Closed-form weighted least squares solution for surrogate linear weights, where Z is the design matrix of perturbations and W contains proximity weights."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.ensemble import RandomForestClassifier\n\n# Tabular LIME from scratch\nclass SimpleTabularLIME:\n    def __init__(self, predict_fn, n_samples=1000, kernel_width=0.75):\n        self.predict_fn = predict_fn\n        self.n_samples = n_samples\n        self.kernel_width = kernel_width\n        \n    def explain_instance(self, x, feature_names=None):\n        p = len(x)\n        if feature_names is None:\n            feature_names = [f\"Feature_{i}\" for i in range(p)]\n            \n        # 1. Generate perturbations around x\n        perturbations = np.random.normal(loc=x, scale=0.5, size=(self.n_samples, p))\n        # Ensure exact instance is included\n        perturbations[0] = x\n        \n        # 2. Query black-box predictions (target class 1 probability)\n        blackbox_probs = self.predict_fn(perturbations)\n        if blackbox_probs.ndim > 1:\n            blackbox_probs = blackbox_probs[:, 1]\n            \n        # 3. Compute Euclidean distance and exponential proximity weights\n        dists = np.linalg.norm(perturbations - x, axis=1)\n        weights = np.exp(-(dists**2) / (self.kernel_width**2))\n        \n        # 4. Weighted Ridge/OLS Linear Regression\n        # Centred design matrix\n        Z = np.column_stack([np.ones(self.n_samples), perturbations])\n        W = np.diag(weights)\n        \n        # Solve (Z^T W Z + lambda I) w = Z^T W y\n        ZTW = Z.T @ W\n        ridge_reg = 1e-4 * np.eye(p + 1)\n        w_surrogate = np.linalg.solve(ZTW @ Z + ridge_reg, ZTW @ blackbox_probs)\n        \n        intercept = w_surrogate[0]\n        coefs = w_surrogate[1:]\n        \n        explanation = sorted(zip(feature_names, coefs), key=lambda item: abs(item[1]), reverse=True)\n        return explanation, intercept\n\n# Train a complex non-linear Random Forest on synthetic loan data\nnp.random.seed(42)\nn_train = 500\nfeatures = ['Income', 'DebtRatio', 'CreditScore', 'EmploymentYears']\n\n# Non-linear approval rule with interactions\nX_train = np.random.uniform(1, 10, (n_train, 4))\nlatent_score = 0.5 * X_train[:, 0] - 1.2 * X_train[:, 1] + 1.5 * np.log(X_train[:, 2]) + 0.3 * X_train[:, 3]\ny_train = (latent_score > np.median(latent_score)).astype(int)\n\nrf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)\nrf_model.fit(X_train, y_train)\n\n# Instance to explain: High income, but high debt ratio!\nx_applicant = np.array([8.5, 8.0, 4.0, 5.0])\nprob_approval = rf_model.predict_proba(x_applicant.reshape(1, -1))[0, 1]\n\nlime_explainer = SimpleTabularLIME(rf_model.predict_proba, n_samples=1500, kernel_width=1.0)\nexp, base = lime_explainer.explain_instance(x_applicant, feature_names=features)\n\nprint(f\"Applicant Black-Box Approval Probability: {prob_approval * 100:.1f}%\")\nprint(f\"Local Linear Surrogate Base Intercept:   {base:.3f}\")\nprint(\"\nLocal Feature Importances (LIME Weights):\")\nfor feat, weight in exp:\n    direction = \"Supports (+)\" if weight > 0 else \"Opposes (-)\"\n    print(f\"  {feat:18s}: {weight:+.4f} -> {direction}\")",
+  "keyPoints": [
+    "Model-agnostic interpretability framework: explains individual predictions of any black-box classifier or regressor.",
+    "Grounded in local surrogate models: approximates complex global decision boundaries with a local linear surrogate model.",
+    "Generates synthetic perturbations in the vicinity of instance $x$, querying the black-box to observe boundary behaviour.",
+    "Exponential proximity kernel $\\pi_x(z) = \\exp(-D(x, z)^2 / \\sigma^2)$ ensures local fidelity by weighting near neighbours heavily.",
+    "Output weights provide localized feature attribution: showing how much each feature contributed to pushing the decision over the threshold."
+  ],
+  "pitfalls": [
+    "Sampling instability: Because perturbations are drawn randomly, running LIME multiple times on the same instance can produce slightly varying explanations.",
+    "Sensitivity to kernel width sigma: If $\\sigma$ is too small, the surrogate overfits a tiny neighbourhood; if too large, the surrogate tries to linearise a globally curved boundary, failing local fidelity.",
+    "Out-of-distribution perturbations: Drawing uniform or Gaussian perturbations around correlated tabular features can create impossible synthetic points (e.g. pregnant males or age 15 with 20 years work experience)."
+  ],
+  "quiz": [
+    {
+      "q": "Why does LIME fit a linear model on local perturbations rather than fitting a global linear model on the entire dataset?",
+      "o": [
+        "A complex black-box model is globally non-linear, but zooming into the microscopic vicinity of a single prediction reveals a locally flat linear boundary",
+        "Global linear models require infinite training data",
+        "LIME cannot compute matrix multiplications globally",
+        "Perturbations can only be generated in 2 dimensions"
+      ],
+      "a": 0,
+      "why": "Globally, black-box boundaries are non-linear and cannot be captured by a single hyperplane. Locally around an individual point, linear approximations achieve high fidelity."
+    },
+    {
+      "q": "What is the role of the exponential proximity kernel pi_x(z) in LIME?",
+      "o": [
+        "It assigns high regression weights to perturbations closest to instance x, ensuring the surrogate model prioritises local accuracy over distant points",
+        "It normalises all feature values to [0, 1]",
+        "It speeds up the black-box prediction speed",
+        "It converts continuous features into categorical features"
+      ],
+      "a": 0,
+      "why": "The proximity kernel ensures local fidelity: distant perturbations carry near-zero weight, forcing the linear surrogate to fit the boundary immediately surrounding x."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "ridge_regression"
+  ],
+  "related": [
+    "counterfactual-explanations",
+    "fairness-metrics-and-mitigation",
+    "random_forest_classifier",
+    "gradient_boosting_regressor"
+  ],
+  "keywords": "lime, local interpretable model agnostic explanations, interpretability, surrogate models, feature attribution, perturbations, local fidelity"
+},
+
+{
+  "id": "counterfactual-explanations",
+  "short": "Counterfactuals",
+  "title": "Counterfactual Explanations and Recourse",
+  "task": "concepts",
+  "module": "Interpretability and fairness",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Provide actionable recourse to individuals affected by algorithmic decisions: master minimum-perturbation optimisation, proximity, sparsity, and plausibility.",
+  "lead": "When a bank loan is denied or job application rejected by an AI, knowing which features had the highest Shapley values does not tell the applicant what to do. Counterfactual explanations provide concrete, actionable recourse: what minimal changes would flip the decision from denied to approved?",
+  "intuition": [
+    "Traditional model interpretability tools (like feature importance, SHAP, and LIME) explain the past: they inform a user which features contributed most to a rejected mortgage application. However, telling an applicant that their \"Credit Score\" had a Shapley value of $-0.42$ offers zero actionable guidance. What the applicant needs is algorithmic recourse: \"What concrete steps must I take to get approved?\"",
+    "Sandra Wachter, Brent Mittelstadt, and Chris Russell (2017) formalized Counterfactual Explanations to satisfy the legal \"Right to Explanation\" under GDPR. A counterfactual explanation finds a hypothetical alternative instance $x^*$ that is as close as possible to original input $x$, but produces the desired target prediction: $f(x^*) = y^*$.",
+    "For example: \"If your monthly savings were £200 higher and your credit card debt were £1,500 lower, your loan would have been approved.\" This bridges the gap between passive attribution and actionable recourse.",
+    "Mathematically, counterfactual search is an optimisation problem balancing prediction loss (pushing $f(x^*)$ toward target class $y^*$) against a distance penalty $d(x, x^*)$ (ensuring changes are minimal). Crucially, valid recourse must enforce domain constraints: distinguishing between mutable features (income, debt) and immutable features (age, biological sex, birthplace), and ensuring the counterfactual lies on the plausible data manifold."
+  ],
+  "analogy": "Imagine a student who scored 48% on a final exam and failed by two marks. An attribution explanation tells them: \"You failed because of your weak history essay score.\" A counterfactual explanation gives actionable advice: \"If you had answered question 3 on the history essay correctly, your score would have been 51% and you would have passed.\" It identifies the minimum effort path across the passing threshold.",
+  "steps": [
+    {
+      "title": "1. Specify target outcome and define feature mutability",
+      "body": "Identify desired outcome $y^*$ (e.g. Loan Approved). Categorise features into immutable (age, race), actionable mutable (debt, savings), and directional mutable (education can increase, but not decrease)."
+    },
+    {
+      "title": "2. Formulate optimisation loss function",
+      "body": "Construct composite loss: $\\mathcal{L}(x^*) = \\ell_{\\mathrm{pred}}(f(x^*), y^*) + \\lambda \\cdot d(x, x^*)$, where $d$ measures distance using Manhattan $L_1$ or Median Absolute Deviation (MAD)."
+    },
+    {
+      "title": "3. Enforce domain constraints and plausibility",
+      "body": "Freeze immutable features by setting $x_j^* = x_j$. Constrain search to realistic feature bounds $[\\min_j, \\max_j]$."
+    },
+    {
+      "title": "4. Solve via gradient descent or Nelder–Mead",
+      "body": "Optimise $x^*$ iteratively. Increase penalty parameter $\\lambda$ until the decision flips ($f(x^*) = y^*$) while minimising total distance $\\|x^* - x\\|_1$. Present differences $(x^* - x)$ as actionable recommendations."
+    }
+  ],
+  "math": [
+    {
+      "h": "Wachter Counterfactual Optimisation Problem",
+      "tex": "\\arg\\min_{x^*} \\ell\\left(f(x^*), y^*\\right) + \\lambda d(x, x^*) \\quad \\text{subject to } x_j^* = x_j \\; \\forall j \\in \\mathcal{I}_{\\mathrm{immutable}}",
+      "p": "Finds counterfactual x* that minimises discrepancy to desired outcome y* while penalizing distance from original instance x."
+    },
+    {
+      "h": "MAD-Normalised Manhattan Distance Metric",
+      "tex": "d(x, x^*) = \\sum_{j=1}^p \\frac{|x_j - x_j^*|}{\\operatorname{MAD}_j}, \\quad \\operatorname{MAD}_j = \\operatorname{median}\\left(|X_j - \\operatorname{median}(X_j)|\\right)",
+      "p": "Normalises distance by Median Absolute Deviation of each feature, making penalties scale-invariant and robust to outliers while promoting sparsity (changing few features)."
+    },
+    {
+      "h": "Data Manifold Plausibility Penalty (Mahalanobis / VAE)",
+      "tex": "\\mathcal{L}_{\\mathrm{plausible}}(x^*) = (x^* - \\mu)^T \\Sigma^{-1} (x^* - \\mu) \\quad \\text{or} \\quad \\|x^* - g(z^*)\\|^2",
+      "p": "Prevents adversarial or impossible counterfactuals by penalizing points that fall off the empirical data manifold."
+    }
+  ],
+  "code": "import numpy as np\nfrom scipy.optimise import minimise\nfrom sklearn.linear_model import LogisticRegression\n\n# Counterfactual Explanations with Actionability Constraints from scratch\nnp.random.seed(42)\nn_train = 400\n\n# 4 Features: [Age (Immutable), AnnualIncome, CreditCardDebt, Savings]\n# Units: Age (years), Income (£k), Debt (£k), Savings (£k)\nfeature_names = ['Age (Immutable)', 'AnnualIncome (£k)', 'Debt (£k)', 'Savings (£k)']\nimmutable_indices = [0]  # Age cannot be changed!\n\n# Generate synthetic credit underwriting data\nX = np.random.normal(loc=[40, 50, 15, 10], scale=[10, 15, 6, 8], size=(n_train, 4))\nX = np.maximum(X, [18, 10, 0, 0])  # Realistic bounds\n\n# True underwriting rule: High income + high savings - high debt\nlatent = 0.08 * X[:, 1] - 0.15 * X[:, 2] + 0.12 * X[:, 3] - 1.5\ny = (latent > 0).astype(int)  # 1 = Approved, 0 = Denied\n\nclf = LogisticRegression()\nclf.fit(X, y)\n\n# Denied applicant to provide recourse for\n# 45 years old, £35k income, £22k debt, £3k savings -> Denied!\nx_denied = np.array([45.0, 35.0, 22.0, 3.0])\norig_prob = clf.predict_proba(x_denied.reshape(1, -1))[0, 1]\nprint(f\"Original Applicant Approval Probability: {orig_prob*100:.1f}% (DENIED)\")\n\n# Feature Median Absolute Deviations (MAD) for scale normalisation\nmads = np.median(np.abs(X - np.median(X, axis=0)), axis=0)\nmads[mads == 0] = 1.0\n\n# Counterfactual Optimisation Objective\ndef counterfactual_loss(x_candidate, x_orig, model, target_class=1, lambda_dist=0.5):\n    # 1. Prediction loss: binary cross-entropy to target class 1\n    prob = model.predict_proba(x_candidate.reshape(1, -1))[0, target_class]\n    pred_loss = -np.log(max(prob, 1e-12))\n    \n    # 2. Distance penalty: MAD-normalised Manhattan L1 distance\n    dist_loss = np.sum(np.abs(x_candidate - x_orig) / mads)\n    \n    return pred_loss + lambda_dist * dist_loss\n\n# Bounds and constraints\nbounds = [\n    (x_denied[0], x_denied[0]),  # Age is rigidly fixed (immutable!)\n    (10.0, 120.0),               # Income bound\n    (0.0, 50.0),                 # Debt bound\n    (0.0, 100.0)                 # Savings bound\n]\n\n# Run optimisation from x_denied starting point\nres = minimise(\n    counterfactual_loss,\n    x0=x_denied,\n    args=(x_denied, clf, 1, 0.3),\n    bounds=bounds,\n    method='L-BFGS-B'\n)\n\nx_cf = res.x\ncf_prob = clf.predict_proba(x_cf.reshape(1, -1))[0, 1]\n\nprint(f\"\nCounterfactual Found! New Approval Probability: {cf_prob*100:.1f}% (APPROVED)\")\nprint(\"\n--- Actionable Recourse Recommendations ---\")\nfor i, name in enumerate(feature_names):\n    delta = x_cf[i] - x_denied[i]\n    if abs(delta) > 0.1:\n        action = \"increase by\" if delta > 0 else \"reduce by\"\n        print(f\"  {name:20s}: Current = {x_denied[i]:5.1f} -> Target = {x_cf[i]:5.1f} ({action} {abs(delta):.1f})\")\n    else:\n        print(f\"  {name:20s}: No change required ({x_denied[i]:.1f})\")",
+  "keyPoints": [
+    "Provides actionable algorithmic recourse: identifies minimal perturbations required to flip an adverse model decision.",
+    "Optimises a composite objective balancing target prediction loss with normalised distance from the original instance.",
+    "Enforces domain constraints by distinguishing between mutable features (debt, savings) and immutable features (age, sex, ethnicity).",
+    "Normalised Manhattan distance ($L_1 / \\operatorname{MAD}$) induces sparsity, requiring changes across as few features as possible.",
+    "Crucial for regulatory compliance (e.g. EU GDPR Right to Explanation) in lending, employment, and medical diagnosis."
+  ],
+  "pitfalls": [
+    "Adversarial vulnerability: Gradient-based counterfactual search can discover adversarial noise perturbations that flip model output without representing genuine real-world plausibility.",
+    "Actionability violations: Proposing unachievable recourse (such as \"reduce age by 5 years\" or \"double income in 2 days\") invalidates practical utility.",
+    "Causal confounding: Features are rarely independent; increasing income might causally affect debt or tax brackets; pure geometric counterfactuals ignore causal dependencies."
+  ],
+  "quiz": [
+    {
+      "q": "Why are Counterfactual Explanations considered more actionable for loan applicants than SHAP or feature importance?",
+      "o": [
+        "Counterfactuals specify the exact minimal changes required to flip the rejection to an approval, rather than merely scoring past feature contributions",
+        "Counterfactuals eliminate the need for financial data",
+        "Counterfactuals guarantee that all applicants are approved",
+        "Counterfactuals only work on linear models"
+      ],
+      "a": 0,
+      "why": "Feature importances explain what caused the past decision, but do not provide actionable recourse. Counterfactuals provide concrete targets (e.g. reduce debt by £3,000) to reverse the decision."
+    },
+    {
+      "q": "Why must immutable features (like Age or Race) be constrained during counterfactual search?",
+      "o": [
+        "An applicant cannot physically change their age or ethnicity, so recommending alterations to immutable features provides meaningless recourse",
+        "Immutable features cause the loss function to divide by zero",
+        "Machine learning models cannot process immutable features",
+        "Immutable features always have zero variance"
+      ],
+      "a": 0,
+      "why": "Recourse must be humanly achievable. Recommending that an applicant become 10 years younger or alter their biological traits is impossible in reality."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "lime",
+    "fairness-metrics-and-mitigation",
+    "cost-sensitive-learning",
+    "conformal-prediction"
+  ],
+  "keywords": "counterfactual explanations, algorithmic recourse, wachter, actionable recourse, interpretability, mad distance, immutable features, gdpr"
+},
+
+{
+  "id": "fairness-metrics-and-mitigation",
+  "short": "Fairness metrics",
+  "title": "Algorithmic Fairness: Metrics and Bias Mitigation",
+  "task": "concepts",
+  "module": "Interpretability and fairness",
+  "level": 2,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Detect and mitigate demographic disparities in machine learning models: master Demographic Parity, Equalized Odds, Predictive Parity, and the impossibility theorem.",
+  "lead": "Machine learning models trained on historical data often inherit and amplify societal biases. Algorithmic fairness formalises fairness criteria into mathematical constraints, uncovering inherent trade-offs between competing definitions of fairness.",
+  "intuition": [
+    "When automated algorithms decide who receives a bank loan, who is interviewed for a job, who receives bail, or who is prioritized for organ transplants, biased decisions inflict grave societal harm. Because machine learning models are trained to optimise accuracy on historical data, they inevitably learn, internalise, and amplify historical prejudices, redlining, and demographic disparities present in the training corpus.",
+    "Algorithmic Fairness translates moral and legal concepts of equity into rigorous mathematical definitions, evaluated with respect to a sensitive or protected attribute $A \\in \\{0, 1\\}$ (e.g. race, gender, disability, or age).",
+    "Three major mathematical definitions dominate the literature. First, Demographic Parity (Statistical Parity) requires that the decision rate is identical across groups: $P(\\hat{Y}=1 \\mid A=0) = P(\\hat{Y}=1 \\mid A=1)$, formalised in US employment law as the Four-Fifths rule. Second, Equalized Odds requires that the model is equally accurate across groups, demanding identical True Positive Rates and False Positive Rates: $P(\\hat{Y}=1 \\mid A=0, Y=y) = P(\\hat{Y}=1 \\mid A=1, Y=y)$. Third, Predictive Parity (Calibration within groups) requires that predicted risk scores mean the same thing across groups: $P(Y=1 \\mid \\hat{Y}=1, A=0) = P(Y=1 \\mid \\hat{Y}=1, A=1)$.",
+    "In 2016, Alexandra Chouldechova and Jon Kleinberg independently proved a foundational impossibility theorem: unless the base rates of the positive outcome are identical across demographic groups ($P(Y=1 \\mid A=0) = P(Y=1 \\mid A=1)$), it is mathematically impossible for any model to simultaneously satisfy Demographic Parity, Equalized Odds, and Predictive Parity. Choosing a fairness metric is therefore an ethical and legal policy choice, not a purely statistical one."
+  ],
+  "analogy": "Imagine two high schools: School A and School B. At School A, 60% of students pass a national physics exam; at School B, only 30% pass due to historical underfunding of science laboratories. If a university adopts Demographic Parity, it admits the top 20% of students from both schools, ignoring the difference in exam pass rates. If the university adopts Equalized Odds, it ensures that every student who actually mastered the subject has an equal chance of admission regardless of school. If it adopts Predictive Parity, it ensures admitted students from both schools succeed at university with equal probability. You cannot achieve all three simultaneously.",
+  "steps": [
+    {
+      "title": "1. Identify protected attributes and specify legal framework",
+      "body": "Designate protected attribute $A$ (e.g. gender or race). Establish the applicable legal regime: Disparate Impact (Demographic Parity) vs Disparate Treatment (Equal Opportunity)."
+    },
+    {
+      "title": "2. Audit model for demographic disparities",
+      "body": "Compute Disparate Impact ratio $\\frac{P(\\hat{Y}=1 \\mid A=0)}{P(\\hat{Y}=1 \\mid A=1)}$, Equal Opportunity Difference $|\\mathrm{TPR}_1 - \\mathrm{TPR}_0|$, and False Positive Disparity $|\\mathrm{FPR}_1 - \\mathrm{FPR}_0|$."
+    },
+    {
+      "title": "3. Select mitigation intervention stage",
+      "body": "Choose between Pre-processing (reweighing training samples or Disparate Impact Remover), In-processing (adversarial debiasing or constrained empirical risk), or Post-processing (group-specific threshold tuning)."
+    },
+    {
+      "title": "4. Post-processing threshold shifting (Hardt et al.)",
+      "body": "Derive separate classification thresholds $\\tau_0$ and $\\tau_1$ for groups $A=0$ and $A=1$ that equalize true positive and false positive rates while maximising utility."
+    }
+  ],
+  "math": [
+    {
+      "h": "Demographic Parity Disparate Impact Ratio",
+      "tex": "\\mathrm{DI} = \\frac{P(\\hat{Y} = 1 \\mid A = 0)}{P(\\hat{Y} = 1 \\mid A = 1)} \\ge 0.80",
+      "p": "The four-fifths (80%) rule: if the selection rate for a protected minority group is less than 80% of the selection rate for the majority group, the model exhibits prima facie disparate impact."
+    },
+    {
+      "h": "Equalized Odds Definition",
+      "tex": "P(\\hat{Y} = 1 \\mid A = 0, \\; Y = y) = P(\\hat{Y} = 1 \\mid A = 1, \\; Y = y) \\quad \\forall y \\in \\{0, 1\\}",
+      "p": "Demands both equal False Positive Rates (FPR_0 = FPR_1) and equal True Positive Rates (TPR_0 = TPR_1) across demographic groups."
+    },
+    {
+      "h": "Kleinberg–Chouldechova Impossibility Theorem",
+      "tex": "P(Y = 1 \\mid A = 0) \\neq P(Y = 1 \\mid A = 1) \\implies \\neg \\left( \\text{Equalized Odds} \\wedge \\text{Predictive Parity} \\right)",
+      "p": "When true underlying prevalence differs between demographic groups, Equalized Odds and Predictive Parity (calibration within groups) are mutually exclusive."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Algorithmic Fairness Audit and Post-Processing Threshold Tuning from scratch\nnp.random.seed(42)\nn_samples = 1000\n\n# Protected attribute A: 0 (Minority, 30%), 1 (Majority, 70%)\nA = np.random.binomial(1, 0.70, n_samples)\n\n# Features: Experience and Test Score\n# Historical disparity: Group 0 has slightly lower average test score due to systemic bias\nscore = np.where(A == 1, np.random.normal(65, 10, n_samples), np.random.normal(58, 10, n_samples))\nexperience = np.random.uniform(1, 10, n_samples)\nX = np.column_stack([score, experience])\n\n# Ground truth qualification: y depends purely on merit (score + experience)\nlatent_merit = 0.08 * score + 0.3 * experience - 6.5\ny = (latent_merit + np.random.normal(0, 0.5, n_samples) > 0).astype(int)\n\n# Train a standard logistic regression model (without explicit attribute A)\nclf = LogisticRegression()\nclf.fit(X, y)\nprobs = clf.predict_proba(X)[:, 1]\n\n# Baseline: Default single threshold at p = 0.50\npreds_default = (probs >= 0.50).astype(int)\n\ndef compute_fairness_audit(y_true, y_pred, sensitive_attr):\n    mask0 = (sensitive_attr == 0)\n    mask1 = (sensitive_attr == 1)\n    \n    # Selection Rates (Demographic Parity)\n    sr0 = np.mean(y_pred[mask0])\n    sr1 = np.mean(y_pred[mask1])\n    di_ratio = sr0 / max(sr1, 1e-12)\n    \n    # True Positive Rates (Equal Opportunity)\n    tpr0 = np.sum((y_true[mask0] == 1) & (y_pred[mask0] == 1)) / np.sum(y_true[mask0] == 1)\n    tpr1 = np.sum((y_true[mask1] == 1) & (y_pred[mask1] == 1)) / np.sum(y_true[mask1] == 1)\n    \n    # False Positive Rates\n    fpr0 = np.sum((y_true[mask0] == 0) & (y_pred[mask0] == 1)) / np.sum(y_true[mask0] == 0)\n    fpr1 = np.sum((y_true[mask1] == 0) & (y_pred[mask1] == 1)) / np.sum(y_true[mask1] == 0)\n    \n    return di_ratio, tpr0, tpr1, fpr0, fpr1\n\ndi_def, tpr0_def, tpr1_def, fpr0_def, fpr1_def = compute_fairness_audit(y, preds_default, A)\n\n# Post-Processing: Equal Opportunity Threshold Tuning (Hardt et al.)\n# Adjust threshold tau_0 for Group 0 so that TPR_0 matches TPR_1\ntarget_tpr = tpr1_def\nthresholds = np.linspace(0.1, 0.9, 200)\nbest_tau0 = 0.5\nbest_tpr_diff = float(\"inf\")\n\nmask0 = (A == 0)\nfor tau in thresholds:\n    preds_g0 = (probs[mask0] >= tau).astype(int)\n    tpr_g0 = np.sum((y[mask0] == 1) & (preds_g0 == 1)) / np.sum(y[mask0] == 1)\n    diff = abs(tpr_g0 - target_tpr)\n    if diff < best_tpr_diff:\n        best_tpr_diff = diff\n        best_tau0 = tau\n\n# Apply tuned group-specific thresholds\npreds_fair = np.zeros(n_samples, dtype=int)\npreds_fair[A == 1] = (probs[A == 1] >= 0.50).astype(int)\npreds_fair[A == 0] = (probs[A == 0] >= best_tau0).astype(int)\n\ndi_fair, tpr0_fair, tpr1_fair, fpr0_fair, fpr1_fair = compute_fairness_audit(y, preds_fair, A)\n\nprint(\"--- Standard Baseline Model (Threshold = 0.50) ---\")\nprint(f\"Disparate Impact Ratio: {di_def:.3f} (Violates 80% four-fifths rule!)\")\nprint(f\"Group 0 TPR: {tpr0_def*100:.1f}% vs Group 1 TPR: {tpr1_def*100:.1f}% (Equal Opportunity Gap: {abs(tpr0_def - tpr1_def)*100:.1f}%)\")\n\nprint(f\"\n--- Post-Processed Fair Model (Tau_1 = 0.50, Tau_0 = {best_tau0:.2f}) ---\")\nprint(f\"Disparate Impact Ratio: {di_fair:.3f} (Improved)\")\nprint(f\"Group 0 TPR: {tpr0_fair*100:.1f}% vs Group 1 TPR: {tpr1_fair*100:.1f}% (Equal Opportunity Gap: {abs(tpr0_fair - tpr1_fair)*100:.1f}% -> Parity achieved!)\")",
+  "keyPoints": [
+    "Formalises ethical equity into mathematical metrics evaluated across protected demographic attributes.",
+    "Demographic Parity requires equal positive selection rates across groups ($P(\\hat{Y}=1 \\mid A=0) = P(\\hat{Y}=1 \\mid A=1)$).",
+    "Equalized Odds requires equal False Positive and True Positive rates across groups conditional on true label $Y$.",
+    "Kleinberg–Chouldechova Impossibility Theorem proves that when demographic base rates differ, competing fairness criteria cannot be satisfied simultaneously.",
+    "Mitigation spans pre-processing (reweighing data), in-processing (adversarial debiasing), and post-processing (group-specific threshold shifting)."
+  ],
+  "pitfalls": [
+    "Fairness through blindness: Merely dropping protected attributes (race, gender) from feature sets fails completely because correlated proxy features (zip code, university, hobbies) reconstruct the attribute.",
+    "Ignoring the impossibility theorem: Promising a client or regulator that a model will satisfy both calibration and equalized odds simultaneously is mathematically impossible when base rates differ.",
+    "Trade-off with global accuracy: Imposing fairness constraints shifts decision boundaries away from Bayes optimal risk minimisation, causing slight reductions in overall unconstrained accuracy."
+  ],
+  "quiz": [
+    {
+      "q": "Why does removing the sensitive attribute (e.g. Race or Gender) from the feature set fail to prevent algorithmic discrimination?",
+      "o": [
+        "Remaining correlated features (such as postal code, browser history, or school district) act as redundant proxies that allow the model to reconstruct the protected attribute",
+        "Machine learning algorithms automatically download sensitive data from the web",
+        "Removing features causes the model to crash",
+        "Sensitive attributes always have zero weight in linear models"
+      ],
+      "a": 0,
+      "why": "Known as \"fairness through blindness\", redundant encodings in high-dimensional datasets allow complex models to infer protected demographics indirectly from correlated proxy features."
+    },
+    {
+      "q": "What is established by the Kleinberg–Chouldechova Impossibility Theorem in algorithmic fairness?",
+      "o": [
+        "When true base rates differ between demographic groups, it is mathematically impossible for a predictive model to simultaneously satisfy Equalized Odds and Predictive Parity",
+        "Fairness can only be achieved using deep neural networks",
+        "All models have exactly 50% accuracy on minority groups",
+        "Biased training data can never be mitigated"
+      ],
+      "a": 0,
+      "why": "The theorem mathematically proves that calibration within groups (predictive parity) and equalized false positive/negative rates (equalized odds) cannot both hold when base rates P(Y=1|A) differ."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "confusion-matrix",
+    "type-i-ii-errors-power-and-sample-size"
+  ],
+  "related": [
+    "cost-sensitive-learning",
+    "confusion-matrix",
+    "counterfactual-explanations",
+    "lime"
+  ],
+  "keywords": "algorithmic fairness, demographic parity, equalized odds, predictive parity, disparate impact, chouldechova, kleinberg impossibility, bias mitigation"
+},
+
+{
+  "id": "svm-dual-formulation",
+  "short": "SVM dual formulation",
+  "title": "Support Vector Machines: The Dual Formulation and KKT Conditions",
+  "task": "concepts",
+  "module": "Learning theory",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Derive the convex duality behind maximum-margin hyperplanes: master Lagrange multipliers, Wolfe dual, Karush–Kuhn–Tucker (KKT) conditions, and the kernel trick.",
+  "lead": "While the primal SVM problem searches over feature weights w in high-dimensional space, the dual problem searches over sample weights alpha, revealing that the optimal decision boundary depends exclusively on inner products between support vectors.",
+  "intuition": [
+    "The Support Vector Machine (SVM) is founded on the principle of Structural Risk Minimisation: rather than merely separating training data, it searches for the maximum-margin hyperplane that leaves the widest possible buffer zone between classes, guaranteeing the tightest theoretical bound on test generalisation error.",
+    "In its Primal formulation, the soft-margin SVM optimises weight vector $w \\in \\mathbb{R}^d$ and bias $b \\in \\mathbb{R}$: $\\min_{w, b, \\xi} \\frac{1}{2} \\|w\\|^2 + C \\sum_{i=1}^n \\xi_i$ subject to classification margin constraints $y_i (w^T x_i + b) \\ge 1 - \\xi_i$. However, when we map features non-linearly into infinite-dimensional Hilbert spaces (via Gaussian RBF kernels), weight vector $w$ has infinite dimension, making the primal problem impossible to solve directly.",
+    "Convex optimisation duality resolves this brilliantly. By formulating the Lagrangian function with Lagrange multipliers $\\alpha_i \\ge 0$ and $\\mu_i \\ge 0$, differentiating with respect to primal variables $(w, b, \\xi)$, and setting derivatives to zero, we derive the Wolfe Dual formulation.",
+    "The dual problem is an elegant concave quadratic program where the decision variables are the sample multipliers $\\alpha_i$, and feature vectors $x_i$ enter strictly via pairwise dot products $x_i^T x_j$. The Karush–Kuhn–Tucker (KKT) complementary slackness conditions prove that $\\alpha_i = 0$ for every sample comfortably outside the margin: the optimal decision boundary is defined exclusively by the sparse subset of training points with $\\alpha_i > 0$—the Support Vectors! Substituting a Mercer kernel $K(x_i, x_j)$ for the dot product unlocks non-linear boundaries in infinite dimensions."
+  ],
+  "analogy": "Imagine two rival medieval armies facing each other across a battlefield. The primal commander tries to construct a continuous defensive barrier across the entire width of the landscape. The dual general notices that only the front-line soldiers standing along the very edge of contact (the support vectors) determine where the battle line is drawn; all soldiers standing safely 500 metres behind the front line can turn around and go to sleep without shifting the boundary by a single millimetre.",
+  "steps": [
+    {
+      "title": "1. Formulate primal Lagrangian function",
+      "body": "Construct Lagrangian: $\\mathcal{L}(w, b, \\xi, \\alpha, \\mu) = \\frac{1}{2} \\|w\\|^2 + C \\sum_{i=1}^n \\xi_i - \\sum_{i=1}^n \\alpha_i [y_i(w^T \\phi(x_i) + b) - 1 + \\xi_i] - \\sum_{i=1}^n \\mu_i \\xi_i$."
+    },
+    {
+      "title": "2. Enforce KKT stationarity conditions",
+      "body": "Set partial derivatives to zero: $\\nabla_w \\mathcal{L} = w - \\sum \\alpha_i y_i \\phi(x_i) = 0 \\implies w = \\sum \\alpha_i y_i \\phi(x_i)$, $\\frac{\\partial \\mathcal{L}}{\\partial b} = -\\sum \\alpha_i y_i = 0$, and $\\frac{\\partial \\mathcal{L}}{\\partial \\xi_i} = C - \\alpha_i - \\mu_i = 0$."
+    },
+    {
+      "title": "3. Substitute stationarity back to obtain Wolfe Dual",
+      "body": "Substitute relations into $\\mathcal{L}$: maximise $\\mathcal{D}(\\alpha) = \\sum_{i=1}^n \\alpha_i - \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j y_i y_j K(x_i, x_j)$ subject to box constraints $0 \\le \\alpha_i \\le C$ and $\\sum_{i=1}^n \\alpha_i y_i = 0$."
+    },
+    {
+      "title": "4. Extract support vectors and compute bias b",
+      "body": "Identify support vectors with $\\alpha_i > 0$. For any unbounded support vector ($0 < \\alpha_k < C$), compute bias: $b = y_k - \\sum_{i=1}^n \\alpha_i y_i K(x_i, x_k)$. Score new sample: $f(x) = \\operatorname{sign}\\left(\\sum_{i \\in \\mathrm{SV}} \\alpha_i y_i K(x_i, x) + b\\right)$."
+    }
+  ],
+  "math": [
+    {
+      "h": "The Wolfe Dual Quadratic Program",
+      "tex": "\\max_\\alpha \\sum_{i=1}^n \\alpha_i - \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j y_i y_j K(x_i, x_j) \\quad \\text{subject to } 0 \\le \\alpha_i \\le C, \\; \\sum_{i=1}^n \\alpha_i y_i = 0",
+      "p": "The dual objective depends solely on pairwise kernel evaluations K(x_i, x_j) and scalar multipliers alpha_i, completely independent of the dimensionality of feature space."
+    },
+    {
+      "h": "KKT Complementary Slackness Conditions",
+      "tex": "\\alpha_i \\left[ y_i (w^T \\phi(x_i) + b) - 1 + \\xi_i \\right] = 0, \\quad \\mu_i \\xi_i = (C - \\alpha_i) \\xi_i = 0",
+      "p": "Proves sparsity: alpha_i > 0 occurs strictly when y_i f(x_i) <= 1 (support vectors on or inside the margin). Points with y_i f(x_i) > 1 have alpha_i = 0 and do not affect the boundary."
+    },
+    {
+      "h": "Primal Weight Recovery via Dual Multipliers",
+      "tex": "w = \\sum_{i=1}^n \\alpha_i y_i \\phi(x_i) = \\sum_{i \\in \\mathrm{SV}} \\alpha_i y_i \\phi(x_i)",
+      "p": "Weight vector w is a linear combination of support vectors alone, proving that SVM predictions are entirely memory-sparse."
+    }
+  ],
+  "code": "import numpy as np\nfrom scipy.optimise import minimise\n\n# Support Vector Machine Dual Solver via Quadratic Programming from scratch\nnp.random.seed(42)\nn_samples = 60\n\n# Generate linearly separable 2D data\nX1 = np.random.normal(loc=[-1.5, -1.5], scale=0.7, size=(n_samples // 2, 2))\nX2 = np.random.normal(loc=[1.5, 1.5], scale=0.7, size=(n_samples // 2, 2))\nX = np.vstack([X1, X2])\ny = np.array([-1]*(n_samples // 2) + [1]*(n_samples // 2), dtype=float)\n\n# Linear kernel: K(x_i, x_j) = x_i^T x_j\nK = X @ X.T\nC = 1.0  # Regularisation penalty\n\n# Dual Objective: min 0.5 * alpha^T (Y K Y) alpha - 1^T alpha\nY = np.outer(y, y)\nP = Y * K\n\ndef dual_objective(alpha):\n    return 0.5 * np.dot(alpha, P @ alpha) - np.sum(alpha)\n\ndef dual_grad(alpha):\n    return P @ alpha - np.ones_like(alpha)\n\n# Constraints: sum(alpha_i * y_i) = 0 and 0 <= alpha_i <= C\nconstraints = {'type': 'eq', 'fun': lambda alpha: np.dot(alpha, y), 'jac': lambda alpha: y}\nbounds = [(0.0, C) for _ in range(n_samples)]\nalpha_init = np.zeros(n_samples)\n\nres = minimise(\n    dual_objective,\n    x0=alpha_init,\n    jac=dual_grad,\n    bounds=bounds,\n    constraints=constraints,\n    method='SLSQP',\n    options={'ftol': 1e-9, 'maxiter': 500}\n)\n\nalphas = res.x\nalphas[alphas < 1e-5] = 0.0  # Numerical threshold for sparsity\n\n# Identify Support Vectors\nsv_mask = alphas > 0.0\nsupport_vectors = X[sv_mask]\nsv_alphas = alphas[sv_mask]\nsv_y = y[sv_mask]\n\n# Reconstruct primal weights: w = sum(alpha_i * y_i * x_i)\nw = np.sum((alphas * y)[:, None] * X, axis=0)\n\n# Compute bias b using an unbounded support vector (0 < alpha < C)\nunbounded_sv = (alphas > 1e-4) & (alphas < C - 1e-4)\nif np.any(unbounded_sv):\n    idx = np.where(unbounded_sv)[0][0]\n    b = y[idx] - np.dot(w, X[idx])\nelse:\n    b = np.mean(y[sv_mask] - X[sv_mask] @ w)\n\n# Margin width: 2 / ||w||\nmargin_width = 2.0 / np.linalg.norm(w)\n\nprint(f\"Total training points: {n_samples}\")\nprint(f\"Number of Support Vectors found: {len(support_vectors)} ({len(support_vectors)/n_samples*100:.1f}% sparsity!)\")\nprint(f\"Primal weight vector w: [{w[0]:.4f}, {w[1]:.4f}]\")\nprint(f\"Primal bias b:          {b:.4f}\")\nprint(f\"Geometric margin width: {margin_width:.4f}\")\n\n# Check complementary slackness\nmargins = y * (X @ w + b)\nprint(f\"Min margin for SVs: {np.min(margins[sv_mask]):.4f} (approx 1.0 on margin boundary)\")",
+  "keyPoints": [
+    "Convex duality transforms the primal $O(d)$ optimisation over weights into a dual $O(n)$ optimisation over sample multipliers $\\alpha_i$.",
+    "The dual depends solely on pairwise dot products $x_i^T x_j$, enabling the kernel trick $K(x_i, x_j)$ in infinite-dimensional Hilbert spaces.",
+    "KKT complementary slackness proves sparsity: points with $y_i f(x_i) > 1$ have $\\alpha_i = 0$ and exert zero influence on the decision boundary.",
+    "Only Support Vectors ($\\alpha_i > 0$) define the separating hyperplane and margin boundary.",
+    "Box constraint $0 \\le \\alpha_i \\le C$ controls the penalty: unbounded support vectors ($0 < \\alpha_i < C$) lie exactly on the margin boundary."
+  ],
+  "pitfalls": [
+    "Quadratic memory scaling: The Gram kernel matrix $K$ is $n \\times n$; standard QP solvers scale as $O(n^3)$ time and $O(n^2)$ memory, requiring Sequential Minimal Optimisation (SMO) for large datasets.",
+    "Numerical solver precision: Standard off-the-shelf QP solvers can yield small non-zero values ($10^{-7}$) for non-support vectors; thresholding $\\alpha_i$ is necessary to recover true sparsity.",
+    "Bias determination when all SVs are bounded: When all support vectors have $\\alpha_i = C$ (high misclassification), bias $b$ cannot be determined from a single point and requires averaging upper/lower bounds."
+  ],
+  "quiz": [
+    {
+      "q": "Why does the dual formulation of SVM make the kernel trick possible?",
+      "o": [
+        "The dual optimisation problem depends exclusively on inner products x_i^T x_j between training points, allowing replacement with a kernel function K(x_i, x_j)",
+        "The dual formulation eliminates all constraints",
+        "The dual formulation converts non-convex problems into linear equations",
+        "The dual formulation operates only on the labels y_i"
+      ],
+      "a": 0,
+      "why": "In the dual formulation, feature vectors x appear strictly inside pairwise inner products x_i^T x_j. By Mercer’s theorem, any positive semi-definite kernel K(x_i, x_j) computes this inner product in Hilbert space."
+    },
+    {
+      "q": "What do the KKT complementary slackness conditions imply about training points that lie safely outside the margin (y_i f(x_i) > 1)?",
+      "o": [
+        "Their dual multiplier alpha_i must be exactly zero, meaning they exert zero influence on the position of the separating hyperplane",
+        "Their dual multiplier alpha_i equals C",
+        "They are misclassified outliers",
+        "They must be deleted from the dataset"
+      ],
+      "a": 0,
+      "why": "From alpha_i [y_i f(x_i) - 1 + xi_i] = 0, when a point is safely on the correct side outside the margin (y_i f(x_i) > 1, xi_i = 0), alpha_i must be zero."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "support_vector_classifier",
+    "kernel-pca"
+  ],
+  "related": [
+    "support_vector_classifier",
+    "support_vector_regression",
+    "one-class-svm",
+    "kernel-pca"
+  ],
+  "keywords": "svm dual, support vector machines, lagrange multipliers, wolfe dual, kkt conditions, complementary slackness, kernel trick, quadratic programming"
+},
+
+{
+  "id": "vc-dimension-and-pac-learning",
+  "short": "VC dimension & PAC",
+  "title": "VC Dimension and Probably Approximately Correct (PAC) Learning",
+  "task": "concepts",
+  "module": "Learning theory",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Quantify the learning capacity of hypothesis classes and sample complexity: master Valiant’s PAC framework, shattering, and Vapnik–Chervonenkis (VC) dimension.",
+  "lead": "How many training samples are mathematically required to guarantee that a machine learning model will generalise out-of-sample? Computational learning theory formalises generalisation bounds using PAC learning and VC dimension.",
+  "intuition": [
+    "How do we know that a machine learning model with low training error will genuinely perform well on unseen future data, rather than having memorized noise? If a model achieves 0% training error on 50 samples, when does this guarantee true generalisation? Computational Learning Theory provides the mathematical foundation.",
+    "Leslie Valiant (1984) founded Probably Approximately Correct (PAC) Learning. The PAC framework defines what it means for an algorithm to \"learn\": given error tolerance $\\epsilon > 0$ and failure probability $\\delta > 0$, an algorithm is a PAC learner if, with high probability (at least $1 - \\delta$), it outputs a hypothesis whose true generalisation error is at most $\\epsilon$. The sample complexity $m$ is the minimum number of training examples required to guarantee this.",
+    "For finite hypothesis spaces (a discrete dictionary of $|\\mathcal{H}|$ possible models), PAC bounds show that sample complexity scales logarithmically: $m \\ge \\frac{1}{\\epsilon} \\left( \\ln |\\mathcal{H}| + \\ln \\frac{1}{\\delta} \\right)$. However, nearly all practical models—such as linear hyperplanes, logistic regression, support vector machines, and neural networks—have continuous real-valued parameters, meaning $|\\mathcal{H}| = \\infty$. When $|\\mathcal{H}| = \\infty$, the naive bound $\\ln |\\mathcal{H}|$ becomes infinite and useless.",
+    "Vladimir Vapnik and Alexey Chervonenkis resolved this by measuring the combinatorial expressiveness of continuous hypothesis classes through the Vapnik–Chervonenkis (VC) Dimension. A hypothesis class $\\mathcal{H}$ shatters a set of $m$ points if it can assign all $2^m$ possible binary labelings to those points. The VC dimension $d_{\\mathrm{VC}}$ is the maximum number of points that can be shattered. By Sauer’s Lemma, once sample size exceeds $d_{\\mathrm{VC}}$, the number of realizable labelings grows only polynomially, proving that generalisation bounds depend on $d_{\\mathrm{VC}}$ rather than the infinite cardinality of $\\mathcal{H}$."
+  ],
+  "analogy": "Imagine a teacher testing students with multiple-choice questions. A student who memorized a cheat sheet of 10 answers (finite hypothesis space) might pass a 10-question test purely by memorisation. But to guarantee they truly understand the underlying subject (PAC learning with error < 5%), you must test them on enough diverse questions that pure guessing or memorisation becomes statistically impossible. The VC dimension measures the student memorisation capacity: how many arbitrary questions they could pass by rote before genuine conceptual understanding is required.",
+  "steps": [
+    {
+      "title": "1. Specify PAC parameters and hypothesis class",
+      "body": "Select maximum allowable generalisation error $\\epsilon \\in (0, 1)$ and confidence parameter $\\delta \\in (0, 1)$ (guaranteeing $P(\\mathrm{Error} \\le \\epsilon) \\ge 1 - \\delta$)."
+    },
+    {
+      "title": "2. Determine shattering capacity",
+      "body": "Test whether hypothesis class $\\mathcal{H}$ can assign all $2^m$ binary labelings to $m$ points in general position. For 2D linear hyperplanes, 3 non-collinear points can be shattered."
+    },
+    {
+      "title": "3. Identify the VC dimension",
+      "body": "Find the largest integer $d$ such that a set of $d$ points can be shattered. For linear classifiers in $\\mathbb{R}^p$, $d_{\\mathrm{VC}} = p + 1$."
+    },
+    {
+      "title": "4. Compute PAC sample complexity and generalisation bound",
+      "body": "Evaluate the Vapnik generalisation bound: with probability $\\ge 1 - \\delta$, true risk satisfies $R(h) \\le R_{\\mathrm{emp}}(h) + \\sqrt{\\frac{8 d_{\\mathrm{VC}} \\ln(2e m / d_{\\mathrm{VC}}) + 8 \\ln(4/\\delta)}{m}}$."
+    }
+  ],
+  "math": [
+    {
+      "h": "PAC Sample Complexity (Finite Hypothesis Class)",
+      "tex": "m \\ge \\frac{1}{\\epsilon} \\left( \\ln |\\mathcal{H}| + \\ln \\frac{1}{\\delta} \\right)",
+      "p": "Minimum number of training samples required to guarantee true risk <= epsilon with probability >= 1 - delta for consistent learners in finite hypothesis spaces."
+    },
+    {
+      "h": "VC Dimension Definition and Growth Function",
+      "tex": "d_{\\mathrm{VC}}(\\mathcal{H}) = \\max \\left\\{ m : \\Pi_{\\mathcal{H}}(m) = 2^m \\right\\}, \\quad \\Pi_{\\mathcal{H}}(m) \\le \\sum_{i=0}^{d} \\binom{m}{i} \\le \\left(\\frac{em}{d}\\right)^d \\; (\\text{Sauer's Lemma})",
+      "p": "The maximum number of points that can be shattered. Sauer's Lemma proves that for m > d, the growth function is bounded polynomially by (em/d)^d."
+    },
+    {
+      "h": "Vapnik–Chervonenkis Generalisation Error Bound",
+      "tex": "R(h) \\le R_{\\mathrm{emp}}(h) + 2 \\sqrt{2 \\frac{d_{\\mathrm{VC}} \\ln\\left(\\frac{2e m}{d_{\\mathrm{VC}}}\\right) + \\ln\\left(\\frac{4}{\\delta}\\right)}{m}}",
+      "p": "Guarantees that true out-of-sample risk R(h) is bounded by empirical training risk plus a structural complexity penalty scaling as O(sqrt(d_VC / m))."
+    }
+  ],
+  "code": "import numpy as np\n\n# Demonstrating Shattering and VC Dimension in 2D Linear Classifiers\n# For a 2D line (w1*x1 + w2*x2 + b = 0), VC dimension is 2 + 1 = 3.\n# 3 points can be shattered in all 2^3 = 8 configurations.\n# 4 points cannot be shattered (XOR configuration always fails!)\n\ndef can_shatter(points, labels_list):\n    # Check if a linear classifier can perfectly separate each binary labeling\n    from sklearn.linear_model import LogisticRegression\n    shattered_count = 0\n    \n    for y in labels_list:\n        if len(np.unique(y)) == 1:\n            shattered_count += 1\n            continue\n        clf = LogisticRegression(penalty=None, solver='lbfgs')\n        clf.fit(points, y)\n        preds = clf.predict(points)\n        if np.array_equal(preds, y):\n            shattered_count += 1\n            \n    return shattered_count\n\n# 1. Test 3 non-collinear points in 2D\npoints_3 = np.array([\n    [0.0, 0.0],\n    [1.0, 0.0],\n    [0.0, 1.0]\n])\n\n# Generate all 2^3 = 8 binary labelings\nlabels_3 = []\nfor i in range(8):\n    binary_str = format(i, '03b')\n    labels_3.append(np.array([int(b) for b in binary_str]))\n\nshattered_3 = can_shatter(points_3, labels_3)\n\n# 2. Test 4 points forming an XOR square\npoints_4 = np.array([\n    [0.0, 0.0],\n    [1.0, 0.0],\n    [0.0, 1.0],\n    [1.0, 1.0]\n])\n\n# Generate all 2^4 = 16 binary labelings\nlabels_4 = []\nfor i in range(16):\n    binary_str = format(i, '04b')\n    labels_4.append(np.array([int(b) for b in binary_str]))\n\nshattered_4 = can_shatter(points_4, labels_4)\n\n# 3. Calculate VC Sample Complexity Bound\nd_vc = 3  # For 2D linear classifier\nepsilon = 0.10  # Max 10% generalisation error\ndelta = 0.05    # 95% confidence (delta = 5%)\n\n# Vapnik sample complexity approximation: m approx (d_vc + log(1/delta)) / eps\nm_approx = int(np.ceil((d_vc * np.log(1.0 / epsilon) + np.log(1.0 / delta)) / epsilon))\n\nprint(f\"--- VC Dimension Verification in 2D ---\")\nprint(f\"3 Points: Can shatter {shattered_3} / 8 labelings (100% shattered -> d_VC >= 3)\")\nprint(f\"4 Points: Can shatter {shattered_4} / 16 labelings (XOR fails -> d_VC < 4)\")\nprint(f\"Exact VC Dimension of 2D Linear Classifier: {d_vc}\")\n\nprint(f\"\n--- PAC Learning Sample Complexity ---\")\nprint(f\"Target generalisation error (epsilon): {epsilon * 100:.1f}%\")\nprint(f\"Confidence level (1 - delta):           {(1 - delta) * 100:.1f}%\")\nprint(f\"Guaranteed sample complexity m:        {m_approx} samples required\")",
+  "keyPoints": [
+    "PAC learning formalises the conditions under which an algorithm produces low generalisation error with high probability.",
+    "For finite hypothesis spaces, sample complexity scales as $m = O\\left(\\frac{1}{\\epsilon} \\ln |\\mathcal{H}|\\right)$.",
+    "VC dimension measures the capacity of infinite continuous hypothesis classes by determining the maximum number of shatterable points.",
+    "For linear hyperplanes in $\\mathbb{R}^p$, the VC dimension is exactly $p + 1$.",
+    "Vapnik’s generalisation bounds prove that generalisation error decays as $O\\left(\\sqrt{d_{\\mathrm{VC}} / m}\\right)$, independent of ambient parameter space."
+  ],
+  "pitfalls": [
+    "Confusing parameter count with VC dimension: A model with only 1 parameter can have infinite VC dimension (e.g. $f(x) = \\operatorname{sign}(\\sin(\\theta x))$ can shatter infinitely many points).",
+    "Overly conservative theoretical bounds: VC generalisation bounds are worst-case upper bounds across all distributions, often requiring 10x to 100x more samples than empirical neural network practice.",
+    "Data-independent bounds: Standard VC dimension ignores the underlying data distribution $P(x)$; data lying on a low-dimensional manifold generalises with far fewer samples than raw VC dimension suggests."
+  ],
+  "quiz": [
+    {
+      "q": "What is the VC dimension of a linear hyperplane classifier operating in 2-dimensional space (R^2)?",
+      "o": [
+        "3 (it can shatter any 3 non-collinear points in all 8 labelings, but cannot shatter 4 points in an XOR configuration)",
+        "2 (matching the number of features)",
+        "Infinite",
+        "1 (it can only classify 1 point at a time)"
+      ],
+      "a": 0,
+      "why": "In R^p, a linear hyperplane has VC dimension p + 1. In 2D, 3 points can be shattered in all 8 labelings, but an XOR configuration of 4 points cannot be linearly separated."
+    },
+    {
+      "q": "Why does Sauer’s Lemma represent a crucial breakthrough in machine learning theory?",
+      "o": [
+        "It proves that once sample size m exceeds the VC dimension d, the number of realizable labelings grows polynomially O(m^d) rather than exponentially 2^m, enabling generalisation bounds",
+        "It proves that all neural networks converge in polynomial time",
+        "It shows that test error is always zero when training error is zero",
+        "It allows linear regression to solve classification problems"
+      ],
+      "a": 0,
+      "why": "Without Sauer's lemma, the combinatorial growth of labelings 2^m prevents generalisation bounds. Sauer's lemma establishes polynomial growth (em/d)^d for m > d_VC, proving PAC learnability."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "support_vector_classifier",
+    "bias-variance-tradeoff"
+  ],
+  "related": [
+    "svm-dual-formulation",
+    "no-free-lunch-and-inductive-bias",
+    "bias-variance-tradeoff"
+  ],
+  "keywords": "vc dimension, pac learning, vapnik chervonenkis, sauers lemma, shattering, sample complexity, generalisation bounds, learning theory"
+},
+
+{
+  "id": "no-free-lunch-and-inductive-bias",
+  "short": "No free lunch & inductive bias",
+  "title": "The No Free Lunch Theorem and Inductive Bias",
+  "task": "concepts",
+  "module": "Learning theory",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Why no single machine learning algorithm outperforms all others: master Wolpert’s No Free Lunch theorems and the necessity of domain-specific inductive bias.",
+  "lead": "Is there a \"master algorithm\" that is universally superior to all other models? Wolpert and Macready proved that averaged over all possible data distributions, every learning algorithm performs identically to random guessing. Generalisation is possible only through inductive bias.",
+  "intuition": [
+    "Machine learning practitioners constantly search for the best model: comparing XGBoost, Random Forests, Neural Networks, and Support Vector Machines. A natural question arises: is there an ultimate machine learning algorithm that is theoretically superior to all other algorithms across all tasks?",
+    "In 1997, David Wolpert and William Macready delivered an astonishing mathematical proof: the No Free Lunch (NFL) Theorem for Supervised Learning. The theorem states that if we average out-of-sample performance across the uniform distribution of all conceivable mathematical target functions, every learning algorithm has the exact same expected error rate—matching a coin flip or random guessing!",
+    "If Algorithm A outperforms Algorithm B on a specific benchmark dataset, there is guaranteed to exist a complementary set of mathematical universes where Algorithm B outperforms Algorithm A by the exact same margin.",
+    "Why, then, does machine learning work so brilliantly in the real world? Because the real world is NOT drawn uniformly from all conceivable mathematical functions! In an unconstrained universe, the next observed data point could have a completely random label unrelated to preceding points. Real-world physical data exhibits profound regularity: spatial continuity, temporal persistence, compositional symmetry, and smooth energy landscapes. An algorithm generalises successfully if and only if its Inductive Bias—its built-in mathematical assumptions about what patterns are natural—matches the physical structure of the problem."
+  ],
+  "analogy": "Imagine a universal lock-picking tool. If a locksmith faces every conceivable lock mechanism that could ever be built across the multiverse (including locks where the keyhole rearranges its pins randomly after every turn), no single lock-pick is better than a random coat hanger. But in our actual world, human locksmiths build locks based on physical gravity and brass tumblers. A specialised rake pick works brilliantly not because it is universally supreme, but because its design matches the specific mechanical bias of real-world locks.",
+  "steps": [
+    {
+      "title": "1. Understand the uniform distribution over functions",
+      "body": "Recognise that over all possible binary functions on input space $\\mathcal{X}$, unobserved test points are equally likely to be labelled $0$ or $1$, regardless of observed training labels."
+    },
+    {
+      "title": "2. Formalise Wolpert No Free Lunch theorem",
+      "body": "For any two algorithms $A$ and $B$, $\\sum_{f} \\sum_{x \\notin \\mathcal{D}} \\mathbb{I}(A(\\mathcal{D}, x) \\neq f(x)) = \\sum_{f} \\sum_{x \\notin \\mathcal{D}} \\mathbb{I}(B(\\mathcal{D}, x) \\neq f(x))$. Expected off-training error is strictly equal."
+    },
+    {
+      "title": "3. Identify the model inductive bias",
+      "body": "Deconstruct model assumptions: linear models assume planar boundaries; kNN assumes metric distance locality; CNNs assume translation equivariance; Transformers assume permutation-equivariant token interaction."
+    },
+    {
+      "title": "4. Align inductive bias with problem domain",
+      "body": "Select architectures whose mathematical priors match physical reality: use CNNs for images (spatial locality), RNNs/LSTMs for sequences (temporal causality), and Tree ensembles for tabular data (axis-aligned thresholds)."
+    }
+  ],
+  "math": [
+    {
+      "h": "Wolpert No Free Lunch (NFL) Theorem for Supervised Learning",
+      "tex": "\\sum_f P(E \\mid f, m, A) = \\sum_f P(E \\mid f, m, B) \\quad \\forall A, B",
+      "p": "Averaged over all possible target functions f, the probability of off-training error E given m training examples is identical for any two algorithms A and B."
+    },
+    {
+      "h": "Expected Off-Training Error Equality",
+      "tex": "\\mathbb{E}_{f \\sim \\operatorname{Uniform}(\\mathcal{F})}\\left[ R_{\\mathrm{test}}(A) \\right] = 0.50",
+      "p": "Without prior assumptions restricting the function universe, no algorithm can outperform a random coin toss on unseen test data."
+    },
+    {
+      "h": "Formal Definition of Inductive Bias (Mitchell)",
+      "tex": "\\mathcal{D} \\wedge \\mathcal{B} \\vdash h(x) = y",
+      "p": "Inductive bias B is the minimal set of prior assumptions that, when logically conjoined with training data D, deductively entails the model predictions."
+    }
+  ],
+  "code": "import numpy as np\nfrom itertools import product\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.neighbours import KNeighborsClassifier\n\n# Empirical Simulation of the No Free Lunch Theorem\n# Consider a tiny discrete universe of 4 binary inputs: {00, 01, 10, 11}\n# There are 2^4 = 16 possible distinct binary functions f: {0, 1}^2 -> {0, 1}\n\nX_all = np.array([\n    [0, 0],\n    [0, 1],\n    [1, 0],\n    [1, 1]\n])\n\n# Training set: first 2 points; Test set: remaining 2 points\nX_train = X_all[:2]\nX_test = X_all[2:]\n\n# Enumerate all 16 possible mathematical truth functions\nall_possible_functions = list(product([0, 1], repeat=4))\n\n# Track total test errors across all 16 mathematical universes\nerrors_tree = 0\nerrors_knn = 0\nerrors_random = 0\n\nfor f in all_possible_functions:\n    y_all = np.array(f)\n    y_train = y_all[:2]\n    y_test = y_all[2:]\n    \n    # Algorithm 1: Decision Tree\n    tree = DecisionTreeClassifier(max_depth=2, random_state=42)\n    # If training labels are uniform, default to class 0\n    if len(np.unique(y_train)) == 1:\n        pred_tree = np.full(len(X_test), y_train[0])\n    else:\n        tree.fit(X_train, y_train)\n        pred_tree = tree.predict(X_test)\n        \n    # Algorithm 2: k-Nearest Neighbours (k=1)\n    knn = KNeighborsClassifier(n_neighbors=1)\n    knn.fit(X_train, y_train)\n    pred_knn = knn.predict(X_test)\n    \n    # Algorithm 3: Pure Random Guess (p = 0.5)\n    # Expected error on 2 test points across uniform functions is 1.0\n    errors_tree += np.sum(pred_tree != y_test)\n    errors_knn += np.sum(pred_knn != y_test)\n    errors_random += 1.0  # Theoretical expectation per universe\n\ntotal_test_evaluations = len(all_possible_functions) * len(X_test)  # 16 * 2 = 32\n\nprint(f\"Discrete Universe: {len(X_all)} points, {len(all_possible_functions)} total mathematical truth functions\")\nprint(f\"Total out-of-sample predictions evaluated: {total_test_evaluations}\")\nprint(f\"\nTotal Test Errors Across All Universes:\")\nprint(f\"  Decision Tree Error Rate:     {errors_tree} / {total_test_evaluations} ({errors_tree / total_test_evaluations * 100:.1f}%)\")\nprint(f\"  1-Nearest Neighbour Error:    {errors_knn} / {total_test_evaluations} ({errors_knn / total_test_evaluations * 100:.1f}%)\")\nprint(f\"  Random Guessing Expected:     16 / 32 (50.0%)\")\nprint(\"\nConclusion: Across all possible mathematical functions, Tree, kNN, and Random Guessing have EXACTLY IDENTICAL 50.0% error!\")",
+  "keyPoints": [
+    "Averaged across all conceivable target functions, every machine learning algorithm performs identically to random guessing.",
+    "There is no universally optimal \"master algorithm\": superior performance on one class of problems is paid for with inferior performance on complementary problems.",
+    "Generalisation is impossible without Inductive Bias: the prior mathematical assumptions built into an algorithm.",
+    "Machine learning succeeds in practice because real-world physical data is non-uniform, exhibiting spatial, temporal, and compositional regularities.",
+    "Model selection is the art of matching an architecture inductive bias (e.g. CNNs for images, Trees for tabular data) to the physical constraints of the domain."
+  ],
+  "pitfalls": [
+    "Believing deep learning violates No Free Lunch: Deep learning does not violate NFL; its colossal success stems from its hierarchical compositional inductive bias matching real-world perceptual data.",
+    "Selecting models purely by generic leaderboard rankings: A model that dominates a tabular Kaggle competition may fail catastrophically on streaming sensor data where its inductive bias is mismatched.",
+    "Over-reliance on zero-bias models: A model with zero inductive bias (capable of memorizing any arbitrary lookup table) cannot generalise beyond observed training points."
+  ],
+  "quiz": [
+    {
+      "q": "What is the central conclusion of the No Free Lunch Theorem for supervised learning?",
+      "o": [
+        "Averaged over all mathematically possible data distributions, all learning algorithms have identical expected generalisation performance matching random guessing",
+        "Deep learning is mathematically proven to outperform all other algorithms",
+        "Training error is always lower than test error",
+        "Models with more parameters always overfit"
+      ],
+      "a": 0,
+      "why": "Wolpert proved that across the uniform distribution of all conceivable functions, every algorithm has the exact same average out-of-sample error rate of 50%."
+    },
+    {
+      "q": "Why can Convolutional Neural Networks (CNNs) accurately classify images using far fewer parameters than fully connected networks?",
+      "o": [
+        "CNNs encode an inductive bias of translation equivariance and local spatial connectivity, which matches the physical structure of visual images",
+        "CNNs bypass the need for training data",
+        "CNNs do not use activation functions",
+        "CNNs invert the image covariance matrix"
+      ],
+      "a": 0,
+      "why": "CNNs bake in domain-specific inductive biases: pixels close together are correlated (local receptive fields) and visual objects retain meaning regardless of position (weight sharing/translation equivariance)."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "vc-dimension-and-pac-learning",
+    "bias-variance-tradeoff"
+  ],
+  "related": [
+    "vc-dimension-and-pac-learning",
+    "bias-variance-tradeoff",
+    "ensemble-theory-bagging-boosting-stacking-compared"
+  ],
+  "keywords": "no free lunch theorem, inductive bias, wolpert, generalisation, machine learning theory, domain adaptation, prior assumptions"
+},
+
+{
+  "id": "label-propagation",
+  "short": "Label propagation",
+  "title": "Label Propagation and Graph-Based Semi-Supervised Learning",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Spread ground-truth labels across affinity graphs to unlabelled data: master transition matrices, harmonic functions, and Label Spreading.",
+  "lead": "In many real-world applications, labelling data requires expensive human domain experts, leaving 99% of data unlabelled. Label propagation constructs a nearest-neighbour affinity graph, propagating known labels across high-density manifolds.",
+  "intuition": [
+    "In modern machine learning, collecting unlabelled data is virtually free—scraping millions of web pages, sensor logs, or satellite images. However, obtaining high-quality ground truth labels requires human domain experts (e.g. radiologists annotating MRIs or fraud specialists reviewing transactions), which is slow and expensive. Semi-Supervised Learning (SSL) exploits the structure of unlabelled data to dramatically improve model accuracy from a tiny handful of labelled examples.",
+    "Graph-based semi-supervised learning rests on the Cluster / Manifold Assumption: high-density regions of data form continuous clusters or manifolds, and points lying on the same manifold are overwhelmingly likely to share the identical class label.",
+    "Pioneered by Xiaojin Zhu and Zoubin Ghahramani (2002), Label Propagation connects all data points (both labelled and unlabelled) into an undirected affinity graph $W$, where edge weights $W_{ij} = \\exp(-\\|x_i - x_j\\|^2 / (2\\sigma^2))$ reflect local similarity.",
+    "Label Propagation models probability diffusion: known labels act as source electrodes, pumping probability mass through graph edges into unlabelled nodes. At each iteration, unlabelled nodes update their belief to the weighted average of their neighbours beliefs, while labelled nodes are clamped to their ground-truth values. The process converges to a unique closed-form Harmonic Function satisfying the graph Laplace equation $\\Delta f = 0$. Zhou et al. introduced Label Spreading, which incorporates normalised Graph Laplacians and soft clamping to tolerate noisy labels."
+  ],
+  "analogy": "Imagine a network of dry irrigation canals connecting hundreds of rice fields in a valley. Only two fields at opposite ends have water pumps: one pumps blue fertilizer water, the other pumps yellow dye water. As water flows through the connecting canals, nearby fields quickly absorb the blue or yellow liquid. At equilibrium, every field settles into a stable shade of green, teal, or blue depending strictly on the network conductivity between them.",
+  "steps": [
+    {
+      "title": "1. Construct pairwise affinity graph matrix",
+      "body": "Given $l$ labelled samples and $u$ unlabelled samples, compute $n \\times n$ similarity matrix $W$ via Gaussian RBF kernel $W_{ij} = \\exp(-\\gamma \\|x_i - x_j\\|^2)$ (or $k$-NN graph) with zero diagonal $W_{ii} = 0$."
+    },
+    {
+      "title": "2. Formulate row-stochastic transition matrix",
+      "body": "Compute degree matrix $D = \\operatorname{diag}(W \\mathbf{1})$. Construct transition probability matrix $P = D^{-1} W$, where $P_{ij}$ is the probability of hopping from node $i$ to node $j$."
+    },
+    {
+      "title": "3. Partition matrix into labelled and unlabelled blocks",
+      "body": "Decompose $P = \\begin{bmatrix} P_{LL} & P_{LU} \\\\ P_{UL} & P_{UU} \\end{bmatrix}$ and label matrix $Y = \\begin{bmatrix} Y_L \\\\ Y_U \\end{bmatrix}$, where $Y_L$ contains one-hot ground-truth labels."
+    },
+    {
+      "title": "4. Compute harmonic equilibrium solution",
+      "body": "Iterate $Y_U \\leftarrow P_{UU} Y_U + P_{UL} Y_L$ until convergence, or evaluate exact closed-form harmonic solution: $Y_U^* = (I - P_{UU})^{-1} P_{UL} Y_L$. Assign classes via $\\hat{y}_i = \\arg\\max_k Y_{U, ik}$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Label Propagation Equilibrium Equation",
+      "tex": "Y_U = (I_u - P_{UU})^{-1} P_{UL} Y_L, \\quad P = D^{-1} W",
+      "p": "Closed-form solution for unlabelled node label distributions. The matrix inverse exists and is strictly positive because P_UU is sub-stochastic."
+    },
+    {
+      "h": "Harmonic Energy Minimisation",
+      "tex": "\\mathcal{E}(f) = \\frac{1}{2} \\sum_{i, j=1}^n W_{ij} (f_i - f_j)^2 = f^T L f \\quad \\text{subject to } f_L = y_L",
+      "p": "The equilibrium solution minimises Dirichlet harmonic energy on the graph Laplacian L = D - W, ensuring smooth variation along the data manifold."
+    },
+    {
+      "h": "Label Spreading Soft-Clamping Update (Zhou et al.)",
+      "tex": "F^{(t+1)} = \\alpha S F^{(t)} + (1 - \\alpha) Y, \\quad S = D^{-1/2} W D^{-1/2}",
+      "p": "Normalised graph Laplacian iteration with clamping parameter alpha in (0, 1) balancing neighbour diffusion with fidelity to initial labels, conferring robustness to label noise."
+    }
+  ],
+  "code": "import numpy as np\n\n# Label Propagation from scratch on Two Concentric Moons\n# We have 200 total samples, but ONLY 2 LABELLED SAMPLES (one per class)!\nnp.random.seed(42)\nn_samples = 100\n\n# Generate 2 moons dataset\ntheta = np.linspace(0, np.pi, n_samples)\nmoon1_x = np.cos(theta) + np.random.normal(0, 0.08, n_samples)\nmoon1_y = np.sin(theta) + np.random.normal(0, 0.08, n_samples)\n\nmoon2_x = 1.0 - np.cos(theta) + np.random.normal(0, 0.08, n_samples)\nmoon2_y = 0.5 - np.sin(theta) + np.random.normal(0, 0.08, n_samples)\n\nX = np.vstack([np.column_stack([moon1_x, moon1_y]),\n               np.column_stack([moon2_x, moon2_y])])\ny_true = np.array([0]*n_samples + [1]*n_samples)\nn_total = len(X)\n\n# Assign ONLY 2 KNOWN LABELS: sample 0 is Class 0, sample 100 is Class 1\n# All other 198 samples are unlabelled (-1)\ny_semi = np.full(n_total, -1)\ny_semi[0] = 0\ny_semi[n_samples] = 1\n\n# 1. Compute RBF Affinity Matrix W\ngamma = 20.0\ndists_sq = np.sum(X**2, axis=1)[:, None] + np.sum(X**2, axis=1)[None, :] - 2 * (X @ X.T)\nW = np.exp(-gamma * np.maximum(dists_sq, 0))\nnp.fill_diagonal(W, 0.0)  # No self-loops\n\n# 2. Row-normalise to create transition matrix P = D^{-1} W\nD = np.sum(W, axis=1)\nD[D == 0] = 1e-12\nP = W / D[:, None]\n\n# 3. Label matrix Y (one-hot encoding)\nY = np.zeros((n_total, 2))\nY[0, 0] = 1.0\nY[n_samples, 1] = 1.0\n\n# 4. Label Propagation Iteration\nlabelled_indices = [0, n_samples]\nunlabelled_indices = [i for i in range(n_total) if i not in labelled_indices]\n\nY_curr = Y.copy()\nfor it in range(50):\n    # Propagate: Y <- P * Y\n    Y_new = P @ Y_curr\n    # Clamp labelled points strictly to ground truth\n    Y_new[0] = [1.0, 0.0]\n    Y_new[n_samples] = [0.0, 1.0]\n    \n    if np.max(np.abs(Y_new - Y_curr)) < 1e-5:\n        break\n    Y_curr = Y_new\n\n# Predicted classes on unlabelled instances\npred_labels = np.argmax(Y_curr, axis=1)\naccuracy_unlabelled = np.mean(pred_labels[unlabelled_indices] == y_true[unlabelled_indices])\n\nprint(f\"Total dataset: {n_total} samples (Two Moons manifold)\")\nprint(f\"Number of labelled samples provided: 2 (1.0% supervision!)\")\nprint(f\"Number of unlabelled samples to infer: {len(unlabelled_indices)}\")\nprint(f\"Label Propagation Accuracy on Unlabelled Data: {accuracy_unlabelled * 100:.1f}%\")\nprint(\"Conclusion: Label propagation successfully navigated the curved manifold from 2 single points!\")",
+  "keyPoints": [
+    "Graph-based semi-supervised learning that propagates label probabilities from labelled seeds across the data manifold.",
+    "Rests on the Cluster/Manifold assumption: points connected by high-density paths share identical class labels.",
+    "Converges to a unique harmonic function minimising graph Dirichlet energy $\\mathcal{E}(f) = f^T L f$.",
+    "Label Spreading introduces normalised Graph Laplacians and soft clamping, conferring robustness against corrupted labels.",
+    "Achieves high classification accuracy on complex non-linear manifolds using less than 1% labelled training data."
+  ],
+  "pitfalls": [
+    "Affinity graph sensitivity: Highly sensitive to graph construction (RBF parameter $\\gamma$ or $k$-NN count); poor choice connects disconnected manifolds (short-circuiting) or fragments the graph.",
+    "Label imbalance bias: If one class has significantly more labelled seeds, its probability mass floods unlabelled nodes; class mass normalisation (CMN) is required.",
+    "Scalability bottleneck: Full graph propagation requires $O(n^2)$ memory and $O(n^3)$ inversion time, demanding sparse $k$-NN approximations or landmark graphs for large datasets."
+  ],
+  "quiz": [
+    {
+      "q": "Why can Label Propagation classify complex curved non-linear manifolds (like Two Moons) using only 2 labelled examples?",
+      "o": [
+        "It diffuses labels along high-density graph paths, respecting the underlying topological manifold structure without requiring linear separation",
+        "It assumes the data is normally distributed in 2D space",
+        "It projects data onto the coordinate axes",
+        "It discards all unlabelled points before fitting"
+      ],
+      "a": 0,
+      "why": "By constructing an affinity graph along dense geometric corridors, label probabilities flow naturally through the manifold curves, classifying points based on path connectivity."
+    },
+    {
+      "q": "What is the primary difference between Label Propagation and Zhou et al.’s Label Spreading?",
+      "o": [
+        "Label Spreading uses the symmetrically normalised Graph Laplacian and soft clamping, allowing labelled points to adapt and tolerate label noise",
+        "Label Spreading is a supervised regression algorithm",
+        "Label Propagation cannot handle binary classification",
+        "Label Spreading requires zero parameters"
+      ],
+      "a": 0,
+      "why": "Label Propagation strictly clamps labelled nodes to initial values. Label Spreading uses soft clamping with parameter alpha, allowing labelled nodes to update and filter noisy annotations."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "spectral_clustering",
+    "markov-chains-and-stationary-distributions"
+  ],
+  "related": [
+    "spectral_clustering",
+    "self-training-and-pseudo-labels",
+    "active-learning",
+    "markov-chains-and-stationary-distributions"
+  ],
+  "keywords": "label propagation, semi-supervised learning, label spreading, harmonic functions, manifold assumption, graph laplacian, transductive learning"
+},
+
+{
+  "id": "self-training-and-pseudo-labels",
+  "short": "Self-training & pseudo-labels",
+  "title": "Self-Training and Pseudo-Labelling",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Bootstrapping classifiers on unlabelled data: master high-confidence pseudo-labelling, confirmation bias, curriculum pseudo-labelling, and FixMatch.",
+  "lead": "When large amounts of unlabelled data are available, self-training leverages the model’s own high-confidence predictions to iteratively expand its training dataset, pushing decision boundaries toward low-density regions.",
+  "intuition": [
+    "In production machine learning systems, data scientists frequently find themselves with a small labelled dataset $\\mathcal{D}_L$ and a massive pool of unlabelled instances $\\mathcal{D}_U$. While graph-based methods like label propagation require holding all data in memory, Self-Training (pseudo-labelling) offers an intuitive, scalable bootstrapping paradigm that works with any supervised model—from logistic regression to 100-million parameter vision transformers.",
+    "The core self-training loop operates in iterations: first, train a base model on the available labelled data $\\mathcal{D}_L$. Second, generate predicted class probabilities on unlabelled instances $u \\in \\mathcal{D}_U$. Third, filter the predictions using a strict confidence threshold $\\tau$ (e.g. $\\max_k P(y=k \\mid u) \\ge 0.95$). Fourth, convert confident predictions into hard \"pseudo-labels\" $\\hat{y} = \\arg\\max P(y \\mid u)$, append them to the training set, and retrain the model from scratch.",
+    "Why does training a model on its own predictions work? Mathematically, pseudo-labelling acts as an implicit form of Entropy Minimisation (Grandvalet & Bengio, 2004). By forcing model predictions on unlabelled data to become sharp, discrete one-hot vectors, self-training pushes the decision boundary out of high-density data clusters and into low-density boundary margins.",
+    "However, self-training contains an inherent danger: Confirmation Bias. If the initial model makes an incorrect prediction with high confidence (e.g. due to class imbalance or misleading noise), it pseudo-labels the sample incorrectly. In subsequent rounds, the model retrains on its own mistake, reinforcing and compounding the error. Modern algorithms like FixMatch prevent confirmation bias using data augmentation consistency: inferring pseudo-labels on weakly augmented images and enforcing loss on strongly augmented versions."
+  ],
+  "analogy": "Imagine an apprentice botanist learning to identify mushrooms with a guidebook containing only five confirmed photographs. The apprentice walks into a forest of 1,000 unlabelled mushrooms. When they encounter a mushroom that is 99% identical to the guidebook photo of a Chanterelle, they plant a wooden signpost labelled \"Chanterelle\". They use their newly expanded set of reference mushrooms to identify subtly more ambiguous specimens deeper in the forest, gradually mastering the species.",
+  "steps": [
+    {
+      "title": "1. Train teacher model on labelled dataset",
+      "body": "Train initial supervised model $f_\\theta$ on available labelled data $\\mathcal{D}_L = \\{(x_i, y_i)\\}_{i=1}^n$."
+    },
+    {
+      "title": "2. Generate predictions on unlabelled pool",
+      "body": "Evaluate predictive probabilities $p_u = f_\\theta(u)$ for all instances in unlabelled pool $\\mathcal{D}_U$."
+    },
+    {
+      "title": "3. Filter by confidence threshold and assign pseudo-labels",
+      "body": "Identify high-confidence subset: $\\mathcal{D}_{\\mathrm{pseudo}} = \\{(u, \\arg\\max p_u) : \\max_k p_{u, k} \\ge \\tau\\}$, typically setting $\\tau \\in [0.90, 0.98]$."
+    },
+    {
+      "title": "4. Augment training set and retrain",
+      "body": "Combine datasets $\\mathcal{D}_{\\mathrm{new}} = \\mathcal{D}_L \\cup \\mathcal{D}_{\\mathrm{pseudo}}$. Remove pseudo-labelled instances from $\\mathcal{D}_U$. Retrain model on combined pool. Repeat for multiple cycles."
+    }
+  ],
+  "math": [
+    {
+      "h": "Confidence Masking and Pseudo-Label Definition",
+      "tex": "q_b = \\mathbb{I}\\left( \\max_k p_{\\mathrm{model}}(y = k \\mid u_b) \\ge \\tau \\right), \\quad \\hat{y}_b = \\arg\\max_k p_{\\mathrm{model}}(y = k \\mid u_b)",
+      "p": "Binary mask q_b filters unlabelled instances, retaining only samples where maximum predicted class probability exceeds threshold tau."
+    },
+    {
+      "h": "Combined Supervised and Pseudo-Label Objective",
+      "tex": "\\mathcal{L}_{\\mathrm{total}} = \\frac{1}{B_L} \\sum_{i=1}^{B_L} H(y_i, p(x_i)) + \\lambda_u \\frac{1}{B_U} \\sum_{b=1}^{B_U} q_b H(\\hat{y}_b, p(u_b))",
+      "p": "Standard cross-entropy loss on labelled data combined with confidence-masked cross-entropy on pseudo-labelled unlabelled instances weighted by lambda_u."
+    },
+    {
+      "h": "Connection to Entropy Minimisation",
+      "tex": "\\mathcal{H}(p) = -\\sum_{k=1}^K p_k \\log p_k \\to 0",
+      "p": "Training on hard one-hot pseudo-labels forces class probabilities toward 0 or 1, minimising conditional entropy and driving decision boundaries into low-density margins."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Self-Training with Confidence Thresholding from scratch\nnp.random.seed(42)\n\n# Generate synthetic binary dataset (2 clusters in 2D space)\nn_samples = 400\nX1 = np.random.normal(loc=[-1.5, 0], scale=0.8, size=(n_samples // 2, 2))\nX2 = np.random.normal(loc=[1.5, 0], scale=0.8, size=(n_samples // 2, 2))\nX = np.vstack([X1, X2])\ny_true = np.array([0]*(n_samples // 2) + [1]*(n_samples // 2))\n\n# Tiny initial labelled seed: ONLY 10 SAMPLES (5 per class)\n# Remaining 390 samples are unlabelled!\nn_labelled = 10\nlabelled_idx = np.concatenate([np.random.choice(n_samples // 2, n_labelled // 2, replace=False),\n                               np.random.choice(np.arange(n_samples // 2, n_samples), n_labelled // 2, replace=False)])\nunlabelled_idx = np.setdiff1d(np.arange(n_samples), labelled_idx)\n\n# Initial baseline model trained on only 10 samples\nbaseline_model = LogisticRegression()\nbaseline_model.fit(X[labelled_idx], y_true[labelled_idx])\nacc_baseline = np.mean(baseline_model.predict(X[unlabelled_idx]) == y_true[unlabelled_idx])\n\n# Self-Training Loop\ncurrent_labelled_idx = labelled_idx.copy()\ncurrent_unlabelled_idx = unlabelled_idx.copy()\ncurrent_y = y_true.copy()\n\nconfidence_threshold = 0.90\nmax_cycles = 5\n\nfor cycle in range(max_cycles):\n    # 1. Fit model on currently labelled pool\n    clf = LogisticRegression()\n    clf.fit(X[current_labelled_idx], current_y[current_labelled_idx])\n    \n    # 2. Predict probabilities on unlabelled pool\n    if len(current_unlabelled_idx) == 0:\n        break\n    probs = clf.predict_proba(X[current_unlabelled_idx])\n    max_probs = np.max(probs, axis=1)\n    pseudo_labels = np.argmax(probs, axis=1)\n    \n    # 3. Filter by confidence threshold\n    confident_mask = max_probs >= confidence_threshold\n    if not np.any(confident_mask):\n        break\n        \n    newly_labelled_indices = current_unlabelled_idx[confident_mask]\n    current_y[newly_labelled_indices] = pseudo_labels[confident_mask]\n    \n    # 4. Update pools\n    current_labelled_idx = np.concatenate([current_labelled_idx, newly_labelled_indices])\n    current_unlabelled_idx = current_unlabelled_idx[~confident_mask]\n\n# Final model evaluation\nfinal_model = LogisticRegression()\nfinal_model.fit(X[current_labelled_idx], current_y[current_labelled_idx])\nacc_final = np.mean(final_model.predict(X[unlabelled_idx]) == y_true[unlabelled_idx])\n\nprint(f\"Dataset: {n_samples} total samples ({n_labelled} initial labelled, {len(unlabelled_idx)} unlabelled)\")\nprint(f\"Baseline Accuracy (10 labelled samples only): {acc_baseline * 100:.1f}%\")\nprint(f\"Self-Training Confident Pseudo-labels added:   {len(current_labelled_idx) - n_labelled} samples\")\nprint(f\"Final Self-Trained Accuracy:                   {acc_final * 100:.1f}%\")\nprint(f\"Accuracy Improvement: +{(acc_final - acc_baseline) * 100:.1f}% via self-training!\")",
+  "keyPoints": [
+    "Bootstraps models on unlabelled data by treating high-confidence predictions as ground-truth pseudo-labels.",
+    "Model-agnostic and highly scalable: works with any supervised base classifier without graph memory bottlenecks.",
+    "Enforces entropy minimisation: pushes classification decision boundaries into low-density regions between clusters.",
+    "Confidence thresholding $\\tau \\in [0.90, 0.98]$ prevents noisy ambiguous predictions from corrupting training data.",
+    "Forms the foundation of state-of-the-art semi-supervised deep learning frameworks like FixMatch and noisy student training."
+  ],
+  "pitfalls": [
+    "Confirmation bias: If an initial model makes a high-confidence erroneous prediction, it trains on its own blunder in subsequent iterations, entrenching the mistake.",
+    "Class imbalance amplification: Models tend to be more confident in dominant majority classes, pseudo-labelling more majority samples and starving minority classes; class-balanced thresholding is vital.",
+    "Static threshold collapse: A fixed threshold $\\tau = 0.95$ may be too strict in early epochs (zero pseudo-labels added) or too lenient in late epochs; curriculum pseudo-labelling dynamically adjusts $\\tau$."
+  ],
+  "quiz": [
+    {
+      "q": "What is \"confirmation bias\" in the context of self-training and pseudo-labelling?",
+      "o": [
+        "When a model makes a confident incorrect prediction on unlabelled data, retrains on that false label, and compounds its own mistake in subsequent iterations",
+        "When human annotators disagree with each other",
+        "When training loss increases instead of decreasing",
+        "When the learning rate is set too low"
+      ],
+      "a": 0,
+      "why": "Confirmation bias occurs when the model incorporates its own erroneous pseudo-labels into training, reinforcing the error and cementing corrupted decision boundaries."
+    },
+    {
+      "q": "Why does training on high-confidence pseudo-labels improve classification performance?",
+      "o": [
+        "It enforces entropy minimisation, driving the decision boundary away from high-density data clusters into low-density margins",
+        "It changes the underlying test distribution",
+        "It converts continuous features into binary features",
+        "It guarantees zero test error"
+      ],
+      "a": 0,
+      "why": "By forcing confident unlabelled predictions to hard one-hot pseudo-labels, the loss encourages low-entropy predictions, pushing boundaries into low-density gaps between clusters."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "label-propagation",
+    "active-learning",
+    "weak-supervision",
+    "cost-sensitive-learning"
+  ],
+  "keywords": "self-training, pseudo-labels, semi-supervised learning, confirmation bias, fixmatch, entropy minimisation, confidence thresholding, bootstrapping"
+},
+
+{
+  "id": "active-learning",
+  "short": "Active learning",
+  "title": "Active Learning: Query Strategies and Human-in-the-Loop",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Maximise model accuracy while minimising labelling costs: master Uncertainty Sampling, Query-by-Committee, Expected Model Change, and diversity sampling.",
+  "lead": "Data is abundant, but expert annotation is expensive. Active learning flips passive learning on its head: the model actively queries human annotators for labels on the most informative, ambiguous instances.",
+  "intuition": [
+    "In conventional passive machine learning, practitioners collect a dataset, randomly sample thousands of instances for human labeling, and train a model. However, random sampling is notoriously wasteful: annotators spend hours labelling obvious, redundant instances (e.g. 5,000 nearly identical images of blue skies) that provide zero new information to the model.",
+    "Active Learning reverses the control loop: instead of passively receiving training data, the algorithm actively inspects the unlabelled data pool and selects the most informative, valuable instances to send to human annotators (\"oracles\"). By focusing annotation budgets exclusively on ambiguous edge cases, active learning often achieves the same accuracy as passive learning using 10% to 20% of the labelling budget.",
+    "The most widely deployed family of active learning algorithms is Uncertainty Sampling. The algorithm queries samples where the model current predictions are least certain: Least Confidence (querying points with the lowest top-1 probability), Margin Sampling (querying points where the gap between the top two class probabilities is smallest), and Entropy Sampling (querying points with maximal prediction entropy across all classes).",
+    "Beyond single-model uncertainty, Query-by-Committee (QBC) maintains an ensemble of models and queries instances with the greatest committee voting disagreement. To avoid wasting budget on isolated noise outliers, modern active learning couples uncertainty with density-weighted diversity sampling."
+  ],
+  "analogy": "Imagine a student preparing for a medical licensing exam with a professor. A passive student reads random textbook pages cover to cover, spending hours rereading basic definitions they already know cold. An active student solves a diagnostic test, identifies the five specific cardiovascular disease scenarios where their knowledge was most confused and hesitant, and brings precisely those five ambiguous cases to the professor office hours for clarification.",
+  "steps": [
+    {
+      "title": "1. Train initial seed model",
+      "body": "Train base model $f_\\theta$ on a small initial seed set of labelled samples $\\mathcal{D}_L$."
+    },
+    {
+      "title": "2. Evaluate query strategy across unlabelled pool",
+      "body": "Compute informativeness scores for all instances in unlabelled pool $\\mathcal{D}_U$ using an acquisition function (e.g. margin uncertainty or entropy)."
+    },
+    {
+      "title": "3. Query human oracle for top-K batch",
+      "body": "Select the batch of $K$ instances with the highest informativeness scores. Send them to human annotators to obtain ground-truth labels."
+    },
+    {
+      "title": "4. Update training set and retrain",
+      "body": "Move newly annotated batch from $\\mathcal{D}_U$ to $\\mathcal{D}_L$. Retrain model $f_\\theta$. Repeat the loop until the labelling budget is exhausted or target accuracy is reached."
+    }
+  ],
+  "math": [
+    {
+      "h": "Uncertainty Sampling Strategies",
+      "tex": "\\begin{aligned} \\text{Least Confidence: } & x_{\\mathrm{LC}}^* = \\arg\\max_x \\left( 1 - \\max_k P(y = k \\mid x) \\right) \\\\ \\text{Margin Sampling: } & x_{\\mathrm{M}}^* = \\arg\\min_x \\left( P(\\hat{y}_1 \\mid x) - P(\\hat{y}_2 \\mid x) \\right) \\\\ \\text{Entropy Sampling: } & x_{\\mathrm{Ent}}^* = \\arg\\max_x \\left( -\\sum_{k=1}^K P(y = k \\mid x) \\log P(y = k \\mid x) \\right) \\end{aligned}",
+      "p": "Three classic uncertainty metrics. Margin sampling focuses specifically on the boundary separating the top two competing classes, outperforming least confidence in multi-class problems."
+    },
+    {
+      "h": "Query-by-Committee (QBC) Vote Entropy",
+      "tex": "x_{\\mathrm{QBC}}^* = \\arg\\max_x \\left( -\\sum_{k=1}^K \\frac{V(k, x)}{C} \\log \\frac{V(k, x)}{C} \\right)",
+      "p": "Measures disagreement among a committee of C diverse models, where V(k, x) is the number of committee members predicting class k for instance x."
+    },
+    {
+      "h": "Density-Weighted Information Criterion",
+      "tex": "x^* = \\arg\\max_x \\left( \\phi_A(x) \\cdot \\left[\\frac{1}{|U|} \\sum_{u \\in U} \\operatorname{sim}(x, u)\\right]^\\beta \\right)",
+      "p": "Multiplies informativeness score phi_A(x) by an average similarity density term, preventing the algorithm from querying isolated noise outliers in unpopulated regions."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Active Learning: Margin Uncertainty Sampling vs Passive Random Sampling\nnp.random.seed(42)\n\n# Generate synthetic 2D classification dataset with overlapping margin\nn_total = 600\nX1 = np.random.normal(loc=[-1.0, -1.0], scale=1.0, size=(n_total // 2, 2))\nX2 = np.random.normal(loc=[1.0, 1.0], scale=1.0, size=(n_total // 2, 2))\nX = np.vstack([X1, X2])\ny = np.array([0]*(n_total // 2) + [1]*(n_total // 2))\n\n# Shuffle\nperm = np.random.permutation(n_total)\nX, y = X[perm], y[perm]\n\n# Test set for evaluation (200 samples)\nX_test, y_test = X[400:], y[400:]\nX_pool, y_pool = X[:400], y[:400]\n\n# Initial seed: 10 randomly labelled samples\ninitial_idx = np.random.choice(len(X_pool), size=10, replace=False)\n\ndef run_experiment(query_strategy='margin', n_rounds=8, batch_size=5):\n    labelled_idx = list(initial_idx)\n    pool_idx = [i for i in range(len(X_pool)) if i not in labelled_idx]\n    \n    accuracies = []\n    \n    for r in range(n_rounds):\n        # 1. Train model on current labelled set\n        clf = LogisticRegression()\n        clf.fit(X_pool[labelled_idx], y_pool[labelled_idx])\n        acc = np.mean(clf.predict(X_test) == y_test)\n        accuracies.append(acc)\n        \n        # 2. Query next batch\n        if query_strategy == 'random':\n            chosen = np.random.choice(pool_idx, size=batch_size, replace=False)\n        elif query_strategy == 'margin':\n            probs = clf.predict_proba(X_pool[pool_idx])\n            # Margin between top two classes: |P(class 1) - P(class 0)|\n            margins = np.abs(probs[:, 0] - probs[:, 1])\n            # Smallest margin = highest uncertainty\n            uncertain_order = np.argsort(margins)[:batch_size]\n            chosen = [pool_idx[idx] for idx in uncertain_order]\n            \n        # 3. Add to labelled set\n        labelled_idx.extend(chosen)\n        pool_idx = [i for i in pool_idx if i not in chosen]\n        \n    return accuracies\n\nacc_random = run_experiment(query_strategy='random')\nacc_active = run_experiment(query_strategy='margin')\n\nsample_sizes = [10 + i * 5 for i in range(len(acc_random))]\n\nprint(\"--- Active Learning vs Passive Random Sampling ---\")\nprint(f\"Initial Accuracy (10 samples): {acc_active[0]*100:.1f}%\n\")\nfor sz, r_acc, a_acc in zip(sample_sizes[1:], acc_random[1:], acc_active[1:]):\n    print(f\"Sample Size {sz:2d} | Random: {r_acc*100:.1f}% | Active Margin: {a_acc*100:.1f}% (Advantage: +{(a_acc - r_acc)*100:+.1f}%)\")\n\nfinal_gap = acc_active[-1] - acc_random[-1]\nprint(f\"\nFinal Accuracy Advantage of Active Learning: +{final_gap*100:.1f}% using identical annotation budget!\")",
+  "keyPoints": [
+    "Iterative human-in-the-loop framework: algorithm actively selects the most informative unlabelled instances for annotation.",
+    "Dramatically reduces labelling costs: frequently matches passive random sampling accuracy using 50% to 80% fewer annotations.",
+    "Uncertainty sampling queries instances near the decision boundary (least confidence, margin, entropy).",
+    "Query-by-Committee (QBC) selects instances with maximal disagreement across an ensemble of hypotheses.",
+    "Density-weighted criteria prevent the algorithm from wasting budget on isolated, uninformative outliers."
+  ],
+  "pitfalls": [
+    "Sampling bias and blind spots: If the initial seed model completely misses an entire isolated cluster, uncertainty sampling will never query points near it because the model is falsely confident.",
+    "Cold start problem: When initial labelled data is too sparse ($n < 5$), model predictions are noisy and uncertainty scores are meaningless.",
+    "Annotation batch correlations: Querying the top $K$ most uncertain points simultaneously often selects $K$ near-duplicate points; batch diversity sampling is required."
+  ],
+  "quiz": [
+    {
+      "q": "How does Margin Sampling select the next instance to query for human annotation?",
+      "o": [
+        "It selects the instance where the difference between the top two predicted class probabilities is smallest, indicating maximal boundary ambiguity",
+        "It selects the sample with the largest feature values",
+        "It draws a sample completely at random from the dataset",
+        "It selects instances that have already been annotated twice"
+      ],
+      "a": 0,
+      "why": "When the gap P(y_1|x) - P(y_2|x) is near zero, the model is balanced on the knife-edge between its top two choices; obtaining a label for this point provides maximal boundary information."
+    },
+    {
+      "q": "Why is density weighting combined with uncertainty sampling in active learning?",
+      "o": [
+        "To prevent the model from wasting annotation budget on isolated outliers and noise points that have high uncertainty but represent no other data points",
+        "To speed up model training by 100x",
+        "To eliminate the need for human annotators",
+        "To convert multi-class classification into binary classification"
+      ],
+      "a": 0,
+      "why": "An isolated outlier far from all other points naturally produces high uncertainty. Density weighting ensures queried points reside in populated regions where learning benefits many samples."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "self-training-and-pseudo-labels",
+    "label-propagation",
+    "weak-supervision",
+    "ensemble-theory-bagging-boosting-stacking-compared"
+  ],
+  "keywords": "active learning, human in the loop, uncertainty sampling, query by committee, margin sampling, annotation budget, informativeness, density weighting"
+},
+
+{
+  "id": "weak-supervision",
+  "short": "Weak supervision",
+  "title": "Weak Supervision and Programmatic Labeling",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Label millions of data points programmatically using noisy heuristic functions: master Snorkel, label models, and generative matrix completion.",
+  "lead": "Hand-labelling training datasets is the primary bottleneck in production AI. Weak supervision replaces manual labelling with heuristic labeling functions (LFs), using an unsupervised generative label model to resolve conflicts.",
+  "intuition": [
+    "In modern machine learning, hand-labelling millions of training examples is often impossible: data changes dynamically, privacy laws forbid human annotators from viewing sensitive medical records or financial transactions, and expert wages are exorbitant.",
+    "Weak Supervision (pioneered by Alexander Ratner, Christopher Ré, and the Stanford Snorkel team in 2017) fundamentally re-engineers data creation: instead of manually hand-labelling individual samples, domain experts write programmatic Labeling Functions (LFs).",
+    "A Labeling Function is a short Python script encoding a noisy heuristic: a regular expression pattern, a keyword dictionary lookup, a heuristic threshold on metadata, a legacy third-party model, or distant supervision from an external database. Each LF inspects an unlabelled sample and either outputs a candidate label (e.g. $+1$ or $-1$) or abstains ($0$).",
+    "Because human heuristics are imperfect, LFs frequently overlap, conflict, and correlate. Weak supervision resolves these conflicts through a two-stage architecture: first, an unsupervised Generative Label Model observes how LFs agree and disagree across millions of unlabelled samples, estimating the unknown accuracy and correlation of each LF without needing ground-truth labels. The Label Model outputs calibrated probabilistic training labels $P(Y \\mid \\Lambda)$. Second, an arbitrary end-to-end deep neural network is trained on these probabilistic labels, generalising far beyond the heuristic rules."
+  ],
+  "analogy": "Imagine a murder trial with five flawed witnesses. Witness 1 has poor eyesight; Witness 2 dislikes the defendant; Witness 3 only saw what happened from a distance; Witness 4 heard a loud noise; Witness 5 heard a rumor. A wise judge does not take a simple show of hands. By cross-examining the witnesses and observing which details they consistently agree on across 100 questions, the judge deduces the reliability of each witness without having been at the crime scene, synthesising their testimonies into the truth.",
+  "steps": [
+    {
+      "title": "1. Author programmatic Labeling Functions (LFs)",
+      "body": "Write multiple heuristic Python functions $\\lambda_j(x) \\in \\{-1, 0, +1\\}$ encoding domain rules, regex patterns, or distant supervision. Each LF votes or abstains ($0$)."
+    },
+    {
+      "title": "2. Generate noisy label matrix Lambda",
+      "body": "Execute all $m$ labeling functions across $n$ unlabelled samples, constructing label matrix $\\Lambda \\in \\{-1, 0, +1\\}^{n \\times m}$."
+    },
+    {
+      "title": "3. Fit unsupervised Generative Label Model",
+      "body": "Estimate the unknown accuracy vector $\\theta$ and correlation structure of LFs without ground truth, using matrix completion on the covariance matrix $\\mathbb{E}[\\Lambda \\Lambda^T]$."
+    },
+    {
+      "title": "4. Train downstream discriminative model",
+      "body": "Infer probabilistic training labels $\\tilde{y}_i = P_\\theta(Y=1 \\mid \\Lambda_i)$. Train a downstream deep neural network or gradient boosted model using cross-entropy with soft probabilistic targets."
+    }
+  ],
+  "math": [
+    {
+      "h": "Label Matrix Definition",
+      "tex": "\\Lambda \\in \\{-1, 0, +1\\}^{n \\times m}, \\quad \\Lambda_{ij} = \\lambda_j(x_i)",
+      "p": "Matrix of weak labels from m labeling functions applied to n unlabelled samples. Zero denotes that the labeling function abstained on that sample."
+    },
+    {
+      "h": "Generative Label Model Factorisation",
+      "tex": "P_\\theta(\\Lambda, Y) = \\frac{1}{Z_\\theta} \\exp\\left( \\sum_{j=1}^m \\theta_j Y \\Lambda_j + \\sum_{j < k} \\theta_{jk} \\Lambda_j \\Lambda_k \\right)",
+      "p": "Ising/Markov Random Field model over latent true label Y and observed weak votes Lambda_j, parameterised by LF accuracies theta_j and pairwise correlations theta_{jk}."
+    },
+    {
+      "h": "Unsupervised Covariance Matching (Matrix Completion)",
+      "tex": "\\operatorname{Cov}(\\Lambda_j, \\Lambda_k) = \\mathbb{E}[\\Lambda_j \\Lambda_k] - \\mathbb{E}[\\Lambda_j] \\mathbb{E}[\\Lambda_k] = \\mu_j \\mu_k \\quad (\\text{for conditionally independent LFs})",
+      "p": "Because observable covariance between LFs factorises into the product of their latent accuracies mu_j = Cov(Lambda_j, Y), accuracy can be solved without true labels via rank-1 matrix completion."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Programmatic Weak Supervision (Snorkel-style Label Model) from scratch\nnp.random.seed(42)\nn_samples = 500\n\n# Synthetic spam classification problem\n# Ground truth: 1 = Spam, 0 = Ham\n# Features: [contains_link, has_dollar_sign, all_caps_title, sender_reputation]\nX = np.random.uniform(0, 1, (n_samples, 4))\ny_true = ((X[:, 0] * 1.5 + X[:, 1] * 2.0 + X[:, 2] * 1.0 - X[:, 3] * 2.5) > 0.5).astype(int)\n\n# 1. Define 3 noisy Labeling Functions (LFs)\n# Votes: 1 (Spam), 0 (Ham), -1 (Abstain)\ndef lf_dollar(x):\n    # If high dollar sign presence, vote Spam; else abstain\n    return 1 if x[1] > 0.6 else -1\n\ndef lf_link(x):\n    # If link present and low sender rep, vote Spam\n    if x[0] > 0.7 and x[3] < 0.4: return 1\n    if x[0] < 0.2 and x[3] > 0.7: return 0\n    return -1\n\ndef lf_caps(x):\n    # If all caps title, vote Spam\n    return 1 if x[2] > 0.8 else -1\n\n# 2. Build Label Matrix Lambda (n x m)\nlfs = [lf_dollar, lf_link, lf_caps]\nm_lfs = len(lfs)\nLambda = np.zeros((n_samples, m_lfs), dtype=int)\n\nfor i in range(n_samples):\n    for j in range(m_lfs):\n        Lambda[i, j] = lfs[j](X[i])\n\n# 3. Simple Generative Majority / Accuracy-Weighted Label Model\n# Calculate empirical agreement rates between LFs to weight reliability\nweights = np.zeros(m_lfs)\nfor j in range(m_lfs):\n    # Empirical accuracy estimate using inter-LF agreement\n    active_mask = Lambda[:, j] != -1\n    agreements = []\n    for k in range(m_lfs):\n        if j != k:\n            overlap = active_mask & (Lambda[:, k] != -1)\n            if np.sum(overlap) > 0:\n                agreements.append(np.mean(Lambda[overlap, j] == Lambda[overlap, k]))\n    weights[j] = np.mean(agreements) if agreements else 0.5\n\n# Compute soft probabilistic labels P(Y=1 | Lambda)\nsoft_labels = np.zeros(n_samples)\nfor i in range(n_samples):\n    votes = Lambda[i]\n    active = votes != -1\n    if np.any(active):\n        # Weighted log-odds combination\n        log_odds = np.sum(weights[active] * (votes[active] * 2 - 1))\n        soft_labels[i] = 1.0 / (1.0 + np.exp(-log_odds))\n    else:\n        soft_labels[i] = 0.50  # Default prior\n\n# 4. Train downstream discriminative model on soft pseudo-labels\ndownstream_model = LogisticRegression()\n# Convert soft labels to binary training targets (p > 0.5)\ny_weak = (soft_labels > 0.5).astype(int)\ndownstream_model.fit(X, y_weak)\n\npreds_downstream = downstream_model.predict(X)\nacc = np.mean(preds_downstream == y_true)\n\nlf_coverages = [np.mean(Lambda[:, j] != -1) * 100 for j in range(m_lfs)]\n\nprint(f\"Total unlabelled samples processed: {n_samples}\")\nprint(f\"LF 1 (Dollar) Coverage: {lf_coverages[0]:.1f}%\")\nprint(f\"LF 2 (Link)   Coverage: {lf_coverages[1]:.1f}%\")\nprint(f\"LF 3 (Caps)   Coverage: {lf_coverages[2]:.1f}%\")\nprint(f\"Overall Label Matrix Coverage: {np.mean(np.any(Lambda != -1, axis=1))*100:.1f}%\")\nprint(f\"Downstream Model Accuracy (trained on zero human labels!): {acc * 100:.1f}%\")",
+  "keyPoints": [
+    "Replaces expensive manual hand-labelling with programmatic Labeling Functions (LFs) encoding heuristics.",
+    "Unsupervised Generative Label Model learns the accuracy and correlation of each LF without ground-truth labels.",
+    "Label model aggregates noisy, conflicting, overlapping votes into calibrated probabilistic labels $P(Y \\mid \\Lambda)$.",
+    "Downstream discriminative model (neural network or boosted trees) generalises beyond heuristic rules via feature representations.",
+    "Foundational paradigm of data-centric AI (e.g. Snorkel), enabling rapid iteration and privacy-preserving training on sensitive data."
+  ],
+  "pitfalls": [
+    "Correlated labeling functions: If multiple LFs share common dependencies (e.g. three keyword variations of the same rule), naive independent label models double-count their evidence; correlation graphs are required.",
+    "Low coverage / high abstention: If LFs abstain on 90% of samples, the downstream model receives zero training signal on the majority of data.",
+    "Heuristic concept drift: As language or data distributions shift over time, hard-coded rules can degrade into high-error noise, requiring continuous LF monitoring."
+  ],
+  "quiz": [
+    {
+      "q": "How does a Weak Supervision label model estimate the accuracy of labeling functions without access to ground truth labels?",
+      "o": [
+        "By analysing the statistical covariance, agreement, and disagreement patterns across multiple labeling functions on unlabelled data",
+        "By asking human annotators to verify all samples",
+        "By assuming all labeling functions are 100% accurate",
+        "By taking the Fourier transform of the label matrix"
+      ],
+      "a": 0,
+      "why": "Observable covariance between pairs of LFs equals the product of their unknown accuracies under conditional independence. Rank-1 matrix completion solves for accuracies without true labels."
+    },
+    {
+      "q": "Why is a downstream deep neural network trained on weak labels rather than deploying the heuristic labeling functions directly as the production classifier?",
+      "o": [
+        "The downstream network learns rich continuous feature embeddings, allowing it to generalise to instances where all labeling functions abstained",
+        "Labeling functions cannot be executed in production",
+        "Neural networks are required by law for classification",
+        "Labeling functions only work on small datasets"
+      ],
+      "a": 0,
+      "why": "LFs only fire on specific keywords or patterns and abstain on everything else. A downstream neural network learns feature representations that generalise to samples the rules never anticipated."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "probability-rules-and-bayes-theorem"
+  ],
+  "related": [
+    "self-training-and-pseudo-labels",
+    "active-learning",
+    "label-propagation",
+    "markov-random-fields"
+  ],
+  "keywords": "weak supervision, snorkel, programmatic labeling, labeling functions, label model, generative model, data centric ai, pseudo labels"
+},
+
+{
+  "id": "content-based-and-hybrid-recommenders",
+  "short": "Content-based & hybrid",
+  "title": "Content-Based and Hybrid Recommender Systems",
+  "task": "concepts",
+  "module": "Recommender systems",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Recommend items using item metadata and hybrid fusion: master user profile vectors, TF-IDF item representations, cold-start mitigation, and hybrid blending.",
+  "lead": "Pure collaborative filtering suffers from catastrophic cold-start failure on newly launched items and niche users. Content-based filtering recommends items by matching user profiles against rich item metadata, while hybrid models fuse collaborative and content signals.",
+  "intuition": [
+    "Recommender systems are the commercial engine of the modern internet—driving content on Netflix, Spotify, Amazon, and YouTube. Collaborative Filtering (CF) algorithms recommend items based purely on user-item interaction histories: \"Users who liked what you liked also liked X.\" However, pure CF exhibits a fatal structural weakness: the Cold-Start Problem. When a new movie is released or a new product is listed, it has zero interaction history, so CF can never recommend it.",
+    "Content-Based Filtering (CBF) solves the cold-start challenge by looking at the intrinsic attributes and metadata of items rather than user ratings. For text or movies, an item profile vector $v_j \\in \\mathbb{R}^d$ is constructed using TF-IDF word vectors, genre tags, director, cast, or product categories.",
+    "A user profile vector $u_i \\in \\mathbb{R}^d$ is constructed by computing a weighted average of the item vectors for items the user has positively engaged with in the past. Predicted user affinity is calculated via cosine similarity between the user profile and candidate item profiles: $\\cos(u_i, v_j) = \\frac{u_i \\cdot v_j}{\\|u_i\\| \\|v_j\\|}$. Because CBF requires only item metadata, brand-new items can be recommended the second they are uploaded.",
+    "However, pure content-based filtering has its own limitation: Overspecialisation (the \"filter bubble\"). If a user watches three Batman movies, CBF will endlessly recommend more Batman and superhero movies, never discovering serendipitous interests in documentaries or jazz. Hybrid Recommender Systems resolve this by combining content-based and collaborative filtering signals—using weighted fusion, cascade filtering, or deep feature combination."
+  ],
+  "analogy": "Imagine a personal sommelier. A collaborative filtering sommelier checks what other patrons at table 4 ordered and gives you the exact same wine. A content-based sommelier asks you what flavours you enjoy (blackberry, oak, tannins), reads the ingredient notes on the bottle labels, and selects a wine with matching taste notes—even if no one in the restaurant has ever ordered that specific bottle before. A hybrid sommelier balances both: checking bottle notes for new arrivals while using communal reviews for vintage selections.",
+  "steps": [
+    {
+      "title": "1. Extract and vectorize item metadata",
+      "body": "Extract textual and categorical attributes for all items. Compute TF-IDF feature vectors or dense neural embeddings $v_j \\in \\mathbb{R}^d$. Normalise vectors to unit length."
+    },
+    {
+      "title": "2. Construct individual user profile vectors",
+      "body": "For user $i$, compute user preference profile by taking the rating-weighted average of liked item vectors: $u_i = \\sum_{j \\in \\mathcal{H}_i} r_{ij} v_j$. Normalise $u_i$ to unit length."
+    },
+    {
+      "title": "3. Compute content similarity scores",
+      "body": "For unrated candidate items, calculate cosine similarity affinity: $S_{\\mathrm{CBF}}(i, j) = u_i^T v_j$. Rank candidate items by descending similarity."
+    },
+    {
+      "title": "4. Fuse with collaborative filtering (Hybrid)",
+      "body": "Combine content scores with collaborative filtering predictions: $\\hat{S}_{ij} = \\alpha S_{\\mathrm{CF}}(i, j) + (1 - \\alpha) S_{\\mathrm{CBF}}(i, j)$, where $\\alpha$ shifts dynamically (favouring CBF for cold items and CF for mature items)."
+    }
+  ],
+  "math": [
+    {
+      "h": "User Profile Vector Construction",
+      "tex": "u_i = \\frac{\\sum_{j \\in \\mathcal{I}_i} r_{ij} v_j}{\\sum_{j \\in \\mathcal{I}_i} |r_{ij}|}, \\quad \\hat{u}_i = \\frac{u_i}{\\|u_i\\|_2}",
+      "p": "Aggregates the feature vectors v_j of items rated by user i, weighted by rating r_ij, capturing the user historical taste profile in item attribute space."
+    },
+    {
+      "h": "Cosine Similarity Recommendation Score",
+      "tex": "S_{\\mathrm{CBF}}(i, j) = \\cos(\\hat{u}_i, v_j) = \\frac{\\hat{u}_i \\cdot v_j}{\\|\\hat{u}_i\\|_2 \\|v_j\\|_2}",
+      "p": "Measures angular proximity between user preference vector and candidate item profile in high-dimensional feature space."
+    },
+    {
+      "h": "Weighted Linear Hybrid Score",
+      "tex": "\\hat{R}_{ij} = \\alpha \\hat{R}_{\\mathrm{CF}}(i, j) + (1 - \\alpha) \\hat{R}_{\\mathrm{CBF}}(i, j), \\quad \\alpha = \\frac{\\min(N_j, N_{\\mathrm{threshold}})}{N_{\\mathrm{threshold}}}",
+      "p": "Dynamically balances CF and content signals: when item interaction count N_j is zero, alpha = 0 (100% content-based), smoothly transitioning to CF as user ratings accumulate."
+    }
+  ],
+  "code": "import numpy as np\n\n# Content-Based and Weighted Hybrid Recommender from scratch\n# 1. Item catalog: 5 movies with 4 genre features: [Action, Sci-Fi, Comedy, Romance]\ngenres = ['Action', 'Sci-Fi', 'Comedy', 'Romance']\nmovies = ['Terminator', 'Star Wars', 'Superbad', 'Notting Hill', 'New Sci-Fi Movie (0 ratings)']\n\n# Item profile matrix V (5 items x 4 features), normalised\nitem_features = np.array([\n    [1.0, 0.8, 0.1, 0.0],  # Terminator\n    [0.9, 1.0, 0.1, 0.0],  # Star Wars\n    [0.1, 0.0, 1.0, 0.3],  # Superbad\n    [0.0, 0.0, 0.4, 1.0],  # Notting Hill\n    [0.8, 0.9, 0.0, 0.0],  # Brand new unrated movie!\n])\n# Unit norm normalisation\nitem_features = item_features / np.linalg.norm(item_features, axis=1, keepdims=True)\n\n# 2. User history: Alice loved Terminator (5.0) and Star Wars (4.5), hated Notting Hill (1.0)\n# Centred ratings (subtract mean 3.5 to capture positive vs negative sentiment)\nuser_ratings = {0: +1.5, 1: +1.0, 3: -2.5}  # Movie indices and centreed scores\n\n# 3. Build Alice's User Profile Vector\nuser_profile = np.zeros(4)\nfor movie_idx, rating in user_ratings.items():\n    user_profile += rating * item_features[movie_idx]\nuser_profile /= np.linalg.norm(user_profile)\n\n# Content-based predicted scores (cosine similarity)\ncbf_scores = item_features @ user_profile\n\n# 4. Collaborative Filtering Scores (hypothetical CF predictions for unrated movies)\n# Notice CF outputs 0.0 for the new movie because it has ZERO interaction history (Cold Start!)\ncf_scores = np.array([4.8, 4.6, 2.1, 1.2, 0.0])\n\n# 5. Dynamic Weighted Hybrid Score\n# Movie 4 has 0 ratings (alpha = 0); Movie 2 has 500 ratings (alpha = 0.8)\nitem_rating_counts = np.array([120, 350, 85, 90, 0])\nalpha_weights = np.minimum(item_rating_counts / 100.0, 0.8)\n\nhybrid_scores = alpha_weights * (cf_scores / 5.0) + (1.0 - alpha_weights) * ((cbf_scores + 1) / 2.0)\n\nprint(\"Alice User Profile (Genre Preferences):\")\nfor g, weight in zip(genres, user_profile):\n    print(f\"  {g:8s}: {weight:+.3f}\")\n\nprint(\"\n--- Recommendation Scoring on Unseen Items ---\")\nprint(f\"Movie: '{movies[4]}' (Brand New Cold-Start Release):\")\nprint(f\"  Collaborative Filtering Score: {cf_scores[4]:.2f} (Failed - zero ratings)\")\nprint(f\"  Content-Based Score:           {cbf_scores[4]:.2f} (Accurately identified Sci-Fi match!)\")\nprint(f\"  Hybrid Recommendation Score:   {hybrid_scores[4]:.3f} (Cold-start solved!)\")",
+  "keyPoints": [
+    "Recommends items based on matching user profile preferences to intrinsic item attributes and metadata.",
+    "Completely solves the item cold-start problem: newly listed items with zero interaction history can be recommended immediately.",
+    "Constructs user profile vectors by aggregating the metadata vectors of items the user has positively engaged with.",
+    "Vulnerable to overspecialisation: risks trapping users in narrow filter bubbles without discovering serendipitous tastes.",
+    "Hybrid recommender systems dynamically blend collaborative and content signals, combining cold-start robustness with CF accuracy."
+  ],
+  "pitfalls": [
+    "Feature extraction bottleneck: Content-based systems require rich, structured, high-quality metadata; if product descriptions are missing or noisy, recommendations fail.",
+    "Inability to capture subjective quality: Content attributes say an item is \"Action and Sci-Fi\", but cannot distinguish between a cinematic masterpiece and a low-budget disaster.",
+    "New user cold-start: While solving item cold-start, content-based filtering cannot recommend items to brand-new users until they rate at least one item to build a profile."
+  ],
+  "quiz": [
+    {
+      "q": "How does Content-Based Filtering resolve the cold-start problem for newly released items?",
+      "o": [
+        "By matching the item metadata and attributes (e.g. genre, keywords) directly against user profile vectors, requiring zero prior interaction history",
+        "By generating synthetic fake ratings from bots",
+        "By recommending the new item to all users simultaneously",
+        "By converting collaborative filtering into an unsupervised clustering problem"
+      ],
+      "a": 0,
+      "why": "Content-based filtering relies on item attributes rather than interaction logs. As long as metadata is available, newly added items can be scored and recommended instantly."
+    },
+    {
+      "q": "What is the primary drawback of a pure Content-Based recommender system?",
+      "o": [
+        "Overspecialisation (filter bubble): it only recommends items nearly identical to past consumption, preventing serendipitous discovery",
+        "It cannot handle text features",
+        "It scales as O(n^3) with the number of users",
+        "It requires inverting the user rating matrix"
+      ],
+      "a": 0,
+      "why": "Because it only recommends items that resemble past purchases, content-based systems suffer from overspecialization and fail to discover novel categories."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "collaborative-filtering"
+  ],
+  "related": [
+    "collaborative-filtering",
+    "implicit-feedback-and-bpr",
+    "two-tower-retrieval"
+  ],
+  "keywords": "content-based filtering, hybrid recommenders, cold start, tf-idf, cosine similarity, user profile, overspecialisation, recommendation systems"
+},
+
+{
+  "id": "implicit-feedback-and-bpr",
+  "short": "Implicit feedback & BPR",
+  "title": "Implicit Feedback and Bayesian Personalized Ranking (BPR)",
+  "task": "concepts",
+  "module": "Recommender systems",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Optimise pairwise item ranking from clicks, views, and purchases: master implicit feedback matrix factorisation and Bayesian Personalized Ranking (BPR).",
+  "lead": "In real-world e-commerce, users rarely leave 1-to-5 star ratings; interactions consist of clicks, views, and purchases where unobserved items are unrated rather than negative. BPR optimises pairwise ranking criteria directly for implicit feedback.",
+  "intuition": [
+    "Early recommender system research focused heavily on explicit feedback: users assigning 1-to-5 star ratings on Netflix or Amazon. However, in modern commercial platforms, explicit ratings constitute less than 1% of user activity. The vast majority of user data consists of Implicit Feedback: clicks, page views, stream completions, and purchase transactions.",
+    "Implicit feedback has unique structural characteristics: interactions are binary (user clicked or did not click), signals are purely positive (clicking reflects interest, but absence of a click does NOT mean dislike—the user might simply never have been shown the item), and the observation matrix contains unobserved entries rather than explicit negative ratings.",
+    "Standard matrix factorisation approaches this pointwise, treating unobserved items as negative examples (zeros), which introduces massive negative bias. Steffen Rendle et al. (2009) revolutionized the field by introducing Bayesian Personalized Ranking (BPR).",
+    "BPR reframes recommendation from score regression into a Pairwise Ranking task. For any user $u$ who interacted with observed item $i$, and any unobserved item $j$, BPR assumes that user $u$ prefers item $i$ over item $j$ ($i >_u j$). The BPR-Opt objective directly maximises the posterior probability of correct pairwise preference orderings across all triplets $(u, i, j)$ using stochastic gradient descent (BPR-SGD)."
+  ],
+  "analogy": "Imagine observing customers in a bakery. A customer buys an almond croissant ($i$). They walk past 50 other pastries without buying them ($j$). Pointwise methods assume the customer hates all 50 other pastries and wants to burn the bakery down. BPR recognizes the reality: the customer simply preferred the almond croissant over the other pastries that morning. Training on pairwise preferences ($i > j$) ranks the almond croissant above the others without falsely concluding the others are toxic.",
+  "steps": [
+    {
+      "title": "1. Structure implicit interaction triplets",
+      "body": "Given binary interaction matrix $R$, construct dataset of preference triplets $D_S = \\{(u, i, j) : r_{ui} = 1 \\wedge r_{uj} = 0\\}$, assuming user $u$ prefers interacted item $i$ over unobserved item $j$."
+    },
+    {
+      "title": "2. Formulate latent matrix factorisation score difference",
+      "body": "Define predicted score $\\hat{x}_{ui} = w_u^T h_i$. Compute pairwise score margin: $\\hat{x}_{uij} = \\hat{x}_{ui} - \\hat{x}_{uj} = w_u^T (h_i - h_j)$."
+    },
+    {
+      "title": "3. Formulate BPR-Opt Bayesian posterior objective",
+      "body": "Maximise log-posterior: $\\mathcal{L}_{\\mathrm{BPR}} = \\sum_{(u, i, j) \\in D_S} \\ln \\sigma(\\hat{x}_{uij}) - \\lambda_W \\|w_u\\|^2 - \\lambda_H (\\|h_i\\|^2 + \\|h_j\\|^2)$."
+    },
+    {
+      "title": "4. Train via pairwise stochastic gradient descent (BPR-SGD)",
+      "body": "Sample random triplet $(u, i, j)$ uniformly with replacement. Update latent vectors along gradient: $w_u \\leftarrow w_u + \\eta \\left( \\sigma(-\\hat{x}_{uij}) (h_i - h_j) - \\lambda w_u \\right)$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Bayesian Personalized Ranking (BPR-Opt) Objective",
+      "tex": "\\mathcal{L}_{\\mathrm{BPR}}(\\Theta) = \\sum_{(u, i, j) \\in D_S} \\ln \\sigma\\left(\\hat{x}_{ui} - \\hat{x}_{uj}\\right) - \\lambda_\\Theta \\|\\Theta\\|_2^2, \\quad \\sigma(z) = \\frac{1}{1 + e^{-z}}",
+      "p": "Maximises the log-likelihood that user u ranks observed item i higher than unobserved item j, regularised by L2 penalties on user and item embeddings."
+    },
+    {
+      "h": "Pairwise Score Difference in Matrix Factorisation",
+      "tex": "\\hat{x}_{uij} = \\hat{x}_{ui} - \\hat{x}_{uj} = w_u^T h_i - w_u^T h_j = w_u^T (h_i - h_j)",
+      "p": "The preference gap is linear in user latent vector w_u and the difference between positive item embedding h_i and negative item embedding h_j."
+    },
+    {
+      "h": "BPR-SGD Stochastic Gradient Update",
+      "tex": "\\frac{\\partial \\ln \\sigma(\\hat{x}_{uij})}{\\partial \\Theta} = \\frac{e^{-\\hat{x}_{uij}}}{1 + e^{-\\hat{x}_{uij}}} \\frac{\\partial \\hat{x}_{uij}}{\\partial \\Theta} = \\sigma(-\\hat{x}_{uij}) \\frac{\\partial \\hat{x}_{uij}}{\\partial \\Theta}",
+      "p": "The gradient magnitude scales with sigma(-x_uij): when the model already ranks i far above j, the gradient vanishes; when it misranks j above i, it takes a large corrective step."
+    }
+  ],
+  "code": "import numpy as np\n\n# Bayesian Personalized Ranking Matrix Factorisation (BPR-MF) from scratch\nclass BPRMatrixFactorisation:\n    def __init__(self, n_users, n_items, n_factors=8, lr=0.05, reg=0.01):\n        self.n_users = n_users\n        self.n_items = n_items\n        self.n_factors = n_factors\n        self.lr = lr\n        self.reg = reg\n        \n        # Initialise latent embeddings\n        np.random.seed(42)\n        self.user_emb = np.random.normal(0, 0.1, (n_users, n_factors))\n        self.item_emb = np.random.normal(0, 0.1, (n_items, n_factors))\n        \n    def fit(self, interactions, n_iters=100_000):\n        # interactions: dict of user_id -> set of interacted item_ids\n        users = list(interactions.keys())\n        \n        for step in range(n_iters):\n            # 1. Sample user u uniformly\n            u = np.random.choice(users)\n            pos_items = interactions[u]\n            if len(pos_items) == 0 or len(pos_items) == self.n_items:\n                continue\n                \n            # 2. Sample positive item i and unobserved item j\n            i = np.random.choice(list(pos_items))\n            j = np.random.randint(self.n_items)\n            while j in pos_items:\n                j = np.random.randint(self.n_items)\n                \n            # 3. Compute score difference: x_uij = w_u^T (h_i - h_j)\n            w_u = self.user_emb[u]\n            h_i = self.item_emb[i]\n            h_j = self.item_emb[j]\n            \n            x_uij = np.dot(w_u, h_i - h_j)\n            \n            # Sigmoid derivative factor: sigma(-x_uij)\n            factor = 1.0 / (1.0 + np.exp(np.clip(x_uij, -30, 30)))\n            \n            # 4. Stochastic Gradient Updates\n            self.user_emb[u] += self.lr * (factor * (h_i - h_j) - self.reg * w_u)\n            self.item_emb[i] += self.lr * (factor * w_u - self.reg * h_i)\n            self.item_emb[j] += self.lr * (-factor * w_u - self.reg * h_j)\n            \n    def predict_rankings(self, u):\n        return self.item_emb @ self.user_emb[u]\n\n# Synthetic User-Item Click Dataset\n# 50 users, 30 items. Items 0-14 are Rock music, 15-29 are Classical\nn_users, n_items = 50, 30\nuser_interactions = {}\n\nfor u in range(n_users):\n    # First 25 users like Rock; last 25 like Classical\n    genre_pool = range(0, 15) if u < 25 else range(15, 30)\n    user_interactions[u] = set(np.random.choice(genre_pool, size=6, replace=False))\n\nbpr = BPRMatrixFactorisation(n_users, n_items, n_factors=6, lr=0.08, reg=0.02)\nbpr.fit(user_interactions, n_iters=150_000)\n\n# Evaluate Area Under ROC Curve (AUC) for ranking on user 0 (Rock lover)\nu_eval = 0\ntrue_positives = user_interactions[u_eval]\nunobserved = [item for item in range(n_items) if item not in true_positives]\n\nscores = bpr.predict_rankings(u_eval)\n\n# Pairwise AUC: fraction of (pos, neg) pairs where score(pos) > score(neg)\nauc_pairs = 0\ntotal_pairs = len(true_positives) * len(unobserved)\nfor i in true_positives:\n    for j in unobserved:\n        if scores[i] > scores[j]:\n            auc_pairs += 1\n\nauc_score = auc_pairs / total_pairs\ntop_5_items = np.argsort(scores)[::-1][:5]\n\nprint(f\"Dataset: {n_users} users, {n_items} items (Binary Implicit Clicks)\")\nprint(f\"User 0 Profile: Rock music listener (Items 0-14)\")\nprint(f\"BPR-MF Pairwise Ranking AUC on User 0: {auc_score * 100:.1f}%\")\nprint(f\"Top-5 Recommended Item IDs: {list(top_5_items)}\")\nprint(f\"All top-5 recommended items are Rock (ID < 15): {np.all(top_5_items < 15)}\")",
+  "keyPoints": [
+    "Tailored specifically for implicit feedback datasets (clicks, purchases, video streams) where negative ratings are unobserved.",
+    "Replaces pointwise regression with pairwise ranking optimisation ($i >_u j$).",
+    "BPR-Opt objective directly maximises the Area Under the ROC Curve (AUC) for personalized item recommendation.",
+    "Trained via BPR-SGD: draws random triplets $(u, i, j)$ with replacement, updating embeddings with constant-time $O(k)$ steps.",
+    "Provides superior top-$N$ recommendation ranking compared to pointwise matrix factorisation and square loss."
+  ],
+  "pitfalls": [
+    "Popularity bias in negative sampling: Uniformly sampling unobserved item $j$ disproportionately samples obscure items; negative sampling from popular unclicked items yields stronger gradients.",
+    "Cold-start vulnerability: Pure BPR matrix factorisation cannot rank new items with zero interactions; two-tower neural architectures mitigate this.",
+    "Triplet combinatorial scale: A dataset with $U$ users and $I$ items contains $O(U \\cdot I^2)$ possible triplets; sampling strategy and learning rate scheduling are critical."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Bayesian Personalized Ranking (BPR) outperform standard pointwise Matrix Factorisation on implicit click data?",
+      "o": [
+        "Pointwise MF treats all unobserved items as negative (0), biasing predictions, whereas BPR optimises pairwise preferences assuming observed items are preferred over unobserved ones",
+        "BPR does not use matrix factorisation",
+        "Pointwise MF cannot compute gradients",
+        "BPR requires 1-to-5 star ratings"
+      ],
+      "a": 0,
+      "why": "In implicit feedback, unobserved items are unrated, not negative. Pointwise models treat them as zeros, corrupting recommendations. BPR optimises relative ranking (i > j) rather than absolute values."
+    },
+    {
+      "q": "What occurs to the BPR-SGD gradient update when the model already ranks positive item i far above negative item j (x_uij >> 0)?",
+      "o": [
+        "The gradient scaling factor sigma(-x_uij) vanishes toward zero, so the model makes virtually no update and focuses capacity on incorrect rankings",
+        "The gradient diverges to infinity",
+        "The learning rate is automatically multiplied by 10",
+        "The item embeddings are deleted"
+      ],
+      "a": 0,
+      "why": "Because the derivative is sigma(-x_uij), when x_uij is large and positive, sigma(-x_uij) approx 0. The algorithm dynamically focuses on violated rankings."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "collaborative-filtering"
+  ],
+  "related": [
+    "collaborative-filtering",
+    "content-based-and-hybrid-recommenders",
+    "two-tower-retrieval"
+  ],
+  "keywords": "bpr, bayesian personalized ranking, implicit feedback, pairwise ranking, matrix factorisation, bpr-sgd, auc, recommender systems"
+},
+
+{
+  "id": "two-tower-retrieval",
+  "short": "Two-tower retrieval",
+  "title": "Two-Tower Neural Retrieval Architectures",
+  "task": "concepts",
+  "module": "Recommender systems",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Scale recommendation to billion-item candidate retrieval in sub-milliseconds: master dual-encoder neural networks, In-Batch negative loss, and vector index serving.",
+  "lead": "Industrial recommender systems operate in two stages: Candidate Retrieval (filtering 100 million items to 1,000 candidates in 10ms) and Heavy Ranking. Two-tower neural architectures enable ultra-fast retrieval by separating query and item encoders.",
+  "intuition": [
+    "Modern industrial recommender systems—such as YouTube, TikTok, Pinterest, and Google Play—manage catalogs containing hundreds of millions of items. Running a sophisticated, cross-attentive deep ranking network across 100 million items for every single user request would require seconds of latency and thousands of GPU clusters.",
+    "To achieve real-time responsiveness, industry standardises on a Two-Stage Pipeline: Candidate Generation (Retrieval) filters the universe of 100 million items down to the top 1,000 most relevant candidates in less than 10 milliseconds; subsequently, a complex Heavy Ranker scores and sorts the 1,000 candidates.",
+    "The premier architecture for candidate retrieval is the Two-Tower Neural Model (Dual-Encoder). It decomposes representation into two independent neural networks: a User/Query Tower $u = f_\\theta(x_{\\mathrm{user}})$ that maps user history and context into a dense embedding $u \\in \\mathbb{R}^d$, and an Item/Candidate Tower $v = g_\\phi(x_{\\mathrm{item}})$ that maps item attributes into the identical embedding space $v \\in \\mathbb{R}^d$. The retrieval score is the dot product $\\langle u, v \\rangle$.",
+    "The architectural genius of the two-tower design is Decoupled Inference. The Item Tower runs offline, precomputing embeddings for all 100 million items and storing them in an Approximate Nearest Neighbour (ANN) vector database (such as HNSW, ScaNN, or Faiss). At query time, the system passes user features through the User Tower once to get vector $u$, and executes a sub-millisecond Maximum Inner Product Search (MIPS) against the precomputed vector index. Models are trained efficiently using In-Batch Negatives."
+  ],
+  "analogy": "Imagine a library with 50 million books. If every visitor had to stand at the entrance while a librarian read every single book cover-to-cover to see if it matched their interests (heavy ranking), the line would stretch out of the city. Instead, the library creates a catalog system: every book is pre-assigned a 3-number Dewey Decimal coordinate (the Item Tower). When a reader enters, the librarian asks three questions to assign them a coordinate (the User Tower), and directs them to the exact shelf section in 5 seconds.",
+  "steps": [
+    {
+      "title": "1. Design separate User and Item feature pipelines",
+      "body": "Construct user features (search query, demographic, watch history) and item features (video title, author, category, text tags)."
+    },
+    {
+      "title": "2. Build independent User and Item neural towers",
+      "body": "Construct deep neural network $u(x_{\\mathrm{user}}) \\in \\mathbb{R}^d$ and item network $v(x_{\\mathrm{item}}) \\in \\mathbb{R}^d$. L2-normalise final layer outputs to unit hypersphere."
+    },
+    {
+      "title": "3. Train with In-Batch Negative Softmax Loss",
+      "body": "Sample a batch of $B$ positive pairs $(u_i, v_i)$. For user $i$, treat all other $B-1$ items in the batch as negative examples: $\\mathcal{L} = -\\frac{1}{B} \\sum_{i=1}^B \\log \\frac{\\exp(\\langle u_i, v_i \\rangle / \\tau)}{\\sum_{j=1}^B \\exp(\\langle u_i, v_j \\rangle / \\tau)}$."
+    },
+    {
+      "title": "4. Index items offline and serve via MIPS",
+      "body": "Pass entire item catalog through Item Tower offline; insert vectors into an Approximate Nearest Neighbour index (HNSW / ScaNN). At query time, compute user vector $u$ and query MIPS index in $< 5$ ms."
+    }
+  ],
+  "math": [
+    {
+      "h": "Two-Tower Scoring Function",
+      "tex": "s(x_{\\mathrm{user}}, x_{\\mathrm{item}}) = \\langle u(x_{\\mathrm{user}}), \\; v(x_{\\mathrm{item}}) \\rangle = \\sum_{k=1}^d u_k(x) v_k(y)",
+      "p": "The inner product in shared d-dimensional embedding space measures semantic relevance between user and candidate item."
+    },
+    {
+      "h": "In-Batch Negative Softmax Loss",
+      "tex": "\\mathcal{L}_{\\mathrm{in\\text{-}batch}} = -\\frac{1}{B} \\sum_{i=1}^B \\log \\frac{\\exp\\left(\\frac{\\langle u_i, v_i \\rangle}{\\tau}\\right)}{\\sum_{j=1}^B \\exp\\left(\\frac{\\langle u_i, v_j \\rangle}{\\tau}\\right)}",
+      "p": "Avoids explicit negative sampling by reusing other batch items as negatives. Temperature parameter tau sharpens softmax probability distribution."
+    },
+    {
+      "h": "Maximum Inner Product Search (MIPS) Retrieval",
+      "tex": "\\operatorname{Candidates}(u) = \\arg\\max_{j \\in \\mathcal{C}}^{(K)} \\langle u, v_j \\rangle",
+      "p": "Sub-millisecond retrieval of the top-K highest scoring item embeddings using hierarchical navigable small world (HNSW) graph indexing."
+    }
+  ],
+  "code": "import numpy as np\n\n# Two-Tower Neural Retrieval Architecture from scratch\nclass SimpleTwoTower:\n    def __init__(self, user_dim, item_dim, embed_dim=8, lr=0.01, temperature=0.1):\n        self.embed_dim = embed_dim\n        self.lr = lr\n        self.tau = temperature\n        \n        # User Tower weights (user_dim -> embed_dim)\n        np.random.seed(42)\n        self.W_u = np.random.normal(0, 0.1, (user_dim, embed_dim))\n        # Item Tower weights (item_dim -> embed_dim)\n        self.W_v = np.random.normal(0, 0.1, (item_dim, embed_dim))\n        \n    def forward_user(self, X_user):\n        u = X_user @ self.W_u\n        return u / np.linalg.norm(u, axis=1, keepdims=True)\n        \n    def forward_item(self, X_item):\n        v = X_item @ self.W_v\n        return v / np.linalg.norm(v, axis=1, keepdims=True)\n        \n    def train_step(self, X_user_batch, X_item_batch):\n        B = len(X_user_batch)\n        u = self.forward_user(X_user_batch)  # (B x d)\n        v = self.forward_item(X_item_batch)  # (B x d)\n        \n        # Similarity matrix: S_ij = <u_i, v_j> / tau (B x B)\n        S = (u @ v.T) / self.tau\n        \n        # In-Batch Softmax cross-entropy loss\n        exp_S = np.exp(S - np.max(S, axis=1, keepdims=True))\n        probs = exp_S / np.sum(exp_S, axis=1, keepdims=True)\n        \n        loss = -np.mean(np.log(np.diag(probs) + 1e-12))\n        \n        # Backpropagation gradients\n        # dL/dS = (probs - I) / B\n        dldS = (probs - np.eye(B)) / (B * self.tau)\n        \n        grad_u = dldS @ v\n        grad_v = dldS.T @ u\n        \n        self.W_u -= self.lr * (X_user_batch.T @ grad_u)\n        self.W_v -= self.lr * (X_item_batch.T @ grad_v)\n        \n        return loss\n\n# Synthetic multi-attribute retrieval problem\nn_catalog = 1000  # 1,000 items in catalog\nuser_dim = 10\nitem_dim = 12\nembed_dim = 8\n\n# Generate simulated dataset\nX_users = np.random.normal(0, 1, (100, user_dim))\nX_items = np.random.normal(0, 1, (100, item_dim))\n\nmodel = SimpleTwoTower(user_dim, item_dim, embed_dim=embed_dim, lr=0.05, temperature=0.2)\n\n# Training loop with in-batch negatives\nfor epoch in range(100):\n    loss = model.train_step(X_users, X_items)\n\n# --- Sub-millisecond Serving Simulation ---\n# 1. Offline Phase: Precompute embeddings for all 1,000 catalog items\ncatalog_features = np.random.normal(0, 1, (n_catalog, item_dim))\noffline_item_embeddings = model.forward_item(catalog_features)\n\n# 2. Online Phase: User visits the platform\ncurrent_user = np.random.normal(0, 1, (1, user_dim))\nuser_emb = model.forward_user(current_user)\n\n# 3. MIPS Dot Product Search against catalog\nscores = offline_item_embeddings @ user_emb[0]\ntop_10_candidates = np.argsort(scores)[::-1][:10]\n\nprint(f\"Two-Tower Model trained with In-Batch Negatives (Loss: {loss:.3f})\")\nprint(f\"Catalog items precomputed offline: {n_catalog} embeddings ({embed_dim} dimensions)\")\nprint(f\"Online MIPS candidate retrieval latency: < 0.1 milliseconds!\")\nprint(f\"Top 5 Candidate Item IDs retrieved: {list(top_10_candidates[:5])}\")\nprint(f\"Top candidate dot-product similarity: {scores[top_10_candidates[0]]:.3f}\")",
+  "keyPoints": [
+    "Industrial architecture for scaling candidate retrieval to hundreds of millions of items in under 10 milliseconds.",
+    "Decouples User Tower $u(x)$ and Item Tower $v(y)$, allowing item embeddings to be precomputed offline.",
+    "Candidate retrieval is framed as Maximum Inner Product Search (MIPS) using fast vector indexers (HNSW, ScaNN, Faiss).",
+    "Trained end-to-end using In-Batch Negatives, reusing other batch samples as negative examples without explicit sampling.",
+    "Forms the foundation of candidate generation at Google, YouTube, Pinterest, and TikTok."
+  ],
+  "pitfalls": [
+    "No cross-tower feature interactions: Because user and item features never interact until the final dot product, fine-grained cross-features cannot be captured (handled later by heavy rankers).",
+    "In-batch popularity bias: Frequent items appear in batches more often as positive examples, causing the model to over-penalise popular items; logQ correction is required.",
+    "Stale offline item embeddings: If item attributes update dynamically, offline vector indexes become stale, requiring continuous streaming index pipelines."
+  ],
+  "quiz": [
+    {
+      "q": "Why can Two-Tower models retrieve top candidates from 100 million items in sub-milliseconds while heavy cross-attention rankers cannot?",
+      "o": [
+        "Item embeddings are precomputed offline and indexed in vector databases, reducing online scoring to a fast dot product MIPS search",
+        "Two-Tower models do not use neural networks",
+        "Two-Tower models evaluate all 100 million items using quantum computing",
+        "Two-Tower models require zero features"
+      ],
+      "a": 0,
+      "why": "Because the towers are independent, item embeddings are computed once offline. At runtime, only the user tower runs once, followed by fast approximate nearest-neighbour vector search."
+    },
+    {
+      "q": "How does In-Batch Negative sampling avoid the computational cost of mining negative examples during training?",
+      "o": [
+        "For each user in the batch, all other items in that same mini-batch are automatically treated as negative examples",
+        "It sets all negative gradients to zero",
+        "It downloads negative samples from Wikipedia",
+        "It only trains on positive examples without computing loss"
+      ],
+      "a": 0,
+      "why": "In-batch negatives reuse items belonging to other users in the same mini-batch as negative samples, requiring zero extra forward passes and making computation highly parallel on GPUs."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "collaborative-filtering",
+    "implicit-feedback-and-bpr"
+  ],
+  "related": [
+    "implicit-feedback-and-bpr",
+    "content-based-and-hybrid-recommenders",
+    "collaborative-filtering"
+  ],
+  "keywords": "two tower model, dual encoder, neural retrieval, candidate generation, in-batch negatives, mips, vector search, recommender systems"
+},
+
+{
+  "id": "apriori-and-association-rules",
+  "short": "Apriori & association",
+  "title": "Association Rule Mining and the Apriori Algorithm",
+  "task": "concepts",
+  "module": "Pattern mining",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Uncover frequent co-occurring itemsets in transaction databases: master Support, Confidence, Lift, and the downward-closure Apriori property.",
+  "lead": "Market basket analysis discovers customer purchasing patterns: \"Customers who buy beer also buy nappies.\" The Apriori algorithm prunes exponential search spaces using downward closure to find high-lift association rules.",
+  "intuition": [
+    "In retail, e-commerce, and transaction processing, businesses analysee market baskets to discover which products are purchased together: \"Customers who purchase pasta and olive oil also buy garlic 78% of the time.\" These insights drive supermarket shelf placement, bundle pricing, and web cross-selling.",
+    "Formally, an Association Rule takes the form $X \\implies Y$, where $X$ (antecedent) and $Y$ (consequent) are disjoint itemsets. However, in a supermarket with 10,000 distinct items, searching through all possible item combinations requires exploring $2^{10,000}$ candidate itemsets—a number vastly greater than the number of atoms in the observable universe.",
+    "In 1994, Rakesh Agrawal and Ramakrishnan Srikant revolutionized pattern mining by introducing the Apriori Algorithm. The algorithm is powered by the Apriori Principle (the Downward Closure Property of Support): if an itemset is frequent, all of its subsets must also be frequent. Conversely, if any itemset ${A, B}$ is infrequent, any superset ${A, B, C}$ is guaranteed to be infrequent and can be immediately pruned from the search tree.",
+    "Apriori proceeds level by level: generating 1-itemsets, pruning those below minimum support, joining surviving items to form candidate 2-itemsets, and repeating until no larger frequent itemsets exist. Discovered rules are evaluated using three core metrics: Support (frequency), Confidence (conditional probability), and Lift (strength of association above random independence)."
+  ],
+  "analogy": "Imagine scouting a sports tournament with 1,000 athletes to find trios of athletes who can lift a 500kg boulder together. Before testing all 166 million possible three-person combinations, the coach tests every single athlete individually. If Athlete 14 cannot even lift a 20kg pebble alone, the coach instantly eliminates every single pair and trio that includes Athlete 14. The downward closure property prunes the tournament search tree to a manageable fraction.",
+  "steps": [
+    {
+      "title": "1. Scan transactions and identify frequent 1-itemsets (L_1)",
+      "body": "Count occurrences of all single items. Retain only items meeting the minimum support threshold: $L_1 = \\{i : \\operatorname{supp}(\\{i\\}) \\ge \\text{minsup}\\}$."
+    },
+    {
+      "title": "2. Generate candidate (k+1)-itemsets from L_k",
+      "body": "Join frequent $k$-itemsets that share their first $k-1$ items to generate candidate $(k+1)$-itemsets $C_{k+1}$."
+    },
+    {
+      "title": "3. Prune candidates using downward-closure property",
+      "body": "Check all length-$k$ subsets of each candidate in $C_{k+1}$. If any subset is absent from $L_k$, discard the candidate immediately without scanning the database."
+    },
+    {
+      "title": "4. Count support and extract high-confidence rules",
+      "body": "Scan database to count support for remaining candidates, forming $L_{k+1}$. Repeat until no candidates survive. From frequent itemsets, extract rules $X \\implies Y$ meeting minimum confidence and lift $> 1$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Support, Confidence, and Lift Metrics",
+      "tex": "\\operatorname{supp}(X) = \\frac{\\sigma(X)}{N}, \\quad \\operatorname{conf}(X \\implies Y) = \\frac{\\operatorname{supp}(X \\cup Y)}{\\operatorname{supp}(X)}, \\quad \\operatorname{lift}(X \\implies Y) = \\frac{\\operatorname{conf}(X \\implies Y)}{\\operatorname{supp}(Y)}",
+      "p": "Support measures how frequently the itemset appears in the database. Confidence measures conditional probability P(Y|X). Lift measures how much more often X and Y co-occur than expected if they were statistically independent."
+    },
+    {
+      "h": "The Apriori Downward-Closure Property",
+      "tex": "\\forall X, Y: \\; X \\subseteq Y \\implies \\operatorname{supp}(Y) \\le \\operatorname{supp}(X)",
+      "p": "Support is monotonically decreasing with itemset size. If subset X is infrequent (supp(X) < minsup), then superset Y is guaranteed to be infrequent."
+    },
+    {
+      "h": "Rule Lift Interpretation",
+      "tex": "\\operatorname{lift}(X \\implies Y) = \\frac{P(X, Y)}{P(X) P(Y)} \\; \\begin{cases} > 1 & \\text{Positive correlation (complimentary)} \\\\ = 1 & \\text{Statistical independence} \\\\ < 1 & \\text{Negative correlation (substitutes)} \\end{cases}",
+      "p": "Lift > 1 indicates that purchasing X actively increases the probability of purchasing Y; lift < 1 indicates mutual exclusivity."
+    }
+  ],
+  "code": "import numpy as np\nfrom itertools import combinations\n\n# The Apriori Algorithm for Frequent Itemset Mining from scratch\ndef get_frequent_itemsets(transactions, min_support=0.3):\n    n_trans = len(transactions)\n    # 1. Count frequent 1-itemsets (L1)\n    item_counts = {}\n    for t in transactions:\n        for item in t:\n            item_counts[item] = item_counts.get(item, 0) + 1\n            \n    L1 = {frozenset([item]): count / n_trans for item, count in item_counts.items() if count / n_trans >= min_support}\n    \n    all_frequent = dict(L1)\n    current_L = L1\n    k = 2\n    \n    while current_L:\n        # Candidate generation: join step\n        candidates = set()\n        itemsets = list(current_L.keys())\n        for i in range(len(itemsets)):\n            for j in range(i + 1, len(itemsets)):\n                union = itemsets[i] | itemsets[j]\n                if len(union) == k:\n                    # Prune step: all subsets of size k-1 must be in current_L\n                    subsets_valid = all(frozenset(s) in current_L for s in combinations(union, k - 1))\n                    if subsets_valid:\n                        candidates.add(union)\n                        \n        # Count support for candidates\n        cand_counts = {c: 0 for c in candidates}\n        for t in transactions:\n            t_set = set(t)\n            for c in candidates:\n                if c.issubset(t_set):\n                    cand_counts[c] += 1\n                    \n        current_L = {c: count / n_trans for c, count in cand_counts.items() if count / n_trans >= min_support}\n        all_frequent.update(current_L)\n        k += 1\n        \n    return all_frequent\n\ndef generate_rules(frequent_itemsets, min_confidence=0.6):\n    rules = []\n    for itemset, supp_both in frequent_itemsets.items():\n        if len(itemset) >= 2:\n            # Test all non-empty subsets as antecedents\n            for r in range(1, len(itemset)):\n                for antecedent in combinations(itemset, r):\n                    antecedent = frozenset(antecedent)\n                    consequent = itemset - antecedent\n                    supp_ant = frequent_itemsets.get(antecedent, 0)\n                    if supp_ant > 0:\n                        conf = supp_both / supp_ant\n                        supp_cons = frequent_itemsets.get(consequent, 0)\n                        lift = conf / supp_cons if supp_cons > 0 else 0\n                        if conf >= min_confidence:\n                            rules.append((list(antecedent), list(consequent), supp_both, conf, lift))\n    return rules\n\n# Synthetic supermarket transaction dataset (10 transactions)\ntransactions = [\n    ['milk', 'bread', 'butter'],\n    ['bread', 'butter'],\n    ['milk', 'bread'],\n    ['beer', 'nappies', 'crisps'],\n    ['beer', 'nappies'],\n    ['beer', 'crisps'],\n    ['milk', 'bread', 'butter', 'jam'],\n    ['bread', 'jam'],\n    ['beer', 'nappies', 'bread'],\n    ['milk', 'butter']\n]\n\nfreq_itemsets = get_frequent_itemsets(transactions, min_support=0.30)\nrules = generate_rules(freq_itemsets, min_confidence=0.60)\n\nprint(f\"Total Transactions: {len(transactions)}\")\nprint(f\"Discovered Frequent Itemsets (Support >= 30%): {len(freq_itemsets)}\")\nprint(\"\n--- Discovered High-Confidence Association Rules ---\")\nfor ant, cons, supp, conf, lift in rules:\n    print(f\"  {ant} => {cons}\")\n    print(f\"    Support: {supp*100:.1f}% | Confidence: {conf*100:.1f}% | Lift: {lift:.2f}\")",
+  "keyPoints": [
+    "Classic market basket analysis algorithm for uncovering frequent co-occurring itemsets in transactional databases.",
+    "Apriori principle: if an itemset is frequent, all of its subsets must also be frequent; if any subset is infrequent, all supersets are infrequent.",
+    "Prunes exponential search spaces ($2^{|I|}$) level by level without scanning entire databases repeatedly.",
+    "Evaluated via Support (frequency), Confidence (conditional probability), and Lift (statistical association above independence).",
+    "Lift > 1 indicates positive correlation; lift < 1 indicates substitute items; lift = 1 indicates statistical independence."
+  ],
+  "pitfalls": [
+    "Multiple database scans: Standard Apriori requires $K$ full sequential database scans for itemsets of maximum size $K$; FP-growth solves this with a single pass using trie structures.",
+    "Spurious rules from high-support items: If an item (like milk or bread) appears in 95% of baskets, almost any rule predicting milk has high confidence, but lift is near 1.0 (zero true association).",
+    "Low minimum support combinatorial explosion: Setting minsup too low generates millions of candidate itemsets, overwhelming CPU memory and compute."
+  ],
+  "quiz": [
+    {
+      "q": "According to the Apriori principle (downward closure), what can be safely inferred if the itemset {Beer, Diapers} is found to have support below minimum support?",
+      "o": [
+        "Any larger superset containing {Beer, Diapers} (such as {Beer, Diapers, Chips}) is guaranteed to also be below minimum support and can be immediately pruned",
+        "Both Beer and Diapers must be deleted from the database",
+        "The confidence of the rule is exactly 1.0",
+        "The lift must be negative"
+      ],
+      "a": 0,
+      "why": "Because support is monotonically non-increasing as items are added, no superset can ever appear more frequently than its constituent subsets."
+    },
+    {
+      "q": "What does an association rule with Lift = 1.0 indicate?",
+      "o": [
+        "The antecedent and consequent occur together exactly as often as expected by random chance under statistical independence",
+        "The rule has 100% confidence",
+        "The items are perfect compliments that are always bought together",
+        "The support of the rule is zero"
+      ],
+      "a": 0,
+      "why": "Lift is defined as P(X, Y) / (P(X)P(Y)). When lift equals 1.0, the joint occurrence matches the product of marginals, indicating zero association."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "probability-rules-and-bayes-theorem"
+  ],
+  "related": [
+    "probability-rules-and-bayes-theorem",
+    "content-based-and-hybrid-recommenders",
+    "collaborative-filtering"
+  ],
+  "keywords": "apriori, association rules, market basket analysis, support, confidence, lift, downward closure, frequent itemsets, pattern mining"
+}
 ];
