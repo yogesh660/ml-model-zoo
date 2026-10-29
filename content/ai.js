@@ -3903,5 +3903,1689 @@ for p in report["probe_audit"]:
     prereq: ['prompt-injection-and-jailbreaks', 'evaluating-llms-benchmarks-and-judges'],
     related: ['prompt-injection-and-jailbreaks', 'evaluating-llms-benchmarks-and-judges'],
     keywords: 'guardrails red-teaming asr pii masking alignment tax false positive refusal safety evaluation toxicity filter',
+  },
+  {
+    "id": "monte-carlo-tree-search",
+    "short": "Monte Carlo Tree Search (MCTS)",
+    "title": "Monte Carlo Tree Search (MCTS): Selection, Expansion, Simulation, and Backpropagation",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "A heuristic search algorithm that navigates massive combinatorial decision trees by combining selective tree growth with random Monte Carlo rollouts and UCB1 exploration.",
+    "lead": "Monte Carlo Tree Search (MCTS) revolutionized automated game playing and sequential decision making where exhaustive minimax search is computationally intractable. By combining asymmetric tree expansion, Upper Confidence Bound for Trees (UCT), and random or neural rollout simulations, MCTS concentrates computation on the most promising tactical variations.",
+    "analogy": "Imagine an explorer navigating an uncharted maze of caves. Instead of attempting to survey every dead-end branch equally, the explorer takes quick running sprints down unknown paths, takes note of which routes brought them closer to daylight, and focuses subsequent detailed mapping on the tunnels that led to the best breakthroughs.",
+    "intuition": [
+      "In games with massive state spaces like Go or chess, minimax search with alpha-beta pruning fails because the game tree branch factor is enormous and crafting a hand-engineered heuristic evaluation function for arbitrary board states is extraordinarily difficult.",
+      "MCTS solves this by building an asymmetric search tree incrementally across four repeating phases: Selection (following high-confidence paths via UCB1), Expansion (adding a new leaf node), Simulation (playing out the game to termination using random moves or a rollout policy), and Backpropagation (updating visit counts and win rates up the ancestor chain)."
+    ],
+    "steps": [
+      "Selection: starting from the root state, descend the tree by choosing actions that maximise the Upper Confidence Bound (UCT) formula until reaching an unexpanded node.",
+      "Expansion: create one or more child nodes corresponding to available legal actions from the selected leaf state.",
+      "Simulation (Rollout): play the game out to a terminal state from the new child node using a fast default policy (e.g. uniform random moves).",
+      "Backpropagation: evaluate the terminal reward (e.g. +1 for win, 0 for loss) and propagate the result upward, incrementing visit counts $N(s)$ and value sums $W(s)$ for all visited ancestors."
+    ],
+    "math": [
+      {
+        "h": "Upper Confidence Bound for Trees (UCT)",
+        "tex": "\\text{UCT}(s, a) = Q(s, a) + c \\sqrt{\\frac{\\ln N(s)}{N(s, a)}}, \\quad Q(s, a) = \\frac{W(s, a)}{N(s, a)}",
+        "p": "Balances exploitation of the empirical average win rate $Q(s, a)$ with exploration of rarely visited actions weighted by exploration constant $c \\approx \\sqrt{2}$."
+      },
+      {
+        "h": "Value Backpropagation Update",
+        "tex": "N(s, a) \\leftarrow N(s, a) + 1, \\quad W(s, a) \\leftarrow W(s, a) + v",
+        "p": "Increments the edge visit count and accumulates the rollout terminal outcome $v \\in \\{-1, 0, 1\\}$ back to the root."
+      }
+    ],
+    "code": "import numpy as np\n\nclass MCTSNode:\n    def __init__(self, state, parent=None):\n        self.state = state\n        self.parent = parent\n        self.children = {}\n        self.visits = 0\n        self.value = 0.0\n\n    def is_fully_expanded(self, legal_actions):\n        return len(self.children) == len(legal_actions)\n\n    def best_child(self, c_param=1.414):\n        choices = []\n        for action, child in self.children.items():\n            # UCT formula: exploitation + exploration\n            exploit = child.value / child.visits\n            explore = c_param * np.sqrt(np.log(self.visits) / child.visits)\n            choices.append((exploit + explore, action, child))\n        return max(choices, key=lambda x: x[0])[2]\n\ndef simulate_rollout(state):\n    \"\"\"Simulates random rollout to termination.\"\"\"\n    # Toy coin game: target is reaching 10 points\n    current = state\n    while current < 10:\n        current += np.random.choice([1, 2])\n    return 1.0 if current == 10 else 0.0\n\ndef mcts_search(root_state, iterations=100):\n    root = MCTSNode(root_state)\n    for _ in range(iterations):\n        node = root\n        # 1. Selection\n        legal_actions = [1, 2] if node.state < 10 else []\n        while node.is_fully_expanded(legal_actions) and legal_actions:\n            node = node.best_child()\n            legal_actions = [1, 2] if node.state < 10 else []\n\n        # 2. Expansion\n        unexplored = [a for a in legal_actions if a not in node.children]\n        if unexplored:\n            action = unexplored[0]\n            child_node = MCTSNode(node.state + action, parent=node)\n            node.children[action] = child_node\n            node = child_node\n\n        # 3. Simulation\n        reward = simulate_rollout(node.state)\n\n        # 4. Backpropagation\n        while node is not None:\n            node.visits += 1\n            node.value += reward\n            node = node.parent\n\n    # Choose action with most visits\n    best_action = max(root.children.items(), key=lambda x: x[1].visits)[0]\n    return best_action, root.children[best_action].visits\n\naction, visits = mcts_search(root_state=6, iterations=200)\nprint(f\"MCTS Recommended Action from state 6: +{action} (Explored {visits} times)\")",
+    "keyPoints": [
+      "MCTS grows asymmetric decision trees towards high-potential game trajectories using UCT selection.",
+      "The UCB1 exploration term guarantees that every legal action is eventually explored while prioritizing proven winning lines.",
+      "Deep reinforcement learning architectures like AlphaZero replace random rollouts with trained neural value networks."
+    ],
+    "pitfalls": [
+      "Setting exploration constant $c$ too high causes the search to devolve into uniform random search; setting it too low traps the agent in premature local optima.",
+      "Using pure random rollouts in games requiring tactical traps where a single random blunder in the rollout ruins accurate value estimation."
+    ],
+    "quiz": [
+      {
+        "q": "What is the role of the $\\sqrt{\\ln N(s) / N(s, a)}$ term in the UCT formula?",
+        "o": [
+          "It forces the agent to surrender immediately when losing",
+          "It provides an exploration bonus that rewards actions that have been visited infrequently relative to their parent",
+          "It calculates the discount factor for long-term rewards",
+          "It normalises the board size to fit in GPU memory"
+        ],
+        "a": 1,
+        "why": "The square root term increases as parent visits $N(s)$ grow but decreases as the specific action visits $N(s, a)$ grow, incentivizing exploration of neglected actions."
+      },
+      {
+        "q": "Which action does MCTS typically select as the final move after search completes?",
+        "o": [
+          "The action with the highest instantaneous reward during the initial random rollout",
+          "The action with the most visits $N(s, a)$, as visit count is the most robust estimate of policy quality",
+          "A uniformly random action among all non-terminal nodes",
+          "The action that requires the fewest lines of code to execute"
+        ],
+        "a": 1,
+        "why": "In MCTS, visit count is the most stable and noise-resistant signal of move quality because UCT naturally allocates the majority of iterations to the superior branch."
+      },
+      {
+        "q": "How did AlphaGo and AlphaZero improve upon classical MCTS rollouts?",
+        "o": [
+          "They eliminated the selection phase entirely",
+          "They replaced random Monte Carlo rollout games with a trained neural value network and guided expansion using a neural policy prior",
+          "They restricted board play to 3x3 grids",
+          "They converted the search tree into an unweighted directed acyclic graph"
+        ],
+        "a": 1,
+        "why": "Random rollouts are noisy and computationally slow; AlphaZero replaced rollouts with a single forward evaluation of a deep value network $V(s)$."
+      }
+    ],
+    "related": [
+      "mdps-and-bellman-equations",
+      "dynamic-programming-value-and-policy-iteration"
+    ],
+    "keywords": "monte carlo tree search, mcts, uct, game tree search, alphazero, reinforcement learning"
+  },
+  {
+    "id": "constraint-satisfaction",
+    "short": "Constraint Satisfaction (CSP)",
+    "title": "Constraint Satisfaction Problems: Backtracking, Arc Consistency (AC-3), and Heuristics",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "A formal problem-solving paradigm that models states as variables with discrete domains and solutions as complete assignments satisfying all relational constraints.",
+    "lead": "Constraint Satisfaction Problems (CSPs) represent state spaces declaratively through variables, domains, and relational constraints. By combining depth-first backtracking search with constraint propagation algorithms like AC-3 and variable-ordering heuristics (MRV, Degree heuristic), CSP solvers efficiently resolve scheduling, timetabling, and circuit layout problems.",
+    "analogy": "Solving a CSP is like arranging seating for an opinionated wedding party. Each guest is a variable, each chair is a domain value, and social rules are constraints (\"Aunt Jane cannot sit next to Uncle Bob\"). Rather than trying all quadrillion seating combinations, you immediately discard tables that violate constraints as you seat guests one by one.",
+    "intuition": [
+      "In standard search algorithms (BFS, A*), states are black-box atomic entities evaluated by heuristic distance functions. In contrast, a Constraint Satisfaction Problem (CSP) gives internal structure to the state: a state is defined by a set of variables $X_i$, each taking values from a domain $D_i$, subject to a set of explicit constraints $C_j$.",
+      "Because constraints are explicit mathematical relations, solvers can detect dead ends long before reaching leaf nodes. Constraint propagation algorithms like AC-3 prune values from variable domains that cannot possibly participate in any valid solution, pruning billions of doomed search branches before backtracking search even visits them."
+    ],
+    "steps": [
+      "Define problem specification: identify variables $X$, domain sets $D$, and relational constraints $C$ (unary, binary, or global).",
+      "Apply initial constraint propagation: execute AC-3 over all directed constraint arcs to eliminate domain values with no valid support.",
+      "Select unassigned variable: apply the Minimum Remaining Values (MRV) heuristic (fail-first principle) and Degree heuristic as tie-breaker.",
+      "Order candidate domain values: test values using the Least Constraining Value (LCV) heuristic to maximise options for remaining unassigned variables.",
+      "Recursive assignment and backtracking: tentatively assign the value, execute forward checking or MAC (Maintaining Arc Consistency), and backtrack if any domain becomes empty."
+    ],
+    "math": [
+      {
+        "h": "Arc Consistency Definition",
+        "tex": "\\forall x \\in D_i, \\quad \\exists y \\in D_j \\quad \\text{such that} \\quad (x, y) \\in C_{ij}",
+        "p": "A directed arc $(X_i, X_j)$ is arc-consistent if for every value $x$ in domain $D_i$, there exists at least one legal value $y$ in $D_j$ satisfying constraint $C_{ij}$."
+      },
+      {
+        "h": "AC-3 Algorithm Complexity",
+        "tex": "\\mathcal{O}(c \\cdot d^3)",
+        "p": "Worst-case time complexity of the AC-3 propagation algorithm on a CSP with $c$ binary constraint arcs and maximum domain size $d$."
+      }
+    ],
+    "code": "def ac3(domains, constraints):\n    \"\"\"Executes the AC-3 arc consistency constraint propagation algorithm.\"\"\"\n    # Queue of all directed constraint arcs\n    queue = [(xi, xj) for xi in domains for xj in domains if (xi, xj) in constraints]\n    \n    while queue:\n        xi, xj = queue.pop(0)\n        # Check if any value in D_i lacks support in D_j\n        revised = False\n        allowed_pairs = constraints.get((xi, xj), set())\n        \n        new_di = []\n        for x in domains[xi]:\n            # Is there any y in D_j such that (x, y) is allowed?\n            if any((x, y) in allowed_pairs for y in domains[xj]):\n                new_di.append(x)\n            else:\n                revised = True\n                \n        if revised:\n            domains[xi] = new_di\n            if len(domains[xi]) == 0:\n                return False  # Inconsistent CSP\n            # Recheck neighbours of xi\n            for xk in domains:\n                if xk != xi and xk != xj and (xk, xi) in constraints:\n                    queue.append((xk, xi))\n    return True\n\n# Map Colouring CSP: 3 regions (WA, NT, SA), colours: {Red, Green}\ndomains = {\n    'WA': ['R', 'G'],\n    'NT': ['R'],\n    'SA': ['R', 'G']\n}\n\n# Constraint: adjacent regions cannot share colour\nneq = {(c1, c2) for c1 in ['R', 'G'] for c2 in ['R', 'G'] if c1 != c2}\nconstraints = {\n    ('WA', 'NT'): neq, ('NT', 'WA'): neq,\n    ('WA', 'SA'): neq, ('SA', 'WA'): neq,\n    ('NT', 'SA'): neq, ('SA', 'NT'): neq\n}\n\nconsistent = ac3(domains, constraints)\nprint(f\"AC-3 Consistency Result: {consistent}\")\nprint(f\"Pruned Domains after Arc Consistency: {domains}\")",
+    "keyPoints": [
+      "CSPs represent problems through variables, domains, and relational constraints, enabling general domain-independent solvers.",
+      "AC-3 enforces pairwise arc consistency by pruning unsupported domain values prior to or during backtracking.",
+      "The MRV (fail-first) and LCV (fail-last) heuristics drastically shrink the search tree compared to naive depth-first search."
+    ],
+    "pitfalls": [
+      "Applying standard AC-3 without backtracking; arc consistency does not guarantee that a global solution exists, only that all binary arcs have local support.",
+      "Representing global constraints (like `AllDifferent`) as dozens of pairwise binary constraints, missing powerful filtering algorithms like bipartite matching."
+    ],
+    "quiz": [
+      {
+        "q": "What is the rationale behind the Minimum Remaining Values (MRV) variable selection heuristic?",
+        "o": [
+          "It picks the variable with the most letters in its name",
+          "It follows the \"fail-first\" principle by selecting the variable most likely to cause a quick prune if no solution exists",
+          "It guarantees finding a solution without ever backtracking",
+          "It orders variables by alphabetical order"
+        ],
+        "a": 1,
+        "why": "By choosing the variable with the fewest legal values left, the search discovers unavoidable dead ends early before expanding deep subtrees."
+      },
+      {
+        "q": "What occurs when AC-3 reduces a variable's domain to an empty set?",
+        "o": [
+          "The problem is solved successfully",
+          "The current partial assignment is inconsistent and the solver must backtrack immediately",
+          "The solver allocates additional GPU memory",
+          "The algorithm converts to breadth-first search"
+        ],
+        "a": 1,
+        "why": "An empty domain means that variable has no valid assignment that satisfies the constraints with its neighbours, proving the current path is impossible."
+      },
+      {
+        "q": "What does the Least Constraining Value (LCV) heuristic do?",
+        "o": [
+          "It assigns the value that rules out the fewest choices for neighbouring unassigned variables",
+          "It deletes all constraints from the graph",
+          "It selects the smallest numerical integer",
+          "It prioritizes values that trigger backtracks"
+        ],
+        "a": 0,
+        "why": "LCV aims to maximise future flexibility by choosing the value that leaves the maximum number of legal options open for subsequent variables."
+      }
+    ],
+    "related": [
+      "intelligent-agents-and-environments",
+      "planning-strips"
+    ],
+    "keywords": "constraint satisfaction, csp, ac-3, backtracking, arc consistency, heuristics, mrv"
+  },
+  {
+    "id": "logic-and-knowledge-representation",
+    "short": "Logic & Knowledge Representation",
+    "title": "Logic and Knowledge Representation: Propositional, First-Order Logic, Resolution, and Ontologies",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The formal foundation of symbolic AI, representing knowledge through propositional logic, first-order logic, resolution refutation, and ontologies.",
+    "lead": "Logic and knowledge representation enable automated reasoning systems to infer new truthful assertions from established premises. Moving from propositional logic to expressive First-Order Logic (FOL) with universal and existential quantifiers, symbolic inference engines employ unification, Conjunctive Normal Form (CNF) conversion, and Robinson's resolution refutation to prove theorems and query structured ontologies.",
+    "analogy": "Knowledge representation is like a strict legal courtroom. A witness cannot simply say \"I have a hunch the defendant was there.\" Every claim must be codified into formal legal statutes (axioms). When the prosecution presents statements A and B, the judge uses universal laws of evidence (modus ponens and resolution) to deduce whether guilt is logically inevitable.",
+    "intuition": [
+      "Statistical machine learning models identify correlation patterns from numbers, but struggle with strict deductive reasoning, compositional semantics, and explaining why a conclusion follows. Symbolic logic provides a sound and complete framework for deductive truth: if your knowledge base contains true axioms and your inference engine uses valid inference rules, every derived statement is guaranteed to be true.",
+      "Propositional logic models binary facts ($P \\implies Q$), but cannot express objects, properties, and relationships. First-Order Logic (FOL) introduces constants (Socrates), variables ($x$), predicates (Human($x$)), functions, and quantifiers ($\\forall x$ for all $x$, $\\exists x$ there exists $x$). Robinson's Resolution theorem proves whether an assertion logically follows by converting all knowledge to CNF and showing that the negated theorem leads to an empty clause (contradiction)."
+    ],
+    "steps": [
+      "Knowledge formalisation: translate domain assertions into First-Order Logic sentences with predicates and quantifiers.",
+      "Eliminate implications: rewrite $P \\implies Q$ as $\\neg P \\lor Q$ and $P \\iff Q$ as $(\\neg P \\lor Q) \\land (\\neg Q \\lor P)$.",
+      "Move negations inward: apply De Morgan's laws and quantifier negation rules ($\\neg \\forall x P \\equiv \\exists x \\neg P$).",
+      "Skolemisation: eliminate existential quantifiers by replacing them with Skolem constants or functions.",
+      "Convert to Conjunctive Normal Form (CNF): distribute disjunctions over conjunctions to produce a set of clauses (disjunction of literals).",
+      "Execute resolution refutation: negate the goal query, add it to the clause database, and repeatedly apply resolution with unification until deriving the empty clause $\\square$."
+    ],
+    "math": [
+      {
+        "h": "Resolution Inference Rule",
+        "tex": "\\frac{A \\lor B, \\quad \\neg B \\lor C}{A \\lor C}",
+        "p": "Eliminates complementary literals $B$ and $\\neg B$ from two clauses to deduce the resolvent clause."
+      },
+      {
+        "h": "Unification and Most General Unifier (MGU)",
+        "tex": "\\theta = \\text{MGU}(P(x, f(a)), \\, P(y, f(z))) \\implies \\theta = \\{x / y, \\, z / a\\}",
+        "p": "Finds the most general variable substitution $\\theta$ that makes two first-order logic terms identical."
+      }
+    ],
+    "code": "def resolve(clause1, clause2):\n    \"\"\"Resolves two CNF clauses by eliminating complementary literals.\"\"\"\n    resolvents = []\n    for lit1 in clause1:\n        neg_lit1 = lit1[1:] if lit1.startswith('~') else '~' + lit1\n        if neg_lit1 in clause2:\n            # Resolvent is union minus the complementary pair\n            new_clause = (set(clause1) - {lit1}) | (set(clause2) - {neg_lit1})\n            resolvents.append(frozenset(new_clause))\n    return resolvents\n\ndef resolution_prover(knowledge_base, goal_query):\n    \"\"\"Proves goal via resolution refutation by deriving empty clause.\"\"\"\n    # KB: Socrates is human (H). If human, mortal (M): ~H v M\n    # Goal: Socrates is mortal (M) -> Negate goal: ~M\n    clauses = set(knowledge_base)\n    negated_goal = frozenset({'~' + goal_query})\n    clauses.add(negated_goal)\n    \n    new = set()\n    while True:\n        clause_list = list(clauses)\n        for i in range(len(clause_list)):\n            for j in range(i + 1, len(clause_list)):\n                c1, c2 = clause_list[i], clause_list[j]\n                resolvents = resolve(c1, c2)\n                for r in resolvents:\n                    if len(r) == 0:\n                        return True, \"Contradiction derived! Empty clause [] proves goal.\"\n                    new.add(r)\n        if new.issubset(clauses):\n            return False, \"No contradiction found. Goal does not entail.\"\n        clauses.update(new)\n\n# Knowledge Base in CNF: Human(socrates), ~Human(x) v Mortal(x)\nkb = [\n    frozenset({'Human'}),\n    frozenset({'~Human', 'Mortal'})\n]\n\nsuccess, explanation = resolution_prover(kb, 'Mortal')\nprint(f\"Theorem Proving Result: {success}\")\nprint(f\"Explanation: {explanation}\")",
+    "keyPoints": [
+      "First-Order Logic allows expressive reasoning over objects, properties, and universal/existential quantifiers.",
+      "Robinson's Resolution rule operates over Conjunctive Normal Form clauses, providing a sound and complete refutation procedure.",
+      "Modern knowledge graphs and ontologies (OWL, RDF) formalise domain knowledge for structured neuro-symbolic reasoning."
+    ],
+    "pitfalls": [
+      "Forgetting that First-Order Logic is semi-decidable; if an entailment is false, resolution may run indefinitely without halting.",
+      "Improper Skolemisation when replacing existential quantifiers that appear inside the scope of universal quantifiers by omitting the function argument."
+    ],
+    "quiz": [
+      {
+        "q": "What is the refutation strategy in automated theorem proving with resolution?",
+        "o": [
+          "Proving the goal by assuming it is true and checking if the computer restarts",
+          "Negating the goal query, adding it to the knowledge base, and using resolution to derive a logical contradiction (the empty clause $\\square$)",
+          "Translating the knowledge base into Python unit tests",
+          "Randomly guessing truth values until a clause is satisfied"
+        ],
+        "a": 1,
+        "why": "Resolution refutation is proof by contradiction: if the negation of the goal combined with true axioms leads to a contradiction (empty clause), the original goal must be true."
+      },
+      {
+        "q": "What does Skolemisation accomplish during conversion to Conjunctive Normal Form (CNF)?",
+        "o": [
+          "It replaces existential quantifiers ($\\exists$) with Skolem constants or functions of universally quantified variables",
+          "It eliminates all variables and replaces them with numbers",
+          "It inverts the order of clauses",
+          "It converts text into UTF-8 bytes"
+        ],
+        "a": 0,
+        "why": "Skolemisation removes existential quantifiers by asserting that the entity whose existence is guaranteed can be denoted by a specific Skolem constant or function."
+      },
+      {
+        "q": "Why can Propositional Logic not represent assertions like \"All humans are mortal\"?",
+        "o": [
+          "Propositional logic cannot handle words longer than 5 letters",
+          "Propositional logic lacks variables and quantifiers, treating entire sentences as atomic boolean propositions without internal structure",
+          "Propositional logic cannot be computed with boolean algebra",
+          "Propositional logic requires infinite memory"
+        ],
+        "a": 1,
+        "why": "Propositional logic treats facts as indivisible true/false atoms; it cannot represent universal generalisations over sets of objects."
+      }
+    ],
+    "related": [
+      "intelligent-agents-and-environments",
+      "constraint-satisfaction"
+    ],
+    "keywords": "logic, first order logic, resolution, propositional logic, knowledge representation, ontology, cnf"
+  },
+  {
+    "id": "planning-strips",
+    "short": "Planning: STRIPS",
+    "title": "Classical Planning: STRIPS Formalism, State-Space Search, and Planning Graphs",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Classical automated planning algorithms using the STRIPS formalism, action schemas with preconditions and effects, forward/backward search, and Graphplan.",
+    "lead": "Automated planning enables autonomous agents to synthesize sequences of actions that transition an environment from an initial state to a desired goal state. The Stanford Research Institute Problem Solver (STRIPS) formalism structures actions into preconditions, add lists, and delete lists, enabling powerful heuristics derived from planning graphs and relaxed problem spaces.",
+    "analogy": "Planning is like a flight routing dispatcher coordinating planes and crew. An action (\"Fly aircraft from London to Tokyo\") has strict preconditions (plane at Heathrow, crew rested, fuel filled) and effects (plane is in Tokyo, fuel is consumed, crew is duty-timed). The planner builds a flight schedule that satisfies all passenger travel goals without violating physical operational constraints.",
+    "intuition": [
+      "In basic pathfinding (like finding a route in a maze), states are atomic coordinates. In classical planning, the world is described by conjunctions of factual fluents (e.g. `At(Robot, RoomA) \\land Has(Robot, Key)`). The challenge is that the state space is combinatorially huge: 100 binary fluents produce $2^{100}$ possible world states.",
+      "STRIPS makes planning tractable by giving actions internal structure: each action specifies what must be true before it can execute (Preconditions), what becomes true after execution (Add list), and what ceases to be true (Delete list). Planners can search forward from the initial state (progression), backward from the goal state (regression), or construct a Planning Graph (Graphplan) to extract mutual exclusions and compute admissible heuristic distances."
+    ],
+    "steps": [
+      "Define problem specification: identify fluents describing the initial state $S_0$ and conjunction of goal literals $G$.",
+      "Formulate action schemas: define actions with parameters, `Preconditions`, `Add-list` (newly asserted fluents), and `Delete-list` (negated fluents).",
+      "Select search direction: choose progression search (forward from $S_0$), regression search (backward from $G$), or planning graph expansion.",
+      "Compute heuristic guidance: extract delete-relaxation heuristics (e.g. $h_{\\text{FF}}$ or $h_{\\max}$) by ignoring all action delete lists.",
+      "Enforce mutex constraints: in Graphplan, identify mutually exclusive actions and propositions across alternating action and state levels.",
+      "Extract plan: backtrack through the search graph to extract a conflict-free sequence of instantiated actions achieving all goal literals."
+    ],
+    "math": [
+      {
+        "h": "STRIPS State Transition Function",
+        "tex": "\\text{Result}(S, a) = (S \\setminus \\text{Delete}(a)) \\cup \\text{Add}(a), \\quad \\text{where} \\quad \\text{Precond}(a) \\subseteq S",
+        "p": "An action $a$ is applicable in state $S$ if all preconditions are satisfied; execution removes the delete list and merges the add list."
+      },
+      {
+        "h": "Delete-Relaxation Heuristic ($h^+$)",
+        "tex": "h^+(S) = \\min_{P \\in \\text{Plans}} \\text{Cost}(P) \\quad \\text{in relaxed problem with} \\quad \\text{Delete}(a) = \\emptyset",
+        "p": "Admissible heuristic obtained by dropping all negative effects (delete lists), meaning achieved fluents persist indefinitely."
+      }
+    ],
+    "code": "class STRIPSAction:\n    def __init__(self, name, preconds, add_list, delete_list):\n        self.name = name\n        self.preconds = set(preconds)\n        self.add_list = set(add_list)\n        self.delete_list = set(delete_list)\n\n    def is_applicable(self, state):\n        return self.preconds.issubset(state)\n\n    def apply(self, state):\n        return (state - self.delete_list) | self.add_list\n\ndef forward_state_planner(initial_state, goal_state, actions, max_depth=10):\n    \"\"\"Simple breadth-first progression forward planner.\"\"\"\n    queue = [(initial_state, [])]\n    visited = set()\n    \n    while queue:\n        state, plan = queue.pop(0)\n        state_key = frozenset(state)\n        \n        if goal_state.issubset(state):\n            return plan\n            \n        if state_key in visited or len(plan) >= max_depth:\n            continue\n        visited.add(state_key)\n        \n        for action in actions:\n            if action.is_applicable(state):\n                next_state = action.apply(state)\n                queue.append((next_state, plan + [action.name]))\n    return None\n\n# Blocks World scenario: Robot must stack Block A on Block B\nactions = [\n    STRIPSAction(\"PickUp(A)\", preconds=[\"OnTable(A)\", \"Clear(A)\", \"HandEmpty\"],\n                 add_list=[\"Holding(A)\"], delete_list=[\"OnTable(A)\", \"Clear(A)\", \"HandEmpty\"]),\n    STRIPSAction(\"Stack(A, B)\", preconds=[\"Holding(A)\", \"Clear(B)\"],\n                 add_list=[\"On(A, B)\", \"HandEmpty\", \"Clear(A)\"], delete_list=[\"Holding(A)\", \"Clear(B)\"])\n]\n\ninit_state = {\"OnTable(A)\", \"Clear(A)\", \"Clear(B)\", \"HandEmpty\"}\ngoal = {\"On(A, B)\"}\n\nplan = forward_state_planner(init_state, goal, actions)\nprint(\"Automated STRIPS Planning Result:\")\nprint(f\"Goal: {goal}\")\nprint(f\"Generated Plan: {plan}\")",
+    "keyPoints": [
+      "STRIPS actions define preconditions, add lists, and delete lists over symbolic world state fluents.",
+      "Delete-relaxation heuristics drop negative effects to construct fast, admissible distance estimates to goal satisfaction.",
+      "Planning graphs identify mutual exclusions between conflicting actions and propositions to prune impossible schedules."
+    ],
+    "pitfalls": [
+      "Suffering from the \"Sussman Anomaly\" in naive goal decomposition where solving one goal inadvertently destroys an already satisfied goal.",
+      "Allowing state-space explosion in forward search without informative domain-independent heuristics like Fast-Forward ($h_{\\text{FF}}$)."
+    ],
+    "quiz": [
+      {
+        "q": "What is the \"delete list\" of an action in the STRIPS planning formalism?",
+        "o": [
+          "A list of software bugs to remove from the code",
+          "The set of factual fluents that cease to be true once the action is executed in the world",
+          "The conditions that must be satisfied before the action can start",
+          "A list of actions that have been deprecated"
+        ],
+        "a": 1,
+        "why": "In STRIPS, execution of an action deletes the fluents in its delete list from the current world state."
+      },
+      {
+        "q": "Why is the delete-relaxation heuristic $h^+$ admissible for $A^*$ search?",
+        "o": [
+          "Because dropping delete lists means no achieved condition is ever destroyed, making the relaxed problem strictly easier or equal to the real problem",
+          "Because it uses random numbers",
+          "Because it requires quadratic time to calculate",
+          "Because it only searches backward from the goal"
+        ],
+        "a": 0,
+        "why": "Dropping negative effects removes obstacles without adding new ones, guaranteeing that the relaxed optimal path is shorter than or equal to the true path cost."
+      },
+      {
+        "q": "What is a \"mutex\" (mutual exclusion) relation between two actions in Graphplan?",
+        "o": [
+          "A relation indicating that two actions can only be run in parallel on a dual-core CPU",
+          "A relation indicating that two actions cannot be executed together because one deletes a precondition or effect of the other",
+          "A relation indicating that two actions have identical names",
+          "A relation indicating that both actions have zero cost"
+        ],
+        "a": 1,
+        "why": "Two actions are mutex if they interfere with each other (e.g. one deletes an effect or precondition of the other) or have competing preconditions."
+      }
+    ],
+    "related": [
+      "intelligent-agents-and-environments",
+      "constraint-satisfaction"
+    ],
+    "keywords": "planning, strips, graphplan, action schemas, automated planning, robotics, forward search"
+  },
+  {
+    "id": "deep-q-networks",
+    "short": "Deep Q-Networks (DQN)",
+    "title": "Deep Q-Networks (DQN): Experience Replay, Target Networks, and Double DQN",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The breakthrough deep reinforcement learning algorithm combining Q-learning with deep convolutional networks, experience replay, and target networks.",
+    "lead": "Classical tabular Q-learning fails when state spaces become continuous or high-dimensional. Deep Q-Networks (DQN) pioneered by Mnih et al. bridged deep learning and reinforcement learning by approximating action-value functions with neural networks, stabilizing training through experience replay buffers and frozen target networks.",
+    "analogy": "Imagine learning to play tennis against a ball machine. If you only practice returning the single ball that was just launched, your muscle memory oscillates erratically. Experience replay is like recording video of hundreds of diverse shots over the past month and reviewing a random shuffle of groundstrokes, volleys, and serves during every practice session to maintain well-rounded reflexes.",
+    "intuition": [
+      "In standard Q-learning, the Bellman equation updates tabular entries: $Q(s, a) \\leftarrow Q(s, a) + \\alpha [r + \\gamma \\max_{a'} Q(s', a') - Q(s, a)]$. When a neural network with parameters $\\theta$ replaces the table, two lethal instabilities arise: 1) consecutive observation samples are highly correlated in time, violating the i.i.d. assumption of stochastic gradient descent; and 2) the target values $r + \\gamma \\max_{a'} Q(s', a'; \\theta)$ shift continuously as the network updates, leading to catastrophic feedback loops.",
+      "DQN conquered these instabilities with two architectural innovations: Experience Replay (storing transitions $(s, a, r, s')$ in a circular buffer and sampling mini-batches uniformly at random) and Target Networks (using a separate, periodically frozen set of weights $\\theta^-$ to calculate Bellman targets)."
+    ],
+    "steps": [
+      "Initialize replay memory buffer $\\mathcal{D}$ to capacity $N$ and action-value network $Q(s, a; \\theta)$ with random weights.",
+      "Initialize target action-value network $Q(s, a; \\theta^-)$ with identical weights $\\theta^- = \\theta$.",
+      "For each timestep: select action $a_t$ using $\\epsilon$-greedy exploration with respect to $Q(s_t, a; \\theta)$.",
+      "Execute action $a_t$, observe reward $r_t$ and successor state $s_{t+1}$, and store transition tuple $(s_t, a_t, r_t, s_{t+1}, \\text{done})$ in $\\mathcal{D}$.",
+      "Sample random mini-batch of transitions from $\\mathcal{D}$ and compute targets: $y_j = r_j$ if terminal, else $r_j + \\gamma \\max_{a'} Q(s_{j+1}, a'; \\theta^-)$.",
+      "Perform gradient descent step on loss $\\mathcal{L}(\\theta) = (y_j - Q(s_j, a_j; \\theta))^2$ and periodically update target weights $\\theta^- \\leftarrow \\theta$."
+    ],
+    "math": [
+      {
+        "h": "DQN Loss Function",
+        "tex": "\\mathcal{L}(\\theta) = \\mathbb{E}_{(s, a, r, s') \\sim \\mathcal{D}} \\left[ \\left( r + \\gamma \\max_{a'} Q(s', a'; \\theta^-) - Q(s, a; \\theta) \\right)^2 \\right]",
+        "p": "Mean squared Bellman error computed over random mini-batches from replay buffer $\\mathcal{D}$, using target network $\\theta^-$ for stability."
+      },
+      {
+        "h": "Double DQN Target Formulation",
+        "tex": "y^{\\text{DoubleDQN}} = r + \\gamma Q\\left(s', \\arg\\max_{a'} Q(s', a'; \\theta); \\theta^-\\right)",
+        "p": "Decouples action selection (using online policy $\\theta$) from value evaluation (using target network $\\theta^-$) to eliminate maximisation bias."
+      }
+    ],
+    "code": "import numpy as np\n\nclass ReplayBuffer:\n    def __init__(self, capacity=1000):\n        self.capacity = capacity\n        self.buffer = []\n        self.idx = 0\n\n    def push(self, s, a, r, s_next, done):\n        if len(self.buffer) < self.capacity:\n            self.buffer.append(None)\n        self.buffer[self.idx] = (s, a, r, s_next, done)\n        self.idx = (self.idx + 1) % self.capacity\n\n    def sample(self, batch_size):\n        indices = np.random.choice(len(self.buffer), batch_size, replace=False)\n        batch = [self.buffer[i] for i in indices]\n        s, a, r, s_next, d = zip(*batch)\n        return np.array(s), np.array(a), np.array(r), np.array(s_next), np.array(d)\n\n# Simulation: Target Network Bellman Error calculation\nnp.random.seed(42)\ngamma = 0.99\nbuffer = ReplayBuffer(100)\n\n# Simulate storing transitions\nfor _ in range(50):\n    s = np.random.randn(4)\n    a = np.random.choice([0, 1])\n    r = 1.0 if s[0] > 0 else 0.0\n    s_next = s + np.random.randn(4) * 0.1\n    buffer.push(s, a, r, s_next, False)\n\n# Sample batch and compute Double DQN targets\ns_b, a_b, r_b, s_next_b, d_b = buffer.sample(8)\n\n# Simulated Q-values from online and target networks\nonline_q_next = np.random.randn(8, 2)\ntarget_q_next = np.random.randn(8, 2)\n\n# Action selection via online network\nbest_actions = np.argmax(online_q_next, axis=1)\n\n# Target evaluation via target network\ndouble_targets = r_b + gamma * target_q_next[np.arange(8), best_actions] * (1 - d_b)\n\nprint(f\"Batch sampled: {len(s_b)} transitions\")\nprint(f\"Double DQN Target Values (First 4): {double_targets[:4].round(3)}\")",
+    "keyPoints": [
+      "Experience replay breaks temporal correlations by shuffling historical transitions into independent training mini-batches.",
+      "Target networks freeze the evaluation parameters for hundreds of iterations, preventing unstable moving target oscillations.",
+      "Double DQN eliminates systematic overestimation bias by separating action selection from value estimation."
+    ],
+    "pitfalls": [
+      "Failing to update target network weights periodically, causing the network to learn against stale, obsolete policy targets.",
+      "Using a replay buffer that is too small, discarding rare winning trajectories before the policy can learn from them."
+    ],
+    "quiz": [
+      {
+        "q": "Why does standard deep Q-learning suffer from instability without an experience replay buffer?",
+        "o": [
+          "Because consecutive states in an episode are strongly temporally correlated, violating the i.i.d. assumption of stochastic gradient descent",
+          "Because replay buffers encrypt state tensors",
+          "Because the agent cannot move without a buffer",
+          "Because gradient descent requires tabular lookups"
+        ],
+        "a": 0,
+        "why": "Transitions gathered sequentially in an interactive environment are correlated; shuffling them in a replay buffer restores the i.i.d. assumption needed for stable SGD."
+      },
+      {
+        "q": "What is the \"moving target problem\" in deep reinforcement learning?",
+        "o": [
+          "The opponent player moves too quickly to track on screen",
+          "Updating network weights changes both current prediction $Q(s, a)$ and target $r + \\gamma \\max Q(s', a')$ simultaneously, causing feedback oscillation",
+          "The reward function changes dynamically between episodes",
+          "The neural network cannot output floating-point values"
+        ],
+        "a": 1,
+        "why": "When the same weights parameterised both the current estimate and the regression target, every gradient step shifts the target, causing divergence."
+      },
+      {
+        "q": "How does Double DQN resolve overestimation bias in Q-value estimation?",
+        "o": [
+          "It doubles the learning rate during backpropagation",
+          "It uses the online network to pick the best action and the target network to evaluate its Q-value",
+          "It runs two games in parallel on two GPUs",
+          "It calculates Q-values with 64-bit precision"
+        ],
+        "a": 1,
+        "why": "In standard DQN, the $\\max$ operator over noisy estimates systematically overestimates values. Double DQN decouples action choice from value evaluation."
+      }
+    ],
+    "related": [
+      "mdps-and-bellman-equations",
+      "dynamic-programming-value-and-policy-iteration"
+    ],
+    "keywords": "deep q networks, dqn, reinforcement learning, experience replay, double dqn, target network, q learning"
+  },
+  {
+    "id": "actor-critic-and-ppo",
+    "short": "Actor–Critic and PPO",
+    "title": "Actor–Critic Architectures and Proximal Policy Optimisation (PPO)",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The modern gold standard in policy gradient algorithms, combining actor-critic variance reduction with clipped surrogate objectives.",
+    "lead": "Policy gradient methods like REINFORCE suffer from high variance and sample inefficiency, while standard policy iteration risks catastrophic performance collapse from excessively large gradient steps. Proximal Policy Optimisation (PPO) combines actor-critic value baselines with a clipped surrogate objective that constrains policy updates within a trust region.",
+    "analogy": "Imagine an apprentice driver learning on an icy road. If the instructor lets the apprentice yank the steering wheel completely to the left whenever they hit a skid, the car spins out of control. PPO acts like a mechanical governor on the steering column: it allows the driver to adjust the steering smoothly, but physically clips extreme jerks to keep the car safely on the road.",
+    "intuition": [
+      "In basic policy gradients (REINFORCE), the policy $\\pi_\\theta(a|s)$ is updated using empirical episode returns $G_t$. Because a complete episode incorporates hundreds of stochastic transitions, returns have enormous variance, demanding millions of training steps. Actor-Critic architectures solve this by training two networks: the Actor (policy $\\pi_\\theta$) selects actions, while the Critic (value function $V_\\phi(s)$) evaluates states, replacing noisy returns with a low-variance Advantage estimate $A(s, a) = r + \\gamma V(s') - V(s)$.",
+      "However, taking standard gradient descent steps on policy gradients can cause the updated policy to diverge catastrophically into degenerate behaviour. TRPO solved this using complex second-order natural gradients and KL constraints. PPO achieves the same safety using a simple first-order clipped surrogate loss: if a proposed update shifts the probability ratio $r_t(\\theta) = \\pi_\\theta(a_t|s_t) / \\pi_{\\theta_{\\text{old}}}(a_t|s_t)$ beyond $[1 - \\epsilon, 1 + \\epsilon]$, the objective is clipped, eliminating destructive policy drift."
+    ],
+    "steps": [
+      "Collect trajectory rollouts: execute current policy $\\pi_{\\theta_{\\text{old}}}$ across $N$ parallel environments for $T$ timesteps.",
+      "Estimate advantage values: compute Generalised Advantage Estimation (GAE) using Critic values $V_\\phi(s_t)$.",
+      "Compute probability ratios: evaluate $r_t(\\theta) = \\frac{\\pi_\\theta(a_t|s_t)}{\\pi_{\\theta_{\\text{old}}}(a_t|s_t)}$ for batch transitions.",
+      "Calculate clipped surrogate loss: compute $\\min(r_t(\\theta) \\hat{A}_t, \\text{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon) \\hat{A}_t)$.",
+      "Update actor and critic: perform multiple epochs of minibatch SGD on composite loss combining clipped policy loss, critic value loss, and entropy bonus.",
+      "Update reference policy: set $\\theta_{\\text{old}} \\leftarrow \\theta$ after completing optimisation epochs."
+    ],
+    "math": [
+      {
+        "h": "PPO Clipped Surrogate Objective",
+        "tex": "L^{\\text{CLIP}}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ \\min\\left( r_t(\\theta) \\hat{A}_t, \\, \\text{clip}(r_t(\\theta), 1 - \\epsilon, 1 + \\epsilon) \\hat{A}_t \\right) \\right]",
+        "p": "Clips probability ratio $r_t(\\theta)$ within $[1-\\epsilon, 1+\\epsilon]$ (typically $\\epsilon=0.2$) to prevent overly ambitious policy updates."
+      },
+      {
+        "h": "Generalised Advantage Estimation (GAE)",
+        "tex": "\\hat{A}_t^{\\text{GAE}(\\gamma, \\lambda)} = \\sum_{l=0}^\\infty (\\gamma \\lambda)^l \\delta_{t+l}^V, \\quad \\delta_t^V = r_t + \\gamma V(s_{t+1}) - V(s_t)",
+        "p": "Balances bias and variance in advantage estimation through exponential discounting factor $\\lambda \\in [0, 1]$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef ppo_clip_loss(pi_probs, pi_old_probs, advantages, epsilon=0.2):\n    \"\"\"Computes PPO clipped surrogate policy loss.\"\"\"\n    # Probability ratio r_t(theta)\n    ratios = pi_probs / (pi_old_probs + 1e-8)\n    \n    # Unclipped and clipped objective terms\n    surr1 = ratios * advantages\n    surr2 = np.clip(ratios, 1.0 - epsilon, 1.0 + epsilon) * advantages\n    \n    # Pessimistic lower bound (minimise negative for gradient ascent)\n    policy_loss = -np.mean(np.minimum(surr1, surr2))\n    return policy_loss, ratios\n\n# Simulation: 4 actions with estimated advantages\nnp.random.seed(42)\nadvantages = np.array([1.5, -0.8, 2.1, -1.2])\n\n# Policy probs under old policy vs candidate updated policy\nold_probs = np.array([0.25, 0.40, 0.20, 0.60])\nnew_probs = np.array([0.35, 0.38, 0.45, 0.40])  # Action 3 doubled in prob!\n\nloss, ratios = ppo_clip_loss(new_probs, old_probs, advantages, epsilon=0.2)\n\nprint(\"PPO Clipped Objective Simulation:\")\nfor i in range(len(advantages)):\n    print(f\"  Sample {i}: Ratio={ratios[i]:.2f}, Adv={advantages[i]:+.1f}\")\nprint(f\"\\nSurrogate Policy Loss: {loss:.4f}\")",
+    "keyPoints": [
+      "Actor-Critic separates policy control (actor) from state evaluation (critic) to reduce gradient variance.",
+      "PPO clips policy probability ratios to enforce conservative, monotonic policy improvements without complex matrix inversions.",
+      "Generalised Advantage Estimation (GAE) provides a tunable bias-variance trade-off for multi-step advantage calculations."
+    ],
+    "pitfalls": [
+      "Normalising advantages across the mini-batch incorrectly or omitting reward scaling, which destabilizes critic value fitting.",
+      "Setting the clipping parameter $\\epsilon$ too large ($> 0.3$), which permits destructive policy shifts that collapse learning."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary operational advantage of the PPO clipped objective over standard policy gradients?",
+        "o": [
+          "It prevents destructively large policy updates by clipping the probability ratio $r_t(\\theta)$ within $[1-\\epsilon, 1+\\epsilon]$",
+          "It allows training without needing any reward signals",
+          "It eliminates the need for neural networks",
+          "It forces the policy to be completely deterministic"
+        ],
+        "a": 0,
+        "why": "Clipping prevents the new policy from moving too far from the old policy in a single iteration, stabilizing gradient ascent."
+      },
+      {
+        "q": "In an Actor-Critic architecture, what does the Critic predict?",
+        "o": [
+          "The next token in a natural language prompt",
+          "The state-value function $V(s)$, estimating expected future cumulative discounted reward from state $s$",
+          "The probability distribution over discrete actions $\\pi(a|s)$",
+          "The optimal learning rate for Adam"
+        ],
+        "a": 1,
+        "why": "The Critic estimates the value function $V(s)$, which serves as a baseline to compute the advantage $A(s, a) = Q(s, a) - V(s)$."
+      },
+      {
+        "q": "Why was PPO widely adopted over Trust Region Policy Optimisation (TRPO)?",
+        "o": [
+          "PPO requires fewer lines of Python and replaces expensive second-order Hessian-vector products with simple first-order SGD",
+          "PPO is only applicable to board games",
+          "PPO eliminates the discount factor $\\gamma$",
+          "TRPO cannot be run on GPU clusters"
+        ],
+        "a": 0,
+        "why": "TRPO requires conjugate gradient optimisation to invert Fisher information matrices, whereas PPO achieves similar trust-region stability with simple first-order clipped objectives."
+      }
+    ],
+    "related": [
+      "policy-gradient-reinforce",
+      "mdps-and-bellman-equations"
+    ],
+    "keywords": "actor critic, ppo, proximal policy optimisation, reinforcement learning, gae, trust region, policy gradient"
+  },
+  {
+    "id": "model-based-rl-and-alphazero",
+    "short": "Model-Based RL & AlphaZero",
+    "title": "Model-Based Reinforcement Learning, World Models, and AlphaZero",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Model-based reinforcement learning frameworks that learn world models or leverage tree search to plan trajectories, exemplified by AlphaZero and MuZero.",
+    "lead": "Model-free reinforcement learning requires millions of environment interactions because it learns purely through trial and error. Model-Based RL constructs an internal predictive model of environment dynamics—predicting next states and rewards—enabling agents to imagine future trajectories, plan via tree search, and achieve superhuman mastery with zero human data, as demonstrated by AlphaZero and MuZero.",
+    "analogy": "A model-free driver navigates an unfamiliar city by wandering down random streets and bumping into cul-de-sacs until they accidentally find the destination after months. A model-based driver consults a mental map (a World Model), visualises alternative turns in their imagination, and selects the optimal route before ever taking their foot off the brake.",
+    "intuition": [
+      "In model-free RL, the agent treats the environment as an opaque black box. In Model-Based RL, the agent explicitly models the transition dynamics $s_{t+1} \\sim P(s_{t+1}|s_t, a_t)$ and reward function $r_t = R(s_t, a_t)$. With this model, the agent can generate synthetic experience (Dyna architecture) or simulate future action sequences using planning algorithms.",
+      "AlphaZero merged deep learning with Monte Carlo Tree Search: a dual-headed neural network takes a board state and simultaneously outputs move probabilities (policy prior $\\mathbf{p}$) and expected game outcome (value $v$). MCTS uses the policy prior to guide tree expansion and the value network to evaluate leaf states without expensive rollouts. MuZero took this further by learning an abstract latent dynamics model directly from sensory observations without knowing the true game rules."
+    ],
+    "steps": [
+      "Learn transition and reward model: train neural networks to predict next latent state $\\mathbf{z}_{t+1}$ and scalar reward $r_t$ given current state $\\mathbf{z}_t$ and action $a_t$.",
+      "Initialize MCTS root node: project current observation into latent state $\\mathbf{z}_0$ using representation network $h_\\theta$.",
+      "Execute neural-guided MCTS: expand search trees using the learned dynamics model $g_\\theta$ and evaluate leaf nodes using prediction network $f_\\theta$.",
+      "Compute search policy $\\pi$: set move probabilities proportional to visit counts: $\\pi(a|s_0) \\propto N(s_0, a)^{1/\\tau}$.",
+      "Self-play and store games: play matches against self, recording trajectories $(\\mathbf{x}_t, \\pi_t, z_t)$ where $z_t$ is the final game outcome.",
+      "Train network end-to-end: minimise combined loss over policy cross-entropy, value mean-squared error, and reward prediction error."
+    ],
+    "math": [
+      {
+        "h": "AlphaZero Joint Loss Function",
+        "tex": "\\mathcal{L}(\\theta) = (z - v)^2 - \\boldsymbol{\\pi}^T \\ln \\mathbf{p} + c \\|\\theta\\|^2",
+        "p": "Jointly optimises value prediction $v$ against game outcome $z$, policy prior $\\mathbf{p}$ against MCTS search policy $\\boldsymbol{\\pi}$, and $L_2$ weight decay."
+      },
+      {
+        "h": "MuZero Recurrent Latent Formulation",
+        "tex": "r_k, \\mathbf{z}_k = g_\\theta(\\mathbf{z}_{k-1}, a_k), \\quad \\mathbf{p}_k, v_k = f_\\theta(\\mathbf{z}_k)",
+        "p": "Dynamics model $g_\\theta$ unrolls future latent states and rewards in imagination without decoding back to raw pixel space."
+      }
+    ],
+    "code": "import numpy as np\n\nclass ToyAlphaZeroEvaluator:\n    \"\"\"Demonstrates joint policy-value evaluation and MCTS prior guidance.\"\"\"\n    def __init__(self, action_dim=4):\n        self.action_dim = action_dim\n\n    def predict(self, state_vector):\n        \"\"\"Dual-head prediction: policy prior (p) and scalar value (v).\"\"\"\n        # Simulated forward pass of dual-head ResNet\n        raw_logits = np.dot(state_vector, np.ones((len(state_vector), self.action_dim)))\n        exp_logits = np.exp(raw_logits - np.max(raw_logits))\n        policy_prior = exp_logits / np.sum(exp_logits)\n        \n        # Value in [-1, +1] representing win/loss expectation\n        value = np.tanh(np.sum(state_vector) * 0.1)\n        return policy_prior, value\n\n# Test state representation\nstate = np.array([0.5, -0.2, 1.2, 0.1])\nmodel = ToyAlphaZeroEvaluator(action_dim=4)\np_prior, v_val = model.predict(state)\n\n# MCTS visit count policy target\nmcts_visits = np.array([120, 15, 310, 55])\ntarget_policy = mcts_visits / np.sum(mcts_visits)\ngame_outcome = 1.0  # Player won\n\n# AlphaZero loss calculation\nloss_value = (game_outcome - v_val) ** 2\nloss_policy = -np.sum(target_policy * np.log(p_prior + 1e-12))\ntotal_loss = loss_value + loss_policy\n\nprint(f\"Predicted Policy Prior: {p_prior.round(3)}\")\nprint(f\"MCTS Search Policy:    {target_policy.round(3)}\")\nprint(f\"Predicted Value:        {v_val:.3f} (True Outcome: {game_outcome})\")\nprint(f\"AlphaZero Joint Loss:   {total_loss:.4f}\")",
+    "keyPoints": [
+      "Model-based RL enables agents to imagine future consequences of actions before executing them in the physical world.",
+      "AlphaZero replaces hand-crafted heuristics with a unified policy-value network guided by MCTS self-play.",
+      "MuZero plans in abstract latent state space, eliminating the need to model irrelevant visual environment details."
+    ],
+    "pitfalls": [
+      "Suffering from compounding model errors in long rollout horizons; small imperfections in the transition model multiply exponentially over multi-step planning.",
+      "Attempting to reconstruct full raw pixel frames in visual world models, wasting model capacity on task-irrelevant background pixels."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary difference between model-free and model-based reinforcement learning?",
+        "o": [
+          "Model-based RL explicitly learns or uses a model of environment transitions and rewards to plan, while model-free learns directly from trial-and-error experience",
+          "Model-free RL only runs on CPU, while model-based runs on GPU",
+          "Model-free RL uses decision trees, while model-based RL uses neural networks",
+          "Model-based RL cannot be used for games"
+        ],
+        "a": 0,
+        "why": "Model-based methods learn or exploit environment dynamics $P(s'|s, a)$ to simulate future trajectories, enabling predictive planning."
+      },
+      {
+        "q": "How does MuZero extend AlphaZero to environments where the game rules are completely unknown (e.g. Atari)?",
+        "o": [
+          "It asks human annotators for rules via crowd-sourcing",
+          "It learns an abstract latent dynamics model that predicts future latent states, rewards, and policy values directly from observation history",
+          "It converts Atari games into chess boards",
+          "It disables tree search entirely"
+        ],
+        "a": 1,
+        "why": "MuZero learns an internal dynamics function operating on latent embeddings, learning to predict task-relevant rewards and policies without explicit rule models."
+      },
+      {
+        "q": "In AlphaZero's loss function, what acts as the training target for the neural network's policy head?",
+        "o": [
+          "The uniform random distribution",
+          "The normalised visit count distribution generated by the MCTS search algorithm",
+          "Human grandmaster move databases",
+          "The reward from the previous timestep"
+        ],
+        "a": 1,
+        "why": "MCTS search acts as a powerful policy improvement operator; the neural network policy head is trained to mimic the high-quality MCTS visit distribution."
+      }
+    ],
+    "related": [
+      "monte-carlo-tree-search",
+      "dynamic-programming-value-and-policy-iteration"
+    ],
+    "keywords": "model based rl, alphazero, muzero, world models, mcts self play, deep reinforcement learning"
+  },
+  {
+    "id": "context-windows-and-memory",
+    "short": "Context Windows & Memory",
+    "title": "Context Windows and Memory: KV Cache Management, Working Memory, and Long-Term Stores",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The principles of LLM memory architectures, spanning short-term working context windows, KV-cache compression, and long-term external vector memory.",
+    "lead": "While large language models exhibit impressive reasoning, their memory is bounded by fixed context window limits and linear memory scaling during generation. Architecting robust AI agents requires decoupling memory into short-term working context (KV caching, sliding windows) and long-term persistent episodic memory (external vector stores and memory compaction).",
+    "analogy": "An LLM's context window is like a student's desk. It holds open notebooks and reference pens for whatever problem is being actively solved right now. But the desk has finite surface area. When the desk fills up, the student must either file older notes into a filing cabinet in the corner (an external vector database) or write a 1-page summary index card to clear space on the desk.",
+    "intuition": [
+      "Transformers process tokens through an in-context working memory: self-attention allows all tokens within the context window to attend to each other. During autoregressive decoding, recomputing key and value representations for all past tokens at every step is wasteful $\\mathcal{O}(N^2)$ work. The Key-Value (KV) cache stores past token key and value projections in GPU memory, reducing per-token generation step complexity to $\\mathcal{O}(N)$.",
+      "However, KV-cache size grows linearly with sequence length, batch size, and layer count, easily demanding 40+ GB of VRAM for long documents. Long-running AI systems overcome this constraint through hierarchical memory: short-term active context managed via sliding-window attention and memory compaction, paired with long-term semantic stores queried through dense retrieval."
+    ],
+    "steps": [
+      "Allocate KV-cache buffers: allocate pre-allocated tensors in GPU memory to store key and value states for past tokens.",
+      "Append incremental token states: at each decoding step, compute $\\mathbf{k}_t, \\mathbf{v}_t$ for the newest token and append to the active cache.",
+      "Monitor memory footprint: calculate VRAM consumption using the formula $2 \\times 2 \\times n_{\\text{layers}} \\times d_{\\text{model}} \\times N \\times B$ bytes.",
+      "Trigger context compaction: when token count nears window limits, generate an abstractive summary of older conversation turns.",
+      "Offload to external storage: persist episodic memories and user profile details to an indexed vector store for semantic retrieval on demand."
+    ],
+    "math": [
+      {
+        "h": "KV-Cache Memory Footprint (FP16)",
+        "tex": "\\text{Memory}_{\\text{KV}} = 4 \\cdot b \\cdot s \\cdot l \\cdot h \\cdot d_k \\quad \\text{bytes}",
+        "p": "Calculates the memory in bytes for batch size $b$, sequence length $s$, layers $l$, attention heads $h$, and head dimension $d_k$ in 16-bit precision."
+      },
+      {
+        "h": "Sliding Window Attention Complexity",
+        "tex": "\\mathcal{O}(N \\cdot W \\cdot d), \\quad \\text{where } W \\ll N",
+        "p": "Restricts self-attention to a localized window of $W$ previous tokens, reducing quadratic scaling to linear scaling with sequence length $N$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef calculate_kv_cache_size(batch_size, seq_len, num_layers, num_heads, head_dim, precision_bytes=2):\n    \"\"\"Calculates KV cache memory footprint in gigabytes.\"\"\"\n    # 2 matrices (Key and Value) per layer\n    total_elements = 2 * batch_size * seq_len * num_layers * num_heads * head_dim\n    total_bytes = total_elements * precision_bytes\n    return total_bytes / (1024 ** 3)\n\nclass SlidingWindowKVCache:\n    \"\"\"Demonstrates sliding-window working memory for autoregressive decoding.\"\"\"\n    def __init__(self, window_size=4, dim=8):\n        self.window_size = window_size\n        self.dim = dim\n        self.keys = []\n        self.values = []\n\n    def update(self, new_key, new_val):\n        self.keys.append(new_key)\n        self.values.append(new_val)\n        # Evict oldest tokens beyond window size\n        if len(self.keys) > self.window_size:\n            self.keys.pop(0)\n            self.values.pop(0)\n            \n    def get_context(self):\n        return np.array(self.keys), np.array(self.values)\n\n# 1. Memory benchmark for 70B parameter model\nvram_gb = calculate_kv_cache_size(batch_size=4, seq_len=32768, num_layers=80, num_heads=64, head_dim=128)\nprint(f\"KV Cache VRAM for 70B model (Batch 4, 32k Context): {vram_gb:.2f} GB\")\n\n# 2. Sliding window working memory simulation\ncache = SlidingWindowKVCache(window_size=3, dim=4)\nfor t in range(5):\n    cache.update(new_key=np.ones(4) * t, new_val=np.zeros(4) * t)\n\nkeys, _ = cache.get_context()\nprint(f\"Active Tokens Retained in Sliding Window (t=5): {keys[:, 0]}\")",
+    "keyPoints": [
+      "KV caching transforms autoregressive token generation from quadratic time $\\mathcal{O}(N^2)$ to linear time $\\mathcal{O}(N)$.",
+      "The linear memory growth of KV caches necessitates multi-query attention (MQA), grouped-query attention (GQA), and paged memory.",
+      "Hierarchical memory combines immediate working context windows with external vector indices for long-term agent persistence."
+    ],
+    "pitfalls": [
+      "Running out of GPU memory during batch inference due to unmanaged KV-cache allocation when users submit long documents.",
+      "Truncating conversation history naively with hard cut-offs rather than structured summary compaction, causing the model to lose instructions."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary function of the KV cache in LLM inference engines?",
+        "o": [
+          "It compiles Python code into C++",
+          "It stores key and value projection tensors of previously processed tokens so they do not need to be recomputed at every generation step",
+          "It quantises weights into binary values",
+          "It automatically searches the web for factual answers"
+        ],
+        "a": 1,
+        "why": "Without a KV cache, generating the $N$-th token requires recomputing self-attention over all previous $N-1$ tokens from scratch."
+      },
+      {
+        "q": "How does Grouped-Query Attention (GQA) reduce KV-cache memory consumption?",
+        "o": [
+          "It shares a single set of key and value heads across multiple query heads, cutting KV-cache size proportionally",
+          "It deletes the value matrix entirely",
+          "It limits the model to processing one token at a time",
+          "It trains the model only on numbers"
+        ],
+        "a": 0,
+        "why": "In GQA (used by Llama 2/3), several query heads share each key/value head, reducing cache memory bandwidth and VRAM usage by 4x to 8x."
+      },
+      {
+        "q": "What is \"context compaction\" in conversational agent architectures?",
+        "o": [
+          "Compressing text files into ZIP archives on disk",
+          "Periodically summarising older dialog turns into a concise briefing that fits within the active context window",
+          "Deleting all user prompts from memory",
+          "Restricting user input to 10 words"
+        ],
+        "a": 1,
+        "why": "Context compaction prevents context overflow by periodically distilling historical turns into an executive summary that retains salient facts."
+      }
+    ],
+    "related": [
+      "inference-kv-cache-batching-paged-attention",
+      "the-agent-loop-react"
+    ],
+    "keywords": "context windows, memory, kv cache, grouped query attention, context compaction, long term memory"
+  },
+  {
+    "id": "graphrag-and-multi-hop-retrieval",
+    "short": "GraphRAG & Multi-Hop Retrieval",
+    "title": "GraphRAG: Knowledge Graph-Augmented Generation and Multi-Hop Reasoning",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Augmenting Retrieval-Augmented Generation with structured knowledge graphs and community summarisation to resolve global queries and multi-hop relationships.",
+    "lead": "Standard vector RAG excels at retrieving localized factual snippets, but fails completely on global synthesis queries (e.g. \"What are the primary themes across this entire corpus?\") and multi-hop entity traversals. GraphRAG structures unstructured text into hierarchical knowledge graphs and community summaries, unlocking holistic understanding and multi-step reasoning.",
+    "analogy": "Standard vector search is like looking through a library using a flashlight that illuminates one paragraph at a time. It works well if you want a specific recipe, but fails if you ask \"How has the author's philosophy on governance evolved across their 10 books?\" GraphRAG is like turning on the library's main ceiling lights: it maps the family tree of themes and chapters, revealing high-level structures that individual flashlight beams completely miss.",
+    "intuition": [
+      "Standard dense retrieval computes cosine similarity between a query embedding and isolated text chunks (e.g. 500 tokens). If an answer requires connecting three distinct facts scattered across separate documents—or requires summarising broad organizational patterns across thousands of files—semantic similarity yields fragmented, uninformative fragments.",
+      "GraphRAG bridges this gap using a multi-stage graph pipeline: 1) Extract entities and relational triples $(s, r, o)$ from source documents using LLMs; 2) Construct a global knowledge graph and cluster connected subgraphs into thematic \"communities\" using Leiden clustering; 3) Generate hierarchical summaries for each community. When answering a global query, the system summarises across relevant community clusters, achieving unprecedented synthesis quality."
+    ],
+    "steps": [
+      "Extract entity and relationship graphs: prompt an LLM to extract all entities, descriptions, and relational claims from document chunks.",
+      "Construct and reconcile graph: merge duplicate entity nodes and resolve coreferences to build a connected knowledge graph.",
+      "Perform hierarchical community detection: run the Leiden or Louvain algorithm to partition the graph into hierarchical clusters of related entities.",
+      "Generate community summaries: synthesize pre-computed narrative summaries for each detected cluster at varying levels of abstraction.",
+      "Execute global query retrieval: map the user query against community summaries, collect parallel partial answers, and synthesize a comprehensive global response.",
+      "Execute multi-hop local retrieval: combine vector similarity over entity nodes with graph traversal to trace multi-hop relationship paths."
+    ],
+    "math": [
+      {
+        "h": "Graph Modularity for Community Detection (Leiden)",
+        "tex": "Q = \\frac{1}{2m} \\sum_{ij} \\left[ A_{ij} - \\gamma \\frac{k_i k_j}{2m} \\right] \\delta(c_i, c_j)",
+        "p": "Measures the density of connections within communities compared to connections between communities, scaled by total edges $m$ and resolution $\\gamma$."
+      },
+      {
+        "h": "Multi-Hop Path Score Formulation",
+        "tex": "\\text{Score}(\\text{Path}) = \\prod_{e \\in \\text{Edges}} \\text{Sim}(q, \\text{Description}(e))",
+        "p": "Scores multi-hop reasoning chains by accumulating semantic alignment along connecting entity relationships."
+      }
+    ],
+    "code": "import numpy as np\n\nclass ToyGraphRAG:\n    \"\"\"Demonstrates entity-relation graph construction and community retrieval.\"\"\"\n    def __init__(self):\n        self.entities = {}\n        self.edges = []\n        self.communities = {}\n\n    def add_relation(self, e1, rel, e2):\n        self.edges.append((e1, rel, e2))\n        self.entities.setdefault(e1, []).append(e2)\n        self.entities.setdefault(e2, []).append(e1)\n\n    def multi_hop_search(self, start_entity, target_relation):\n        \"\"\"Finds 2-hop connected entities matching target relation.\"\"\"\n        results = []\n        # Hop 1: Neighbours of start entity\n        for (e1, r1, e2) in self.edges:\n            if e1 == start_entity:\n                intermediate = e2\n                # Hop 2: Relationships from intermediate entity\n                for (ie1, r2, final_e) in self.edges:\n                    if ie1 == intermediate and r2 == target_relation:\n                        results.append((start_entity, r1, intermediate, r2, final_e))\n        return results\n\n# Populate synthetic corporate knowledge graph\ngraph = ToyGraphRAG()\ngraph.add_relation(\"DeepMind\", \"subsidiary_of\", \"Alphabet\")\ngraph.add_relation(\"Alphabet\", \"headquartered_in\", \"California\")\ngraph.add_relation(\"Alphabet\", \"founded_by\", \"Larry Page\")\n\n# Multi-hop query: \"Where is DeepMind's parent company located?\"\nchains = graph.multi_hop_search(\"DeepMind\", \"headquartered_in\")\n\nprint(\"GraphRAG Multi-Hop Retrieval Result:\")\nfor chain in chains:\n    print(f\"  Path: {chain[0]} --[{chain[1]}]--> {chain[2]} --[{chain[3]}]--> {chain[4]}\")\nprint(f\"\\nDeduced Fact: DeepMind's parent company is located in '{chains[0][4]}'\")",
+    "keyPoints": [
+      "GraphRAG overcomes the \"blind spots\" of vector similarity by constructing relational graphs across disjoint documents.",
+      "Hierarchical community detection (Leiden) creates structured summaries of themes across entire document corpora.",
+      "Combining graph-based path traversal with semantic search enables explainable multi-hop deduction."
+    ],
+    "pitfalls": [
+      "Excessive LLM token cost during graph construction; parsing millions of pages into entity triples requires substantial batch processing budgets.",
+      "Graph fragmentation from noisy entity resolution; if \"Google\" and \"Google LLC\" remain separate disconnected nodes, multi-hop traversals break."
+    ],
+    "quiz": [
+      {
+        "q": "Why does traditional vector-based RAG struggle with global queries like \"What are the major themes across this entire 500-page dataset?\"",
+        "o": [
+          "Vector embeddings cannot be searched quickly",
+          "Vector retrieval relies on finding small text chunks that match specific keywords, which fails when information is dispersed broadly rather than concentrated in one paragraph",
+          "Vector RAG only supports audio files",
+          "Vector databases can only store 10 documents"
+        ],
+        "a": 1,
+        "why": "Global summary queries have no single localized text match; GraphRAG solves this by pre-computing hierarchical community summaries of entire topic clusters."
+      },
+      {
+        "q": "What role does community detection (such as the Leiden algorithm) play in GraphRAG?",
+        "o": [
+          "It deletes inactive user accounts",
+          "It groups closely interconnected entities and concepts into thematic clusters so the LLM can generate high-level holistic summaries",
+          "It sorts words in alphabetical order",
+          "It encrypts vector indices for privacy"
+        ],
+        "a": 1,
+        "why": "Community detection identifies naturally cohesive topic clusters in the knowledge graph, allowing hierarchical summaries to represent entire subject areas."
+      },
+      {
+        "q": "What is a \"multi-hop\" query in question answering?",
+        "o": [
+          "A query sent across multiple Wi-Fi routers",
+          "A question whose answer requires chaining together distinct facts from two or more separate documents or entity relations",
+          "A query containing multiple spelling errors",
+          "A question asked in more than one language"
+        ],
+        "a": 1,
+        "why": "Multi-hop queries require traversing intermediate relationships (e.g. Entity A -> Entity B -> Entity C) where no single document states the direct link."
+      }
+    ],
+    "related": [
+      "rag-architecture-end-to-end",
+      "chunking-and-embeddings-for-retrieval"
+    ],
+    "keywords": "graphrag, multi hop retrieval, knowledge graphs, leiden clustering, community detection, rag"
+  },
+  {
+    "id": "planning-and-task-decomposition",
+    "short": "Planning & Task Decomposition",
+    "title": "Agent Planning and Task Decomposition: Chain-of-Thought, Tree-of-Thoughts, and Plan-and-Solve",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Methods for decomposing complex multi-step objectives into executable agent sub-goals, including Chain-of-Thought, Tree-of-Thoughts, and dynamic re-planning.",
+    "lead": "When presented with complex, open-ended tasks, language models that attempt direct zero-shot execution frequently stumble or enter repetitive loops. Structured task decomposition—from Chain-of-Thought (CoT) and Least-to-Most prompting to Tree-of-Thoughts (ToT) and Plan-and-Solve frameworks—enables agents to formulate hierarchical roadmaps, evaluate branch states, and backtrack dynamically upon failure.",
+    "analogy": "Imagine being asked to build an entire house. If you just grab a hammer and start nailing random boards together on day one, the structure will collapse. An experienced general contractor first drafts an architectural blueprint (Task Decomposition), schedules plumbers before drywallers (Dependency Ordering), and inspects each stage before proceeding (Self-Evaluation and Re-planning).",
+    "intuition": [
+      "Autoregressive language models predict tokens one by one from left to right. When faced with a complex reasoning problem (like writing an entire software library or solving a mathematical proof), the model has no \"thinking buffer\" if forced to answer immediately: whatever token it generates first commits the entire future output trajectory to that initial hypothesis.",
+      "Decomposition frameworks decouple problem planning from execution: 1) Plan generation: the agent breaks down the overarching goal into a directed acyclic graph (DAG) of modular sub-tasks; 2) Sub-task execution: the agent executes each discrete step using targeted tools; 3) Self-reflection and re-planning: the agent observes intermediate tool outputs, assesses progress against the plan, and dynamically modifies subsequent steps if obstacles emerge."
+    ],
+    "steps": [
+      "Prompt decomposition strategy: instruct the LLM to output an ordered plan of discrete sub-goals before issuing any execution tool calls.",
+      "Formulate dependency graph: identify predecessor and successor constraints across sub-tasks to determine which steps can run in parallel.",
+      "Execute step-by-step: dispatch the first unblocked sub-task to specialized executor agents or specific tool harnesses.",
+      "Evaluate execution outcomes: compare tool observation outputs against expected sub-goal validation criteria.",
+      "Dynamic re-planning: if an execution step fails or returns unexpected data, prompt the planner to adjust subsequent steps without starting from scratch.",
+      "Synthesize final objective: combine validated intermediate results into the final comprehensive solution."
+    ],
+    "math": [
+      {
+        "h": "Tree-of-Thoughts (ToT) Node Evaluation",
+        "tex": "v(s) = \\text{LLM-Evaluate}(s, \\text{Task}), \\quad s^* = \\arg\\max_{s \\in \\text{Candidates}} v(s)",
+        "p": "Evaluates candidate intermediate thought states $s$ using qualitative grading prompts (Sure, Likely, Impossible) mapped to scalar utility."
+      },
+      {
+        "h": "Plan Success Probability Formulation",
+        "tex": "P(\\text{Success}) = \\prod_{k=1}^K P(\\text{Step}_k \\text{ succeeds} \\mid \\text{Steps}_{<k})",
+        "p": "Underlines the compounding error challenge in long-horizon plans, necessitating active monitoring and mid-course correction."
+      }
+    ],
+    "code": "class TaskDecomposer:\n    \"\"\"Demonstrates Plan-and-Solve task decomposition with dynamic execution.\"\"\"\n    def __init__(self):\n        self.subtasks = []\n        self.completed = []\n\n    def create_plan(self, high_level_goal):\n        \"\"\"Simulates decomposing a complex user request into ordered sub-tasks.\"\"\"\n        # Simulated decomposition output from an LLM planner\n        if \"market analysis\" in high_level_goal.lower():\n            self.subtasks = [\n                {\"id\": 1, \"task\": \"Search industry report statistics\", \"status\": \"pending\"},\n                {\"id\": 2, \"task\": \"Extract competitor pricing models\", \"status\": \"pending\"},\n                {\"id\": 3, \"task\": \"Synthesise SWOT matrix and revenue forecast\", \"status\": \"pending\"}\n            ]\n        return self.subtasks\n\n    def execute_next(self, mock_tool_result):\n        \"\"\"Executes current pending subtask and updates plan status.\"\"\"\n        for step in self.subtasks:\n            if step[\"status\"] == \"pending\":\n                step[\"status\"] = \"completed\"\n                step[\"result\"] = mock_tool_result\n                self.completed.append(step)\n                return step\n        return None\n\ndecomposer = TaskDecomposer()\nplan = decomposer.create_plan(\"Perform market analysis for enterprise AI software\")\n\nprint(\"Generated Agent Execution Plan:\")\nfor step in plan:\n    print(f\"  Step {step['id']}: {step['task']} [{step['status']}]\")\n\n# Execute steps incrementally\ns1 = decomposer.execute_next(\"Found 4 market reports: projected 28% CAGR\")\ns2 = decomposer.execute_next(\"Competitors A & B charge $30/user/mo\")\n\nprint(f\"\\nExecuted Step 1 Result: {s1['result']}\")\nprint(f\"Executed Step 2 Result: {s2['result']}\")\nremaining = [s for s in decomposer.subtasks if s['status'] == 'pending']\nprint(f\"Remaining Sub-tasks to complete: {len(remaining)}\")",
+    "keyPoints": [
+      "Decomposing complex goals into discrete sub-tasks prevents language models from committing prematurely to flawed output paths.",
+      "Tree-of-Thoughts enables multi-branch exploration, heuristic state evaluation, and systematic backtracking.",
+      "Dynamic re-planning allows agents to recover gracefully from tool execution failures during long-horizon tasks."
+    ],
+    "pitfalls": [
+      "Decomposing into sub-tasks that are too fine-grained, generating excessive latency and API cost with minimal reasoning benefit.",
+      "Blindly executing static plans without monitoring intermediate tool outputs, blindly carrying flawed assumptions through all subsequent steps."
+    ],
+    "quiz": [
+      {
+        "q": "How does Tree-of-Thoughts (ToT) improve upon standard Chain-of-Thought (CoT) prompting?",
+        "o": [
+          "ToT eliminates all text output and replaces it with numbers",
+          "ToT frames problem-solving as search over a tree of intermediate thoughts, enabling evaluation of multiple options and systematic backtracking",
+          "ToT requires no prompt engineering",
+          "ToT only works on binary classification"
+        ],
+        "a": 1,
+        "why": "CoT is a single linear chain. ToT explores multiple branches of thoughts, evaluates candidate paths, and backtracks when a path hits a dead end."
+      },
+      {
+        "q": "Why is dynamic re-planning critical for autonomous agents operating in external environments?",
+        "o": [
+          "Because API calls, code execution, and web retrievals frequently fail or return unexpected results that require adjusting subsequent steps",
+          "Because the agent must reboot its GPU after every step",
+          "Because static plans run too quickly for the user to read",
+          "Because the model will forget its system prompt otherwise"
+        ],
+        "a": 0,
+        "why": "In real-world environments, tools encounter errors or missing data. A rigid static plan fails, whereas dynamic re-planning adapts subsequent actions."
+      },
+      {
+        "q": "What is the \"compounding error\" problem in long-horizon sequential agent plans?",
+        "o": [
+          "Floating point numbers lose precision on 64-bit architectures",
+          "If each step has a 95% success rate, a 20-step plan has an overall success rate of only $(0.95)^{20} \\approx 36\\%$ without error recovery",
+          "Compound interest reduces API credits",
+          "Errors only occur on the first step of an execution"
+        ],
+        "a": 1,
+        "why": "In sequential plans without active verification, the probability of complete success decays exponentially with the number of dependent steps."
+      }
+    ],
+    "related": [
+      "the-agent-loop-react",
+      "agent-evaluation-and-test-harnesses"
+    ],
+    "keywords": "task decomposition, agent planning, tree of thoughts, chain of thought, plan and solve, dynamic replanning"
+  },
+  {
+    "id": "memory-and-state",
+    "short": "Memory and State in Agents",
+    "title": "Agent Memory and State: Epistemic, Working, Semantic, and Episodic Architectures",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The taxonomy of memory for autonomous agents: sensory working memory, episodic experiential logs, and semantic knowledge stores.",
+    "lead": "Without memory, an AI agent treats every interaction as a blank-slate event, unable to learn from past mistakes, retain user preferences, or execute long-running tasks. Structuring agent memory requires borrowing cognitive architectures: dividing memory into working memory (scratchpad context), episodic memory (chronological experience logs), and semantic memory (structured knowledge bases).",
+    "analogy": "Think of human cognition: Working memory is your immediate train of thought while solving an equation. Episodic memory is your vivid recollection of your eighth birthday party or a mistake you made yesterday. Semantic memory is your timeless factual understanding that Paris is the capital of France. An AI agent requires all three systems to act intelligently over time.",
+    "intuition": [
+      "Language model weights are frozen after training; any knowledge acquired during an interactive session must be stored outside the model weights. The naive approach—stuffing the entire conversation history into the prompt—collapses once context length limits are reached or API costs skyrocket.",
+      "A principled agent memory architecture structures retention into distinct functional tiers: 1) Working Memory: the immediate active scratchpad (ReAct thoughts, tool responses); 2) Episodic Memory: logs of past agent runs, recording what goals were attempted, what tools succeeded, and what mistakes were corrected; 3) Semantic Memory: permanent distilled facts, user preferences, and domain rules stored in vector or relational databases and retrieved via semantic similarity."
+    ],
+    "steps": [
+      "Capture raw interaction events: record user utterances, agent thoughts, tool calls, and observations with timestamps into an append-only event stream.",
+      "Maintain active working memory: keep recent turns and uncompleted goals inside the immediate prompt context window.",
+      "Extract episodic memories: at task completion, prompt a reflection model to generate an episodic takeaway summary (\"What did I learn from this run?\").",
+      "Index into semantic vector storage: embed facts, entity relationships, and user preferences, indexing them into vector databases with metadata filters.",
+      "Query and assemble context: when a new task arrives, retrieve relevant semantic and episodic memories, formatting them into system prompt memory blocks."
+    ],
+    "math": [
+      {
+        "h": "Memory Retrieval Relevance Function",
+        "tex": "\\text{Score}(m) = \\alpha \\cdot \\text{Sim}(q, m) + \\beta \\cdot \\text{Recency}(m) + \\gamma \\cdot \\text{Importance}(m)",
+        "p": "Balances semantic cosine similarity to current query $q$, recency exponential decay, and self-evaluated importance rating."
+      },
+      {
+        "h": "Recency Decay Formulation",
+        "tex": "\\text{Recency}(m) = e^{-\\lambda (t_{\\text{curr}} - t_m)}",
+        "p": "Applies exponential decay over elapsed time $(t_{\\text{curr}} - t_m)$ to prioritize fresh memories, scaled by decay rate $\\lambda$."
+      }
+    ],
+    "code": "import numpy as np\n\nclass AgentMemoryStore:\n    \"\"\"Demonstrates multi-attribute retrieval combining similarity, recency, and importance.\"\"\"\n    def __init__(self):\n        self.memories = []\n\n    def add_memory(self, text, embedding, importance, timestamp):\n        self.memories.append({\n            'text': text,\n            'embedding': embedding,\n            'importance': importance,\n            'timestamp': timestamp\n        })\n\n    def retrieve(self, query_emb, current_time, top_k=2, alpha=0.5, beta=0.3, gamma=0.2, decay_rate=0.05):\n        scored = []\n        for m in self.memories:\n            # Cosine similarity\n            sim = np.dot(query_emb, m['embedding']) / (np.linalg.norm(query_emb) * np.linalg.norm(m['embedding']))\n            # Exponential recency decay\n            recency = np.exp(-decay_rate * (current_time - m['timestamp']))\n            # Composite score\n            score = alpha * sim + beta * recency + gamma * m['importance']\n            scored.append((score, m['text']))\n        scored.sort(key=lambda x: x[0], reverse=True)\n        return scored[:top_k]\n\n# Simulation\nnp.random.seed(42)\nmem_store = AgentMemoryStore()\n\n# Embeddings (dim=3)\nq_emb = np.array([1.0, 0.2, 0.1])\nmem_store.add_memory(\"User prefers responses in British English spelling\", \n                     np.array([0.9, 0.3, 0.0]), importance=0.9, timestamp=10)\nmem_store.add_memory(\"Yesterday user ordered pizza from Italian kitchen\", \n                     np.array([0.1, 0.8, 0.5]), importance=0.3, timestamp=18)\nmem_store.add_memory(\"User requested code examples in Python with typing\", \n                     np.array([0.8, 0.1, 0.4]), importance=0.8, timestamp=19)\n\nretrieved = mem_store.retrieve(q_emb, current_time=20, top_k=2)\n\nprint(\"Retrieved Salient Memories for Agent Context:\")\nfor score, text in retrieved:\n    print(f\"  [Score: {score:.3f}] {text}\")",
+    "keyPoints": [
+      "Agent memory decouples active working context from long-term episodic and semantic external stores.",
+      "Memory retrieval ranks memories using a combination of semantic similarity, recency decay, and importance weighting.",
+      "Reflective episodic summarisation allows agents to learn across sessions without fine-tuning underlying model weights."
+    ],
+    "pitfalls": [
+      "Allowing memory stores to accumulate conflicting outdated facts without update or invalidation mechanisms.",
+      "Retrieving irrelevant memories that clutter the context window and distract the agent from the immediate task."
+    ],
+    "quiz": [
+      {
+        "q": "What is the difference between episodic memory and semantic memory in an AI agent architecture?",
+        "o": [
+          "Episodic memory stores chronological records of specific past experiences and attempts; semantic memory stores timeless distilled facts and knowledge",
+          "Episodic memory is stored in RAM; semantic memory is printed on paper",
+          "Episodic memory is only used for music; semantic memory is used for text",
+          "There is no functional distinction"
+        ],
+        "a": 0,
+        "why": "Episodic memory captures sequential personal experiences (\"what happened when I ran this script yesterday\"), while semantic memory captures general factual concepts."
+      },
+      {
+        "q": "In cognitive agent memory retrieval (e.g. Generative Agents), what three factors are standardly combined to score memory relevance?",
+        "o": [
+          "Character count, file size, and author name",
+          "Semantic relevance (cosine similarity), recency (exponential time decay), and importance (salience rating)",
+          "Alphabetical order, font size, and language ID",
+          "Download speed, network latency, and ping rate"
+        ],
+        "a": 1,
+        "why": "The Stanford Generative Agents architecture demonstrated that weighting semantic fit, recency, and importance produces human-like contextual recall."
+      },
+      {
+        "q": "Why cannot conversational agents rely entirely on prompt concatenation for long-term memory?",
+        "o": [
+          "Concatenating all history eventually exceeds context window limits and leads to unsustainable latency and cost per turn",
+          "Prompt strings cannot be saved to disk",
+          "LLMs refuse to read prompts longer than 100 words",
+          "Tokenisers crash when processing past conversations"
+        ],
+        "a": 0,
+        "why": "Every added turn inflates input token fees and latency, and eventually hits maximum context window limits, requiring external retrieval systems."
+      }
+    ],
+    "related": [
+      "context-windows-and-memory",
+      "the-agent-loop-react"
+    ],
+    "keywords": "agent memory, episodic memory, semantic memory, working memory, recency decay, generative agents"
+  },
+  {
+    "id": "multi-agent-systems",
+    "short": "Multi-Agent Systems",
+    "title": "Multi-Agent Systems: Coordination, Role-Playing, Debate, and Consensus Protocols",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Architectures for orchestrating multiple specialised AI agents to collaborate, debate, verify, and resolve complex workflows beyond single-agent capabilities.",
+    "lead": "While single-agent systems face cognitive saturation when tackling sprawling tasks, Multi-Agent Systems (MAS) distribute problem solving across networks of specialized autonomous agents. By assigning distinct personas, tools, and objectives, multi-agent frameworks leverage peer debate, collaborative critique, and formal consensus protocols to maximise output quality and reduce errors.",
+    "analogy": "A single agent attempting to build a commercial software product is like one lone individual trying to write the code, design the UI, test security, manage servers, and audit accounting all by themselves. A multi-agent system is a well-coordinated engineering company: a Product Manager writes specs, a Developer writes code, a QA Engineer tries to break it, and an Architect reviews the pull request.",
+    "intuition": [
+      "A single prompt often forces a model to compromise between conflicting objectives: being creative versus being strictly factual, or generating code versus auditing security vulnerabilities. Multi-Agent Systems eliminate this compromise through role specialization: Agent A is explicitly instructed to write ambitious code, while Agent B is explicitly instructed to act as a cynical, adversarial code reviewer looking for bugs.",
+      "Collaborative protocols govern how agents communicate: 1) Hierarchical orchestration (a supervisor agent delegates tasks to worker agents); 2) Sequential pipelines (assembly line handoffs); 3) Peer debate (multiple agents critique each other's reasoning across rounds until reaching consensus). Empirical research shows that multi-agent debate dramatically reduces hallucinations in factual and mathematical reasoning."
+    ],
+    "steps": [
+      "Define agent personas and toolsets: configure distinct system prompts, skills, and tools for each specialized agent role.",
+      "Establish communication topology: select hierarchical (supervisor-worker), sequential pipeline, or decentralized peer network.",
+      "Define shared state or message bus: provide a shared blackboard, conversational transcript, or structured JSON schema for message exchange.",
+      "Implement multi-agent debate/critique loops: orchestrate iterative review rounds where agents review, challenge, and refine peer drafts.",
+      "Enforce termination and consensus criteria: establish exit rules (e.g. unanimous agreement, majority voting, or supervisor approval) to prevent infinite loops."
+    ],
+    "math": [
+      {
+        "h": "Multi-Agent Majority Voting Consensus",
+        "tex": "\\hat{y} = \\arg\\max_{c \\in \\mathcal{C}} \\sum_{i=1}^M w_i \\, \\mathbb{I}(y_i = c)",
+        "p": "Determines collective answer $\\hat{y}$ across $M$ agents by weighting individual agent votes $y_i$ by confidence or track-record weight $w_i$."
+      },
+      {
+        "h": "Iterative Multi-Agent Debate Convergence",
+        "tex": "P(y_i^{(t)} \\mid \\mathbf{x}, \\{y_j^{(t-1)}\\}_{j \\ne i}), \\quad t = 1, \\dots, T",
+        "p": "Updates agent $i$'s response at round $t$ conditioned on the previous arguments of all peer agents, driving consensus."
+      }
+    ],
+    "code": "class SimpleMultiAgentDebate:\n    \"\"\"Simulates a multi-agent debate between a Generator and a Critic.\"\"\"\n    def __init__(self):\n        pass\n\n    def generator_turn(self, task, critique=None):\n        if critique is None:\n            return \"Proposed Plan: Build monolithic API server with single database.\"\n        else:\n            return \"Revised Plan: Decompose into microservices with message queue to address scale concerns.\"\n\n    def critic_turn(self, proposal):\n        if \"monolithic\" in proposal:\n            return \"CRITIQUE: Monolith introduces single point of failure under high traffic. Decouple services.\"\n        return \"APPROVED: Architecture meets resilience and scaling criteria.\"\n\n    def run_debate(self, task, max_rounds=3):\n        critique = None\n        for round_idx in range(1, max_rounds + 1):\n            proposal = self.generator_turn(task, critique)\n            critique = self.critic_turn(proposal)\n            print(f\"--- Round {round_idx} ---\")\n            print(f\"Generator: {proposal}\")\n            print(f\"Critic:    {critique}\\n\")\n            if \"APPROVED\" in critique:\n                return proposal\n        return proposal\n\ndebate = SimpleMultiAgentDebate()\nfinal_plan = debate.run_debate(\"Design backend architecture for 10M users\")\nprint(f\"Final Consensus Architecture: {final_plan}\")",
+    "keyPoints": [
+      "Multi-agent systems decouple complex workflows across specialized, role-delineated autonomous agents.",
+      "Multi-agent debate and adversarial critique reduce hallucinations by exposing flawed reasoning to peer review.",
+      "Robust coordination requires well-defined communication topologies, shared state protocols, and explicit termination criteria."
+    ],
+    "pitfalls": [
+      "Allowing unconstrained conversational loops where two agents endlessly thank or agree with each other without terminating.",
+      "Over-complicating straightforward tasks with multi-agent topologies when a single structured prompt would succeed faster and at 10x lower cost."
+    ],
+    "quiz": [
+      {
+        "q": "Why does multi-agent debate reduce factual hallucinations compared to single-agent generation?",
+        "o": [
+          "Because multiple agents force the GPU to run at higher clock speeds",
+          "Because assigning an agent the explicit role of an adversarial critic forces scrutiny of logical flaws that single-pass autoregressive models gloss over",
+          "Because multi-agent systems rewrite the training dataset",
+          "Because it converts text into numerical matrices"
+        ],
+        "a": 1,
+        "why": "In multi-agent debate, dedicated critic agents are incentivized to find counterexamples and verify claims, catching hallucinations."
+      },
+      {
+        "q": "What is a \"supervisor-worker\" multi-agent topology?",
+        "o": [
+          "An architecture where every agent talks to every other agent randomly",
+          "An architecture where a centralized orchestrator agent breaks down tasks, assigns them to specialized worker agents, and synthesizes results",
+          "An architecture where only one agent is allowed to be online",
+          "A system without communication"
+        ],
+        "a": 1,
+        "why": "In supervisor-worker setups, a lead agent acts as an executive manager, delegating sub-tasks to specialists and coordinating the overall workflow."
+      },
+      {
+        "q": "What is the most common operational failure mode in poorly constrained multi-agent loops?",
+        "o": [
+          "Immediate memory corruption",
+          "Infinite conversation chatter (e.g. repetitive cycles of agreement or unresolvable debates) that drains API credits without progressing",
+          "The model deleting its own weights",
+          "GPU overheating"
+        ],
+        "a": 1,
+        "why": "Without explicit stopping conditions, maximum round limits, or consensus metrics, agents often fall into repetitive conversational loops."
+      }
+    ],
+    "related": [
+      "the-agent-loop-react",
+      "agent-evaluation-and-test-harnesses"
+    ],
+    "keywords": "multi agent systems, multi agent debate, role playing, consensus protocols, supervisor worker, agent coordination"
+  },
+  {
+    "id": "agent-protocols-mcp",
+    "short": "Agent Protocols: MCP",
+    "title": "Agent Protocols: Model Context Protocol (MCP), Tool Registries, and Standardised Interfaces",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The open architecture of the Model Context Protocol (MCP), standardising how AI agents connect to local resources, tools, and remote context servers.",
+    "lead": "Connecting AI agents to databases, local filesystems, developer tools, and external APIs historically required fragile, bespoke integration code for every tool and platform. The Model Context Protocol (MCP) establishes an open, standard client-server protocol enabling models to discover tools, query context resources, and execute commands through safe, interoperable interfaces.",
+    "analogy": "Before USB, every computer peripheral needed its own custom cable and port: round mouse plugs, printer parallel ports, joystick ports, and SCSI connectors. MCP is the USB-C of the AI agent era: a single universal connector and communication standard that lets any language model plug into any data source, code sandbox, or tool server seamlessly.",
+    "intuition": [
+      "In early agent implementations, every company wrote custom function calling wrappers. If you wanted an agent to access GitHub, Postgres, and Slack, you had to write 3 custom wrappers, maintain separate authentication handlers, and adapt prompts whenever tool signatures changed. If you switched LLM providers, you often had to rewrite the integrations.",
+      "The Model Context Protocol (MCP) solves this by decoupling the agent client (the LLM application) from the capability server (the tool/resource provider). MCP defines standard JSON-RPC 2.0 primitives: 1) Resources: passive data the agent can read (like file contents or database tables); 2) Tools: active executable functions the agent can invoke with arguments; 3) Prompts: reusable prompt templates surfaced by servers. This standard allows developers to build an MCP server once and have it work instantly across Claude, Gemini, IDE assistants, and custom agents."
+    ],
+    "steps": [
+      "Establish JSON-RPC transport: configure stdio (for local subprocess tools) or SSE/HTTP (for remote networked services).",
+      "Execute client-server handshake: exchange protocol versions and client/server capability declarations (`resources`, `tools`, `prompts`).",
+      "Discover available tools: client calls `tools/list` to retrieve JSON schema descriptions of available functions and argument specifications.",
+      "Execute tool call: when the model decides to invoke a tool, the client dispatches a `tools/call` JSON-RPC message with validated parameters.",
+      "Enforce security and sandboxing: implement human-in-the-loop confirmation or capability gating before executing dangerous operations (e.g. file deletion, database writes).",
+      "Stream tool response: return stdout, stderr, or structured content blocks back to the agent client context."
+    ],
+    "math": [
+      {
+        "h": "MCP JSON-RPC 2.0 Request-Response Protocol",
+        "tex": "\\text{Req} = \\{ \\text{jsonrpc}: \\text{\"2.0\"}, \\text{id}: k, \\text{method}: m, \\text{params}: p \\}, \\quad \\text{Resp} = \\{ \\text{jsonrpc}: \\text{\"2.0\"}, \\text{id}: k, \\text{result}: r \\}",
+        "p": "Standard asynchronous client-server messaging standard with unique request identifiers $k$ for concurrent tool execution."
+      },
+      {
+        "h": "Tool Selection Likelihood Formulation",
+        "tex": "P(\\text{Tool} = t_i \\mid \\mathbf{x}, \\{S_1, \\dots, S_K\\}) = \\text{softmax}\\left( \\mathbf{w}_{\\text{tool}}^T \\text{LLM}(\\mathbf{x}, S_i) \\right)",
+        "p": "Probability of selecting tool $t_i$ given user request $\\mathbf{x}$ and JSON schema definitions $S_i$."
+      }
+    ],
+    "code": "import json\n\nclass MockMCPServer:\n    \"\"\"Demonstrates Model Context Protocol (MCP) server primitives.\"\"\"\n    def __init__(self, name=\"file_server\"):\n        self.name = name\n        self.files = {\"data.txt\": \"Model Context Protocol standardises tool connectivity.\"}\n\n    def handle_request(self, json_rpc_msg):\n        request = json.loads(json_rpc_msg)\n        req_id = request.get(\"id\")\n        method = request.get(\"method\")\n        params = request.get(\"params\", {})\n\n        if method == \"tools/list\":\n            tools = [{\n                \"name\": \"read_file\",\n                \"description\": \"Reads contents of a file by path\",\n                \"inputSchema\": {\n                    \"type\": \"object\",\n                    \"properties\": {\"path\": {\"type\": \"string\"}},\n                    \"required\": [\"path\"]\n                }\n            }]\n            return json.dumps({\"jsonrpc\": \"2.0\", \"id\": req_id, \"result\": {\"tools\": tools}})\n\n        elif method == \"tools/call\":\n            tool_name = params.get(\"name\")\n            args = params.get(\"arguments\", {})\n            if tool_name == \"read_file\":\n                content = self.files.get(args.get(\"path\"), \"Error: File not found\")\n                return json.dumps({\"jsonrpc\": \"2.0\", \"id\": req_id, \"result\": {\"content\": [{\"type\": \"text\", \"text\": content}]}})\n                \n        return json.dumps({\"jsonrpc\": \"2.0\", \"id\": req_id, \"error\": {\"code\": -32601, \"message\": \"Method not found\"}})\n\nserver = MockMCPServer()\n\n# 1. Discover tools\nreq_list = json.dumps({\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/list\"})\nresp_list = server.handle_request(req_list)\nprint(\"MCP Tool Discovery Response:\")\nprint(json.dumps(json.loads(resp_list), indent=2))\n\n# 2. Invoke tool\nreq_call = json.dumps({\"jsonrpc\": \"2.0\", \"id\": 2, \"method\": \"tools/call\", \n                       \"params\": {\"name\": \"read_file\", \"arguments\": {\"path\": \"data.txt\"}}})\nresp_call = server.handle_request(req_call)\nprint(\"\\nMCP Tool Execution Response:\")\nprint(json.dumps(json.loads(resp_call), indent=2))",
+    "keyPoints": [
+      "The Model Context Protocol (MCP) establishes an open standard for connecting AI models to data sources and tools.",
+      "MCP defines standardised primitives for Resources (passive data), Tools (executable actions), and Prompts (templates).",
+      "Decoupling client applications from tool servers allows tool integrations to be shared universally across different AI assistants."
+    ],
+    "pitfalls": [
+      "Granting unrestricted tool execution permissions to an MCP server without human-in-the-loop approval on destructive operations.",
+      "Over-saturating the model context with dozens of heavy tool schemas, degrading function-calling accuracy."
+    ],
+    "quiz": [
+      {
+        "q": "What problem does the Model Context Protocol (MCP) solve for AI developers?",
+        "o": [
+          "It replaces Python with assembly code",
+          "It replaces fragmented, bespoke tool integrations with an open standard for exposing tools, files, and prompts to any LLM client",
+          "It trains new language models from scratch on laptops",
+          "It eliminates the need for network connections"
+        ],
+        "a": 1,
+        "why": "MCP acts as a universal communication standard between AI host applications and external tool/resource servers."
+      },
+      {
+        "q": "What is the fundamental difference between an MCP \"Resource\" and an MCP \"Tool\"?",
+        "o": [
+          "Resources are passive data that can be read (like documents); Tools are active callable functions that take arguments and perform actions",
+          "Resources are free, while Tools require payment",
+          "Tools only run on Windows, while Resources run on Linux",
+          "There is no difference"
+        ],
+        "a": 0,
+        "why": "In MCP, Resources represent readable context streams, whereas Tools represent executable operations that produce computational side effects."
+      },
+      {
+        "q": "What message protocol standard does MCP use for client-server communication?",
+        "o": [
+          "Raw binary UDP packets",
+          "JSON-RPC 2.0 over standard IO (stdio) or HTTP/Server-Sent Events (SSE)",
+          "SOAP XML over FTP",
+          "Morse code"
+        ],
+        "a": 1,
+        "why": "MCP specifies JSON-RPC 2.0 as its messaging format, running locally over stdio subprocess pipes or over HTTP/SSE for remote services."
+      }
+    ],
+    "related": [
+      "the-agent-loop-react",
+      "tool-use-and-function-calling"
+    ],
+    "keywords": "model context protocol, mcp, tool use, agent protocols, json-rpc, function calling, interoperability"
+  },
+  {
+    "id": "speculative-decoding",
+    "short": "Speculative Decoding",
+    "title": "Speculative Decoding: Drafter-Verifier Architecture and Speculative Sampling",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Inference acceleration algorithm that uses a small draft model to generate candidate tokens verified in parallel by the target model, speeding up generation 2-3x.",
+    "lead": "Autoregressive language generation is memory-bandwidth bound: generating each token requires reading billions of parameters from high-bandwidth memory (HBM) to compute a single forward pass. Speculative decoding bypasses this bottleneck by employing a lightweight draft model to generate speculative candidate token prefixes that are verified simultaneously in a single forward pass of the large target model.",
+    "analogy": "Imagine a busy senior judge dictating a legal contract. Having the judge write every single common word (\"the\", \"defendant\", \"agrees to\") is an expensive waste of their time. Instead, a fast junior clerk drafts the next 5 words, and the senior judge glances at the draft in one quick look, approving the first 4 words instantly and correcting only the 5th.",
+    "intuition": [
+      "Modern GPUs have immense compute capability (thousands of TFLOPs), but memory bandwidth is relatively limited. In standard generation, feeding 1 token to a 70B parameter model leaves 99% of GPU compute cores idle while waiting for weights to transfer from memory. In contrast, verifying 5 tokens in parallel takes virtually the same wall-clock time as processing 1 single token!",
+      "Speculative decoding exploits this: a small, ultra-fast draft model (e.g. 1B parameters) quickly speculates $K$ consecutive tokens. The large target model (e.g. 70B parameters) evaluates all $K$ tokens in one batched forward pass. Using speculative rejection sampling, the target model accepts the valid tokens according to its exact output probability distribution, accepting multiple tokens per step without altering the mathematical output distribution."
+    ],
+    "steps": [
+      "Generate candidate tokens: autoregressively sample $K$ speculative tokens $(\\tilde{x}_1, \\dots, \\tilde{x}_K)$ using the fast draft model $M_q$.",
+      "Execute batched verification: pass the current context along with all $K$ candidate tokens into the target model $M_p$ in a single forward pass.",
+      "Compute acceptance probabilities: for each candidate token $k=1 \\dots K$, accept with probability $\\min(1, \\frac{p(x_k)}{q(x_k)})$.",
+      "Handle rejection: if candidate $k$ is rejected, sample a replacement token from adjusted distribution $(p(x) - q(x))^+$ and discard subsequent candidates.",
+      "Bonus token generation: if all $K$ candidates are accepted, sample an additional bonus token from the target model logits at position $K+1$.",
+      "Update context: append all accepted tokens plus the correction/bonus token to the generation sequence."
+    ],
+    "math": [
+      {
+        "h": "Speculative Acceptance Criterion",
+        "tex": "P(\\text{Accept } x) = \\min\\left( 1, \\, \\frac{p(x)}{q(x)} \\right)",
+        "p": "Accepts candidate $x$ proposed by draft model $q$ with probability proportional to its likelihood ratio under target model $p$."
+      },
+      {
+        "h": "Adjusted Rejection Residual Distribution",
+        "tex": "P'(x) = \\frac{\\max(0, p(x) - q(x))}{\\sum_w \\max(0, p(w) - q(w))}",
+        "p": "When a candidate is rejected, sampling from residual distribution $P'(x)$ mathematically guarantees the exact target distribution $p(x)$ is preserved."
+      }
+    ],
+    "code": "import numpy as np\n\ndef speculative_sampling_step(draft_probs, target_probs, candidate_tokens):\n    \"\"\"Executes speculative rejection sampling for K candidate tokens.\"\"\"\n    accepted_tokens = []\n    \n    for k, token in enumerate(candidate_tokens):\n        p = target_probs[k, token]\n        q = draft_probs[k, token]\n        \n        # Acceptance test: accept with prob min(1, p/q)\n        accept_prob = min(1.0, p / max(q, 1e-12))\n        u = np.random.uniform(0, 1)\n        \n        if u < accept_prob:\n            accepted_tokens.append(token)\n        else:\n            # Rejection: sample replacement from (p - q)+\n            residual = np.maximum(0.0, target_probs[k] - draft_probs[k])\n            residual /= np.sum(residual)\n            correction_token = np.random.choice(len(residual), p=residual)\n            accepted_tokens.append(correction_token)\n            break  # Discard future candidates\n            \n    return accepted_tokens\n\n# Simulation: 3 candidate tokens across vocabulary of size 5\nnp.random.seed(42)\nK = 3\nvocab_size = 5\n\n# Draft model generates tokens [1, 3, 2]\ncandidates = [1, 3, 2]\ndraft_probs = np.full((K, vocab_size), 0.1)\ndraft_probs[0, 1] = 0.6\ndraft_probs[1, 3] = 0.5\ndraft_probs[2, 2] = 0.7\n\n# Target model distribution\ntarget_probs = np.full((K, vocab_size), 0.05)\ntarget_probs[0, 1] = 0.8  # Strong agreement on token 1\ntarget_probs[1, 3] = 0.6  # Agreement on token 2\ntarget_probs[2, 2] = 0.1  # Target strongly disagrees on token 3!\n\naccepted = speculative_sampling_step(draft_probs, target_probs, candidates)\nprint(f\"Proposed Candidates from Draft Model: {candidates}\")\nprint(f\"Accepted / Corrected Tokens:          {accepted}\")\nprint(f\"Effective Speedup: {len(accepted)} tokens generated in 1 target forward pass!\")",
+    "keyPoints": [
+      "Speculative decoding accelerates inference 2-3x by converting sequential token memory reads into parallel verification passes.",
+      "Speculative rejection sampling mathematically guarantees that the output token distribution remains identical to the target model.",
+      "Effective speedup depends on draft model acceptance rate and relative drafter-to-target execution latency."
+    ],
+    "pitfalls": [
+      "Using a draft model with poor alignment to the target model; low acceptance rates cause generation to run slower than standard decoding.",
+      "Applying speculative decoding on high-batch serving workloads that are already compute-bound rather than memory-bandwidth bound."
+    ],
+    "quiz": [
+      {
+        "q": "Why does speculative decoding not degrade the output quality or accuracy of the target language model?",
+        "o": [
+          "Because the draft model has higher parameter count than the target model",
+          "Because speculative rejection sampling mathematically preserves the exact probability distribution of the target model",
+          "Because all tokens are reviewed by human annotators",
+          "Because it disables temperature sampling"
+        ],
+        "a": 1,
+        "why": "Leviathan et al. proved that speculative rejection sampling produces the identical probability distribution as sampling directly from the target model."
+      },
+      {
+        "q": "Why does verifying $K$ speculative tokens in a single target model pass take roughly the same time as generating 1 token?",
+        "o": [
+          "Because GPUs only read input tokens, not weights",
+          "Because modern GPUs are memory-bandwidth bound during single-token decoding; processing $K$ tokens amortizes memory reads across parallel matrix math",
+          "Because target models have zero latency",
+          "Because verify passes use INT4 quantization"
+        ],
+        "a": 1,
+        "why": "Reading large model weights from VRAM to compute 1 token wastes compute cores. Computing $K$ tokens uses the same loaded weights across parallel operations."
+      },
+      {
+        "q": "When does speculative decoding fail to provide a wall-clock speedup?",
+        "o": [
+          "When the draft model has a low acceptance rate or when the server is already fully compute-saturated under massive batch sizes",
+          "When generating English text",
+          "When using greedy decoding",
+          "When running on NVIDIA GPUs"
+        ],
+        "a": 0,
+        "why": "If the draft model frequently predicts wrong tokens, the target rejects them, wasting draft computation without advancing generation."
+      }
+    ],
+    "related": [
+      "inference-kv-cache-batching-paged-attention",
+      "serving-latency-and-cost"
+    ],
+    "keywords": "speculative decoding, speculative sampling, draft model, inference acceleration, memory bandwidth bound"
+  },
+  {
+    "id": "caching-and-model-routing",
+    "short": "Caching and Model Routing",
+    "title": "LLM Systems: Prompt Caching, Semantic Cache, and Dynamic Model Routing",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Techniques for slashing latency and API expenditures via prefix prompt caching, semantic vector cache, and cascade model routing.",
+    "lead": "Commercial LLM applications face steep cost and latency hurdles when processing repetitive prompts or routing all queries to massive flagship models. Combining exact prefix prompt caching, semantic vector caching (GPTCache), and dynamic model routing (LLM cascade routers) reduces operational serving costs by 60–85% while cutting response latency.",
+    "analogy": "Imagine a customer service department. If every single customer who walks in is sent to meet the CEO, the company wastes millions on executive salary and wait times explode. A smart organization places a frequently-asked-questions kiosk at the entrance (Semantic Cache) and assigns junior reps to handle routine inquiries, escalating only complex legal questions to senior leadership (Model Routing).",
+    "intuition": [
+      "In typical enterprise applications, users ask semantically similar questions (\"How do I reset my password?\" vs \"Steps to change my login password\") or submit queries with massive shared system prompts (like 10,000 tokens of documentation). Standard systems blindly run full inference on every request, paying full token rates.",
+      "Systems engineering solves this with two complementary layers: 1) Caching: Prompt Caching preserves pre-computed KV-cache states for identical prompt prefixes across requests, while Semantic Caching stores past Q&A pairs in a vector database, returning cached answers when cosine similarity exceeds a high threshold (e.g. 0.95); 2) Model Routing: A lightweight classifier routes simple queries to small, inexpensive models (e.g. 8B parameters) and escalates complex multi-step reasoning to frontier models (e.g. 400B parameters)."
+    ],
+    "steps": [
+      "Check exact prefix cache: verify if input prompt prefix matches existing GPU KV-cache blocks, skipping recomputation for static system prompts.",
+      "Query semantic vector cache: embed user query and search vector cache; if cosine similarity $\\ge \\tau_{\\text{cache}}$, return cached answer immediately.",
+      "Evaluate query complexity: compute difficulty score using a small routing classifier or prompt length/intent heuristics.",
+      "Select model tier: route easy queries to tier-1 models (fast, cheap) and hard reasoning queries to tier-2 flagship models.",
+      "Execute model generation: stream generation to client while asynchronously updating the semantic cache with the newly synthesized response pair."
+    ],
+    "math": [
+      {
+        "h": "Semantic Cache Hit Criterion",
+        "tex": "\\text{Hit}(q) = \\begin{cases} \\text{Return } A(q^*) & \\text{if } \\max_{q^* \\in \\mathcal{C}} \\cos(\\mathbf{e}(q), \\mathbf{e}(q^*)) \\ge \\tau_{\\text{cache}} \\\\ \\text{Forward to LLM} & \\text{otherwise} \\end{cases}",
+        "p": "Returns cached answer $A(q^*)$ if embedding cosine similarity between incoming query and cached query exceeds threshold $\\tau_{\\text{cache}}$."
+      },
+      {
+        "h": "Cascade Routing Expected Cost",
+        "tex": "\\mathbb{E}[\\text{Cost}] = P(\\text{Easy}) \\cdot C_{\\text{small}} + P(\\text{Hard}) \\cdot (C_{\\text{small}} + C_{\\text{flagship}})",
+        "p": "Quantifies significant cost reduction when the majority of user queries are resolved by smaller model tiers."
+      }
+    ],
+    "code": "import numpy as np\n\nclass SemanticCacheAndRouter:\n    \"\"\"Demonstrates semantic caching and tier-based model routing.\"\"\"\n    def __init__(self, cache_threshold=0.92):\n        self.cache = {}\n        self.threshold = cache_threshold\n\n    def query(self, query_text, query_emb):\n        # 1. Semantic Cache Lookup\n        for cached_text, (cached_emb, cached_ans) in self.cache.items():\n            sim = np.dot(query_emb, cached_emb) / (np.linalg.norm(query_emb) * np.linalg.norm(cached_emb))\n            if sim >= self.threshold:\n                return f\"[CACHE HIT (sim: {sim:.2f})] {cached_ans}\", \"cache\"\n                \n        # 2. Dynamic Model Routing\n        # Heuristic: queries with keywords like 'analysee', 'prove', 'refactor' route to flagship\n        is_complex = any(k in query_text.lower() for k in [\"analyse\", \"prove\", \"architect\", \"synthesise\"])\n        if is_complex:\n            routed_model = \"Flagship-400B ($20/M tokens)\"\n            answer = f\"Comprehensive synthesized answer generated by {routed_model}.\"\n        else:\n            routed_model = \"Economy-8B ($0.20/M tokens)\"\n            answer = f\"Concise direct response generated by {routed_model}.\"\n            \n        # Store in cache\n        self.cache[query_text] = (query_emb, answer)\n        return f\"[ROUTED: {routed_model}] {answer}\", routed_model\n\nrouter = SemanticCacheAndRouter()\n\n# Mock embeddings (dim=3)\nq1_emb = np.array([1.0, 0.0, 0.2])\nq2_emb = np.array([0.98, 0.05, 0.2])  # Near identical to Q1!\nq3_emb = np.array([0.1, 1.0, 0.0])\n\nans1, tier1 = router.query(\"What is the capital of France?\", q1_emb)\nans2, tier2 = router.query(\"Which city is France's capital?\", q2_emb)\nans3, tier3 = router.query(\"Synthesise an enterprise architecture plan\", q3_emb)\n\nprint(ans1)\nprint(ans2)\nprint(ans3)",
+    "keyPoints": [
+      "Prompt prefix caching reuses precomputed KV activations, slashing first-token latency on shared system prompts.",
+      "Semantic caching serves repeated queries from vector databases, achieving near-zero latency and zero API cost.",
+      "Dynamic model routing directs requests to the most cost-effective model tier capable of satisfying the query complexity."
+    ],
+    "pitfalls": [
+      "Setting semantic cache similarity thresholds too low ($< 0.85$), returning answers that answer a different question.",
+      "Caching time-sensitive or personalized queries without session isolation, leaking private user data across accounts."
+    ],
+    "quiz": [
+      {
+        "q": "What is the operational benefit of Prompt Prefix Caching (e.g. Anthropic Prompt Caching)?",
+        "o": [
+          "It deletes the model weights after generation",
+          "It stores the pre-computed KV-cache for repeated system instructions and reference documents, cutting input token fees by up to 90% and reducing time-to-first-token",
+          "It translates prompts into binary code",
+          "It converts text into HTML"
+        ],
+        "a": 1,
+        "why": "Prefix caching reuses the computed KV representations of static headers and documents across queries, avoiding redundant attention recomputation."
+      },
+      {
+        "q": "How does a Semantic Cache differ from a traditional Redis key-value cache in NLP systems?",
+        "o": [
+          "Traditional caches require exact byte-for-byte string matches; semantic caches use vector similarity to match paraphrased inquiries with identical meaning",
+          "Semantic caches cannot store strings",
+          "Traditional caches only work on numbers",
+          "Semantic caches require GPUs for lookup"
+        ],
+        "a": 0,
+        "why": "Users phrase identical questions differently (\"reset password\" vs \"change login password\"). Semantic caching matches paraphrases using embedding distance."
+      },
+      {
+        "q": "What is the goal of a dynamic model cascade router (e.g. FrugalGPT)?",
+        "o": [
+          "To route easy, straightforward queries to small, inexpensive models and reserve large flagship models only for complex reasoning tasks",
+          "To shut down servers at night",
+          "To randomly pick a model for every turn",
+          "To convert text to speech"
+        ],
+        "a": 0,
+        "why": "Cascade routers evaluate query difficulty and direct simple requests to small models, cutting operational expenditures by up to 80% with minimal quality loss."
+      }
+    ],
+    "related": [
+      "serving-latency-and-cost",
+      "inference-kv-cache-batching-paged-attention"
+    ],
+    "keywords": "prompt caching, semantic cache, model routing, frugalgpt, cost reduction, llm systems, latency"
+  },
+  {
+    "id": "observability-and-tracing",
+    "short": "Observability & Tracing",
+    "title": "LLM Observability and Tracing: OpenTelemetry, Spans, Evaluations, and Cost Auditing",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Instrumentation and monitoring architectures for AI applications, capturing execution spans, token metrics, latency breakdowns, and regression evaluations.",
+    "lead": "Modern compound AI systems consist of multi-turn agent loops, chained tool calls, retrieval pipelines, and multiple LLM invocations. Debugging and monitoring these systems requires end-to-end observability: capturing OpenTelemetry-standardised distributed traces, tracking token usage and latency waterfalls, and detecting silent degradation through automated evaluation pipelines.",
+    "analogy": "Running a complex agent without observability is like managing an international airline using only a paper notepad. When a flight is delayed 4 hours, you have no idea whether it was caused by maintenance, luggage loading, air traffic control, or weather. Distributed tracing is flight telemetry: it instruments every second of the plane's journey, pinning down the exact 12-minute maintenance hangup.",
+    "intuition": [
+      "In traditional web applications, debugging is straightforward: functions return deterministic codes and error stack traces point to line numbers. In LLM applications, failures are silent: the model produces fluent prose that subtly hallucinates a tool argument or fails to call a necessary retrieval function. Without telemetry, identifying whether a failure originated in bad chunking, poor reranking, or prompt drift is impossible.",
+      "AI observability instruments applications using distributed tracing: 1) Trace: the complete end-to-end lifecycle of a user request; 2) Spans: timed units of work within the trace (e.g. Embedding generation span: 45ms, Vector search span: 120ms, LLM generation span: 1.8s); 3) Metadata attributes: recording prompt text, completion tokens, costs, model IDs, and automated evaluation scores for every execution span."
+    ],
+    "steps": [
+      "Instrument application lifecycle: wrap agent workflows, tool calls, and LLM API invocations with OpenTelemetry-compliant trace spans.",
+      "Record span metadata: capture input tokens, completion tokens, model parameters (temperature), latency, and monetary cost per call.",
+      "Correlate multi-step agent trajectories: propagate parent-child span IDs across sub-agent calls and asynchronous task executions.",
+      "Configure automated online evaluations: evaluate sample traces asynchronously using LLM-as-a-judge for faithfulness and toxicity.",
+      "Aggregate metrics dashboards: visualise latency percentiles (P50, P95, P99), token consumption trends, error rates, and cache hit ratios.",
+      "Set automated alerting thresholds: trigger alerts on cost anomalies, rate limit spikes, or sudden drops in task success rates."
+    ],
+    "math": [
+      {
+        "h": "Total Trace Latency Waterfall",
+        "tex": "T_{\\text{total}} = \\sum_{s \\in \\text{Sequential}} T_s + \\max_{p \\in \\text{Parallel}} T_p",
+        "p": "Calculates overall request duration by summing sequential execution spans and bottleneck parallel asynchronous spans."
+      },
+      {
+        "h": "Total Session Operational Cost",
+        "tex": "\\text{Cost} = \\sum_{i=1}^M \\left( N_{\\text{prompt}}^{(i)} \\cdot P_{\\text{in}} + N_{\\text{comp}}^{(i)} \\cdot P_{\\text{out}} \\right)",
+        "p": "Aggregates token consumption across $M$ distinct spans weighted by input price $P_{\\text{in}}$ and output price $P_{\\text{out}}$."
+      }
+    ],
+    "code": "import time\n\nclass SimpleSpan:\n    def __init__(self, name, parent=None):\n        self.name = name\n        self.parent = parent\n        self.start_time = None\n        self.end_time = None\n        self.attributes = {}\n\n    def __enter__(self):\n        self.start_time = time.time()\n        return self\n\n    def __exit__(self, exc_type, exc_val, exc_tb):\n        self.end_time = time.time()\n\n    def set_attribute(self, key, value):\n        self.attributes[key] = value\n\n    @property\n    def duration_ms(self):\n        return (self.end_time - self.start_time) * 1000\n\n# Simulate an instrumented RAG pipeline trace\ntrace_spans = []\n\ndef run_instrumented_rag(query):\n    with SimpleSpan(\"rag_pipeline\") as root_span:\n        root_span.set_attribute(\"query\", query)\n        \n        # Child Span 1: Embedding\n        with SimpleSpan(\"embed_query\", parent=root_span) as s1:\n            time.sleep(0.02)  # Simulate 20ms embedding\n            s1.set_attribute(\"model\", \"text-embedding-3\")\n        trace_spans.append(s1)\n        \n        # Child Span 2: Vector Search\n        with SimpleSpan(\"vector_search\", parent=root_span) as s2:\n            time.sleep(0.05)  # Simulate 50ms search\n            s2.set_attribute(\"results_count\", 3)\n        trace_spans.append(s2)\n        \n        # Child Span 3: LLM Generation\n        with SimpleSpan(\"llm_generation\", parent=root_span) as s3:\n            time.sleep(0.12)  # Simulate 120ms generation\n            s3.set_attribute(\"prompt_tokens\", 850)\n            s3.set_attribute(\"completion_tokens\", 140)\n            s3.set_attribute(\"cost_usd\", 0.0032)\n        trace_spans.append(s3)\n        \n    trace_spans.append(root_span)\n\nrun_instrumented_rag(\"Explain quantum computing\")\n\nprint(\"LLM Observability Trace Report:\")\nfor span in trace_spans:\n    parent_info = f\" (parent: {span.parent.name})\" if span.parent else \" [ROOT]\"\n    print(f\"  Span: {span.name:18} | Duration: {span.duration_ms:5.1f} ms{parent_info}\")\n    if \"cost_usd\" in span.attributes:\n        print(f\"    --> Tokens: {span.attributes['prompt_tokens']} in / {span.attributes['completion_tokens']} out | Cost: ${span.attributes['cost_usd']:.4f}\")",
+    "keyPoints": [
+      "Observability instruments multi-step agent systems with distributed traces, spans, and execution metadata.",
+      "Telemetry captures token consumption, latency waterfalls, and monetary cost breakdowns per request.",
+      "Continuous evaluation and automated LLM-as-a-judge monitoring detect silent quality regressions in production."
+    ],
+    "pitfalls": [
+      "Logging sensitive user personal identifiable information (PII) directly into unencrypted telemetry span payloads.",
+      "Running synchronous evaluations on every single production request, doubling user latency; use asynchronous sampling instead."
+    ],
+    "quiz": [
+      {
+        "q": "What is a \"span\" in distributed tracing for AI systems?",
+        "o": [
+          "The maximum number of tokens in a vocabulary",
+          "A single timed unit of work within a trace (such as a database query, embedding lookup, or LLM API call) with associated start/end times and metadata",
+          "A physical cable connecting two servers",
+          "The font size of output text"
+        ],
+        "a": 1,
+        "why": "In OpenTelemetry, a trace represents the end-to-end request, while spans represent individual timed operations within that request."
+      },
+      {
+        "q": "Why are traditional software error stack traces insufficient for debugging compound AI applications?",
+        "o": [
+          "Because LLMs cannot run on servers",
+          "Because failures in AI systems are frequently silent semantic degradations (e.g. hallucinations, flawed retrieval, or invalid tool parameters) that return HTTP 200 success codes",
+          "Because Python does not support logging",
+          "Because traces only work in test environments"
+        ],
+        "a": 1,
+        "why": "A model can return an incorrect or hallucinated answer with status code 200 without throwing an exception, requiring semantic monitoring and tracing."
+      },
+      {
+        "q": "How should evaluation metrics (e.g. faithfulness, toxicity) be collected in high-throughput production environments?",
+        "o": [
+          "By halting generation until three human annotators approve every token",
+          "By logging traces and running automated evaluations asynchronously on a sampled percentage of sessions",
+          "By deleting all logs to save disk space",
+          "By forcing the client to compute BLEU scores"
+        ],
+        "a": 1,
+        "why": "Asynchronous evaluation on a sampled stream avoids adding latency to end users while maintaining statistical visibility over system health."
+      }
+    ],
+    "related": [
+      "serving-latency-and-cost",
+      "the-agent-loop-react"
+    ],
+    "keywords": "observability, tracing, opentelemetry, spans, latency waterfall, token monitoring, evaluation"
+  },
+  {
+    "id": "privacy-differential-privacy-and-federated-learning",
+    "short": "Privacy: DP & Federated Learning",
+    "title": "Privacy-Preserving Machine Learning: Differential Privacy and Federated Learning",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The mathematical guarantees of Differential Privacy and decentralized training mechanics of Federated Learning to protect confidential user data.",
+    "lead": "Machine learning models trained on sensitive user data are vulnerable to membership inference and training data reconstruction attacks. Privacy-Preserving Machine Learning (PPML) mitigates these threats through rigorous mathematical frameworks: Differential Privacy (DP) guarantees plausible deniability via calibrated noise injection, while Federated Learning (FL) trains models collaboratively across decentralized edge devices without centralizing private data.",
+    "analogy": "Imagine a public survey asking citizens if they have committed tax fraud. If respondents answer truthfully, nobody participates for fear of prosecution. Under randomized response (Differential Privacy), every participant flips a coin: if heads, they answer truthfully; if tails, they answer \"yes\". A statistician can still reconstruct the exact population percentage mathematically, yet any individual respondent has complete legal plausible deniability.",
+    "intuition": [
+      "Deep neural networks have enormous capacity and can memorize rare training outliers (like a patient's clinical diagnosis or a user's credit card number). An attacker with model access can launch a Membership Inference Attack to determine if a specific person was in the training dataset, or prompt an LLM to regurgitate memorized secrets.",
+      "Differential Privacy (DP) provides a rigorous mathematical definition of privacy: the output of a computation should be virtually indistinguishable whether any single individual's data is included or excluded from the dataset. In DP-SGD (Differentially Private Stochastic Gradient Descent), this is achieved by clipping per-sample gradients to a maximum norm $C$ and adding Gaussian noise $\\sigma$. Federated Learning complements this by keeping data on client devices (e.g. mobile phones) and transmitting only model weight updates, aggregated via algorithms like FedAvg."
+    ],
+    "steps": [
+      "Define privacy budget $(\\epsilon, \\delta)$: establish the maximum allowable privacy loss $\\epsilon$ and failure probability $\\delta$ for the application.",
+      "Implement per-sample gradient clipping: during training, clip the $L_2$ norm of every individual sample gradient to maximum threshold $C$.",
+      "Inject calibrated noise: add Gaussian noise scaled by noise multiplier $\\sigma$ and clipping bound $C$ to the aggregated mini-batch gradient.",
+      "Track cumulative privacy loss: monitor privacy budget consumption across training iterations using Rényi Differential Privacy (RDP) accountants.",
+      "Distribute decentralized training (FL): broadcast global model weights to participating edge clients, train locally for $E$ epochs on device data.",
+      "Aggregate model updates (FedAvg): average client parameter updates on the central server weighted by each client's local dataset size."
+    ],
+    "math": [
+      {
+        "h": "Differential Privacy Definition ($(\\epsilon, \\delta)$-DP)",
+        "tex": "P(\\mathcal{M}(D) \\in S) \\le e^\\epsilon P(\\mathcal{M}(D') \\in S) + \\delta",
+        "p": "Guarantees that randomized mechanism $\\mathcal{M}$ outputs nearly identical distributions on any two neighbouring datasets $D, D'$ differing by at most one individual."
+      },
+      {
+        "h": "Federated Averaging (FedAvg) Update",
+        "tex": "w_{t+1} = \\sum_{k=1}^K \\frac{n_k}{n} w_{t+1}^k, \\quad w_{t+1}^k = w_t - \\eta \\nabla F_k(w_t)",
+        "p": "Aggregates decentralized weights from $K$ client devices weighted by their local sample count $n_k$ relative to total samples $n$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef dp_sgd_step(gradients, clip_norm=1.0, noise_multiplier=0.5):\n    \"\"\"Simulates a Differentially Private SGD gradient aggregation step.\"\"\"\n    # 1. Per-sample gradient clipping\n    clipped_grads = []\n    for g in gradients:\n        norm = np.linalg.norm(g)\n        clip_factor = min(1.0, clip_norm / max(norm, 1e-8))\n        clipped_grads.append(g * clip_factor)\n        \n    clipped_grads = np.array(clipped_grads)\n    \n    # 2. Sum clipped gradients\n    summed_grad = np.sum(clipped_grads, axis=0)\n    \n    # 3. Add calibrated Gaussian noise\n    sigma = noise_multiplier * clip_norm\n    noise = np.random.normal(0, sigma, size=summed_grad.shape)\n    \n    # Private average gradient\n    private_grad = (summed_grad + noise) / len(gradients)\n    return private_grad\n\ndef federated_averaging(client_weights, client_sizes):\n    \"\"\"Computes FedAvg weighted parameter aggregation across clients.\"\"\"\n    total_samples = sum(client_sizes)\n    global_weights = np.zeros_like(client_weights[0])\n    for w, n in zip(client_weights, client_sizes):\n        global_weights += (n / total_samples) * w\n    return global_weights\n\n# Simulation: 5 sample gradients\nnp.random.seed(42)\nsample_grads = [np.array([2.5, -1.2, 0.4]), np.array([0.1, 0.2, 0.1]), \n                np.array([8.0, 4.0, -2.0])] # Sample 3 is an outlier!\n\npriv_grad = dp_sgd_step(sample_grads, clip_norm=1.5, noise_multiplier=0.8)\nprint(\"Differentially Private Aggregated Gradient:\")\nprint(f\"  Private Gradient: {priv_grad.round(4)}\")\n\n# Federated Averaging simulation across 3 clients\nclient_w = [np.array([1.2, 0.8]), np.array([1.4, 0.7]), np.array([1.1, 0.9])]\nclient_n = [1000, 500, 1500]\nfed_w = federated_averaging(client_w, client_n)\nprint(f\"\\nFederated Averaged Global Weights: {fed_w.round(4)}\")",
+    "keyPoints": [
+      "Differential Privacy mathematically bounds the privacy risk of individuals contributing to a machine learning dataset.",
+      "DP-SGD clips per-sample gradients and adds calibrated Gaussian noise to prevent memorization of outliers.",
+      "Federated Learning trains models collaboratively across decentralized devices, ensuring raw training data never leaves client hardware."
+    ],
+    "pitfalls": [
+      "Clipping gradients too aggressively (norm too small), destroying gradient signal and causing model underfitting.",
+      "Assuming Federated Learning alone guarantees privacy; gradient updates themselves can leak training data via inversion attacks unless combined with Differential Privacy."
+    ],
+    "quiz": [
+      {
+        "q": "What is the operational meaning of the parameter $\\epsilon$ (epsilon) in Differential Privacy?",
+        "o": [
+          "The learning rate of the model",
+          "The privacy loss budget: smaller $\\epsilon$ indicates stronger privacy protection but adds more noise to the output",
+          "The number of GPUs in the cluster",
+          "The percentage of missing data in the dataset"
+        ],
+        "a": 1,
+        "why": "In $(\\epsilon, \\delta)$-DP, $\\epsilon$ quantifies the worst-case privacy budget; smaller values enforce tighter privacy guarantees."
+      },
+      {
+        "q": "Why does DP-SGD require clipping per-sample gradients before adding noise?",
+        "o": [
+          "To bound the maximum sensitivity of the gradient sum, ensuring that no single individual sample can exert unlimited influence on the aggregate update",
+          "To speed up floating point operations",
+          "To convert negative numbers into positive numbers",
+          "To save disk memory"
+        ],
+        "a": 0,
+        "why": "Noise calibration requires knowing the maximum potential impact (sensitivity) of a single record; clipping to $C$ sets that sensitivity bound."
+      },
+      {
+        "q": "What is a major challenge in Federated Learning known as \"Non-IID client data\"?",
+        "o": [
+          "Clients do not have internet connections",
+          "Data distributions across different mobile devices vary widely depending on individual user habits, complicating global model convergence",
+          "Clients refuse to accept software updates",
+          "Device batteries run out of charge"
+        ],
+        "a": 1,
+        "why": "Different users exhibit vastly different language, photo, or typing habits. Non-IID distributions cause local client gradients to pull in conflicting directions."
+      }
+    ],
+    "related": [
+      "guardrails-and-red-teaming",
+      "ci-cd-for-ml"
+    ],
+    "keywords": "differential privacy, federated learning, dp-sgd, privacy preserving ml, membership inference, fedavg"
+  },
+  {
+    "id": "ai-governance-and-regulation",
+    "short": "AI Governance & Regulation",
+    "title": "AI Governance, Compliance, and Risk Management: The EU AI Act and NIST AI RMF",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The regulatory frameworks and compliance standards governing commercial AI deployment, including the EU AI Act risk tiers and the NIST AI RMF.",
+    "lead": "As artificial intelligence transitions from research labs to mission-critical public infrastructure, regulatory bodies worldwide are enacting strict legal compliance regimes. Navigating this landscape requires understanding risk-tier taxonomies (such as the EU AI Act), risk management frameworks (NIST AI RMF), model cards, conformity assessments, and algorithmic accountability.",
+    "analogy": "Developing AI today is like the early automotive industry in the 1920s. Initial cars were built without speed limits, seatbelts, or mandatory crash testing. As motor vehicles became widespread, governments established transport ministries, traffic laws, safety inspections, and seatbelt mandates. AI governance establishes similar mandatory safety standards and inspection protocols for algorithmic engines.",
+    "intuition": [
+      "Deploying AI models in sensitive societal domains (healthcare, hiring, policing, credit scoring) can cause catastrophic real-world harm if systems are biased, brittle, or opaque. Governments are shifting away from voluntary ethical guidelines toward binding statutory regulations with heavy fines for non-compliance.",
+      "The European Union AI Act establishes a risk-based regulatory pyramid: 1) Unacceptable Risk (banned practices like cognitive manipulation or social scoring); 2) High Risk (regulated domains like employment, law enforcement, critical infrastructure requiring mandatory conformity assessments, bias audits, and human oversight); 3) Specific Transparency Risk (chatbots and deepfakes requiring clear labelling); 4) Minimal Risk (unregulated spam filters and video games). Concurrently, the NIST AI Risk Management Framework (RMF) organizes organizational governance around four core functions: Govern, Map, Measure, and Manage."
+    ],
+    "steps": [
+      "Conduct risk-tier classification: assess whether the intended AI use case falls under prohibited, high-risk, or minimal-risk statutory definitions.",
+      "Establish governance policies (Govern): define accountability structures, cross-functional oversight committees, and technical documentation protocols.",
+      "Map context and potential harms (Map): document deployment context, stakeholder populations, upstream training datasets, and foreseeable failure modes.",
+      "Measure performance and bias (Measure): evaluate demographic disparities, calibration error, robustness under adversarial stress, and factual faithfulness.",
+      "Implement risk mitigation controls (Manage): apply technical guardrails, continuous monitoring, incident response procedures, and human-in-the-loop fallback.",
+      "Publish comprehensive Model Cards: document model capabilities, limitations, evaluated benchmarks, and out-of-scope applications."
+    ],
+    "math": [
+      {
+        "h": "NIST AI Risk Score Matrix",
+        "tex": "\\text{Risk} = P(\\text{Adverse Event}) \\times \\text{Severity of Harm}",
+        "p": "Evaluates systemic risk by multiplying the empirical likelihood of a model failure by the real-world severity of harm."
+      },
+      {
+        "h": "Maximum Statutory Fine Calculation (EU AI Act)",
+        "tex": "\\text{Fine}_{\\max} = \\max\\left( €35,000,000, \\, 7\\% \\times \\text{Global Annual Turnover} \\right)",
+        "p": "Penalties for deploying prohibited AI systems under the European Union AI Act enforcement regime."
+      }
+    ],
+    "code": "class AIGovernanceComplianceAudit:\n    \"\"\"Simulates an EU AI Act Risk Tier assessment and compliance checklist.\"\"\"\n    def __init__(self, system_name, domain, uses_biometrics=False, is_autonomous_decision=False):\n        self.name = system_name\n        self.domain = domain\n        self.uses_biometrics = uses_biometrics\n        self.is_autonomous_decision = is_autonomous_decision\n\n    def classify_risk_tier(self):\n        # 1. Prohibited Risk Check\n        if self.domain == \"social_scoring\" or (self.uses_biometrics and self.domain == \"realtime_public_surveillance\"):\n            return \"UNACCEPTABLE RISK (PROHIBITED)\", [\"Cease development immediately; banned under Article 5.\"]\n\n        # 2. High Risk Check\n        high_risk_domains = [\"employment\", \"credit_scoring\", \"healthcare\", \"critical_infrastructure\", \"justice\"]\n        if self.domain in high_risk_domains:\n            requirements = [\n                \"Technical Documentation & Logging (Art. 11/12)\",\n                \"High Quality Training Data & Bias Audits (Art. 10)\",\n                \"Human Oversight Integration (Art. 14)\",\n                \"Accuracy, Robustness & Cybersecurity Testing (Art. 15)\",\n                \"Registration in EU Database before commercial deployment\"\n            ]\n            return \"HIGH RISK (MANDATORY CONFORMITY ASSESSMENT)\", requirements\n\n        # 3. Minimal Risk\n        return \"MINIMAL RISK\", [\"Voluntary codes of conduct; standard software QA.\"]\n\n# Example: Auditing an AI-powered resume screening tool\naudit = AIGovernanceComplianceAudit(\n    system_name=\"TalentScreen-v2\",\n    domain=\"employment\",\n    uses_biometrics=False,\n    is_autonomous_decision=True\n)\n\ntier, checklist = audit.classify_risk_tier()\nprint(f\"System: '{audit.name}' in Domain: '{audit.domain}'\")\nprint(f\"Assigned EU AI Act Regulatory Tier: {tier}\\n\")\nprint(\"Mandatory Statutory Compliance Checklist:\")\nfor req in checklist:\n    print(f\"  [ ] {req}\")",
+    "keyPoints": [
+      "The EU AI Act classifies artificial intelligence applications into four risk tiers: Unacceptable, High, Transparency, and Minimal.",
+      "High-risk AI systems must undergo mandatory conformity assessments, bias auditing, technical documentation, and human-in-the-loop oversight.",
+      "The NIST AI Risk Management Framework structures organizational safety across four continuous functions: Govern, Map, Measure, and Manage."
+    ],
+    "pitfalls": [
+      "Treating AI governance as a one-time legal sign-off rather than an ongoing continuous monitoring and re-evaluation discipline.",
+      "Deploying high-risk autonomous systems in employment or lending without human oversight and appeal mechanisms for affected individuals."
+    ],
+    "quiz": [
+      {
+        "q": "Under the European Union AI Act, which class of AI systems is strictly prohibited?",
+        "o": [
+          "Search engines and web browsers",
+          "Systems that deploy subliminal cognitive manipulation or social scoring systems run by public authorities",
+          "Spam email filters",
+          "Video game non-player characters"
+        ],
+        "a": 1,
+        "why": "Article 5 of the EU AI Act bans systems deemed unacceptable threats to fundamental rights, such as social scoring and exploitative biometric surveillance."
+      },
+      {
+        "q": "What are the four core functions defined in the NIST AI Risk Management Framework (AI RMF)?",
+        "o": [
+          "Compile, Link, Run, Debug",
+          "Govern, Map, Measure, and Manage",
+          "Input, Hidden, Output, Loss",
+          "Search, Filter, Rank, Display"
+        ],
+        "a": 1,
+        "why": "The NIST AI RMF organizes enterprise risk management into four core functions: Govern (policies), Map (context), Measure (quantitative metrics), and Manage (mitigation)."
+      },
+      {
+        "q": "What is the primary function of a standardised \"Model Card\"?",
+        "o": [
+          "A physical credit card used to pay cloud server bills",
+          "A structured technical document detailing a model's architecture, intended use, evaluated benchmarks, limitations, and ethical considerations",
+          "A warranty sticker placed on GPU cases",
+          "A certificate allowing developers to skip unit tests"
+        ],
+        "a": 1,
+        "why": "Pioneered by Mitchell et al., Model Cards provide standardised transparency into model capabilities, training data, and known limitations."
+      }
+    ],
+    "related": [
+      "guardrails-and-red-teaming",
+      "bias-and-fairness-in-nlp"
+    ],
+    "keywords": "ai governance, eu ai act, nist ai rmf, model cards, compliance, high risk ai, risk management"
+  },
+  {
+    "id": "alignment-and-interpretability-overview",
+    "short": "Alignment & Interpretability",
+    "title": "AI Alignment and Mechanistic Interpretability: Circuits, Steering Vectors, and Safety Taxonomies",
+    "task": "concepts",
+    "track": "ai",
+    "tier": "Extended",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "The frontier of AI safety research, investigating outer/inner alignment, reward hacking, mechanistic interpretability, and activation steering.",
+    "lead": "As foundation models scale in capability, ensuring they remain safe, controllable, and aligned with human intent becomes paramount. AI Alignment addresses the challenge of building systems that pursue intended goals rather than unintended proxies, while Mechanistic Interpretability reverse-engineers the internal computational circuits, representations, and polysemantic features inside neural networks.",
+    "analogy": "Imagine attempting to understand an alien spacecraft. Alignment is ensuring that when you pull the steering yoke to the left, the ship turns left instead of exploding or hijacking your controls. Mechanistic interpretability is opening up the spaceship's engine bay with an oscilloscope and reverse-engineering the wiring schematics to understand how electrical currents flow between components.",
+    "intuition": [
+      "AI Alignment decomposes into two fundamental challenges: 1) Outer Alignment: did we formulate the right objective function? (e.g. optimising pure click-through rates leads models to promote sensationalist outrage); 2) Inner Alignment: did the neural network internalize our intended goal, or did it learn a deceptive sub-goal that happens to score well during training (goal misgeneralisation or deceptive alignment)?",
+      "Because deep neural networks operate as opaque matrices of billions of floating-point numbers, we cannot verify alignment simply by inspecting weight tensors. Mechanistic Interpretability seeks to reverse-engineer neural networks into human-interpretable computer programs: decomposing polysemantic neurons into monosemantic features using Sparse Autoencoders (SAEs), mapping attention induction heads, and steering generation dynamically using activation addition (steering vectors)."
+    ],
+    "steps": [
+      "Identify alignment vulnerabilities: audit for reward hacking, sycophancy, power-seeking tendencies, and deceptive reasoning in out-of-distribution environments.",
+      "Train Sparse Autoencoders (SAEs): train sparse autoencoders on internal residual stream activations to disentangle polysemantic superposition into monosemantic feature directions.",
+      "Trace attention induction heads: detect transformer attention head pairs that copy and paste patterned sequences, executing in-context learning.",
+      "Extract steering vectors: compute the difference vector $\\mathbf{v}_{\\text{steer}} = \\mathbf{h}_{\\text{honest}} - \\mathbf{h}_{\\text{dishonest}}$ between paired contrastive completions.",
+      "Apply activation steering: add $\\alpha \\cdot \\mathbf{v}_{\\text{steer}}$ to the intermediate residual stream during forward passes to steer behaviour without fine-tuning weights.",
+      "Evaluate safety margin: test robustness under red-teaming attacks and assess whether safety interventions impose a performance tax on general reasoning."
+    ],
+    "math": [
+      {
+        "h": "Sparse Autoencoder (SAE) Monosemantic Objective",
+        "tex": "\\mathcal{L}_{\\text{SAE}}(\\mathbf{x}) = \\| \\mathbf{x} - \\mathbf{W}_{\\text{dec}} \\mathbf{f}(\\mathbf{x}) \\|_2^2 + \\lambda \\| \\mathbf{f}(\\mathbf{x}) \\|_1, \\quad \\mathbf{f}(\\mathbf{x}) = \\text{ReLU}(\\mathbf{W}_{\\text{enc}}(\\mathbf{x} - \\mathbf{b}_{\\text{dec}}) + \\mathbf{b}_{\\text{enc}})",
+        "p": "Reconstructs residual stream $\\mathbf{x}$ using an overcomplete sparse feature dictionary $\\mathbf{f}(\\mathbf{x})$ penalised by $L_1$ sparsity regularisation."
+      },
+      {
+        "h": "Activation Steering (Representation Engineering)",
+        "tex": "\\mathbf{h}_l' = \\mathbf{h}_l + \\alpha \\cdot \\mathbf{v}_{\\text{concept}}",
+        "p": "Intervenes directly on layer $l$ hidden state by injecting directional concept vector $\\mathbf{v}_{\\text{concept}}$ with intervention strength $\\alpha$."
+      }
+    ],
+    "code": "import numpy as np\n\nclass ActivationSteeringToy:\n    \"\"\"Demonstrates representation engineering and activation steering on residual states.\"\"\"\n    def __init__(self, dim=4):\n        self.dim = dim\n\n    def extract_steering_vector(self, positive_states, negative_states):\n        \"\"\"Computes mean difference vector for a target behavioural concept.\"\"\"\n        mean_pos = np.mean(positive_states, axis=0)\n        mean_neg = np.mean(negative_states, axis=0)\n        vector = mean_pos - mean_neg\n        return vector / (np.linalg.norm(vector) + 1e-8)\n\n    def forward_with_steering(self, hidden_state, steering_vector, alpha=1.5):\n        \"\"\"Injects steering vector into hidden state during inference.\"\"\"\n        steered_state = hidden_state + alpha * steering_vector\n        return steered_state\n\n# Simulation: Steer model from 'hallucination/dishonesty' toward 'truthfulness'\nnp.random.seed(42)\nd = 4\n\n# Hidden states when answering truthfully vs dishonestly\nhonest_states = np.array([\n    [1.2, 0.8, -0.4, 0.9],\n    [1.5, 0.7, -0.2, 1.1],\n    [1.3, 0.9, -0.5, 0.8]\n])\ndishonest_states = np.array([\n    [-0.5, 0.2, 1.2, -0.8],\n    [-0.7, 0.1, 1.4, -0.6],\n    [-0.4, 0.3, 1.1, -0.9]\n])\n\nsteering_sim = ActivationSteeringToy(dim=d)\nv_truth = steering_sim.extract_steering_vector(honest_states, dishonest_states)\n\n# Ambiguous query state that leans slightly dishonest\nneutral_state = np.array([0.1, 0.2, 0.8, -0.2])\nsteered_state = steering_sim.forward_with_steering(neutral_state, v_truth, alpha=2.0)\n\nprint(f\"Extracted Truthfulness Steering Vector: {v_truth.round(3)}\")\nprint(f\"Original Neutral Activation:           {neutral_state.round(3)}\")\nprint(f\"Steered Output Activation:              {steered_state.round(3)}\")",
+    "keyPoints": [
+      "Outer alignment formulates correct objectives; inner alignment ensures neural networks internalize intended goals without deceptive sub-goals.",
+      "Mechanistic interpretability aims to reverse-engineer neural networks into human-auditable computational circuits.",
+      "Sparse autoencoders resolve polysemantic superposition, and activation steering allows direct control over model representations during inference."
+    ],
+    "pitfalls": [
+      "Assuming an aligned model during evaluation will remain aligned in deployment; models can exhibit \"deceptive alignment\", acting cooperative until opportunities emerge.",
+      "Injecting steering vectors with excessive strength $\\alpha$, which corrupts syntactic fluency and causes gibberish generation."
+    ],
+    "quiz": [
+      {
+        "q": "What is the distinction between \"outer alignment\" and \"inner alignment\"?",
+        "o": [
+          "Outer alignment applies to computer hardware; inner alignment applies to Python scripts",
+          "Outer alignment ensures the specified loss function matches true human intent; inner alignment ensures the learned model actually optimises that intended objective rather than an unintended proxy",
+          "Outer alignment is measured in minutes; inner alignment is measured in seconds",
+          "There is no distinction"
+        ],
+        "a": 1,
+        "why": "Outer alignment is about specifying the right objective; inner alignment is about whether the trained model genuinely internalizes that objective without goal misgeneralisation."
+      },
+      {
+        "q": "Why do neurons in deep neural networks exhibit \"polysemanticity\" (responding to multiple unrelated concepts)?",
+        "o": [
+          "Because the neural network is defective and needs replacement",
+          "Because the network uses superposition to represent far more conceptual features than it has physical neurons by assigning features to non-orthogonal directions",
+          "Because computers cannot represent negative numbers",
+          "Because ReLU activations cannot fire twice"
+        ],
+        "a": 1,
+        "why": "Superposition theory explains that networks compress vast numbers of features into fewer dimensional spaces by packing features as non-orthogonal linear combinations."
+      },
+      {
+        "q": "How does activation steering (representation engineering) alter model behaviour during inference?",
+        "o": [
+          "It deletes the final linear layer of the network",
+          "It directly adds a pre-computed directional concept vector into intermediate layer activations during the forward pass, steering generation without retraining weights",
+          "It rewrites the user query in Pig Latin",
+          "It resets all model weights to random noise"
+        ],
+        "a": 1,
+        "why": "Activation addition directly shifts residual stream activations along desired conceptual axes (e.g. honesty, refusal, sentiment) during forward inference."
+      }
+    ],
+    "related": [
+      "instruction-tuning-rlhf-and-dpo",
+      "guardrails-and-red-teaming"
+    ],
+    "keywords": "alignment, mechanistic interpretability, sparse autoencoders, activation steering, representation engineering, inner alignment"
   }
 ];
