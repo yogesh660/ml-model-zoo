@@ -2755,4 +2755,1944 @@ print("Verified: CTC greedy best-path decoding executed successfully!")`,
   related: ['vision-transformer', 'semantic-segmentation-fcn-and-u-net', 'the-attention-mechanism'],
   keywords: 'ocr optical character recognition document ai dbnet crnn ctc connectionist temporal classification layoutlm text detection text recognition trocr',
 },
+  {
+    "id": "classical-segmentation-k-means-watershed-grabcut",
+    "short": "Classical segmentation",
+    "title": "Classical Image Segmentation: K-Means Colour Clustering, Watershed, and GrabCut",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Segmenting visual scenes without deep learning using pixel colour clustering, topographical gradient watershed flooding, and iterative min-cut GrabCut graph cuts.",
+    "lead": "Before deep convolutional networks dominated computer vision, image segmentation relied on rigorous mathematical algorithms rooted in graph theory, topographical fluid dynamics, and statistical clustering. Techniques like K-Means colour space clustering, the Watershed transform, and GrabCut provide fast, interpretable, training-free methods for isolating foreground objects, separating touching cells in microscopy, and extracting interactive foreground cutouts.",
+    "analogy": "Imagine an aerial photograph of mountainous terrain during a rising flood. The Watershed algorithm treats gradient magnitudes as topographical peaks and basins: as water rises simultaneously from every local valley, dams are erected wherever rising ponds touch, perfectly outlining mountain ridges. GrabCut is like stretching an elastic rubber membrane around an object: it finds the minimum-energy boundary that wraps tightly around the subject while cutting through the fewest connecting tissue fibers.",
+    "intuition": [
+      "Image segmentation partitions an image into semantically coherent pixel regions. In classical vision, segmentation operates on low-level cues: pixel colour, intensity gradients, and spatial coordinates.",
+      "K-Means segmentation clusters pixels in colour space (such as CIE L*a*b* or RGB) into $K$ discrete colour modes. While fast, raw K-means ignores spatial connectivity, producing noisy, fragmented pixel masks.",
+      "The Watershed algorithm treats a greyscale gradient image as a 3D topographic relief map: light pixels are high ridges (boundaries), and dark pixels are low basins. Flooding basins from predefined markers partitions the image into catchment basins. However, raw gradient maps contain thousands of local noise minima, causing severe over-segmentation; marker-controlled watershed solves this by initializing floods strictly from user-defined seeds.",
+      "GrabCut (Rother et al.) formulates segmentation as an energy minimisation problem on a graph. Pixels are represented as graph nodes connected to source (Foreground) and sink (Background) terminals. Using Gaussian Mixture Models (GMMs) to model colour distributions and the Max-Flow / Min-Cut theorem, GrabCut iteratively cuts the minimum-cost graph edges, producing clean boundaries with minimal user bounding-box hints."
+    ],
+    "steps": [
+      "Select segmentation approach: Choose K-means for colour reduction, marker-controlled watershed for separating touching objects, or GrabCut for interactive object extraction.",
+      "Preprocess and filter: Apply bilateral filtering or median blur to suppress high-frequency sensor noise without blurring object edges.",
+      "Compute morphological gradients: For watershed, compute Sobel or morphological gradient $\\nabla I$ to identify boundary ridges.",
+      "Generate seed markers: Apply distance transforms and thresholding to isolate confident object cores and background markers.",
+      "Apply graph cut (GrabCut): Initialize foreground/background Gaussian Mixture Models from a user bounding box; iteratively alternate between assigning pixels to GMM components and computing min-cut graph partitioning.",
+      "Post-process boundaries: Apply morphological closing and contour smoothing to produce final clean segmentation masks."
+    ],
+    "math": [
+      {
+        "h": "GrabCut Energy Minimisation Formulation",
+        "tex": "E(\\underline{\\alpha}, \\mathbf{k}, \\underline{\\theta}, \\mathbf{z}) = U(\\underline{\\alpha}, \\mathbf{k}, \\underline{\\theta}, \\mathbf{z}) + V(\\underline{\\alpha}, \\mathbf{z})",
+        "p": "Decomposes segmentation energy into regional data fidelity $U$ (likelihood under GMM colour models) and boundary smoothness $V$ (contrast-dependent penalty for assigning adjacent pixels to different classes)."
+      },
+      {
+        "h": "Boundary Smoothness Edge Penalty",
+        "tex": "V(\\underline{\\alpha}, \\mathbf{z}) = \\gamma \\sum_{(m, n) \\in \\mathcal{C}} [\\alpha_m \\ne \\alpha_n] \\exp\\left( -\\beta \\|z_m - z_n\\|^2 \\right)",
+        "p": "Penalises boundary cuts between adjacent pixels $(m, n)$, with penalties dropping when crossing sharp colour differences."
+      },
+      {
+        "h": "Max-Flow / Min-Cut Optimality (Ford-Fulkerson)",
+        "tex": "\\min_{\\mathcal{S}, \\mathcal{T}} \\operatorname{Capacity}(\\mathcal{S}, \\mathcal{T}) = \\max \\operatorname{Flow}(s \\to t)",
+        "p": "The globally optimal boundary cut minimising energy $E$ is computed in polynomial time via the maximum network flow algorithm."
+      }
+    ],
+    "code": "import numpy as np\n\ndef simple_kmeans_color_quantisation(image_rgb: np.ndarray, k: int = 3, max_iter: int = 10) -> np.ndarray:\n    \"\"\"Segment image by clustering pixel colours in RGB space via K-Means.\"\"\"\n    h, w, c = image_rgb.shape\n    pixels = image_rgb.reshape(-1, c).astype(np.float32)\n    \n    # Initialize centroids randomly from pixels\n    np.random.seed(42)\n    idx = np.random.choice(len(pixels), k, replace=False)\n    centroids = pixels[idx]\n    \n    for _ in range(max_iter):\n        # 1. Assign each pixel to nearest centroid\n        # [N, K] distance matrix\n        dists = np.linalg.norm(pixels[:, None, :] - centroids[None, :, :], axis=-1)\n        labels = np.argmin(dists, axis=1)\n        \n        # 2. Update centroids\n        new_centroids = np.array([pixels[labels == i].mean(axis=0) if (labels == i).any() \n                                 else centroids[i] for i in range(k)])\n        if np.allclose(centroids, new_centroids, atol=1e-2):\n            break\n        centroids = new_centroids\n        \n    quantised = centroids[labels].reshape(h, w, c).astype(np.uint8)\n    return quantised, labels.reshape(h, w)\n\n# Test on 8x8 synthetic image with 2 colour regions\nimg = np.zeros((8, 8, 3), dtype=np.uint8)\nimg[:4, :] = [200, 30, 30]   # Red foreground\nimg[4:, :] = [30, 180, 50]   # Green background\n\nsegmented_img, mask = simple_kmeans_color_quantisation(img, k=2)\nprint(\"Segmented mask unique labels:\", np.unique(mask))\nprint(\"K-Means cleanly separated the two colour regions without neural networks!\")",
+    "keyPoints": [
+      "Classical segmentation partitions images without requiring training labels or deep neural networks.",
+      "K-Means clusters pixel colours but lacks spatial boundary coherence.",
+      "Marker-controlled watershed treats gradients as topography, using seed markers to prevent over-segmentation.",
+      "GrabCut uses Gaussian Mixture Models and graph min-cuts to iteratively segment foreground objects from bounding boxes."
+    ],
+    "pitfalls": [
+      "Over-segmentation in raw watershed: Applying watershed directly to noisy image gradients without marker seeds produces a fractured mosaic of thousands of tiny useless regions.",
+      "Colour overlap in GrabCut: If the foreground object shares identical colours with the background (e.g. a green frog on a green leaf), GrabCut cannot separate them using colour GMMs alone.",
+      "Ignoring spatial coordinates in K-Means: Clustering only $(R, G, B)$ values merges spatially distant pixels that happen to have similar colours; concatenate spatial coordinates $(R, G, B, x, y)$ for spatial compactness."
+    ],
+    "quiz": [
+      {
+        "q": "Why does the raw, unseeded Watershed algorithm suffer from severe over-segmentation on natural images?",
+        "o": [
+          "Because water cannot flow in digital computers",
+          "High-frequency image noise produces hundreds of tiny local gradient minima, each of which forms its own isolated catchment basin",
+          "Because the image has more than 1 colour channel",
+          "Because watershed requires deep neural networks"
+        ],
+        "a": 1,
+        "why": "Every local minimum in the gradient image acts as a seed for a catchment basin. Noise creates hundreds of false minima, fragmenting the image."
+      },
+      {
+        "q": "How does the GrabCut algorithm achieve fast, globally optimal foreground/background boundary cuts?",
+        "o": [
+          "Using brute-force search across all possible pixel subsets",
+          "By formulating the energy minimisation problem as a graph cut and solving it in polynomial time using the Max-Flow / Min-Cut theorem",
+          "By running stochastic gradient descent on pixel coordinates",
+          "By computing the Fourier transform of the image"
+        ],
+        "a": 1,
+        "why": "GrabCut represents pixel affinities and GMM likelihoods as edge capacities in a flow network. The min-cut separating source from sink is solved via maximum network flow."
+      },
+      {
+        "q": "What is the primary limitation of pure K-Means colour segmentation?",
+        "o": [
+          "It cannot process RGB images",
+          "It operates strictly in colour space and ignores spatial pixel connectivity, creating noisy, fragmented masks with holes",
+          "It requires 100 epochs of GPU training",
+          "It only works on black and white images"
+        ],
+        "a": 1,
+        "why": "K-Means clusters pixels purely by $(R, G, B)$ values without spatial awareness: two pixels with the same colour in opposite corners of the image are grouped together."
+      }
+    ],
+    "related": [
+      "thresholding-histograms-and-morphology",
+      "semantic-segmentation-fcn-and-u-net",
+      "edge-detection-sobel-and-canny"
+    ],
+    "keywords": "classical segmentation, k-means, watershed, grabcut, graph cuts, min-cut max-flow, image segmentation, gaussian mixture models"
+  },
+  {
+    "id": "hog-with-svm",
+    "short": "HOG with SVM",
+    "title": "Pedestrian and Object Detection: Histogram of Oriented Gradients (HOG) with Linear SVM",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Extracting gradient orientation histograms, normalising overlapping blocks, and detecting objects with sliding-window Linear SVMs.",
+    "lead": "Before deep convolutional networks achieved dominance on ImageNet, the Histogram of Oriented Gradients (HOG) paired with a Linear Support Vector Machine (Dalal & Triggs, 2005) was the gold standard for pedestrian and object detection. By capturing localized edge direction distributions invariant to illumination changes, HOG provides a fast, interpretable descriptor that remains widely used in real-time embedded vision and robotics.",
+    "analogy": "Imagine drawing a quick charcoal sketch of a person walking. You do not need to shade in skin tones or cloth patterns; what makes a human instantly recognisable is the silhouette—the vertical lines of the torso and legs, the round curve of the head, and the diagonal angles of swinging arms. HOG captures this structural silhouette by tallying up the directions of edge strokes across small grid squares.",
+    "intuition": [
+      "The central premise of HOG is that local object appearance and shape can be characterized by the distribution of local intensity gradients, even without precise knowledge of the underlying pixel values.",
+      "The image is divided into small connected spatial cells (e.g. $8 \\times 8$ pixels). For every pixel in a cell, the horizontal and vertical gradients are computed via 1D centered point derivatives $[-1, 0, 1]$. The gradient magnitude acts as a vote, and the gradient orientation determines which orientation bin (typically 9 bins from $0^\\circ$ to $180^\\circ$, unsigned) receives the vote.",
+      "To provide invariance to illumination and shadowing, adjacent cells are grouped into larger spatial blocks (e.g. $2 \\times 2$ cells of $16 \\times 16$ pixels). The concatenated cell histograms within a block are normalised using $L_2$-norm with clipping ($L_2$-Hys), creating robust, contrast-invariant block descriptors.",
+      "A dense multi-scale sliding window detector slides a fixed-size detection window (e.g. $64 \\times 128$ pixels) across an image pyramid, scoring each window with a pre-trained Linear SVM $w^T x + b > 0$. Overlapping detections are merged using Non-Maximum Suppression (NMS)."
+    ],
+    "steps": [
+      "Gradient computation: Filter image with 1D horizontal and vertical kernels $[-1, 0, 1]$ and $[-1, 0, 1]^T$ to compute gradient magnitude $r$ and orientation $\\theta$.",
+      "Spatial cell histogram voting: Partition image into $8 \\times 8$ pixel cells; vote gradient magnitudes into 9 angular orientation bins ($0^\\circ$ to $180^\\circ$) using bilinear interpolation.",
+      "Block normalisation: Group cells into overlapping $2 \\times 2$ blocks (16x16 pixels); compute $L_2$-norm over the 36-dimensional block vector and normalise to suppress contrast variations.",
+      "Concatenate window descriptor: Concatenate all normalised block vectors across the $64 \\times 128$ detection window (producing a 3,780-dimensional feature vector).",
+      "Classify via Linear SVM: Compute dot product between feature vector and learned SVM hyperplane weights; score windows above threshold $\\tau$.",
+      "Non-Maximum Suppression (NMS): Filter out redundant overlapping bounding boxes, preserving only highest-confidence detections."
+    ],
+    "math": [
+      {
+        "h": "Pixel Gradient Magnitude and Orientation",
+        "tex": "r(x, y) = \\sqrt{I_x(x, y)^2 + I_y(x, y)^2}, \\quad \\theta(x, y) = \\arctan\\left( \\frac{I_y(x, y)}{I_x(x, y)} \\right) \\pmod{180^\\circ}",
+        "p": "Computes edge intensity $r$ and unsigned angular orientation $\\theta \\in [0^\\circ, 180^\\circ)$ from directional image derivatives."
+      },
+      {
+        "h": "Block L2-Hys Normalisation",
+        "tex": "\\mathbf{v}_{\\mathrm{norm}} = \\frac{\\mathbf{v}}{\\sqrt{\\|\\mathbf{v}\\|_2^2 + \\epsilon^2}}, \\quad \\tilde{v}_i = \\min(v_{\\mathrm{norm}, i}, \\; 0.2), \\quad \\mathbf{v}_{\\mathrm{final}} = \\frac{\\tilde{\\mathbf{v}}}{\\sqrt{\\|\\tilde{\\mathbf{v}}\\|_2^2 + \\epsilon^2}}",
+        "p": "Normalises block feature vector $\\mathbf{v}$, clips large outlier components at 0.2 to limit dominant gradient saturation, and re-normalises."
+      },
+      {
+        "h": "Linear SVM Scoring Decision Boundary",
+        "tex": "f(\\mathbf{x}) = \\mathbf{w}^T \\mathbf{x} + b \\ge 0 \\implies \\text{Object Detected}",
+        "p": "Evaluates the linear dot product between the concatenated 3,780-D HOG descriptor $\\mathbf{x}$ and the SVM weight vector $\\mathbf{w}$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef compute_simple_hog_cell(cell_img: np.ndarray, num_bins: int = 9) -> np.ndarray:\n    \"\"\"Compute gradient orientation histogram for an 8x8 pixel cell.\"\"\"\n    # Compute 1D central differences\n    gx = np.zeros_like(cell_img, dtype=np.float32)\n    gy = np.zeros_like(cell_img, dtype=np.float32)\n    \n    gx[:, 1:-1] = cell_img[:, 2:] - cell_img[:, :-2]\n    gy[1:-1, :] = cell_img[2:, :] - cell_img[:-2, :]\n    \n    mag = np.sqrt(gx**2 + gy**2)\n    # Unsigned angle between 0 and 180 degrees\n    angle = (np.arctan2(gy, gx) * 180.0 / np.pi) % 180.0\n    \n    # Vote into orientation bins\n    hist = np.zeros(num_bins, dtype=np.float32)\n    bin_width = 180.0 / num_bins\n    \n    for i in range(cell_img.shape[0]):\n        for j in range(cell_img.shape[1]):\n            b = int(angle[i, j] / bin_width) % num_bins\n            hist[b] += mag[i, j]\n            \n    # L2 normalise cell histogram\n    norm = np.linalg.norm(hist) + 1e-6\n    return hist / norm\n\n# Sample 8x8 cell with vertical edge\ncell = np.zeros((8, 8), dtype=np.float32)\ncell[:, 4:] = 255.0  # Sharp vertical edge in middle\n\nhog_hist = compute_simple_hog_cell(cell, num_bins=9)\nprint(\"HOG 9-bin orientation histogram:\")\nprint(np.round(hog_hist, 3))\nprint(f\"Dominant orientation bin: {np.argmax(hog_hist)} (captures vertical gradient cleanly!)\")",
+    "keyPoints": [
+      "HOG captures structural shape and silhouettes via local distributions of intensity gradient orientations.",
+      "Unsigned gradient bins ($0^\\circ$ to $180^\\circ$) capture edge orientation regardless of light/dark transition order.",
+      "Overlapping block normalisation provides robustness against illumination changes and shadows.",
+      "Paired with Linear SVM, HOG provides fast pedestrian detection without deep neural networks."
+    ],
+    "pitfalls": [
+      "Scale sensitivity without image pyramids: HOG is not scale invariant; detecting pedestrians at various distances requires constructing a dense image pyramid.",
+      "Rigid deformation failure: HOG with a single linear SVM struggles with articulated human poses (sitting, crouching, jumping); requires Deformable Part Models (DPM).",
+      "Signed vs unsigned angles: Using signed angles ($0^\\circ$ to $360^\\circ$) degrades pedestrian detection because an edge transitioning from dark-to-light has the same structural meaning as light-to-dark."
+    ],
+    "quiz": [
+      {
+        "q": "Why does HOG typically use \"unsigned\" gradient orientations ($0^\\circ$ to $180^\\circ$) rather than signed orientations ($0^\\circ$ to $360^\\circ$) for pedestrian detection?",
+        "o": [
+          "Because math libraries cannot calculate angles over 180 degrees",
+          "Unsigned angles make the descriptor invariant to whether a foreground garment is lighter or darker than the background (e.g. white shirt on dark wall vs dark shirt on white wall)",
+          "To double the memory consumption",
+          "Because pedestrians only walk in one direction"
+        ],
+        "a": 1,
+        "why": "A dark shirt on a light wall has the opposite gradient sign of a light shirt on a dark wall. Unsigned gradients map both to the same orientation, capturing the invariant contour."
+      },
+      {
+        "q": "What is the purpose of overlapping block normalisation in the HOG descriptor?",
+        "o": [
+          "To blur the image before filtering",
+          "To ensure illumination and local contrast variations do not distort gradient magnitudes",
+          "To resize the image to a power of two",
+          "To convert floating point values to integers"
+        ],
+        "a": 1,
+        "why": "In natural scenes, sunlight and shadows scale gradient magnitudes dramatically. Normalising overlapping blocks provides local photometric invariance."
+      },
+      {
+        "q": "How does a HOG-based detector locate objects of different physical sizes in a photograph?",
+        "o": [
+          "By dynamically stretching the SVM weights",
+          "By scanning an Image Pyramid where the input image is repeatedly subsampled at multiple scales, using a fixed-size HOG window detector",
+          "By applying non-linear polynomial kernel expansions",
+          "By retraining the SVM at every single pixel"
+        ],
+        "a": 1,
+        "why": "HOG uses a fixed detection window ($64 \\times 128$). Detecting objects at various scales requires resizing the image repeatedly into a scale-space image pyramid."
+      }
+    ],
+    "related": [
+      "edge-detection-sobel-and-canny",
+      "iou-nms-and-map",
+      "support_vector_classifier"
+    ],
+    "keywords": "hog, histogram of oriented gradients, svm, pedestrian detection, dalal triggs, block normalisation, image pyramid, sliding window"
+  },
+  {
+    "id": "image-pyramids-and-scale-space",
+    "short": "Pyramids & scale space",
+    "title": "Image Pyramids and Scale Space: Gaussian Blurring, Laplacians, and Multiscale Representation",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 15,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Representing visual structures across continuous spatial scales using Gaussian scale spaces, Laplacian bandpass pyramids, and octave downsampling.",
+    "lead": "Real-world objects do not exist at a single fixed scale: a car can appear as a 20-pixel dot on the horizon or a 2,000-pixel structure occupying the entire camera frame. Computer vision algorithms that operate at a single pixel resolution cannot recognise objects across distances. Gaussian scale space theory and image pyramids provide mathematically principled frameworks for analyseing images across multiple spatial resolutions.",
+    "analogy": "Imagine viewing an oil painting in an art gallery. When standing 10 centimeters away, you see high-frequency brush stroke textures and canvas fabric threads, but cannot perceive the overall subject. As you walk backwards 5 meters, fine texture blurs away, revealing the broad low-frequency forms of trees, hills, and a cathedral. An image pyramid captures all viewing distances simultaneously.",
+    "intuition": [
+      "Scale space theory (Witkin, Koenderink) proves that the only linear, shift-invariant, isotropic scale-space operator that does not create new spurious features (extrema) as scale expands is the Gaussian kernel: $L(x, y; \\sigma) = I(x, y) * G(x, y; \\sigma)$.",
+      "As standard deviation $\\sigma$ increases, high-frequency details (fine edges, texture noise) are progressively suppressed, leaving stable coarse structures.",
+      "A Gaussian Pyramid discretizes continuous scale space by alternating Gaussian blurring with dyadic spatial subsampling (downsampling by $2\\times$), creating a pyramid of progressively smaller image octaves.",
+      "A Laplacian Pyramid computes the difference between adjacent Gaussian levels, isolating distinct frequency octaves (bandpass filtering). This decomposition enables seamless multi-band image blending (e.g. stitching panoramic photos without visible seams) and feature detection (SIFT Difference of Gaussians)."
+    ],
+    "steps": [
+      "Configure pyramid octaves and scales: Select number of pyramid levels $K$ based on image resolution and minimum detectable object size.",
+      "Apply Gaussian smoothing: Convolve image with a symmetric Gaussian blur kernel (typically $5 \\times 5$ binomial kernel).",
+      "Downsample (Subsample): Discard every other row and column ($2\\times$ spatial decimation) to produce the next Gaussian pyramid octave $G_{k+1}$.",
+      "Compute Laplacian bandpass level: Upsample $G_{k+1}$ back to $G_k$'s dimensions and subtract: $L_k = G_k - \\operatorname{Up}(G_{k+1})$.",
+      "Detect scale-space extrema: Search across $3 \\times 3 \\times 3$ scale-space volumes (spatial coordinates and adjacent scale levels) to identify scale-invariant keypoint candidates.",
+      "Reconstruct original image: Reconstruct losslessly by recursively adding upsampled levels: $G_k = L_k + \\operatorname{Up}(G_{k+1})$."
+    ],
+    "math": [
+      {
+        "h": "Linear Scale-Space Definition",
+        "tex": "L(x, y; \\sigma) = I(x, y) * G(x, y; \\sigma), \\quad G(x, y; \\sigma) = \\frac{1}{2\\pi\\sigma^2} \\exp\\left( -\\frac{x^2 + y^2}{2\\sigma^2} \\right)",
+        "p": "Convolution with a Gaussian kernel uniquely satisfies the causality axiom: no new local extrema can be created as scale $\\sigma$ increases."
+      },
+      {
+        "h": "Laplacian Pyramid Bandpass Decomposition",
+        "tex": "L_k = G_k - \\operatorname{Expand}(G_{k+1}), \\quad k \\in \\{0, 1, \\dots, K-1\\}",
+        "p": "Each Laplacian level $L_k$ isolates the bandpass frequency information lost between consecutive Gaussian octaves."
+      },
+      {
+        "h": "Difference-of-Gaussians (DoG) Approximation",
+        "tex": "D(x, y; \\sigma, k) = L(x, y; k\\sigma) - L(x, y; \\sigma) \\approx (k - 1)\\sigma^2 \\nabla^2 L(x, y; \\sigma)",
+        "p": "Difference of Gaussians provides an efficient approximation to the scale-normalised Laplacian of Gaussian (LoG) operator."
+      }
+    ],
+    "code": "import numpy as np\n\ndef gaussian_downsample_2x(image: np.ndarray) -> np.ndarray:\n    \"\"\"Blur and subsample image by 2x (single octave downstep).\"\"\"\n    # 3x3 simple Gaussian kernel\n    kernel = np.array([\n        [1, 2, 1],\n        [2, 4, 2],\n        [1, 2, 1]\n    ], dtype=np.float32) / 16.0\n    \n    # 2D convolution (valid padding)\n    h, w = image.shape\n    blurred = np.zeros_like(image)\n    for i in range(1, h - 1):\n        for j in range(1, w - 1):\n            blurred[i, j] = np.sum(image[i-1:i+2, j-1:j+2] * kernel)\n            \n    # Subsample every second row and column\n    return blurred[::2, ::2]\n\n# Create 16x16 test pattern\nimg = np.random.uniform(0, 255, size=(16, 16)).astype(np.float32)\n\n# Build 3-level Gaussian Pyramid\ng0 = img\ng1 = gaussian_downsample_2x(g0)\ng2 = gaussian_downsample_2x(g1)\n\nprint(\"Gaussian Pyramid Dimensions across Octaves:\")\nprint(f\"Level 0 (Base):    {g0.shape}\")\nprint(f\"Level 1 (Octave 1): {g1.shape}\")\nprint(f\"Level 2 (Octave 2): {g2.shape}\")\nprint(\"Subsampling preserves coarse structures while drastically reducing resolution!\")",
+    "keyPoints": [
+      "Scale-space theory represents images across continuous scales without introducing artificial artifacts.",
+      "Gaussian blurring is the unique linear scale-space kernel that guarantees no new extrema are created.",
+      "A Gaussian pyramid combines blurring with $2\\times$ downsampling to represent octaves efficiently.",
+      "Laplacian pyramids decompose images into bandpass frequency layers, enabling seamless multi-band blending."
+    ],
+    "pitfalls": [
+      "Downsampling without blurring (Aliasing): Subsampling pixels directly without pre-filtering with a low-pass Gaussian filter introduces severe high-frequency Moiré aliasing artifacts.",
+      "Memory overhead of non-subsampled scale space: Maintaining full image resolution across all scale levels consumes massive RAM; octave decimation is essential for scalability.",
+      "Edge effects during convolution: Failing to handle image boundaries properly causes dark borders to propagate and contaminate upper pyramid levels."
+    ],
+    "quiz": [
+      {
+        "q": "Why is the Gaussian kernel mathematically unique in scale-space theory?",
+        "o": [
+          "It is the only filter that executes in zero milliseconds",
+          "It is the unique linear, shift-invariant kernel that satisfies the causality axiom: no new local extrema (spurious features) are created as scale increases",
+          "It converts colour images into text",
+          "It eliminates the need for matrices"
+        ],
+        "a": 1,
+        "why": "Scale-space axioms prove that the Gaussian kernel is the only linear filter that does not introduce new spurious peaks or valleys as smoothing increases."
+      },
+      {
+        "q": "What occurs if you downsample an image by $2\\times$ without first applying a low-pass Gaussian blur filter?",
+        "o": [
+          "The image becomes completely transparent",
+          "High-frequency frequencies fold back into low frequencies, creating severe jagged aliasing artifacts and Moiré patterns",
+          "The file size expands exponentially",
+          "Colours are inverted"
+        ],
+        "a": 1,
+        "why": "By the Nyquist-Shannon sampling theorem, subsampling without low-pass filtering causes frequencies above the new Nyquist limit to fold back as aliasing."
+      },
+      {
+        "q": "What is a Laplacian Pyramid used for in multi-resolution image processing?",
+        "o": [
+          "To encrypt images",
+          "To decompose an image into distinct bandpass frequency sub-bands, allowing operations like multi-band exposure blending and seamless image stitching",
+          "To calculate neural network loss",
+          "To train decision tree classifiers"
+        ],
+        "a": 1,
+        "why": "A Laplacian pyramid stores differences between adjacent Gaussian levels, isolating frequency octaves for seamless multi-band blending and texture synthesis."
+      }
+    ],
+    "related": [
+      "sift-orb-and-feature-matching",
+      "corners-and-keypoints-harris-fast",
+      "edge-detection-sobel-and-canny"
+    ],
+    "keywords": "image pyramids, scale space, gaussian pyramid, laplacian pyramid, difference of gaussians, dog, multi-scale, aliasing, subsampling"
+  },
+  {
+    "id": "bag-of-visual-words",
+    "short": "Bag of visual words",
+    "title": "Bag of Visual Words (BoVW): Visual Vocabularies, Codebooks, and Spatial Pyramids",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Quantising local descriptors into visual words with K-Means codebooks, TF-IDF weighting, and Spatial Pyramid Matching.",
+    "lead": "Before deep learning end-to-end representation learning, image retrieval and scene classification adapted techniques directly from natural language processing. Just as documents are represented as a \"bag of words\" based on dictionary term frequencies, an image can be represented as a Bag of Visual Words (BoVW). By clustering invariant local descriptors (SIFT) into a discrete visual vocabulary, BoVW converts variable numbers of local keypoints into fixed-length vectors for standard classifiers.",
+    "analogy": "Imagine categorising architecture styles (gothic cathedrals vs modern skyscrapers). You do not look at every single brick; instead, you build a mental vocabulary of architectural motifs: \"pointed arches\", \"stained-glass rosettes\", \"flying buttresses\", and \"steel I-beams\". Describing a cathedral simply involves tallying the frequency of these visual motifs: an image with 5 pointed arches and 2 rosettes is classified as Gothic, regardless of where they appear.",
+    "intuition": [
+      "Local feature detectors (like SIFT) extract variable numbers of 128-dimensional descriptors per image (e.g. 500 vectors for one image, 2,000 for another). Standard machine learning classifiers (SVMs, Random Forests) require a fixed-length feature vector.",
+      "BoVW constructs a Visual Codebook (vocabulary) of size $K$ by clustering millions of SIFT descriptors extracted across a training corpus using K-Means. Each cluster centroid represents a \"visual word\" (e.g. an eye corner, a bicycle spoke, or a leafy texture).",
+      "For a new query image, its local descriptors are assigned to the nearest visual word centroid. The image is represented as a $K$-dimensional histogram of visual word frequencies, weighted using TF-IDF to down-weight ubiquitous background textures (like flat sky or grass).",
+      "The primary limitation of standard BoVW is the complete loss of spatial layout (a face with a mouth above the eyes has the same histogram as a normal face). Spatial Pyramid Matching (Lazebnik et al.) overcomes this by partitioning the image into increasingly fine sub-grids ($1 \\times 1, 2 \\times 2, 4 \\times 4$) and concatenating weighted histograms across spatial resolutions."
+    ],
+    "steps": [
+      "Extract local invariant descriptors: Run SIFT, SURF, or ORB across all training images to extract millions of 128-D local feature vectors.",
+      "Construct visual vocabulary (Codebook): Cluster sampled descriptors into $K$ centroids (typically $K \\in [500, 5000]$) using K-Means.",
+      "Quantise image features: For each test image, map each extracted descriptor to its nearest visual word centroid in Euclidean distance.",
+      "Compute TF-IDF histogram: Accumulate frequency counts into a $K$-dimensional histogram; weight by Inverse Document Frequency (IDF) and normalise.",
+      "Construct Spatial Pyramid (SPM): Subdivide image into $1 \\times 1$, $2 \\times 2$, and $4 \\times 4$ grids; compute BoVW histograms within each grid cell and concatenate with geometric weights.",
+      "Train linear classifier: Train a Support Vector Machine with Histogram Intersection Kernel or linear solver on the final fixed-length vectors."
+    ],
+    "math": [
+      {
+        "h": "Vector Quantisation to Visual Words",
+        "tex": "w(x_i) = \\operatorname*{arg\\,min}_{k \\in \\{1, \\dots, K\\}} \\| x_i - \\mathbf{c}_k \\|_2^2",
+        "p": "Quantises continuous local descriptor $x_i \\in \\mathbb{R}^{128}$ to the index of the nearest codebook centroid $\\mathbf{c}_k$."
+      },
+      {
+        "h": "Spatial Pyramid Match Kernel Weighting",
+        "tex": "\\mathcal{K}_{\\mathrm{SPM}}(X, Y) = \\mathcal{I}_L + \\sum_{l=0}^{L-1} \\frac{1}{2^{L-l}} \\left( \\mathcal{I}_l - \\mathcal{I}_{l+1} \\right)",
+        "p": "Weights matches at finer spatial resolutions $l$ exponentially higher than coarse global matches, where $\\mathcal{I}$ is histogram intersection."
+      },
+      {
+        "h": "Histogram Intersection Kernel",
+        "tex": "\\mathcal{I}(\\mathbf{h}_A, \\mathbf{h}_B) = \\sum_{k=1}^K \\min\\left( h_{A, k}, \\; h_{B, k} \\right)",
+        "p": "Measures non-linear overlap between two normalised visual word frequency histograms."
+      }
+    ],
+    "code": "import numpy as np\nfrom sklearn.cluster import MiniBatchKMeans\n\n# Simulate extracting 100 SIFT-like descriptors across training images\nnp.random.seed(42)\ndescriptors_corpus = np.random.randn(500, 128).astype(np.float32)\n\n# 1. Build Visual Vocabulary of K=8 words via K-Means\nvocab_size = 8\nkmeans = MiniBatchKMeans(n_clusters=vocab_size, random_state=42, n_init='auto')\nkmeans.fit(descriptors_corpus)\n\n# 2. Represent a new test image with 20 detected local descriptors\ntest_descriptors = np.random.randn(20, 128).astype(np.float32)\n\n# Quantise descriptors to nearest visual words\nword_assignments = kmeans.predict(test_descriptors)\n\n# 3. Construct Bag of Visual Words histogram\nbovw_hist = np.bincount(word_assignments, minlength=vocab_size).astype(np.float32)\n# L1 normalise frequency vector\nbovw_hist /= np.sum(bovw_hist)\n\nprint(\"Visual Vocabulary Centroids Shape:\", kmeans.cluster_centers_.shape)\nprint(\"Quantised Visual Words Assigned:  \", word_assignments[:10])\nprint(\"Final BoVW Histogram Representation (K=8):\")\nprint(np.round(bovw_hist, 3))\nprint(\"Image converted to fixed-length 8-D vector ready for SVM classification!\")",
+    "keyPoints": [
+      "Bag of Visual Words converts variable numbers of local keypoints into fixed-length feature vectors.",
+      "A visual codebook is constructed by clustering SIFT descriptors using K-Means.",
+      "TF-IDF weighting down-weights common non-informative textures like uniform sky.",
+      "Spatial Pyramid Matching restores spatial layout by computing histograms across hierarchical sub-grids."
+    ],
+    "pitfalls": [
+      "Codebook undersizing or oversizing: If $K$ is too small (e.g. 50), words are too coarse to distinguish objects; if $K$ is too large (e.g. 100,000), quantisation noise prevents matches.",
+      "Loss of spatial layout in naive BoVW: Standard BoVW treats an image as an unstructured bag; spatial pyramids are mandatory to preserve scene composition.",
+      "K-Means clustering scalability: Clustering 10 million SIFT descriptors with standard K-Means is computationally prohibitive; use MiniBatchKMeans or Approximate K-Means (FLANN)."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary motivation for constructing a \"Bag of Visual Words\" representation of an image?",
+        "o": [
+          "To generate audio speech from images",
+          "To convert an arbitrary, variable number of localized keypoint descriptors (like SIFT) into a single fixed-length feature vector suitable for standard machine learning classifiers",
+          "To compress JPEG images for web transmission",
+          "To replace convolutional neural networks"
+        ],
+        "a": 1,
+        "why": "Different images yield different numbers of keypoints (e.g. 150 vs 1,200). BoVW maps descriptors to fixed $K$-dimensional codebook histograms, enabling standard SVM/RF classification."
+      },
+      {
+        "q": "How does Spatial Pyramid Matching (SPM) overcome the primary limitation of the classical Bag of Visual Words model?",
+        "o": [
+          "By converting images into 3D holograms",
+          "By computing visual word histograms across multi-level spatial grids ($1 \\times 1, 2 \\times 2, 4 \\times 4$), preserving coarse spatial layout and geometry",
+          "By replacing SIFT with random numbers",
+          "By deleting all background pixels"
+        ],
+        "a": 1,
+        "why": "Standard BoVW discards spatial relationships completely. Spatial pyramids partition the image into hierarchical sub-regions, preserving spatial context."
+      },
+      {
+        "q": "What is a \"visual word\" in the BoVW pipeline?",
+        "o": [
+          "A text label written on an image",
+          "The cluster centroid of a group of similar local descriptors (e.g. SIFT vectors) discovered via K-Means clustering in feature space",
+          "A word in the English dictionary",
+          "A single RGB pixel"
+        ],
+        "a": 1,
+        "why": "A visual word is a centroid in 128-D descriptor space representing a prototypical local visual patch or edge pattern."
+      }
+    ],
+    "related": [
+      "sift-orb-and-feature-matching",
+      "bag-of-words-and-tf-idf",
+      "support_vector_classifier"
+    ],
+    "keywords": "bag of visual words, bovw, visual vocabulary, codebook, spatial pyramid matching, spm, sift, vector quantisation, image classification"
+  },
+  {
+    "id": "camera-model-and-calibration",
+    "short": "Camera model & calibration",
+    "title": "The Pinhole Camera Model and Geometric Calibration: Intrinsic, Extrinsic, and Radial Distortion",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 17,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Mapping 3D world coordinates to 2D image pixels using the pinhole projection matrix, lens distortion modelling, and Zhang's checkerboard calibration.",
+    "lead": "Every photograph captured by a digital sensor is a central perspective projection of a 3D world onto a 2D plane. To enable robotic navigation, autonomous driving, or augmented reality, a vision system must invert this projection: converting 2D pixel coordinates back into calibrated 3D geometric rays. Camera calibration mathematically estimates the camera's optical centre, focal length, physical sensor orientation, and lens distortion parameters.",
+    "analogy": "Imagine a painter sitting behind a clear glass window, painting the landscape outside by tracing exactly where light rays passing through a tiny peephole (the pinhole) hit the glass sheet. If the glass is tilted (extrinsic rotation), shifted (extrinsic translation), or if the glass pane is curved like a funhouse mirror (radial lens distortion), the tracing will warp unless the painter uses a calibration matrix to mathematically un-distort the perspective.",
+    "intuition": [
+      "The ideal Pinhole Camera Model projects a 3D point $\\mathbf{P}_w = (X_w, Y_w, Z_w)$ onto a 2D image plane via central perspective: $x = f \\frac{X}{Z}, y = f \\frac{Y}{Z}$, where $f$ is the focal length.",
+      "In homogeneous projective geometry, this mapping is expressed as a compact $3 \\times 4$ projection matrix $\\mathbf{P} = \\mathbf{K} [\\mathbf{R} \\mid \\mathbf{t}]$.",
+      "The Intrinsic Matrix $\\mathbf{K}$ represents internal optical properties: focal lengths in pixel units $(f_x, f_y)$ and the principal point (optical centre) $(c_x, c_y)$. The Extrinsic Matrix $[\\mathbf{R} \\mid \\mathbf{t}]$ represents the camera's rigid 3D pose in the world: a $3 \\times 3$ rotation matrix $\\mathbf{R}$ and a $3 \\times 1$ translation vector $\\mathbf{t}$.",
+      "Real physical lenses introduce optical distortion: Radial distortion (barrel or pincushion distortion caused by lens curvature, modelled with coefficients $k_1, k_2, k_3$) and Tangential distortion (caused by the lens sensor not being perfectly parallel, modelled with $p_1, p_2$). Zhang's calibration method observes a flat checkerboard from multiple angles to solve for all intrinsic, extrinsic, and distortion parameters closed-form via planar homographies."
+    ],
+    "steps": [
+      "Capture planar calibration pattern: Photograph a rigid checkerboard or circle grid from 10–20 diverse angles, distances, and orientations.",
+      "Detect sub-pixel corner coordinates: Locate interior checkerboard corner vertices to sub-pixel accuracy using gradient saddle point refinement.",
+      "Compute planar homographies: For each view, estimate the $3 \\times 3$ homography matrix $\\mathbf{H}$ mapping known planar checkerboard coordinates to detected image pixels.",
+      "Extract intrinsic camera matrix: Use orthogonality constraints across multiple homographies to solve the linear closed-form system for intrinsic parameters $\\mathbf{K}$.",
+      "Estimate lens distortion coefficients: Fit radial distortion polynomial ($k_1, k_2$) and tangential parameters ($p_1, p_2$) via non-linear Levenberg-Marquardt optimisation.",
+      "Rectify and undistort: Remap incoming raw camera frames to undistorted rectilinear images prior to downstream 3D triangulation."
+    ],
+    "math": [
+      {
+        "h": "Full Perspective Camera Projection Matrix",
+        "tex": "s \\begin{bmatrix} u \\\\ v \\\\ 1 \\end{bmatrix} = \\underbrace{\\begin{bmatrix} f_x & 0 & c_x \\\\ 0 & f_y & c_y \\\\ 0 & 0 & 1 \\end{bmatrix}}_{\\mathbf{K} \\text{ (Intrinsics)}} \\underbrace{\\begin{bmatrix} r_{11} & r_{12} & r_{13} & t_x \\\\ r_{21} & r_{22} & r_{23} & t_y \\\\ r_{31} & r_{32} & r_{33} & t_z \\end{bmatrix}}_{[\\mathbf{R} \\mid \\mathbf{t}] \\text{ (Extrinsics)}} \\begin{bmatrix} X_w \\\\ Y_w \\\\ Z_w \\\\ 1 \\end{bmatrix}",
+        "p": "Projects homogeneous 3D world coordinates $(X_w, Y_w, Z_w, 1)^T$ to homogeneous 2D pixel coordinates $(u, v, 1)^T$ up to arbitrary scale $s$."
+      },
+      {
+        "h": "Radial Lens Distortion Polynomial Model",
+        "tex": "\\begin{aligned} x_{\\mathrm{distorted}} &= x (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\\\ y_{\\mathrm{distorted}} &= y (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\end{aligned}, \\quad r^2 = x^2 + y^2",
+        "p": "Models barrel distortion ($k_1 < 0$) and pincushion distortion ($k_1 > 0$) as an even-power radial polynomial expansion away from the optical centre."
+      },
+      {
+        "h": "Planar Homography Constraint (Zhang Formulation)",
+        "tex": "\\mathbf{h}_1^T \\mathbf{B} \\mathbf{h}_2 = 0, \\quad \\mathbf{h}_1^T \\mathbf{B} \\mathbf{h}_1 = \\mathbf{h}_2^T \\mathbf{B} \\mathbf{h}_2, \\quad \\mathbf{B} = \\mathbf{K}^{-T} \\mathbf{K}^{-1}",
+        "p": "Exploits the orthonormality of rotation column vectors $\\mathbf{r}_1$ and $\\mathbf{r}_2$ to solve for absolute conic image $\\mathbf{B}$ and extract matrix $\\mathbf{K}$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef project_3d_to_pixel(point_3d_world: np.ndarray, K: np.ndarray, R: np.ndarray, t: np.ndarray) -> np.ndarray:\n    \"\"\"Project a 3D world coordinate to 2D image pixel coordinates.\"\"\"\n    # 1. Transform to camera frame: P_cam = R * P_world + t\n    point_cam = R @ point_3d_world + t\n    \n    # 2. Perspective division by depth Z\n    z = point_cam[2]\n    if z <= 0:\n        raise ValueError(\"Point lies behind the camera!\")\n    normalised_coord = np.array([point_cam[0] / z, point_cam[1] / z, 1.0])\n    \n    # 3. Apply intrinsic matrix K\n    pixel_homo = K @ normalised_coord\n    return pixel_homo[:2]\n\n# Define camera intrinsics: focal length 800px, optical centre at (320, 240)\nK = np.array([\n    [800.0,   0.0, 320.0],\n    [  0.0, 800.0, 240.0],\n    [  0.0,   0.0,   1.0]\n])\n\n# Camera located at (0, 0, 0) looking straight down +Z axis\nR = np.eye(3)\nt = np.array([0.0, 0.0, 0.0])\n\n# 3D object located at (X=1.0m, Y=0.5m, Z=4.0m)\nP_world = np.array([1.0, 0.5, 4.0])\n\npixel = project_3d_to_pixel(P_world, K, R, t)\nprint(f\"3D World Point {P_world} -> 2D Image Pixel: (u={pixel[0]:.1f}, v={pixel[1]:.1f})\")\n# u = 800 * (1/4) + 320 = 520.0, v = 800 * (0.5/4) + 240 = 340.0",
+    "keyPoints": [
+      "Camera calibration maps 3D physical world space to 2D discrete digital pixel arrays.",
+      "Intrinsic matrix $\\mathbf{K}$ models internal optics: focal lengths $(f_x, f_y)$ and principal point $(c_x, c_y)$.",
+      "Extrinsic matrix $[\\mathbf{R} \\mid \\mathbf{t}]$ models the 6-DOF camera pose in the world coordinate frame.",
+      "Radial and tangential distortion parameters rectify lens curvature before geometric triangulation."
+    ],
+    "pitfalls": [
+      "Assuming square pixels ($f_x = f_y$): Some digital sensors have non-square pixel aspect ratios; assuming $f_x = f_y$ introduces subtle aspect ratio errors in 3D reconstruction.",
+      "Neglecting lens distortion on wide-angle cameras: Using linear projection equations on fisheye or wide-angle lenses causes massive errors near image margins (up to 50 pixels).",
+      "Calibrating with coplanar camera views: Capturing checkerboard images from only parallel frontal perspectives fails to constrain focal length; tilt the board by at least $30^\\circ$–$45^\\circ$."
+    ],
+    "quiz": [
+      {
+        "q": "What is the role of the camera Intrinsic Matrix $\\mathbf{K}$ in geometric computer vision?",
+        "o": [
+          "It specifies the latitude and longitude of the camera",
+          "It encapsulates internal optical parameters: pixel focal lengths $(f_x, f_y)$, principal point $(c_x, c_y)$, and sensor skew",
+          "It encrypts image files to prevent cyber attacks",
+          "It records the camera's battery percentage"
+        ],
+        "a": 1,
+        "why": "The intrinsic matrix $\\mathbf{K}$ models the internal geometric optical properties that transform rays in camera space into pixel coordinates."
+      },
+      {
+        "q": "What causes \"radial distortion\" in optical camera lenses?",
+        "o": [
+          "Radio interference from mobile phone towers",
+          "Light rays bending more near the curved edges of a physical spherical lens than at the optical centre, producing barrel or pincushion distortion",
+          "The sensor overheating during long video recordings",
+          "Low shutter speed"
+        ],
+        "a": 1,
+        "why": "Physical glass lenses are spherical approximations. Rays entering near lens perimeters bend unevenly, warping straight lines into curved arcs."
+      },
+      {
+        "q": "Why does Zhang's checkerboard calibration method require photographing the pattern from multiple tilted angles?",
+        "o": [
+          "To test the photographer's motor skills",
+          "Images taken strictly parallel to the sensor leave the focal length mathematically unconstrained; tilting introduces perspective foreshortening that isolates $f$",
+          "To clean dust off the camera lens",
+          "Because checkerboards are invisible from straight ahead"
+        ],
+        "a": 1,
+        "why": "Frontal parallel views create degenerate homography systems where focal length cannot be disentangled from distance. Tilting provides non-coplanar optical constraints."
+      }
+    ],
+    "related": [
+      "geometric-transforms-and-homography",
+      "ransac",
+      "stereo-vision-and-depth"
+    ],
+    "keywords": "camera calibration, pinhole camera model, intrinsic matrix, extrinsic matrix, zhang calibration, radial distortion, projection matrix, homography"
+  },
+  {
+    "id": "stereo-vision-and-depth",
+    "short": "Stereo vision & depth",
+    "title": "Stereo Vision and Depth Estimation: Epipolar Geometry, Disparity, and Triangulation",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Inferring 3D scene depth from calibrated binocular camera pairs using epipolar line rectification, disparity cost volumes, and geometric triangulation.",
+    "lead": "Human depth perception relies heavily on binocular disparity: our two eyes view the world from slightly different vantage points, causing nearby objects to shift dramatically relative to the background. In computer vision, stereo depth estimation formalises this biological phenomenon using epipolar geometry: matching corresponding points across left and right camera feeds to triangulate metric 3D point clouds without active laser sensors.",
+    "analogy": "Hold your thumb out at arm's length and alternate closing your left and right eyes: your thumb jumps dramatically back and forth against the distant wall. Now look at a distant tree and repeat: the tree barely shifts at all. The size of that horizontal jump is disparity: inversely proportional to distance. By measuring that pixel shift with millimeter precision, a stereo algorithm calculates exact 3D distance.",
+    "intuition": [
+      "Consider two cameras separated by horizontal baseline distance $B$. A 3D point $\\mathbf{P}$ projects onto image coordinates $x_L$ and $x_R$ in the left and right cameras. The horizontal shift $d = x_L - x_R$ is called Disparity.",
+      "From similar triangles, metric depth $Z$ is inversely proportional to disparity: $Z = \\frac{f \\cdot B}{d}$, where $f$ is the focal length. As an object moves infinitely far away, disparity drops to zero; as an object gets close, disparity expands.",
+      "Finding matching points across two arbitrary images is an expensive 2D search. Epipolar Geometry simplifies this: for any point in the left image, its corresponding match in the right image must lie along a single 1D line called the Epipolar Line.",
+      "Stereo Rectification applies homographies to both images, warping them so epipolar lines become perfectly horizontal and collinear with pixel rows. This reduces 2D feature matching to an ultra-fast 1D horizontal search along the exact same row ($y_L = y_R$).",
+      "Modern stereo algorithms (Semi-Global Matching - SGM, and deep stereo networks like PSMNet / RAFT-Stereo) construct 3D cost volumes comparing pixel similarities across candidate disparities, regularising with smoothness priors to yield dense depth maps."
+    ],
+    "steps": [
+      "Calibrate stereo rig: Perform joint geometric calibration to compute baseline distance vector $\\mathbf{t}$ and relative rotation matrix $\\mathbf{R}$ between cameras.",
+      "Stereo rectification: Compute rectification homographies to align camera optical axes parallel, making epipolar lines collinear with horizontal scanlines.",
+      "Compute matching cost volume: For each pixel $(x, y)$, compute matching cost across candidate disparity range $d \\in [0, d_{\\max}]$ (using Census transform, SAD, or deep feature correlation).",
+      "Cost aggregation: Smooth matching costs across multiple 1D path directions (Semi-Global Matching; SGM) to enforce spatial disparity smoothness.",
+      "Disparity selection & refinement: Select minimum cost disparity $d^* = \\operatorname*{arg\\,min}_d C(x, y, d)$ and refine to sub-pixel accuracy via quadratic interpolation.",
+      "Triangulate 3D point cloud: Reproject disparity map into calibrated 3D metric coordinates $(X, Y, Z)$ using camera baseline $B$ and focal length $f$."
+    ],
+    "math": [
+      {
+        "h": "Fundamental Stereo Depth Triangulation Equation",
+        "tex": "Z = \\frac{f \\cdot B}{d} = \\frac{f \\cdot B}{x_L - x_R}",
+        "p": "Metric depth $Z$ is strictly inversely proportional to horizontal disparity $d = x_L - x_R$, where $B$ is baseline and $f$ is focal length."
+      },
+      {
+        "h": "Epipolar Constraint and Essential Matrix",
+        "tex": "\\mathbf{x}_R^T \\mathbf{E} \\mathbf{x}_L = 0, \\quad \\mathbf{E} = [\\mathbf{t}]_\\times \\mathbf{R} = \\mathbf{K}_R^T \\mathbf{F} \\mathbf{K}_L",
+        "p": "Enforces that corresponding rays must intersect in 3D space, constraining matches in the right image to the epipolar line $\\mathbf{l}_R = \\mathbf{F} \\mathbf{x}_L$."
+      },
+      {
+        "h": "SGM Energy Minimisation Objective",
+        "tex": "E(D) = \\sum_p C(p, D_p) + \\sum_{(p, q) \\in \\mathcal{N}} P_1 \\mathbb{I}(|D_p - D_q| = 1) + \\sum_{(p, q) \\in \\mathcal{N}} P_2 \\mathbb{I}(|D_p - D_q| > 1)",
+        "p": "Semi-Global Matching balances matching cost $C$ against penalties for small step disparity changes ($P_1$) and large discontinuous jumps ($P_2$)."
+      }
+    ],
+    "code": "import numpy as np\n\ndef compute_depth_from_disparity(disparity_map: np.ndarray, focal_length_px: float, baseline_m: float) -> np.ndarray:\n    \"\"\"Convert stereo disparity map into metric depth in meters.\"\"\"\n    # Prevent division by zero for zero or negative disparities\n    valid_mask = disparity_map > 0.1\n    depth_m = np.zeros_like(disparity_map, dtype=np.float32)\n    depth_m[valid_mask] = (focal_length_px * baseline_m) / disparity_map[valid_mask]\n    return depth_m\n\n# Camera parameters: Focal length 1000px, Baseline 0.2 meters (20 cm)\nf = 1000.0\nB = 0.20\n\n# Synthetic disparity observations (in pixels)\n# Object A: disparity = 40.0 px (near)\n# Object B: disparity = 10.0 px (medium)\n# Object C: disparity = 2.0 px  (far)\ndisparities = np.array([40.0, 10.0, 2.0], dtype=np.float32)\ndepths = compute_depth_from_disparity(disparities, focal_length_px=f, baseline_m=B)\n\nfor d, z in zip(disparities, depths):\n    print(f\"Disparity: {d:4.1f} px ---> Calculated 3D Depth: {z:5.2f} meters\")\n# Notice depth scales inversely: 40px -> 5.0m, 10px -> 20.0m, 2px -> 100.0m",
+    "keyPoints": [
+      "Stereo vision triangulates metric 3D depth from binocular horizontal disparity.",
+      "Depth is inversely proportional to disparity: $Z = (f \\cdot B) / d$.",
+      "Epipolar geometry and rectification reduce 2D feature matching to 1D horizontal line searches.",
+      "Semi-Global Matching (SGM) optimises disparity maps with directional path smoothness constraints."
+    ],
+    "pitfalls": [
+      "Textureless regions: In plain, textureless surfaces (white walls, calm water), correspondence matching fails because all candidate disparities produce identical matching costs.",
+      "Repetitive patterns: Barcodes, fences, or window blinds produce multiple identical correlation peaks, causing catastrophic disparity ambiguity.",
+      "Stereo occlusion: Points visible in the left camera that are occluded from the right camera's viewpoint have no true match; detect occlusions via Left-Right Consistency checks."
+    ],
+    "quiz": [
+      {
+        "q": "Why does stereo image rectification represent a crucial preprocessing step before stereo matching?",
+        "o": [
+          "It turns colour photos into grayscale",
+          "It aligns epipolar lines parallel to image scanlines, reducing the 2D correspondence search to an ultra-fast 1D horizontal search along identical rows",
+          "It doubles the image resolution",
+          "It automatically deletes noisy pixels"
+        ],
+        "a": 1,
+        "why": "Without rectification, finding a matching pixel requires searching across an arbitrary tilted 2D epipolar line. Rectification ensures matches lie on the same horizontal row ($y_L = y_R$)."
+      },
+      {
+        "q": "What is the mathematical relationship between disparity $d$ and metric depth $Z$ in a rectified stereo system?",
+        "o": [
+          "Depth is linearly proportional to disparity ($Z = k \\cdot d$)",
+          "Depth is inversely proportional to disparity ($Z = \\frac{f \\cdot B}{d}$)",
+          "Depth is quadratic in disparity ($Z = d^2$)",
+          "Depth is independent of disparity"
+        ],
+        "a": 1,
+        "why": "By similar triangles, $Z = (f \\cdot B) / d$. As an object approaches the camera, disparity expands; as it moves away, disparity approaches zero."
+      },
+      {
+        "q": "What is the purpose of a \"Left-Right Consistency Check\" in stereo depth estimation?",
+        "o": [
+          "To verify that the left and right cameras have the same serial number",
+          "To detect occluded pixels: ensuring that matching from Left $\\to$ Right arrives at the same point as matching back from Right $\\to$ Left",
+          "To invert the image colours",
+          "To calculate camera frame rate"
+        ],
+        "a": 1,
+        "why": "If a pixel is visible to the left camera but blocked from the right, the right-to-left match will pick an unrelated pixel. Consistency checks flag and invalidate these occlusions."
+      }
+    ],
+    "related": [
+      "camera-model-and-calibration",
+      "geometric-transforms-and-homography",
+      "optical-flow"
+    ],
+    "keywords": "stereo vision, depth estimation, epipolar geometry, disparity, triangulation, essential matrix, rectification, semi-global matching, sgm"
+  },
+  {
+    "id": "optical-flow",
+    "short": "Optical flow & motion",
+    "title": "Optical Flow and Motion Estimation: Lucas-Kanade, Horn-Schunck, and Deep Correlation",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Estimating 2D pixel motion fields across video frames using the brightness constancy assumption, spatial smoothness constraints, and pyramidal tracking.",
+    "lead": "Visual perception is inherently temporal: motion reveals object boundaries, camera egomotion, and physical trajectory predictions. Optical flow is the pattern of apparent motion of image objects between consecutive video frames, represented as a 2D vector field $(u, v)$ for every pixel. Understanding classical differential methods (Lucas-Kanade, Horn-Schunck) and deep correlation architectures (RAFT) is fundamental for video processing, action recognition, and robotics.",
+    "analogy": "Imagine standing by a river at night, watching drifting autumn leaves illuminated by a lamppost. You cannot see the water current itself, but by tracking how individual bright leaves drift from coordinate $(x, y)$ to $(x + \\Delta x, y + \\Delta y)$ between eye blinks, you infer the direction and speed of the river current at every point across the river surface.",
+    "intuition": [
+      "Optical flow relies on the Brightness Constancy Assumption: the intensity of a physical scene point remains constant as it moves over a tiny time delta $\\Delta t$: $I(x + u, y + v, t + \\Delta t) = I(x, y, t)$.",
+      "Applying a first-order Taylor series expansion yields the Optical Flow Constraint Equation: $I_x u + I_y v + I_t = 0$. This single scalar equation has two unknowns $(u, v)$ at each pixel—an under-determined system known as the Aperture Problem (motion parallel to an edge cannot be resolved from local observations alone).",
+      "Lucas-Kanade (LK) resolves the aperture problem by assuming local spatial constancy: all pixels within a small window (e.g. $5 \\times 5$) share the same motion vector $(u, v)$. Solving the resulting over-determined $25 \\times 2$ linear system via least squares requires the spatial structure tensor to be well-conditioned (which corresponds to corner regions, explaining why corners are optimal for tracking).",
+      "Horn-Schunck formulates global variational optical flow: adding a global spatial smoothness penalty $\\int (\\|\\nabla u\\|^2 + \\|\\nabla v\\|^2)$ to yield dense, smooth flow fields across the entire frame. Modern deep optical flow (RAFT; Teed & Deng) computes all-pairs 4D correlation volumes and iteratively updates flow fields using recurrent GRU blocks."
+    ],
+    "steps": [
+      "Formulate brightness constancy: Assert that surface reflectance remains invariant across consecutive frames $t$ and $t + 1$.",
+      "Compute spatial and temporal gradients: Calculate horizontal derivative $I_x$, vertical derivative $I_y$, and temporal difference $I_t = I_{t+1} - I_t$.",
+      "Construct structure tensor (Lucas-Kanade): For each keypoint, aggregate outer products of spatial gradients within a local neighborhood $\\mathbf{A}^T \\mathbf{A} = \\sum [I_x^2, I_x I_y; I_x I_y, I_y^2]$.",
+      "Solve linear least-squares system: Solve $\\mathbf{d} = (\\mathbf{A}^T \\mathbf{A})^{-1} \\mathbf{A}^T \\mathbf{b}$ for motion vector $(u, v)^T$.",
+      "Build coarse-to-fine iterative pyramid: To track large displacements exceeding 1–2 pixels, build a Gaussian pyramid, compute flow on coarse levels, and warp finer levels recursively.",
+      "Global regularisation (Horn-Schunck / RAFT): Apply global Laplacian smoothing or iterative GRU correlation lookups to produce dense flow across textureless regions."
+    ],
+    "math": [
+      {
+        "h": "Optical Flow Constraint Equation",
+        "tex": "I_x u + I_y v + I_t = 0 \\iff \\nabla I \\cdot \\mathbf{v} + \\frac{\\partial I}{\\partial t} = 0, \\quad \\mathbf{v} = \\begin{bmatrix} u \\\\ v \\end{bmatrix}",
+        "p": "First-order Taylor expansion under the brightness constancy assumption relating spatial gradients $(I_x, I_y)$ to temporal rate of change $I_t$."
+      },
+      {
+        "h": "Lucas-Kanade Least Squares Solution",
+        "tex": "\\begin{bmatrix} u \\\\ v \\end{bmatrix} = \\left( \\sum_{i \\in \\Omega} \\begin{bmatrix} I_{x,i}^2 & I_{x,i} I_{y,i} \\\\ I_{x,i} I_{y,i} & I_{y,i}^2 \\end{bmatrix} \\right)^{-1} \\begin{bmatrix} -\\sum_{i} I_{x,i} I_{t,i} \\\\ -\\sum_{i} I_{y,i} I_{t,i} \\end{bmatrix}",
+        "p": "Solves for local motion vector $\\mathbf{v}$ within window $\\Omega$ using the pseudo-inverse of the spatial gradient structure tensor."
+      },
+      {
+        "h": "Horn-Schunck Global Variational Energy",
+        "tex": "E(u, v) = \\iint \\left[ (I_x u + I_y v + I_t)^2 + \\alpha^2 \\left( \\|\\nabla u\\|^2 + \\|\\nabla v\\|^2 \\right) \\right] dx \\, dy",
+        "p": "Balances local photometric error against a global $L_2$ spatial smoothness regulariser weighted by parameter $\\alpha^2$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef simple_lucas_kanade_step(I1: np.ndarray, I2: np.ndarray, x: int, y: int, win_size: int = 3) -> np.ndarray:\n    \"\"\"Compute local optical flow vector (u, v) at coordinate (x, y) via Lucas-Kanade.\"\"\"\n    r = win_size // 2\n    \n    # Extract local patches\n    p1 = I1[y-r:y+r+1, x-r:x+r+1].astype(np.float32)\n    p2 = I2[y-r:y+r+1, x-r:x+r+1].astype(np.float32)\n    \n    # Spatial gradients on frame 1\n    Ix = np.zeros_like(p1)\n    Iy = np.zeros_like(p1)\n    Ix[:, 1:-1] = (p1[:, 2:] - p1[:, :-2]) * 0.5\n    Iy[1:-1, :] = (p1[2:, :] - p1[:-2, :]) * 0.5\n    \n    # Temporal gradient between frames\n    It = p2 - p1\n    \n    # Flatten window elements\n    ix = Ix.flatten()\n    iy = Iy.flatten()\n    it = It.flatten()\n    \n    A = np.column_stack([ix, iy])\n    b = -it\n    \n    # Solve (A^T A) v = A^T b\n    AtA = A.T @ A\n    if np.linalg.cond(AtA) > 100.0:\n        return np.array([0.0, 0.0])  # Aperture problem / flat region!\n        \n    v = np.linalg.inv(AtA) @ (A.T @ b)\n    return v\n\n# Create synthetic 7x7 image with a bright corner shifting right by 1 pixel\nf1 = np.zeros((7, 7), dtype=np.uint8)\nf1[2:5, 2:5] = 200  # Bright square at (3, 3)\n\nf2 = np.zeros((7, 7), dtype=np.uint8)\nf2[2:5, 3:6] = 200  # Shifted right (+1 on X axis)\n\nflow = simple_lucas_kanade_step(f1, f2, x=3, y=3, win_size=3)\nprint(f\"Calculated Motion Vector: (u={flow[0]:.2f}, v={flow[1]:.2f})\")\nprint(\"Lucas-Kanade accurately recovered the +1.0 horizontal pixel shift!\")",
+    "keyPoints": [
+      "Optical flow estimates apparent 2D velocity fields $(u, v)$ across consecutive video frames.",
+      "The brightness constancy assumption states that surface reflectance is invariant over time.",
+      "The Aperture Problem causes flow parallel to straight edges to be inherently ambiguous.",
+      "Lucas-Kanade solves local flow using least squares over small windows; Horn-Schunck enforces global smoothness."
+    ],
+    "pitfalls": [
+      "The Aperture Problem: Attempting to calculate optical flow on a straight horizontal line only reveals vertical motion; horizontal movement generates zero temporal derivative.",
+      "Large displacements violating Taylor approximations: Standard Lucas-Kanade assumes motions smaller than 1 pixel; tracking large jumps requires hierarchical Gaussian image pyramids.",
+      "Illumination changes: Flashing lights or changing shadows violate the brightness constancy assumption, producing false motion vectors."
+    ],
+    "quiz": [
+      {
+        "q": "What is the \"Aperture Problem\" in optical flow and motion estimation?",
+        "o": [
+          "When the camera lens aperture is closed, blocking all light",
+          "When viewing a moving edge through a small local window, motion parallel to the edge is invisible, allowing only perpendicular normal motion to be measured",
+          "When video frames have different aspect ratios",
+          "When the camera shutter speed is too fast"
+        ],
+        "a": 1,
+        "why": "Looking at a moving barber pole or flat line through a small aperture, movement along the edge creates zero change. Only movement perpendicular to the gradient can be resolved locally."
+      },
+      {
+        "q": "Why does the Lucas-Kanade optical flow algorithm work reliably only on corner-like image regions?",
+        "o": [
+          "Because corners reflect more sunlight than edges",
+          "The structure tensor $\\mathbf{A}^T \\mathbf{A}$ requires two large non-zero eigenvalues to be invertible, which occurs only at corners where gradients point in multiple directions",
+          "Because corners have zero temporal derivative",
+          "Because Lucas-Kanade requires integer pixel values"
+        ],
+        "a": 1,
+        "why": "At a corner, gradients vary in both $x$ and $y$, making the structure tensor well-conditioned and uniquely invertible. On flat areas or straight edges, the matrix is singular."
+      },
+      {
+        "q": "How does Pyramidal Lucas-Kanade track large object motions exceeding 10 pixels between frames?",
+        "o": [
+          "By increasing the frame rate of the video recording",
+          "By building a Gaussian image pyramid, calculating coarse flow on heavily downsampled levels where large motions become small sub-pixel shifts, and propagating flow down",
+          "By running 100 epochs of deep learning training",
+          "By converting the image to the frequency domain"
+        ],
+        "a": 1,
+        "why": "In coarse downsampled pyramid levels, a 10-pixel jump shrinks to 1.25 pixels, satisfying the small-motion Taylor series assumption before refining at full resolution."
+      }
+    ],
+    "related": [
+      "corners-and-keypoints-harris-fast",
+      "image-pyramids-and-scale-space",
+      "stereo-vision-and-depth"
+    ],
+    "keywords": "optical flow, lucas-kanade, horn-schunck, brightness constancy, aperture problem, motion estimation, video tracking, structure tensor"
+  },
+  {
+    "id": "depthwise-separable-convolutions-and-convnext",
+    "short": "Depthwise convs & ConvNeXt",
+    "title": "Modern Convolutional Engineering: Depthwise-Separable Convolutions and the ConvNeXt Renaissance",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 17,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Decoupling spatial filtering from channel mixing with Depthwise-Separable Convolutions (MobileNet) and modernising CNNs with ConvNeXt.",
+    "lead": "Standard 2D convolutions perform spatial filtering and cross-channel mixing simultaneously in a single heavy tensor operation, requiring massive FLOPs and parameter counts. Depthwise-Separable Convolutions (Howard et al., MobileNet) factorise standard convolutions into two lightweight steps: a spatial depthwise filter followed by a 1x1 pointwise projection, slashing compute by 8x to 9x. Later, ConvNeXt (Liu et al.) modernised pure convolutional networks with Vision Transformer design choices, proving CNNs remain competitive with Transformers.",
+    "analogy": "Imagine baking a 100-layer multicoloured cake. A standard convolution is like having 64 master chefs simultaneously decorating and mixing all 64 layers in a giant shared bowl—chaotic, slow, and requiring huge counter space. A depthwise-separable convolution first has one decorator frost each cake layer individually in isolation (depthwise spatial filtering), and then has a specialist slice through the vertical stack with a laser to blend flavours (1x1 pointwise channel mixing).",
+    "intuition": [
+      "In a standard convolution with $C_{\\mathrm{in}}$ input channels, $C_{\\mathrm{out}}$ output channels, and kernel size $K \\times K$, the computational cost per output spatial position is $K^2 \\cdot C_{\\mathrm{in}} \\cdot C_{\\mathrm{out}}$.",
+      "Depthwise-Separable Convolutions factorise this into: 1) Depthwise Convolution: applies a single spatial $K \\times K$ filter to each input channel independently ($K^2 \\cdot C_{\\mathrm{in}}$ FLOPs), learning purely spatial patterns; 2) Pointwise Convolution: applies a $1 \\times 1$ convolution across all channels ($C_{\\mathrm{in}} \\cdot C_{\\mathrm{out}}$ FLOPs), learning cross-channel combinations.",
+      "The computational cost drops by $\\frac{1}{C_{\\mathrm{out}}} + \\frac{1}{K^2} \\approx \\frac{1}{9}$ for $3 \\times 3$ kernels, enabling real-time deep learning on mobile smartphones.",
+      "When Vision Transformers (ViTs) emerged, many attributed their success entirely to the self-attention mechanism. ConvNeXt re-examined CNN architecture from first principles: adopting ViT design practices (larger $7 \\times 7$ kernels, inverted bottleneck ratios, fewer normalisation layers, substituting GELU for ReLU, LayerNorm instead of BatchNorm). ConvNeXt matched or exceeded Swin Transformer accuracy while maintaining pure convolutional efficiency."
+    ],
+    "steps": [
+      "Factorise standard convolution: Replace standard `Conv2d(Cin, Cout, K)` with `Conv2d(Cin, Cin, K, groups=Cin)` followed by `Conv2d(Cin, Cout, 1)`.",
+      "Adopt inverted bottleneck design: Expand channel dimensions inside the residual block by $4\\times$ before contracting, shifting compute into high-capacity intermediate projections.",
+      "Enlarge spatial kernel sizes: Increase depthwise convolutional kernel size from $3 \\times 3$ to $7 \\times 7$ to match the broad receptive field of Vision Transformer self-attention windows.",
+      "Modernise activation and normalisation: Replace BatchNorm with LayerNorm (computing normalisation across channels per pixel); replace ReLU with smooth GELU activations.",
+      "Reduce normalisation frequency: Place LayerNorm only once per residual block rather than after every individual convolution.",
+      "Train with modern augmentation recipes: Train with AdamW, cosine learning rate schedules, Mixup, and RandAugment for 300 epochs."
+    ],
+    "math": [
+      {
+        "h": "Standard vs Depthwise-Separable FLOP Ratio",
+        "tex": "\\frac{\\mathrm{Cost}_{\\mathrm{separable}}}{\\mathrm{Cost}_{\\mathrm{standard}}} = \\frac{D_K^2 \\cdot M + M \\cdot N}{D_K^2 \\cdot M \\cdot N} = \\frac{1}{N} + \\frac{1}{D_K^2} \\approx \\frac{1}{D_K^2}",
+        "p": "For $3 \\times 3$ kernels ($D_K = 3$) and large channel count $N$, depthwise-separable convolutions reduce computational cost by approximately 88%–89%."
+      },
+      {
+        "h": "ConvNeXt Inverted Bottleneck Flow",
+        "tex": "\\mathbf{x}_{l+1} = \\mathbf{x}_l + \\mathbf{W}_{2} \\cdot \\operatorname{GELU}\\left( \\mathbf{W}_{1} \\cdot \\operatorname{LayerNorm}\\left( \\operatorname{DWConv}_{7\\times 7}(\\mathbf{x}_l) \\right) \\right)",
+        "p": "Applies $7 \\times 7$ depthwise convolution, normalises via LayerNorm, expands channels by $4\\times$ via $\\mathbf{W}_1$, and projects back via $\\mathbf{W}_2$."
+      },
+      {
+        "h": "LayerNorm for Convolutional Tensors",
+        "tex": "\\operatorname{LN}(\\mathbf{x})_{c, h, w} = \\frac{x_{c, h, w} - \\mu_{h, w}}{\\sqrt{\\sigma_{h, w}^2 + \\epsilon}} \\cdot \\gamma_c + \\beta_c, \\quad \\mu_{h, w} = \\frac{1}{C} \\sum_{c=1}^C x_{c, h, w}",
+        "p": "Computes mean and variance across channel dimension $C$ for each spatial coordinate $(h, w)$, independent of batch size."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\n\nclass DepthwiseSeparableConv(nn.Module):\n    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3, padding: int = 1):\n        super().__init__()\n        # 1. Depthwise convolution: groups = in_channels\n        self.depthwise = nn.Conv2d(\n            in_channels, in_channels, kernel_size=kernel_size,\n            padding=padding, groups=in_channels, bias=False\n        )\n        # 2. Pointwise convolution: 1x1 kernel\n        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=True)\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return self.pointwise(self.depthwise(x))\n\n# Compare parameter counts: Standard vs Separable\nin_c, out_c = 64, 128\nstd_conv = nn.Conv2d(in_c, out_c, kernel_size=3, padding=1)\nsep_conv = DepthwiseSeparableConv(in_c, out_c, kernel_size=3, padding=1)\n\nstd_params = sum(p.numel() for p in std_conv.parameters())\nsep_params = sum(p.numel() for p in sep_conv.parameters())\n\nprint(f\"Standard 3x3 Conv Parameters:            {std_params:,}\")\nprint(f\"Depthwise-Separable 3x3 Conv Parameters: {sep_params:,}\")\nprint(f\"Parameter reduction: {(1.0 - sep_params / std_params) * 100:.1f}% savings!\")",
+    "keyPoints": [
+      "Depthwise-separable convolutions factorise spatial filtering and channel mixing into two separate steps.",
+      "Reduces computational FLOPs and parameter counts by $\\approx 8\\times$ to $9\\times$ for $3 \\times 3$ kernels.",
+      "MobileNet established depthwise-separable blocks as the foundation for edge mobile vision.",
+      "ConvNeXt modernised CNNs using $7 \\times 7$ kernels, inverted bottlenecks, and LayerNorm, rivaling Vision Transformers."
+    ],
+    "pitfalls": [
+      "Under-utilising GPU memory bandwidth: Depthwise convolutions have lower arithmetic intensity (fewer FLOPs per memory access); on high-end desktop GPUs, wall-clock speedups can be lower than theoretical FLOP reductions unless kernels are fused.",
+      "Using small $3 \\times 3$ kernels in modern architectures: Modern CNNs benefit from larger $7 \\times 7$ depthwise kernels to capture long-range receptive fields without parameter blowup.",
+      "Applying BatchNorm with small batch sizes: BatchNorm degrades when batch size per GPU is small ($< 16$); ConvNeXt uses LayerNorm to remain batch-size invariant."
+    ],
+    "quiz": [
+      {
+        "q": "How does a Depthwise-Separable Convolution reduce computational cost compared to a standard convolution?",
+        "o": [
+          "By rounding all floating point numbers to integers",
+          "By splitting the operation into a spatial depthwise convolution (applying a separate filter to each channel independently) followed by a 1x1 pointwise convolution across channels",
+          "By skipping every second frame in video",
+          "By eliminating the need for backpropagation"
+        ],
+        "a": 1,
+        "why": "Standard convolutions perform spatial filtering and channel combination simultaneously. Separating them decouples spatial operations from channel mixing, reducing FLOPs by $\\approx 88\\%$."
+      },
+      {
+        "q": "What was the primary design philosophy behind the ConvNeXt architecture (Liu et al., 2022)?",
+        "o": [
+          "To replace all convolutions with self-attention heads",
+          "To modernise a pure standard convolutional network step-by-step using Vision Transformer architectural design choices (larger kernels, LayerNorm, inverted bottleneck, GELU)",
+          "To train models exclusively on mobile phones",
+          "To eliminate residual skip connections"
+        ],
+        "a": 1,
+        "why": "ConvNeXt took a standard ResNet and modernised its macro/micro design choices based on Swin Transformer findings, demonstrating that pure CNNs can match Transformer performance."
+      },
+      {
+        "q": "What is the theoretical computational savings ratio of a $3 \\times 3$ depthwise-separable convolution compared to a standard $3 \\times 3$ convolution when channel counts are large?",
+        "o": [
+          "Approximately 10%",
+          "Approximately 50%",
+          "Approximately 88%–89% (reduction factor of $\\approx 1/K^2 = 1/9$)",
+          "100% (zero compute cost)"
+        ],
+        "a": 2,
+        "why": "The cost ratio is $\\frac{1}{N} + \\frac{1}{K^2}$. For $K=3$ and large $N$, the ratio approaches $1/9 \\approx 11.1\\%$, yielding an 88.9% compute reduction."
+      }
+    ],
+    "related": [
+      "receptive-field-stride-and-pooling",
+      "cnn-architecture-tour-lenet-to-resnet-to-efficientnet",
+      "vision-transformer"
+    ],
+    "keywords": "depthwise separable convolutions, mobilenet, convnext, inverted bottleneck, layernorm, pointwise convolution, spatial filtering, cnn modernisation"
+  },
+  {
+    "id": "two-stage-detectors-the-r-cnn-family",
+    "short": "The R-CNN family",
+    "title": "Two-Stage Object Detection: R-CNN, Fast R-CNN, Faster R-CNN, and the Region Proposal Network",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Mastering the evolution of two-stage detection from selective search to Fast R-CNN RoI pooling and end-to-end Region Proposal Networks (RPN).",
+    "lead": "Object detection requires answering two questions simultaneously: where are the objects (localization), and what are they (classification)? While one-stage detectors (YOLO, SSD) prioritize inference speed by predicting boxes in a single dense pass, two-stage detectors prioritize localization precision. Tracing the evolutionary arc from original R-CNN to Fast R-CNN and Faster R-CNN explains how region proposals, RoI pooling, and the Region Proposal Network (RPN) unified detection into a single end-to-end trainable deep network.",
+    "analogy": "Imagine an art appraiser and a museum guard inspecting a crowded gallery. In original R-CNN, the guard cuts out 2,000 physical patches from the canvas with scissors and carries them one by one to the appraiser's office. In Fast R-CNN, the appraiser takes one high-resolution photograph of the entire gallery and simply glances at different areas of the master photo. In Faster R-CNN, the appraiser replaces the manual guard with an automated laser pointer (the RPN) that highlights candidate paintings in real time.",
+    "intuition": [
+      "Original R-CNN (Girshick et al., 2014) used classical Selective Search to generate $\\approx 2,000$ candidate region proposals per image, warped each crop to $227 \\times 227$ pixels, and ran each crop independently through AlexNet. This took 47 seconds per image and consumed gigabytes of disk space for cached features.",
+      "Fast R-CNN (2015) solved the redundant compute bottleneck: it passes the entire image through the convolutional backbone once, extracting a single global feature map. Region of Interest (RoI) Pooling then extracts a fixed-size $7 \\times 7$ feature vector from the shared feature map for each proposal, accelerating inference by $146\\times$.",
+      "However, Fast R-CNN was still bottle-necked by Selective Search on CPU ($approx 2$ seconds per image). Faster R-CNN (Ren et al., 2015) eliminated Selective Search entirely by introducing the Region Proposal Network (RPN): a small fully convolutional network that slides across the shared feature map, evaluating multi-scale Anchor Boxes to predict candidate proposals in 10 milliseconds.",
+      "The two-stage paradigm divides detection into: Stage 1 (RPN generates a few hundred high-recall candidate bounding boxes) and Stage 2 (Fast R-CNN head refines box coordinates and classifies categories). This separation produces high precision on small and crowded objects."
+    ],
+    "steps": [
+      "Extract shared feature maps: Pass input image through convolutional backbone (e.g. ResNet-50 with Feature Pyramid Network) to generate feature maps.",
+      "Slide Region Proposal Network (RPN): At each feature map cell, evaluate $k$ anchor boxes (e.g. 3 scales $\\times$ 3 aspect ratios = 9 anchors).",
+      "Classify objectness and regress proposals: RPN predicts binary objectness logits (foreground vs background) and 4 bounding box regression deltas $(\\Delta x, \\Delta y, \\Delta w, \\Delta h)$.",
+      "Filter proposals with NMS: Select top 2,000 proposals during training (300 during inference) using Non-Maximum Suppression (IoU threshold 0.7).",
+      "Extract fixed-size vectors via RoIAlign: Extract $7 \\times 7$ feature maps for each proposal using bilinear interpolation (RoIAlign) to prevent quantization misalignment.",
+      "Classify and refine (Stage 2): Pass pooled RoI features through fully connected heads to output $C$-class softmax probabilities and final category-specific bounding box offsets."
+    ],
+    "math": [
+      {
+        "h": "Bounding Box Regression Delta Formulation",
+        "tex": "t_x = \\frac{x - x_a}{w_a}, \\quad t_y = \\frac{y - y_a}{h_a}, \\quad t_w = \\ln\\left(\\frac{w}{w_a}\\right), \\quad t_h = \\ln\\left(\\frac{h}{h_a}\\right)",
+        "p": "Parameterises ground truth box $(x, y, w, h)$ relative to anchor $(x_a, y_a, w_a, h_a)$ using translation normalisation and log-scale variance."
+      },
+      {
+        "h": "Faster R-CNN Multi-Task Loss Objective",
+        "tex": "\\mathcal{L}(p, u, t, v) = \\mathcal{L}_{\\mathrm{cls}}(p, u) + \\lambda [u \\ge 1] \\sum_{i \\in \\{x, y, w, h\\}} \\operatorname{Smooth}_{L_1}(t_i - v_i)",
+        "p": "Combines cross-entropy classification loss $\\mathcal{L}_{\\mathrm{cls}}$ with $\\operatorname{Smooth}_{L_1}$ regression loss, active strictly for positive foreground boxes ($u \\ge 1$)."
+      },
+      {
+        "h": "Smooth L1 Robust Regression Loss",
+        "tex": "\\operatorname{Smooth}_{L_1}(x) = \\begin{cases} 0.5 x^2 & \\text{if } |x| < 1 \\\\ |x| - 0.5 & \\text{otherwise} \\end{cases}",
+        "p": "Behaves as quadratic $L_2$ loss for small errors (preventing gradient oscillations) and linear $L_1$ loss for large errors (robust against outlier boxes)."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass SimpleRPNHead(nn.Module):\n    \"\"\"Educational demonstration of Region Proposal Network (RPN) head.\"\"\"\n    def __init__(self, in_channels: int = 256, num_anchors: int = 9):\n        super().__init__()\n        # 3x3 intermediate conv\n        self.conv = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1)\n        # 1x1 conv for binary objectness (foreground vs background)\n        self.cls_head = nn.Conv2d(in_channels, num_anchors * 2, kernel_size=1)\n        # 1x1 conv for 4 bounding box deltas per anchor (dx, dy, dw, dh)\n        self.reg_head = nn.Conv2d(in_channels, num_anchors * 4, kernel_size=1)\n\n    def forward(self, feature_map: torch.Tensor):\n        # feature_map shape: [batch, in_channels, H, W]\n        t = F.relu(self.conv(feature_map))\n        \n        # Objectness logits: [batch, 2 * num_anchors, H, W]\n        cls_logits = self.cls_head(t)\n        # Box deltas: [batch, 4 * num_anchors, H, W]\n        bbox_deltas = self.reg_head(t)\n        return cls_logits, bbox_deltas\n\n# Test on feature map (e.g. ResNet stride 16 on 224x224 image -> 14x14 grid)\nrpn = SimpleRPNHead(in_channels=256, num_anchors=9)\nfeat = torch.randn(2, 256, 14, 14)\nscores, deltas = rpn(feat)\n\ntotal_anchors = 14 * 14 * 9\nprint(f\"Feature map grid: 14x14 cells with 9 anchors per cell\")\nprint(f\"Total candidate proposals evaluated in parallel: {total_anchors:,} anchors per image\")\nprint(f\"Objectness scores shape: {scores.shape} | Box deltas shape: {deltas.shape}\")",
+    "keyPoints": [
+      "Two-stage detectors divide detection into proposal generation (Stage 1) and classification/refinement (Stage 2).",
+      "Fast R-CNN introduced RoI pooling on a single shared feature map, eliminating redundant forward passes.",
+      "Faster R-CNN introduced the Region Proposal Network (RPN), replacing CPU Selective Search with real-time GPU anchors.",
+      "RoIAlign replaced RoIPool, using bilinear interpolation to eliminate sub-pixel spatial rounding errors."
+    ],
+    "pitfalls": [
+      "RoIPool quantization misalignment: In original Fast R-CNN, `RoIPool` rounded floating point coordinates to integers ($16.8 \\to 16$), causing compounding spatial misalignments that ruined small object detection; use `RoIAlign`.",
+      "Extreme anchor class imbalance: 99.9% of anchors in an image belong to the background; if trained naively, the RPN predicts \"background\" everywhere; sample balanced minibatches with 1:1 or 1:3 positive-to-negative ratios.",
+      "Inference latency: While accurate, two-stage detectors require sequential proposal filtering and per-RoI forward passes, running at 10–25 FPS compared to YOLO's 60–120 FPS."
+    ],
+    "quiz": [
+      {
+        "q": "What critical innovation in Faster R-CNN (Ren et al., 2015) enabled real-time end-to-end object detection?",
+        "o": [
+          "Replacing convolutional layers with recurrent LSTM cells",
+          "The Region Proposal Network (RPN), which replaced slow CPU Selective Search with a fast neural network operating directly on shared feature maps",
+          "Eliminating all bounding box coordinates",
+          "Training exclusively on black and white images"
+        ],
+        "a": 1,
+        "why": "Fast R-CNN took 2 seconds per image because Selective Search ran on the CPU. Faster R-CNN replaced it with the neural RPN running in 10ms on the GPU."
+      },
+      {
+        "q": "Why did Mask R-CNN replace `RoIPool` with `RoIAlign`?",
+        "o": [
+          "RoIAlign runs 10x faster than RoIPool",
+          "RoIPool performed harsh integer rounding (quantization) on spatial coordinates, causing severe misalignment when predicting pixel-accurate masks",
+          "RoIPool could only process square images",
+          "RoIAlign deletes background anchors"
+        ],
+        "a": 1,
+        "why": "RoIPool rounded floating-point boundary coordinates, causing pixel drifts that broke pixel-level segmentation. RoIAlign uses bilinear interpolation without quantization."
+      },
+      {
+        "q": "What is the role of Anchor Boxes in the Region Proposal Network (RPN)?",
+        "o": [
+          "To anchor the camera position in 3D world space",
+          "Predefined reference bounding boxes of diverse scales and aspect ratios at each feature grid position, providing regression reference points",
+          "To compress image files before training",
+          "To encrypt feature weights"
+        ],
+        "a": 1,
+        "why": "Anchors provide multiscale reference templates (e.g. tall for pedestrians, wide for cars). The RPN simply predicts minor regression deltas relative to these known templates."
+      }
+    ],
+    "related": [
+      "one-stage-detectors-ssd-and-yolo",
+      "iou-nms-and-map",
+      "instance-segmentation-mask-r-cnn"
+    ],
+    "keywords": "two-stage detectors, r-cnn, fast r-cnn, faster r-cnn, rpn, region proposal network, roialign, anchor boxes, object detection"
+  },
+  {
+    "id": "anchor-free-detection-and-detr",
+    "short": "Anchor-free & DETR",
+    "title": "Modern Object Detection: Anchor-Free Detectors (FCOS) and Detection Transformers (DETR)",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Eliminating anchor box hyperparameters and Non-Maximum Suppression using centre-point regression (FCOS) and bipartite matching Transformers (DETR).",
+    "lead": "For years, object detection was dominated by anchor boxes: practitioners had to manually tune dozens of hyperparameters (anchor scales, aspect ratios, IoU match thresholds), while complex hand-crafted post-processing like Non-Maximum Suppression (NMS) remained mandatory. Anchor-free architectures (FCOS) and Detection Transformers (DETR; Carion et al., 2020) redefined the paradigm, framing object detection as direct point regression or set prediction via bipartite matching.",
+    "analogy": "Imagine ordering food at a busy restaurant. An anchor-based system is like an over-cautious waiter guessing that you might want 9 possible predefined combinations (small salad, large burger, medium fries) and bringing 9 plates to the table, forcing you to throw away 8 duplicates with a spatula (NMS). DETR is like an intelligent chef who simply receives your table order, glances at the kitchen, and delivers exactly the dishes you requested with zero waste.",
+    "intuition": [
+      "Anchor-based detectors suffer from fundamental flaws: anchors require heavy heuristic tuning, introduce severe positive-negative sample imbalance, and require non-differentiable NMS post-processing.",
+      "FCOS (Fully Convolutional One-Stage Object Detection; Tian et al.) eliminates anchors entirely: it treats every location $(x, y)$ on the feature map inside a ground-truth box as a positive training sample, directly regressing the 4 distances to box edges $(l, t, r, b)$. A novel \"Centerness\" branch down-weights low-quality bounding boxes far from object centres without anchor boxes.",
+      "DETR (DEtection TRansformer; Carion et al.) completely eliminates both anchors and NMS, formulating detection as a direct Set Prediction problem. An image passes through a CNN backbone and a Transformer encoder-decoder. A fixed set of $N$ learned Object Queries interact with image tokens via cross-attention.",
+      "During training, DETR uses the Hungarian Algorithm to find a unique, optimal one-to-one Bipartite Matching between the $N$ predictions and ground-truth objects. This one-to-one assignment guarantees that each physical object is predicted by exactly one query, making NMS completely unnecessary."
+    ],
+    "steps": [
+      "Extract multi-scale features: Pass image through CNN backbone (ResNet) and flatten spatial feature maps into sequence tokens.",
+      "Transformer Encoder self-attention: Model global context and pairwise feature dependencies across all spatial locations.",
+      "Pass learned Object Queries to Decoder: Provide $N$ fixed learned embedding vectors (e.g. $N=100$) that query image representations via cross-attention.",
+      "Predict independent box sets: Feed each of the $N$ output embeddings through shared feed-forward networks (FFNs) to predict category class and normalised box coordinates $(x, y, w, h)$.",
+      "Compute optimal Bipartite Matching (Training): Run the Hungarian matching algorithm to find permutation $\\sigma \\in \\mathfrak{S}_N$ minimising matching cost with ground truth.",
+      "Direct inference (No NMS): Filter out predictions assigned to the background \"no-object\" class $\\varnothing$; directly emit remaining bounding boxes with zero NMS post-processing."
+    ],
+    "math": [
+      {
+        "h": "Optimal Bipartite Matching Cost (Hungarian Algorithm)",
+        "tex": "\\hat{\\sigma} = \\operatorname*{arg\\,min}_{\\sigma \\in \\mathfrak{S}_N} \\sum_{i=1}^N \\mathcal{L}_{\\mathrm{match}}\\left( y_i, \\; \\hat{y}_{\\sigma(i)} \\right)",
+        "p": "Finds the permutation $\\sigma$ of predictions that minimises the global sum of pairwise classification and bounding box distances."
+      },
+      {
+        "h": "Pairwise Matching Cost Function",
+        "tex": "\\mathcal{L}_{\\mathrm{match}}(y_i, \\hat{y}_\\sigma) = -\\mathbb{I}(c_i \\ne \\varnothing) \\hat{p}_\\sigma(c_i) + \\mathbb{I}(c_i \\ne \\varnothing) \\left[ \\lambda_{\\mathrm{L1}} \\| b_i - \\hat{b}_\\sigma \\|_1 + \\lambda_{\\mathrm{giou}} \\mathcal{L}_{\\mathrm{GIoU}}(b_i, \\hat{b}_\\sigma) \\right]",
+        "p": "Balances target class probability $\\hat{p}(c_i)$ with $L_1$ coordinate error and Generalised IoU (GIoU) loss."
+      },
+      {
+        "h": "FCOS Centerness Branch Target",
+        "tex": "\\operatorname{Centerness}^* = \\sqrt{\\frac{\\min(l^*, r^*)}{\\max(l^*, r^*)} \\times \\frac{\\min(t^*, b^*)}{\\max(t^*, b^*)}}",
+        "p": "Measures how close feature cell $(x, y)$ is to the centre of the bounding box; down-weights peripheral low-quality detections."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\nfrom scipy.optimise import linear_sum_assignment\n\ndef toy_bipartite_matching(pred_boxes: torch.Tensor, gt_boxes: torch.Tensor):\n    \"\"\"Educational demonstration of Hungarian bipartite matching used in DETR.\"\"\"\n    # pred_boxes: [N, 4], gt_boxes: [M, 4] where N >= M\n    N, M = pred_boxes.size(0), gt_boxes.size(0)\n    \n    # Compute pairwise L1 cost matrix: [N, M]\n    cost_matrix = torch.cdist(pred_boxes, gt_boxes, p=1).detach().numpy()\n    \n    # Solve optimal one-to-one assignment via Hungarian algorithm\n    pred_indices, gt_indices = linear_sum_assignment(cost_matrix)\n    \n    return pred_indices, gt_indices\n\n# Simulate 5 DETR object queries predicting boxes against 2 ground-truth objects\ntorch.manual_seed(42)\npredictions = torch.tensor([\n    [0.10, 0.10, 0.20, 0.20],  # Query 0: Near GT 0\n    [0.80, 0.80, 0.15, 0.15],  # Query 1: Far away (background)\n    [0.55, 0.50, 0.30, 0.30],  # Query 2: Near GT 1\n    [0.12, 0.09, 0.22, 0.21],  # Query 3: Also near GT 0 (competing duplicate)\n    [0.90, 0.10, 0.10, 0.10]   # Query 4: Background\n])\n\nground_truth = torch.tensor([\n    [0.11, 0.10, 0.21, 0.20],  # GT 0\n    [0.50, 0.50, 0.30, 0.30]   # GT 1\n])\n\npred_idx, gt_idx = toy_bipartite_matching(predictions, ground_truth)\n\nprint(\"Hungarian Bipartite Assignment:\")\nfor p, g in zip(pred_idx, gt_idx):\n    print(f\"Query {p} strictly assigned to Ground Truth {g} (Distance: {torch.dist(predictions[p], ground_truth[g]):.4f})\")\nprint(\"Duplicate queries receive NO assignment, forcing them to predict background without NMS!\")",
+    "keyPoints": [
+      "Anchor-free architectures eliminate complex anchor scale/aspect ratio tuning.",
+      "FCOS regresses distances to box boundaries directly from positive grid cells.",
+      "DETR frames object detection as direct Set Prediction using Transformer cross-attention.",
+      "Hungarian bipartite matching enforces strict one-to-one matching, completely eliminating NMS."
+    ],
+    "pitfalls": [
+      "Slow training convergence in original DETR: Original DETR required 500 epochs to converge because cross-attention looks everywhere; Deformable DETR solves this by focusing attention locally.",
+      "Small object detection in DETR: Standard DETR downsamples feature maps by $32\\times$, losing fine spatial details of small objects; multi-scale feature pyramids are required.",
+      "High Hungarian matching cost computation: While fast for small query counts ($N=100$), Hungarian matching scales as $O(N^3)$ on CPU if query counts balloon to thousands."
+    ],
+    "quiz": [
+      {
+        "q": "Why does DETR (DEtection TRansformer) not require Non-Maximum Suppression (NMS) post-processing?",
+        "o": [
+          "Because DETR runs exclusively on CPUs",
+          "Because training uses bipartite Hungarian matching, which enforces a strict one-to-one assignment where each ground-truth object can be predicted by only one unique query",
+          "Because DETR only detects one object per image",
+          "Because Transformers cannot process overlapping boxes"
+        ],
+        "a": 1,
+        "why": "Traditional models produce dozens of overlapping duplicate proposals for one object. DETR's bipartite loss penalizes duplicate predictions, forcing only one query to emit the box."
+      },
+      {
+        "q": "What are \"Object Queries\" in the DETR architecture?",
+        "o": [
+          "SQL queries sent to a remote database",
+          "A fixed number of learned positional embedding vectors (e.g. 100) fed to the Transformer decoder, each tasked with querying and detecting one object in the scene",
+          "The ground truth bounding box labels",
+          "The prompt instructions written by human users"
+        ],
+        "a": 1,
+        "why": "Object queries are learned vectors that attend to image features via cross-attention, specializing in detecting objects at particular image regions or scales."
+      },
+      {
+        "q": "What is the role of the \"Centerness\" branch in the anchor-free FCOS detector?",
+        "o": [
+          "To centre the camera before taking a photograph",
+          "To predict how close a feature cell is to the centre of its object bounding box, down-weighting low-quality peripheral boundary detections during testing",
+          "To compute the mean colour of the image",
+          "To ensure the loss function has zero gradient"
+        ],
+        "a": 1,
+        "why": "Locations near object edges produce noisy box predictions. FCOS down-weights these low-quality boxes by multiplying classification scores by predicted centerness."
+      }
+    ],
+    "related": [
+      "the-attention-mechanism",
+      "two-stage-detectors-the-r-cnn-family",
+      "one-stage-detectors-ssd-and-yolo"
+    ],
+    "keywords": "anchor-free detection, detr, fcos, hungarian algorithm, bipartite matching, set prediction, object queries, deformable detr, nms-free"
+  },
+  {
+    "id": "instance-segmentation-mask-r-cnn",
+    "short": "Mask R-CNN",
+    "title": "Instance Segmentation with Mask R-CNN: Extending Faster R-CNN with RoIAlign and Mask FCN",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Detecting and segmenting individual object instances simultaneously using Faster R-CNN backbones, RoIAlign, and parallel pixel-level mask FCN heads.",
+    "lead": "Semantic segmentation classifies every pixel into a category (e.g. \"person\"), but cannot distinguish between two people standing side by side. Object detection places a bounding box around each person, but cannot capture exact contours. Instance Segmentation achieves both: detecting each individual object instance and predicting a pixel-accurate binary mask for each. Mask R-CNN (He et al., 2017) solved this elegantly by adding a small Fully Convolutional Network mask branch in parallel with Faster R-CNN.",
+    "analogy": "Imagine a factory quality-control robot inspecting apples on a conveyor belt. Semantic segmentation says: \"80% of the belt area is apple\". Object detection says: \"there are four separate rectangular apple crates\". Instance segmentation assigns a distinct numbered label to each individual apple and shrink-wraps an exact plastic clingfilm contour around every single apple skin, isolating bruised spots to sub-millimeter precision.",
+    "intuition": [
+      "Instance segmentation follows a \"Detect then Segment\" paradigm: first detect candidate object bounding boxes, and then predict a binary segmentation mask inside each proposed box.",
+      "Mask R-CNN extends Faster R-CNN by adding a third parallel output branch for each Region of Interest (RoI): in addition to the classification branch (predicting class $c$) and bounding box regression branch (predicting box deltas), it adds a small Fully Convolutional Network (FCN) predicting a $K \\times m \\times m$ binary mask (where $m \\times m$ is typically $28 \\times 28$).",
+      "The critical enabler was RoIAlign: Faster R-CNN's original `RoIPool` used integer quantization (rounding $16.7$ to $16$), introducing up to half-pixel misalignments. While harmless for coarse bounding boxes, a 1-pixel shift completely misaligns fine object masks. RoIAlign uses bilinear interpolation at four sampling points per bin, preserving continuous floating-point spatial fidelity.",
+      "Decoupling mask and class prediction: For each RoI, the mask branch outputs $K$ independent binary masks (one for each class), without competition between classes. The classification branch independently decides which class label to apply, preventing inter-class competition from corrupting mask quality."
+    ],
+    "steps": [
+      "Extract multi-scale feature pyramid: Pass image through ResNet with Feature Pyramid Network (FPN) generating feature maps at strides 4, 8, 16, 32.",
+      "Generate candidate proposals via RPN: Region Proposal Network proposes high-recall candidate bounding boxes.",
+      "Extract aligned RoI features via RoIAlign: Extract continuous $14 \\times 14$ feature representations for each proposal using bilinear interpolation without quantization.",
+      "Classify and regress box (Standard Faster R-CNN): Pass features through fully connected layers to predict class logits and refined bounding box offsets.",
+      "Predict pixel-accurate masks in parallel: Pass $14 \\times 14$ features through a 4-layer $3 \\times 3$ FCN followed by a $2 \\times 2$ deconvolution, emitting $28 \\times 28$ binary mask logits for each class.",
+      "Paste and threshold mask: Threshold the target class mask at $0.5$ and paste back onto the original image within the predicted bounding box coordinates."
+    ],
+    "math": [
+      {
+        "h": "Mask R-CNN Multi-Task Total Loss",
+        "tex": "\\mathcal{L}_{\\mathrm{total}} = \\mathcal{L}_{\\mathrm{cls}} + \\mathcal{L}_{\\mathrm{box}} + \\mathcal{L}_{\\mathrm{mask}}",
+        "p": "Jointly trains classification loss $\\mathcal{L}_{\\mathrm{cls}}$, bounding box regression $\\mathcal{L}_{\\mathrm{box}}$, and pixel binary cross-entropy $\\mathcal{L}_{\\mathrm{mask}}$."
+      },
+      {
+        "h": "Decoupled Binary Mask Cross-Entropy Loss",
+        "tex": "\\mathcal{L}_{\\mathrm{mask}} = -\\frac{1}{m^2} \\sum_{i=1}^{m} \\sum_{j=1}^{m} \\left[ y_{ij} \\ln \\sigma(s_{ij}^k) + (1 - y_{ij}) \\ln (1 - \\sigma(s_{ij}^k)) \\right]",
+        "p": "Evaluates average binary cross-entropy strictly on the $k$-th mask slice corresponding to ground-truth class $k$, avoiding inter-class competition."
+      },
+      {
+        "h": "RoIAlign Continuous Bilinear Interpolation",
+        "tex": "f(x, y) = \\sum_{i, j \\in \\{0, 1\\}} w_{ij} \\cdot f(\\lfloor x \\rfloor + i, \\; \\lfloor y \\rfloor + j), \\quad w_{ij} = |1 - i - (x - \\lfloor x \\rfloor)| \\cdot |1 - j - (y - \\lfloor y \\rfloor)|",
+        "p": "Samples exact continuous sub-pixel coordinates without spatial rounding, eliminating mask boundary quantization artifacts."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass MiniMaskBranch(nn.Module):\n    \"\"\"Educational demonstration of Mask R-CNN's FCN mask prediction branch.\"\"\"\n    def __init__(self, in_channels: int = 256, num_classes: int = 4, mask_res: int = 14):\n        super().__init__()\n        # 4 consecutive conv layers\n        self.convs = nn.Sequential(\n            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1),\n            nn.ReLU(),\n            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1),\n            nn.ReLU()\n        )\n        # Deconvolution (transpose conv) to upsample 14x14 -> 28x28\n        self.upsample = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2)\n        # 1x1 conv predicting K binary mask channels\n        self.mask_head = nn.Conv2d(in_channels, num_classes, kernel_size=1)\n\n    def forward(self, roi_features: torch.Tensor):\n        # roi_features from RoIAlign: [num_rois, in_channels, 14, 14]\n        h = self.convs(roi_features)\n        h = F.relu(self.upsample(h))  # [num_rois, in_channels, 28, 28]\n        mask_logits = self.mask_head(h)  # [num_rois, num_classes, 28, 28]\n        return mask_logits\n\n# Test mask branch on 2 RoIs (e.g. 2 detected pedestrians)\nroi_feat = torch.randn(2, 256, 14, 14)\nmask_net = MiniMaskBranch(in_channels=256, num_classes=4)\nmasks = mask_net(roi_feat)\n\nprint(f\"Input RoIAlign feature shape: {roi_feat.shape}\")\nprint(f\"Output mask logits shape:     {masks.shape} (2 RoIs, 4 classes, 28x28 resolution)\")\nprint(\"Each class receives an independent binary mask channel, preventing inter-class competition!\")",
+    "keyPoints": [
+      "Mask R-CNN adds a small parallel FCN branch to Faster R-CNN to predict pixel masks.",
+      "RoIAlign eliminates spatial quantization by sampling four continuous bilinear points per bin.",
+      "Decouples class and mask prediction: predicts independent binary masks for each category.",
+      "Represents the industry standard foundation for instance segmentation in robotics and medical imaging."
+    ],
+    "pitfalls": [
+      "Using `RoIPool` instead of `RoIAlign`: Using coarse integer RoIPool degrades mask average precision (AP) by up to 10 points due to spatial quantization misalignments.",
+      "Coupling mask channels with Softmax: Using Softmax across mask channels forces classes to compete for pixels, destroying overlapping mask contours; use per-pixel sigmoid binary cross-entropy.",
+      "Memory consumption during training: Predicting $28 \\times 28$ masks across 512 candidate RoIs per image increases GPU VRAM consumption; tune sampled positive RoIs."
+    ],
+    "quiz": [
+      {
+        "q": "What distinguishes Instance Segmentation from Semantic Segmentation?",
+        "o": [
+          "Semantic segmentation runs on GPUs, while instance segmentation runs on CPUs",
+          "Semantic segmentation classifies pixels into broad categories without distinguishing separate individual objects; Instance segmentation identifies and segments each distinct object instance independently",
+          "Instance segmentation only works on black and white images",
+          "Semantic segmentation predicts 3D bounding boxes"
+        ],
+        "a": 1,
+        "why": "Semantic segmentation assigns all \"person\" pixels to one class. Instance segmentation distinguishes Person 1, Person 2, and Person 3 with individual masks."
+      },
+      {
+        "q": "Why did the authors of Mask R-CNN decouple mask prediction from classification by using per-pixel Sigmoid instead of Softmax across classes?",
+        "o": [
+          "Because Sigmoid runs faster than Softmax",
+          "To prevent inter-class competition: the mask branch predicts binary shape masks for all classes independently, while the classification branch decides which mask to select",
+          "Because PyTorch does not support Softmax on 2D maps",
+          "To reduce parameter counts to zero"
+        ],
+        "a": 1,
+        "why": "Decoupling avoids forcing classes to compete for pixels. The network learns pure binary object silhouettes independently for each candidate category."
+      },
+      {
+        "q": "What was the specific bug in `RoIPool` that RoIAlign fixed in Mask R-CNN?",
+        "o": [
+          "A memory leak in the C++ CUDA kernel",
+          "Coordinate quantization (rounding continuous floating point RoI boundaries to nearest integers), which introduced severe sub-pixel misalignments that ruined mask accuracy",
+          "Inability to process non-square proposals",
+          "Division by zero when depth was negative"
+        ],
+        "a": 1,
+        "why": "RoIPool rounded floating coordinates to integers ($x/16$), introducing half-pixel errors that misaligned pixel-level mask boundaries with real object edges."
+      }
+    ],
+    "related": [
+      "two-stage-detectors-the-r-cnn-family",
+      "semantic-segmentation-fcn-and-u-net",
+      "segment-anything"
+    ],
+    "keywords": "mask r-cnn, instance segmentation, roialign, fpn, faster r-cnn, fully convolutional network, binary cross-entropy, object detection"
+  },
+  {
+    "id": "segment-anything",
+    "short": "Segment Anything (SAM)",
+    "title": "Promptable Foundation Models for Vision: Segment Anything (SAM)",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Zero-shot promptable visual segmentation using heavyweight image encoders, interactive prompt conditioning (points, boxes, text), and lightweight real-time mask decoders.",
+    "lead": "Traditionally, image segmentation models were trained for narrow closed vocabularies: an autonomous vehicle model segmenting 19 urban driving classes could not segment a medical cell or a manufacturing screw. The Segment Anything Model (SAM; Kirillov et al., Meta AI, 2023) established the first general-purpose visual foundation model for segmentation: capable of zero-shot segmentation of any arbitrary object via interactive prompts (points, bounding boxes, or rough masks).",
+    "analogy": "Imagine a master woodcarver with a magic chisel. Instead of carving only wooden horses, the chisel responds to simple pointing gestures: you point your finger at an eagle in a block of oak (point prompt) or draw a rough chalk box around a tree branch (bounding box prompt), and the chisel instantly carves out the exact, millimetre-perfect 3D boundary in under 50 milliseconds.",
+    "intuition": [
+      "SAM reframes segmentation as a Promptable Task: given an image and any prompt (foreground/background positive/negative click points, bounding boxes, or coarse masks), the model must return a valid segmentation mask.",
+      "To enable real-time web browser interaction ($< 50$ms), SAM decouples computation into two asymmetric stages: 1) Heavyweight Image Encoder: a massive Vision Transformer (ViT-H with 632M parameters) runs once per image on the server, generating an information-dense image embedding; 2) Lightweight Mask Decoder: runs in under 50ms (even on client CPU/WebGL), cross-attending prompt tokens with the precomputed image embedding.",
+      "Resolving Ambiguity: When a user clicks on a person's wrist wearing a watch, does the click prompt mean the watch dial, the entire watch, or the person? SAM solves ambiguity by predicting three valid candidate masks simultaneously (sub-part, part, whole), along with estimated IoU confidence scores.",
+      "Data Engine: SAM was trained on the SA-1B dataset—over 1.1 billion high-quality masks across 11 million diverse images—using an iterative data engine (model-assisted annotation $\\to$ semi-automatic annotation $\\to$ fully automatic grid annotation)."
+    ],
+    "steps": [
+      "Precompute image embedding (Heavyweight Encoder): Pass $1024 \\times 1024$ image through Vision Transformer (ViT) to extract a $64 \\times 64 \\times 256$ spatial feature embedding (run once).",
+      "Encode interactive prompt (Prompt Encoder): Represent point clicks as positional encodings plus learned positive/negative embeddings; represent bounding boxes as corner coordinate pairs.",
+      "Two-way cross-attention (Lightweight Decoder): Run two-way cross-attention blocks where prompt tokens attend to image embeddings and image embeddings attend to prompt tokens.",
+      "Predict multi-mask ambiguity outputs: Emit three candidate masks at different semantic hierarchies (e.g. subpart, part, whole) via transposed convolutions.",
+      "Compute IoU confidence score: A dedicated MLP head predicts the expected Intersection-over-Union (IoU) of each predicted mask with the true object.",
+      "Interactive refinement: Allow users to click additional points to correct ambiguous boundaries, updating the mask in real time."
+    ],
+    "math": [
+      {
+        "h": "SAM Promptable Multi-Mask Loss Formulation",
+        "tex": "\\mathcal{L}_{\\mathrm{SAM}} = \\min_{k \\in \\{1, 2, 3\\}} \\left[ 20 \\cdot \\mathcal{L}_{\\mathrm{focal}}(m_k, y) + \\mathcal{L}_{\\mathrm{dice}}(m_k, y) \\right] + \\| \\mathrm{IoU}_k - \\operatorname{IoU}(m_k, y) \\|^2",
+        "p": "Computes focal loss and Dice loss strictly against the best-matching predicted mask $k$, backpropagating error through the most accurate hierarchy level."
+      },
+      {
+        "h": "Positional Prompt Coordinate Embedding",
+        "tex": "\\mathbf{e}_{\\mathrm{point}} = \\operatorname{PosEmbed}(x, y) + \\mathbf{w}_{\\mathrm{type}}, \\quad \\mathbf{w}_{\\mathrm{type}} \\in \\{\\mathbf{w}_{\\mathrm{pos}}, \\; \\mathbf{w}_{\\mathrm{neg}}\\}",
+        "p": "Encodes spatial click coordinates $(x, y)$ using Fourier sinusoidal positional embeddings combined with learned positive/negative category tokens."
+      },
+      {
+        "h": "Dice Similarity Loss for Mask Boundaries",
+        "tex": "\\mathcal{L}_{\\mathrm{dice}}(p, y) = 1 - \\frac{2 \\sum_i p_i y_i + \\epsilon}{\\sum_i p_i + \\sum_i y_i + \\epsilon}",
+        "p": "Measures spatial overlap between predicted sigmoid probabilities $p$ and binary ground truth $y$, robust against extreme background pixel imbalance."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass MiniSAMDecoder(nn.Module):\n    \"\"\"Educational demonstration of SAM's lightweight prompt-conditioned mask decoder.\"\"\"\n    def __init__(self, embed_dim: int = 256, num_masks: int = 3):\n        super().__init__()\n        self.num_masks = num_masks\n        # Cross-attention layer between prompt tokens and image embeddings\n        self.cross_attn = nn.MultiheadAttention(embed_dim, num_heads=8, batch_first=True)\n        # Transpose convolution to upsample 64x64 embedding -> 256x256 mask logits\n        self.upsample = nn.Sequential(\n            nn.ConvTranspose2d(embed_dim, 64, kernel_size=2, stride=2),\n            nn.ReLU(),\n            nn.ConvTranspose2d(64, num_masks, kernel_size=2, stride=2)\n        )\n\n    def forward(self, image_embedding: torch.Tensor, prompt_tokens: torch.Tensor):\n        # image_embedding: [batch, 256, 64, 64]\n        # prompt_tokens:   [batch, num_prompts, 256] (e.g. click coordinates)\n        batch, c, h, w = image_embedding.shape\n        img_flat = image_embedding.flatten(2).permute(0, 2, 1)  # [batch, 4096, 256]\n        \n        # Cross-attention: prompt queries attend to image keys/values\n        attn_out, _ = self.cross_attn(query=prompt_tokens, key=img_flat, value=img_flat)\n        \n        # Modulate image embedding with prompt summary\n        prompt_summary = attn_out.mean(dim=1).view(batch, c, 1, 1)\n        modulated_feat = image_embedding + prompt_summary\n        \n        # Emit 3 hierarchical candidate masks (subpart, part, whole)\n        masks = self.upsample(modulated_feat)  # [batch, 3, 256, 256]\n        return masks\n\n# Simulate real-time inference: Precomputed image embedding + 1 user click prompt\ndecoder = MiniSAMDecoder(embed_dim=256, num_masks=3)\nimg_emb = torch.randn(1, 256, 64, 64)       # Computed once on server\nclick_prompt = torch.randn(1, 1, 256)        # Single user click\n\nout_masks = decoder(img_emb, click_prompt)\nprint(f\"Precomputed server embedding: {img_emb.shape}\")\nprint(f\"Interactive decoder mask shape: {out_masks.shape} (3 hierarchical candidates)\")\nprint(\"Decoder runs in <50ms per user interaction!\")",
+    "keyPoints": [
+      "SAM established promptable zero-shot foundation models for visual segmentation.",
+      "Asymmetric architecture: heavy ViT image encoder runs once; lightweight mask decoder runs in $<50$ms.",
+      "Supports diverse interactive prompts: foreground/background clicks, bounding boxes, or text.",
+      "Resolves semantic ambiguity by predicting three hierarchical masks (subpart, part, whole) with IoU scores."
+    ],
+    "pitfalls": [
+      "Re-running the heavy image encoder on every click: The 632M parameter ViT encoder takes 200–500ms; caching the $64 \\times 64$ embedding is mandatory for interactive real-time prompt updates.",
+      "Semantic classification absence: SAM predicts pure object boundaries (class-agnostic binary masks); it does not assign semantic class labels (e.g. \"dog\", \"car\"); pair with CLIP for semantic labelling.",
+      "Transparent or camouflaged objects: SAM struggles with objects with subtle refractive boundaries (clear glass windows, transparent bottles) where contrast edges are minimal."
+    ],
+    "quiz": [
+      {
+        "q": "Why does the Segment Anything Model (SAM) decouple its architecture into a heavy image encoder and a lightweight mask decoder?",
+        "o": [
+          "To run the encoder on Android phones and the decoder on supercomputers",
+          "The heavy ViT encoder processes the image once (slowly), while the lightweight decoder evaluates interactive user prompts in real time ($< 50$ms) on client devices",
+          "Because Transformers cannot process masks",
+          "To eliminate the need for training data"
+        ],
+        "a": 1,
+        "why": "The image embedding is computed once and cached. When a user clicks to add points, only the tiny decoder runs, allowing instant real-time response."
+      },
+      {
+        "q": "How does SAM handle semantic ambiguity when a user clicks on an object that could mean a part or the whole (e.g. clicking on a car tire)?",
+        "o": [
+          "It throws an exception and halts execution",
+          "It predicts three valid candidate masks simultaneously (sub-part, part, whole) along with estimated confidence scores",
+          "It deletes the image",
+          "It always defaults to the entire image"
+        ],
+        "a": 1,
+        "why": "Ambiguity is intrinsic to promptable segmentation. SAM outputs 3 masks at different semantic levels (e.g. tire rim, tire, full car) so users or downstream logic can pick the right level."
+      },
+      {
+        "q": "Does SAM natively predict semantic class labels (such as \"cat\", \"chair\", or \"bicycle\") for its segmented masks?",
+        "o": [
+          "Yes, SAM classifies over 100,000 distinct English categories",
+          "No, SAM is strictly class-agnostic; it produces precise object masks without semantic class names and is typically paired with CLIP for classification",
+          "SAM only detects human faces",
+          "SAM only works on synthetic computer-generated graphics"
+        ],
+        "a": 1,
+        "why": "SAM is class-agnostic: it identifies \"what is an object\" and cuts out its contour. Semantic labeling is achieved by cropping the mask and querying an open-vocabulary model like CLIP."
+      }
+    ],
+    "related": [
+      "instance-segmentation-mask-r-cnn",
+      "semantic-segmentation-fcn-and-u-net",
+      "clip-and-multimodal-embeddings"
+    ],
+    "keywords": "segment anything, sam, foundation models, zero-shot segmentation, promptable segmentation, vit, mask decoder, sa-1b, interactive vision"
+  },
+  {
+    "id": "swin-and-hierarchical-transformers",
+    "short": "Swin & hierarchical vision",
+    "title": "Hierarchical Vision Transformers: Shifted Windows (Swin Transformer) and Linear Scaling",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Restoring multi-scale hierarchical feature maps and linear computational complexity to vision transformers using shifted local window attention.",
+    "lead": "The original Vision Transformer (ViT) treated images as flat sequences of non-overlapping patches, computing global self-attention across all tokens. While effective for image classification, global self-attention scales quadratically with image resolution $O((H \\times W)^2)$, making high-resolution dense prediction tasks like object detection and semantic segmentation computationally prohibitive. The Swin Transformer (Liu et al., 2021) reintroduced hierarchical feature pyramids and linear complexity via Shifted Windows.",
+    "analogy": "Imagine a team of security guards monitoring a giant wall of 1,000 video screens. In a standard ViT, every guard attempts to watch and cross-reference all 1,000 screens simultaneously, quickly succumbing to cognitive exhaustion. In a Swin Transformer, each guard monitors a local $7 \\times 7$ grid of screens. In the next shift, the guards step three screens to the right and down (shifted windows), enabling information to bridge across adjacent monitoring zones while keeping each guard's workload strictly local and constant.",
+    "intuition": [
+      "Standard ViT has two major limitations as a general vision backbone: 1) Quadratic complexity with image size: processing an 800x800 image requires $\\approx 2,500$ patches, leading to massive memory usage; 2) Single-scale representations: ViT maintains constant token resolution throughout all layers, lacking the multi-scale feature pyramids that traditional detectors (FPN) use to detect objects at varying scales.",
+      "Swin Transformer builds a hierarchical feature representation: starting from small $4 \\times 4$ patches, it merges neighbouring patches in deeper layers (e.g. $2\\times$ spatial reduction with channel doubling), mirroring the hierarchical pyramid structure of ResNet.",
+      "To achieve linear computational complexity $O(M^2 \\cdot N)$, Swin computes self-attention strictly within localized non-overlapping windows of fixed size $M \\times M$ (typically $7 \\times 7$ patches).",
+      "To allow cross-window communication without global attention, consecutive Swin layers alternate between standard Window-based Self-Attention (W-MSA) and Shifted Window-based Self-Attention (SW-MSA). In SW-MSA, the window partitioning is shifted by $(\\lfloor M/2 \\rfloor, \\lfloor M/2 \\rfloor)$ pixels. A cyclic shift with an attention mask ensures cross-window information sharing with zero extra computation or padding."
+    ],
+    "steps": [
+      "Patch partition: Divide $H \\times W$ image into $4 \\times 4$ raw pixel patches, projecting each 48-D patch vector to embedding dimension $C$.",
+      "Standard Window Self-Attention (W-MSA): Partition feature map into non-overlapping $M \\times M$ windows (e.g. $7 \\times 7$); compute multi-head self-attention independently within each window in linear $O(N)$ time.",
+      "Shifted Window Self-Attention (SW-MSA): In the subsequent layer, shift window boundaries by $(\\lfloor M/2 \\rfloor, \\lfloor M/2 \\rfloor)$ patches to enable cross-window connections.",
+      "Cyclic shifting and masked attention: Efficiently compute SW-MSA by cyclically wrapping corner patches and applying a directional attention mask to prevent false cross-boundary attention.",
+      "Patch merging (Downsampling): In deeper stages, concatenate $2 \\times 2$ neighbouring patches, apply linear projection to double channel dimension ($2C$), and halve spatial resolution ($H/2 \\times W/2$).",
+      "Downstream task integration: Feed the resulting 4-stage multi-scale feature pyramid into dense prediction heads (U-Net for segmentation, Mask R-CNN for detection)."
+    ],
+    "math": [
+      {
+        "h": "Window Self-Attention Linear Computational Complexity",
+        "tex": "\\begin{aligned} \\Omega(\\text{Global Self-Attention}) &= 4 H W C^2 + 2 (H W)^2 C \\quad [O(N^2) \\text{ Quadratic}] \\\\ \\Omega(\\text{Window Self-Attention}) &= 4 H W C^2 + 2 M^2 H W C \\quad [O(N) \\text{ Linear in } HW] \\end{aligned}",
+        "p": "Window attention scales linearly with total pixel count $HW$ when window size $M$ is fixed (e.g. $M=7$), enabling gigapixel processing."
+      },
+      {
+        "h": "Relative Position Bias Self-Attention",
+        "tex": "\\operatorname{Attention}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V}) = \\operatorname{Softmax}\\left( \\frac{\\mathbf{Q} \\mathbf{K}^T}{\\sqrt{d}} + \\mathbf{B} \\right) \\mathbf{V}, \\quad \\mathbf{B} \\in \\mathbb{R}^{M^2 \\times M^2}",
+        "p": "Injects continuous 2D relative position bias matrix $\\mathbf{B}$ into the attention logits, parameterised across offset range $[-M+1, M-1]$."
+      },
+      {
+        "h": "Shifted Window Partition Coordinates",
+        "tex": "\\left( x', y' \\right) = \\left( \\left( x - \\left\\lfloor \\frac{M}{2} \\right\\rfloor \\right) \\bmod W, \\; \\left( y - \\left\\lfloor \\frac{M}{2} \\right\\rfloor \\right) \\bmod H \\right)",
+        "p": "Cyclically translates feature maps by half a window width, bridging isolated receptive fields across consecutive network blocks."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\n\ndef window_partition(x: torch.Tensor, window_size: int = 7) -> torch.Tensor:\n    \"\"\"Partition feature map into non-overlapping local spatial windows.\"\"\"\n    batch, h, w, c = x.shape\n    # Reshape: [B, H/M, M, W/M, M, C] -> [num_windows*B, M, M, C]\n    x = x.view(batch, h // window_size, window_size, w // window_size, window_size, c)\n    windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, c)\n    return windows\n\ndef window_reverse(windows: torch.Tensor, window_size: int, h: int, w: int) -> torch.Tensor:\n    \"\"\"Reverse local windows back into full global feature map.\"\"\"\n    batch_num_win = windows.shape[0]\n    num_win_h, num_win_w = h // window_size, w // window_size\n    batch = batch_num_win // (num_win_h * num_win_w)\n    c = windows.shape[-1]\n    \n    x = windows.view(batch, num_win_h, num_win_w, window_size, window_size, c)\n    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(batch, h, w, c)\n    return x\n\n# Simulate 56x56 feature map with window size M=7\nx = torch.randn(2, 56, 56, 96)\nM = 7\nwindows = window_partition(x, window_size=M)\nreconstructed = window_reverse(windows, window_size=M, h=56, w=56)\n\nprint(f\"Original Feature Map: {x.shape}\")\nprint(f\"Partitioned Windows:  {windows.shape} (64 windows of 7x7 per batch)\")\nprint(\"Reversible without data loss?\", torch.equal(x, reconstructed))",
+    "keyPoints": [
+      "Swin Transformer reintroduces hierarchical multi-scale pyramids to Vision Transformers.",
+      "Computes self-attention within local $M \\times M$ windows, achieving linear $O(HW)$ complexity.",
+      "Alternating standard and shifted windows (W-MSA and SW-MSA) enables cross-window communication.",
+      "Serves as a drop-in replacement for CNN backbones in object detection and semantic segmentation."
+    ],
+    "pitfalls": [
+      "Image dimensions not divisible by window size: If $H$ or $W$ is not a multiple of $M$, padding is required; failing to slice off the padding distorts output dimensions.",
+      "Forgetting the attention mask in cyclic shift: In SW-MSA, cyclic wrapping brings physically distant corners together; omitting the directional attention mask allows spurious attention across unrelated image boundaries.",
+      "Relative position bias indexing errors: Indexing the $(2M-1) \\times (2M-1)$ relative position bias table incorrectly maps wrong spatial offsets to attention heads."
+    ],
+    "quiz": [
+      {
+        "q": "Why was the original Vision Transformer (ViT) poorly suited as a general backbone for dense prediction tasks like object detection and high-resolution segmentation?",
+        "o": [
+          "Because ViT cannot process colour images",
+          "ViT maintains a constant single-scale resolution throughout and its global self-attention scales quadratically $O((HW)^2)$ with image size, making high resolutions computationally prohibitive",
+          "ViT only runs on CPUs",
+          "ViT deletes all edge pixels"
+        ],
+        "a": 1,
+        "why": "Dense tasks require high resolutions and multi-scale pyramids (FPN). Standard ViT's $O(N^2)$ attention is too slow, and its single scale cannot detect objects of varying sizes."
+      },
+      {
+        "q": "How does the Swin Transformer achieve linear computational complexity $O(HW)$ with respect to image resolution?",
+        "o": [
+          "By computing self-attention strictly within localized, non-overlapping windows of fixed size $M \\times M$",
+          "By rounding all weights to zero",
+          "By replacing attention with random Gaussian noise",
+          "By downsampling the image to 1x1"
+        ],
+        "a": 0,
+        "why": "Because window size $M$ is fixed (e.g. $7 \\times 7$), the attention cost per window is constant, and the total cost scales linearly with the number of windows."
+      },
+      {
+        "q": "What is the purpose of shifting the window partitioning (SW-MSA) in alternating layers of the Swin Transformer?",
+        "o": [
+          "To introduce motion blur",
+          "To introduce cross-window connections, allowing information to propagate across window boundaries without requiring expensive global attention",
+          "To compress the model weights into an archive",
+          "To convert RGB channels into grayscale"
+        ],
+        "a": 1,
+        "why": "W-MSA keeps windows isolated. Shifting the window grid by half a window in the next layer groups neighbouring boundary tokens together, facilitating global information exchange."
+      }
+    ],
+    "related": [
+      "vision-transformer",
+      "receptive-field-stride-and-pooling",
+      "the-attention-mechanism"
+    ],
+    "keywords": "swin transformer, hierarchical vision transformer, shifted windows, w-msa, sw-msa, linear complexity, relative position bias, patch merging"
+  },
+  {
+    "id": "vision-language-models-and-vqa",
+    "short": "VLMs & Visual QA",
+    "title": "Vision-Language Models: CLIP Alignments, Multi-Modal Projectors, and Visual Question Answering (VQA)",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Bridging pixels and text tokens using cross-modal projection layers, frozen LLM backbones, and Visual Question Answering (LLaVA, Flamingo).",
+    "lead": "For decades, computer vision and natural language processing developed in separate silos: vision classified image categories, while language models predicted text tokens. Vision-Language Models (VLMs) unify both modalities into a multimodal cognitive architecture. By projecting visual feature patches into the word embedding space of a frozen Large Language Model (e.g. LLaVA, Flamingo), VLMs can hold conversations about visual scenes, reason about charts, and solve complex Visual Question Answering (VQA) queries.",
+    "analogy": "Imagine a brilliant writer who was born blind, possessing vast knowledge of language, history, and logic (a frozen LLM). A visual translator (the multimodal projector) attaches a high-definition digital camera (vision encoder) to the writer's desk and converts visual light rays directly into Braille words. The writer does not need a brain transplant; they simply read the visual Braille tokens alongside normal text questions and answer fluently.",
+    "intuition": [
+      "Modern VLMs (such as LLaVA; Liu et al.) connect three components: 1) A Vision Encoder (typically a pretrained CLIP ViT) that transforms an image into a sequence of visual patch tokens; 2) A Multimodal Projector (a lightweight MLP or cross-attention Resampler) that projects visual embeddings into the exact hidden dimension of the LLM; 3) A Pretrained LLM (Vicuna, Llama) that processes visual and textual tokens jointly.",
+      "Training typically proceeds in two stages: Stage 1 (Feature Alignment): The vision encoder and LLM are frozen, training strictly the projector MLP on millions of image-caption pairs so the LLM learns to comprehend visual tokens; Stage 2 (Visual Instruction Tuning): The LLM and projector are fine-tuned jointly on conversational dialogue, visual reasoning, and VQA datasets.",
+      "During forward inference, an image is converted into $P$ visual tokens (e.g. 576 tokens for a 24x24 patch grid). These visual tokens are prepended directly to the user's tokenized text prompt (`[IMG_1] ... [IMG_576] What is the person holding?`), allowing the autoregressive Transformer to generate natural language answers with full visual grounding."
+    ],
+    "steps": [
+      "Extract visual patch embeddings: Pass $336 \\times 336$ image through frozen CLIP ViT-L/14, extracting penultimate layer patch activations (e.g. 576 tokens of dimension 1024).",
+      "Project across modalities: Pass visual tokens through a two-layer MLP projector with GELU activations to map dimension $1024 \\to 4096$ (matching LLM hidden dimension).",
+      "Tokenize text prompt: Tokenize user prompt and format with multimodal chat template (e.g. `Human: <image>\\nDescribe this photo. Assistant:`).",
+      "Concatenate multimodal token sequence: Replace the `<image>` placeholder token with the sequence of 576 projected continuous visual embeddings.",
+      "Autoregressive language generation: Feed concatenated embeddings through the LLM decoder; generate answers token by token using standard causal language modelling.",
+      "Instruction fine-tuning: Fine-tune projector and LLM parameters using LoRA or full backpropagation on high-quality multi-turn visual conversations."
+    ],
+    "math": [
+      {
+        "h": "Multimodal Linear Projector Alignment",
+        "tex": "\\mathbf{H}_v = \\mathbf{W}_2 \\cdot \\operatorname{GELU}\\left( \\mathbf{W}_1 \\cdot \\mathbf{Z}_v + \\mathbf{b}_1 \\right) + \\mathbf{b}_2, \\quad \\mathbf{Z}_v = g_{\\mathrm{vision}}(I)",
+        "p": "Projects visual tokens $\\mathbf{Z}_v \\in \\mathbb{R}^{P \\times d_v}$ into the LLM token embedding space $\\mathbf{H}_v \\in \\mathbb{R}^{P \\times d_{\\mathrm{text}}}$."
+      },
+      {
+        "h": "Multimodal Autoregressive Likelihood Objective",
+        "tex": "P(\\mathbf{Y} \\mid \\mathbf{X}_v, \\mathbf{X}_t) = \\prod_{i=1}^L P\\left( y_i \\;\\middle|\\; \\mathbf{H}_v, \\; \\mathbf{X}_{t, <i}, \\; \\mathbf{Y}_{<i} \\right)",
+        "p": "Models the probability of response text sequence $\\mathbf{Y}$ conditioned jointly on projected image tokens $\\mathbf{H}_v$ and preceding text tokens."
+      },
+      {
+        "h": "Flamingo Perceiver Resampler Compression",
+        "tex": "\\mathbf{Q} = \\mathbf{L}_{\\mathrm{queries}}, \\quad \\mathbf{K}, \\mathbf{V} = [\\mathbf{Z}_v \\parallel \\mathbf{L}_{\\mathrm{queries}}], \\quad \\mathbf{Z}_{\\mathrm{compressed}} = \\operatorname{CrossAttn}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})",
+        "p": "Compresses thousands of variable-length visual feature tokens into a fixed small set of latent tokens (e.g. 64) via learned cross-attention queries."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\n\nclass MiniVLMProjector(nn.Module):\n    \"\"\"Educational demonstration of a LLaVA-style multimodal MLP projection layer.\"\"\"\n    def __init__(self, vision_dim: int = 768, llm_dim: int = 2048):\n        super().__init__()\n        self.projector = nn.Sequential(\n            nn.Linear(vision_dim, llm_dim),\n            nn.GELU(),\n            nn.Linear(llm_dim, llm_dim)\n        )\n\n    def forward(self, visual_tokens: torch.Tensor, text_embeddings: torch.Tensor):\n        # visual_tokens:   [batch, num_patches, vision_dim] (from CLIP)\n        # text_embeddings: [batch, text_seq_len, llm_dim]   (from LLM embedding table)\n        \n        # 1. Project visual tokens to LLM dimension\n        projected_visual = self.projector(visual_tokens)  # [batch, num_patches, llm_dim]\n        \n        # 2. Concatenate: [Visual Tokens ... Text Tokens]\n        multimodal_input = torch.cat([projected_visual, text_embeddings], dim=1)\n        return multimodal_input\n\n# Simulate: Image produces 16 patch tokens (dim 768); Text prompt has 8 words (dim 2048)\nvlm_proj = MiniVLMProjector(vision_dim=768, llm_dim=2048)\nvision_feat = torch.randn(1, 16, 768)\ntext_feat   = torch.randn(1, 8, 2048)\n\njoint_input = vlm_proj(vision_feat, text_feat)\nprint(f\"Projected Multimodal Sequence Shape: {joint_input.shape}\")\nprint(\"16 visual tokens seamlessly prepended to 8 text tokens for the LLM decoder!\")",
+    "keyPoints": [
+      "Vision-Language Models fuse visual perception with general-purpose language reasoning.",
+      "LLaVA connects a frozen vision encoder (CLIP) to an LLM using a lightweight MLP projector.",
+      "Visual patches are treated as pseudo-text tokens, prepended directly to the user's token prompt.",
+      "Training separates into initial feature alignment followed by visual instruction fine-tuning."
+    ],
+    "pitfalls": [
+      "Visual token context consumption: High-resolution images produce hundreds or thousands of patch tokens, consuming huge fractions of the LLM's limited context window.",
+      "Object hallucination: VLMs frequently hallucinate objects that are not in the image due to strong textual prior biases in the LLM language decoder; mitigate with DPO alignment.",
+      "Spatial reasoning limitations: Standard VLMs struggle with fine-grained spatial coordinates (e.g. exact bounding box coordinates or counting crowded coins); requires high-res vision encoders."
+    ],
+    "quiz": [
+      {
+        "q": "How does an architecture like LLaVA feed image information into a Large Language Model (LLM)?",
+        "o": [
+          "It converts the image into an audio waveform",
+          "A vision encoder extracts visual patch tokens, which are projected by an MLP into the LLM's embedding dimension and prepended to text tokens as pseudo-words",
+          "It retrains the LLM from scratch using only images",
+          "It deletes all text tokens"
+        ],
+        "a": 1,
+        "why": "LLaVA uses a vision encoder to extract visual patch tokens, projects them into the text embedding space via an MLP, and inputs them directly to the LLM."
+      },
+      {
+        "q": "What is \"object hallucination\" in Vision-Language Models (VLMs)?",
+        "o": [
+          "When the camera lens is smudged",
+          "A failure mode where the model asserts the presence of common objects (e.g. a chair or cup) in its text response that are not actually in the image, driven by language model prior biases",
+          "When images are rendered in 3D",
+          "When the learning rate is too high"
+        ],
+        "a": 1,
+        "why": "Language models have strong prior associations (e.g. \"a kitchen has a refrigerator\"). When uncertain, the LLM hallucinates objects that logically fit the scene text."
+      },
+      {
+        "q": "Why is training divided into two stages in modern VLM development (Feature Alignment then Instruction Tuning)?",
+        "o": [
+          "Because GPUs cannot train for more than 1 hour",
+          "Stage 1 aligns the visual feature space to the text space without disrupting LLM language fluency; Stage 2 trains conversational reasoning and visual instruction following",
+          "To test two different optimisers",
+          "Stage 1 is for colour images, Stage 2 is for black and white"
+        ],
+        "a": 1,
+        "why": "Freezing the LLM in Stage 1 teaches the projector the visual-to-text mapping without degrading the LLM's general knowledge before jointly fine-tuning in Stage 2."
+      }
+    ],
+    "related": [
+      "clip-and-multimodal-embeddings",
+      "vision-transformer",
+      "swin-and-hierarchical-transformers"
+    ],
+    "keywords": "vision-language models, vlm, vqa, llava, flamingo, multimodal, clip, visual instruction tuning, cross-attention, perceiver resampler"
+  },
+  {
+    "id": "latent-diffusion-and-controlnet",
+    "short": "Latent diffusion & ControlNet",
+    "title": "Generative Vision: Latent Diffusion Models (Stable Diffusion) and Spatial Conditioning with ControlNet",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Generating photorealistic images efficiently in compressed latent spaces (LDM) and injecting structural geometric guidance via ControlNet.",
+    "lead": "Pixel-space diffusion models generate breathtaking visual fidelity, but denoising thousands of high-resolution RGB pixels directly is computationally agonizing: generating a single image requires hundreds of seconds on high-end GPUs. Latent Diffusion Models (LDM / Stable Diffusion; Rombach et al., 2022) shift the diffusion process into a perceptually compressed latent space. ControlNet (Zhang et al., 2023) then adds precise spatial conditioning (edges, poses, depth), unlocking controllable visual synthesis.",
+    "analogy": "Imagine a painter creating a mural. Working in pixel space is like carving microscopic details into millions of individual grains of sand. Working in latent diffusion is like drawing a compressed, high-level artist's cartoon sketch where one stroke captures an entire cheekbone. ControlNet acts as an architect's blue tracing paper laid over the sketch: it locks down the exact structural lines and proportions so the painter can add colours and textures without altering the pose.",
+    "intuition": [
+      "Digital images contain massive perceptual redundancy: high-frequency noise that the human eye barely notices consumes 90% of pixel compute. Latent Diffusion Models decouple generation into two stages: Perceptual Compression (handled by an autoencoder / VAE) and Semantic Generation (handled by a latent diffusion U-Net).",
+      "The VAE compresses an image $x \\in \\mathbb{R}^{3 \\times H \\times W}$ by an $8\\times$ spatial downsampling factor into a low-dimensional latent representation $z \\in \\mathbb{R}^{4 \\times (H/8) \\times (W/8)}$, cutting compute volume by $64\\times$.",
+      "The diffusion process (forward noising and reverse denoising) operates entirely within this compact latent space $z$. Cross-attention mechanisms inside the U-Net inject text prompts encoded by CLIP or T5.",
+      "Standard text-to-image diffusion lacks spatial control: prompt engineering (\"a person jumping\") cannot dictate exact hand positions or camera angles. ControlNet clones the trainable U-Net encoder weights, applies \"zero convolutions\" (convolutions initialised with zero weights and biases), and injects spatial conditions (Canny edges, depth maps, OpenPose human skeletons) without disrupting the original model's generative prior."
+    ],
+    "steps": [
+      "Perceptual compression: Encode training image $x$ into compact latent representation $z_0 = \\mathcal{E}(x)$ using a pretrained VAE encoder.",
+      "Forward latent noising: Sample timestep $t \\sim \\mathcal{U}(1, T)$ and Gaussian noise $\\epsilon$; add noise to latent: $z_t = \\sqrt{\\bar{\\alpha}_t} z_0 + \\sqrt{1 - \\bar{\\alpha}_t} \\epsilon$.",
+      "Encode conditioning signals: Encode text prompt via CLIP text encoder into cross-attention sequence; encode spatial guide (e.g. Canny edge map) via ControlNet encoder.",
+      "Denoise via U-Net: Predict added noise $\\epsilon_\\theta(z_t, t, c_{\\mathrm{text}}, c_{\\mathrm{control}})$ using cross-attention and zero-convolution residuals.",
+      "Reverse sampling: Iteratively denoise latent from pure Gaussian noise $z_T \\sim \\mathcal{N}(0, \\mathbf{I})$ down to clean latent $z_0$ using fast ODE solvers (DDIM, DPM-Solver) in 20–30 steps.",
+      "Decode to pixel space: Reconstruct high-resolution RGB image through VAE decoder: $\\hat{x} = \\mathcal{D}(z_0)$."
+    ],
+    "math": [
+      {
+        "h": "Latent Diffusion Mean Squared Error Objective",
+        "tex": "\\mathcal{L}_{\\mathrm{LDM}} = \\mathbb{E}_{\\mathcal{E}(x), \\; \\epsilon \\sim \\mathcal{N}(0, \\mathbf{I}), \\; t}\\left[ \\left\\| \\epsilon - \\epsilon_\\theta\\left( z_t, \\; t, \\; \\tau_\\theta(y) \\right) \\right\\|^2 \\right]",
+        "p": "Trains U-Net $\\epsilon_\\theta$ to predict the noise added to compressed latent $z_t$, conditioned on text prompt embedding $\\tau_\\theta(y)$."
+      },
+      {
+        "h": "ControlNet Zero-Convolution Formulation",
+        "tex": "\\mathbf{y}_{\\mathrm{ctrl}} = \\mathcal{F}(\\mathbf{x}; \\; \\Theta) + \\mathcal{Z}\\left( \\mathcal{F}_{\\mathrm{clone}}\\left( \\mathbf{x} + \\mathcal{Z}(\\mathbf{c}; \\; \\Theta_{z1}); \\; \\Theta_{\\mathrm{clone}} \\right); \\; \\Theta_{z2} \\right)",
+        "p": "Zero convolutions $\\mathcal{Z}$ start with weights and biases initialized to exact zero, ensuring ControlNet outputs zero initially and preserves base model capability."
+      },
+      {
+        "h": "Classifier-Free Guidance (CFG) Latent Extrapolation",
+        "tex": "\\tilde{\\epsilon}_\\theta(z_t, c) = \\epsilon_\\theta(z_t, \\varnothing) + s \\cdot \\left( \\epsilon_\\theta(z_t, c) - \\epsilon_\\theta(z_t, \\varnothing) \\right), \\quad s > 1.0",
+        "p": "Pushes the predicted noise vector away from the unconditional prediction $\\varnothing$ towards the conditioned prompt $c$ by guidance scale $s$."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\n\nclass ZeroConv2d(nn.Module):\n    \"\"\"Zero-convolution layer used in ControlNet: initialized to exact zero.\"\"\"\n    def __init__(self, channels: int):\n        super().__init__()\n        self.conv = nn.Conv2d(channels, channels, kernel_size=1)\n        # Initialize weights and bias strictly to zero!\n        nn.init.zeros_(self.conv.weight)\n        nn.init.zeros_(self.conv.bias)\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return self.conv(x)\n\n# Demonstrate ControlNet residual injection without initial disruption\nx_latent = torch.randn(1, 64, 32, 32)\ncondition_map = torch.randn(1, 64, 32, 32)  # E.g. Canny edge embedding\n\nzero_conv = ZeroConv2d(channels=64)\n# At step 0 of training, zero_conv output is strictly zero!\ncontrol_signal = zero_conv(condition_map)\n\n# Residual addition preserves base model state perfectly\nfused_latent = x_latent + control_signal\nassert torch.equal(x_latent, fused_latent), \"Zero convolution must produce zero output at initialization!\"\nprint(\"Zero convolution verified: Base model functions identically at step 0!\")",
+    "keyPoints": [
+      "Latent Diffusion compresses images into compact latent space via a VAE, cutting compute by $64\\times$.",
+      "The diffusion denoising U-Net operates entirely within latent space, conditioned on text via cross-attention.",
+      "ControlNet adds structural spatial conditioning (depth, edges, human pose) to pretrained diffusion models.",
+      "Zero convolutions preserve base model generation capabilities at step zero, enabling stable progressive fine-tuning."
+    ],
+    "pitfalls": [
+      "VAE decoding compression artifacts: If the VAE compression factor is set too aggressive (e.g. $f=32$), fine textures (human fingers, small text) cannot be reconstructed by the decoder.",
+      "High guidance scale saturation: Setting Classifier-Free Guidance (CFG) scale $s > 15$ causes severe over-saturation, contrast clipping, and unnatural plastic skin artifacts.",
+      "Conditioning mismatch in ControlNet: Providing a condition resolution that does not match the image aspect ratio stretches spatial features, distorting generated anatomy."
+    ],
+    "quiz": [
+      {
+        "q": "Why does Latent Diffusion (Stable Diffusion) run significantly faster than pixel-space diffusion models like DALL-E 1?",
+        "o": [
+          "Because Latent Diffusion runs without GPUs",
+          "A pretrained VAE compresses images by $8\\times$ spatially into a 4-channel latent space, allowing the diffusion U-Net to denoise a $64\\times$ smaller representation",
+          "Because Latent Diffusion only produces 16x16 pixel images",
+          "Because it eliminates the reverse diffusion process"
+        ],
+        "a": 1,
+        "why": "Pixel diffusion processes $3 \\times 512 \\times 512 = 786,432$ values per step. Latent diffusion processes $4 \\times 64 \\times 64 = 16,384$ values—a 48x reduction in tensor size."
+      },
+      {
+        "q": "What is the purpose of \"Zero Convolutions\" in the ControlNet architecture?",
+        "o": [
+          "To permanently delete negative weights",
+          "To ensure that at initialization, the ControlNet branch outputs exact zero, completely preserving the base diffusion model's original generation capabilities without disruption",
+          "To convert floating point operations into integer additions",
+          "To set the learning rate to zero"
+        ],
+        "a": 1,
+        "why": "By initializing weights and biases to zero, ControlNet outputs zero on day one, guaranteeing that training begins from the stable base model state without harmful weight destruction."
+      },
+      {
+        "q": "What role does Classifier-Free Guidance (CFG) play during latent diffusion reverse sampling?",
+        "o": [
+          "It deletes bad images from disk",
+          "It extrapolates predictions in the direction of the text prompt away from the unconditional prediction, dramatically increasing image prompt adherence at the cost of diversity",
+          "It replaces cross-attention with self-attention",
+          "It trains a separate classifier network"
+        ],
+        "a": 1,
+        "why": "CFG computes predictions with and without the prompt, extrapolating along the difference vector: $\\epsilon = \\epsilon_{\\mathrm{uncond}} + s(\\epsilon_{\\mathrm{cond}} - \\epsilon_{\\mathrm{uncond}})$."
+      }
+    ],
+    "related": [
+      "diffusion-models",
+      "variational-autoencoders",
+      "clip-and-multimodal-embeddings"
+    ],
+    "keywords": "latent diffusion, stable diffusion, controlnet, zero convolution, vae, classifier-free guidance, cfg, text-to-image, generative vision"
+  },
+  {
+    "id": "face-detection-and-recognition",
+    "short": "Face detection & recognition",
+    "title": "Facial Biometrics: Viola-Jones, MTCNN, RetinaFace, and Deep Embedding Cosine Margins (ArcFace)",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Building end-to-end facial biometrics pipelines from Haar cascade detection to ArcFace additive angular margin loss verification.",
+    "lead": "Facial biometrics spans two distinct tasks: Face Detection (finding all bounding boxes and 5 facial landmarks in a scene) and Face Recognition / Verification (determining whether two detected faces belong to the same identity). From classical AdaBoost Haar Cascades (Viola-Jones) and Multi-Task Cascaded CNNs (MTCNN) to modern RetinaFace and ArcFace angular margin embeddings, facial biometrics has evolved into a real-time, highly reliable computer vision discipline.",
+    "analogy": "Imagine a passport security gate at an international airport. Step 1 (Face Detection) is the security guard spotting you in the crowd, ensuring your face is uncovered, and identifying your eyes, nose, and mouth. Step 2 (Face Recognition) is the biometric scanner comparing the geometric angle of your facial bone structure against your passport photo chip on a high-dimensional mathematical sphere to verify your identity.",
+    "intuition": [
+      "The classical Viola-Jones (2001) detector was the first real-time face detector: using rectangular Haar-like features computed in $O(1)$ constant time via Integral Images, combined with an AdaBoost attentional cascade that discards 95% of background windows in early layers.",
+      "Modern face detection (RetinaFace; Deng et al.) uses multi-task convolutional networks with Feature Pyramid Networks: predicting face bounding boxes, classification scores, and 5 facial landmark keypoints (two eyes, nose tip, two mouth corners) in a single dense forward pass.",
+      "Facial alignment warps detected faces using a similarity transform so the 5 landmarks map to canonical coordinates, eliminating pose variations.",
+      "Face Recognition operates under an Open-Set setting (billions of unseen identities). Standard Softmax loss is insufficient because it only forces features to be separable, not discriminative. ArcFace (Additive Angular Margin Loss; Deng et al.) normalises both weights and embeddings to the unit hypersphere and adds an additive angular margin $m$ directly inside the cosine: $\\cos(\\theta + m)$. This enforces extreme intra-class compactness and inter-class discrepancy on the hypersphere."
+    ],
+    "steps": [
+      "Face detection: Detect faces and 5 facial landmark coordinates using single-shot feature pyramid networks (RetinaFace).",
+      "Facial landmark alignment: Compute affine similarity transform to align the 5 landmark points to standard template coordinates, cropping a normalised $112 \\times 112$ face image.",
+      "Feature embedding extraction: Pass aligned face through a deep residual backbone (e.g. ResNet-50) with ArcFace loss to produce a 512-dimensional unit-norm embedding vector.",
+      "Compute angular margin loss (Training): Normalise weights $\\|W_j\\| = 1$ and features $\\|x_i\\| = 1$; compute angle $\\theta_i = \\arccos(W_{y_i}^T x_i)$, add angular penalty $m$, and scale by radius $s$.",
+      "Cosine similarity verification: For two face embeddings $\\mathbf{u}$ and $\\mathbf{v}$, compute cosine similarity $S = \\mathbf{u} \\cdot \\mathbf{v}$.",
+      "Threshold verification: If similarity $S > \\tau$ (e.g. $\\tau = 0.65$), verify as identical person; otherwise reject as non-matching impostor."
+    ],
+    "math": [
+      {
+        "h": "ArcFace Additive Angular Margin Loss Formulation",
+        "tex": "\\mathcal{L}_{\\mathrm{ArcFace}} = -\\frac{1}{N} \\sum_{i=1}^N \\ln \\frac{\\exp\\left( s \\cdot \\cos(\\theta_{y_i} + m) \\right)}{\\exp\\left( s \\cdot \\cos(\\theta_{y_i} + m) \\right) + \\sum_{j \\ne y_i} \\exp\\left( s \\cdot \\cos \\theta_j \\right)}",
+        "p": "Adds additive angular margin penalty $m$ directly to the target angle $\\theta_{y_i}$ on the unit sphere, scaled by hypersphere radius $s$."
+      },
+      {
+        "h": "Integral Image Constant-Time Rectangle Sum",
+        "tex": "\\sum_{x_1 < x \\le x_2, \\; y_1 < y \\le y_2} I(x, y) = II(x_2, y_2) - II(x_1, y_2) - II(x_2, y_1) + II(x_1, y_1)",
+        "p": "Computes pixel intensity sum inside any arbitrary rectangle in strictly 4 array lookups, enabling real-time Viola-Jones Haar evaluation."
+      },
+      {
+        "h": "Cosine Metric Verification Decision Rule",
+        "tex": "\\operatorname{Verify}(x_1, x_2) = \\begin{cases} \\text{Same Identity} & \\text{if } \\frac{f(x_1) \\cdot f(x_2)}{\\|f(x_1)\\| \\|f(x_2)\\|} \\ge \\tau \\\\ \\text{Impostor} & \\text{otherwise} \\end{cases}",
+        "p": "Verifies identity by evaluating cosine similarity on normalised 512-D embedding vectors against operating threshold $\\tau$."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport math\n\nclass ArcMarginProduct(nn.Module):\n    \"\"\"ArcFace: Additive Angular Margin Loss layer.\"\"\"\n    def __init__(self, in_features: int = 512, out_features: int = 10, s: float = 30.0, m: float = 0.50):\n        super().__init__()\n        self.in_features = in_features\n        self.out_features = out_features\n        self.s = s\n        self.m = m\n        self.weight = nn.Parameter(torch.FloatTensor(out_features, in_features))\n        nn.init.xavier_uniform_(self.weight)\n\n    def forward(self, input: torch.Tensor, label: torch.Tensor):\n        # 1. Normalise weights and input embeddings to unit hypersphere\n        cosine = F.linear(F.normalise(input), F.normalise(self.weight))\n        sine = torch.sqrt(1.0 - torch.clamp(cosine ** 2, 0, 1))\n        \n        # 2. cos(theta + m) = cos(theta)*cos(m) - sin(theta)*sin(m)\n        phi = cosine * math.cos(self.m) - sine * math.sin(self.m)\n        \n        # 3. Apply angular margin strictly to true target classes\n        one_hot = torch.zeros(cosine.size(), device=input.device)\n        one_hot.scatter_(1, label.view(-1, 1).long(), 1)\n        output = (one_hot * phi) + ((1.0 - one_hot) * cosine)\n        \n        # 4. Scale by hypersphere radius s\n        output *= self.s\n        return output\n\n# Test ArcFace layer on batch of 2 faces\ntorch.manual_seed(42)\narcface = ArcMarginProduct(in_features=512, out_features=10, s=32.0, m=0.5)\nembeddings = torch.randn(2, 512)\nlabels = torch.tensor([3, 7])\n\nscaled_logits = arcface(embeddings, labels)\nprint(\"ArcFace Scaled Logits Shape:\", scaled_logits.shape)\nprint(\"Additive angular margin enforced on hypersphere for extreme identity clustering!\")",
+    "keyPoints": [
+      "Facial biometrics decomposes into face detection, landmark alignment, and embedding verification.",
+      "Viola-Jones used integral images and AdaBoost cascades for pioneering real-time CPU face detection.",
+      "RetinaFace predicts bounding boxes, confidence, and 5 facial landmark keypoints jointly.",
+      "ArcFace adds an additive angular margin $m$ on the hypersphere, maximising inter-class separation."
+    ],
+    "pitfalls": [
+      "Skipping facial alignment: Extracting embeddings directly from unaligned, tilted face bounding boxes degrades verification accuracy significantly; always align 5 landmarks.",
+      "Biased verification thresholds: Setting a universal threshold without auditing demographic subgroups can lead to disparate False Match Rates (FMR) across ethnicities or lighting conditions.",
+      "Liveness spoofing vulnerabilities: Relying purely on 2D RGB embeddings is vulnerable to presentation attacks (holding up a printed photo or phone screen); integrate 3D depth or infrared liveness checks."
+    ],
+    "quiz": [
+      {
+        "q": "Why is standard Softmax Cross-Entropy loss insufficient for training production Face Recognition systems?",
+        "o": [
+          "Because Softmax cannot run on GPUs",
+          "Softmax forces features to be linearly separable for training classes, but does not enforce compact intra-class clustering or large angular margins necessary for unseen open-set identities",
+          "Because Softmax outputs negative numbers",
+          "Because facial images only have 1 colour channel"
+        ],
+        "a": 1,
+        "why": "Softmax creates decision boundaries between known training classes, but leaves wide intraclass spread. ArcFace forces features to cluster tightly on a sphere with large margins."
+      },
+      {
+        "q": "What is the role of the 5 facial landmark keypoints (eyes, nose, mouth corners) in facial recognition pipelines?",
+        "o": [
+          "To count how many teeth a person has",
+          "To calculate a geometric similarity transform that aligns and crops the face into a standardised canonical orientation, eliminating head tilt and yaw variations",
+          "To compress the JPEG image",
+          "To detect skin diseases"
+        ],
+        "a": 1,
+        "why": "Alignment transforms tilted faces so eyes and mouth line up at identical canonical pixel coordinates, eliminating pose variations before embedding extraction."
+      },
+      {
+        "q": "How did the classical Viola-Jones detector calculate rectangular Haar feature sums in $O(1)$ constant time?",
+        "o": [
+          "By using quantum superposition",
+          "Using the Integral Image representation, where any rectangular sum is computed using strictly four corner array lookups regardless of box size",
+          "By ignoring 99% of the pixels",
+          "By using Vision Transformers"
+        ],
+        "a": 1,
+        "why": "An integral image stores cumulative sums. Any rectangular area sum $[x_1, x_2] \\times [y_1, y_2]$ is evaluated via four lookups: $II(A) + II(D) - II(B) - II(C)$."
+      }
+    ],
+    "related": [
+      "metric-learning-and-triplet-loss",
+      "two-stage-detectors-the-r-cnn-family",
+      "contrastive-learning-simclr-and-infonce"
+    ],
+    "keywords": "face recognition, face detection, arcface, retinaface, mtcnn, viola-jones, haar cascades, angular margin, biometrics"
+  },
+  {
+    "id": "pose-estimation",
+    "short": "Human pose estimation",
+    "title": "Human Pose Estimation: Heatmap Regression, Part Affinity Fields (OpenPose), and Top-Down vs Bottom-Up",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Tracking articulated human skeletons using 2D Gaussian heatmap regression, Part Affinity Fields (PAFs), and comparing top-down vs bottom-up multi-person architectures.",
+    "lead": "Detecting a human with a bounding box tells you where the person is, but reveals nothing about what they are doing: are they running, crouching, raising a hand, or falling? Human Pose Estimation localizes key articulated skeletal anatomical landmarks (shoulders, elbows, wrists, knees, ankles) in 2D or 3D space. From heatmap regression to bottom-up Part Affinity Fields (OpenPose) and top-down HRNet, pose estimation powers athletic biomechanics, ergonomics, and gesture control.",
+    "analogy": "Imagine an animator drawing a running stick figure. Rather than drawing clothes or skin, the animator focuses strictly on the 17 pivot joints of the skeleton: ankles, knees, hips, wrists, elbows, shoulders, and head. If a sports scientist connects these pivot joints with virtual rubber bands, they can calculate the exact knee flexion angle, stride length, and joint stress of a sprinter.",
+    "intuition": [
+      "Representing anatomical keypoints as raw $(x, y)$ coordinate regressions using standard MSE loss yields poor results: $(x, y)$ regression is non-linear, sensitive to outliers, and cannot model multi-modal uncertainty.",
+      "Modern pose estimators formulate keypoint localization as Spatial Heatmap Regression: for each keypoint $k$, the network predicts a 2D probability heatmap $H_k(x, y)$ where a 2D Gaussian blob is centered on the true joint location. Peak locations correspond to detected keypoints, while peak height indicates detection confidence.",
+      "Multi-Person Pose Estimation follows two competing architectural paradigms: 1) Top-Down (Detect-then-Estimate): Run an object detector to crop each person, and pass each cropped box through a pose network (e.g. HRNet). Accurate for clean images, but computational cost scales linearly $O(N)$ with the number of people in the scene; 2) Bottom-Up (Detect-all-then-Group): Detect all anatomical keypoints simultaneously across the entire image, then group them into distinct human skeletons using Part Affinity Fields (PAFs; OpenPose) or associative embeddings. Real-time constant $O(1)$ runtime regardless of crowd density.",
+      "Part Affinity Fields (PAFs) are 2D vector fields that encode the location and orientation of limbs (e.g. vector pointing from elbow to wrist). By evaluating line integrals along candidate limb connections, bipartite matching groups disjoint body parts into coherent individual skeletons in real time."
+    ],
+    "steps": [
+      "Select architecture paradigm: Choose top-down (e.g. YOLO/HRNet; highest accuracy for few people) or bottom-up (e.g. OpenPose; constant runtime for crowded scenes).",
+      "Generate ground-truth Gaussian heatmaps: For each keypoint $k$, render a 2D Gaussian $\\exp\\left(-\\frac{(x-x_k)^2 + (y-y_k)^2}{2\\sigma^2}\\right)$ with radius $\\sigma \\approx 2\\text{--}3$ pixels.",
+      "Extract multi-scale high-resolution features: Use HRNet to maintain parallel high-resolution representations throughout the network without losing fine spatial detail.",
+      "Predict confidence heatmaps and PAF vector fields: Predict $K$ joint heatmaps and $2L$ directional vector fields for limb connections.",
+      "Evaluate Part Affinity line integrals (Bottom-Up): Compute vector dot product line integrals between pairs of detected candidate joints to score connection likelihood.",
+      "Bipartite skeleton matching: Solve optimal joint association via Hungarian bipartite matching; connect joints into complete kinematic human skeletons."
+    ],
+    "math": [
+      {
+        "h": "2D Ground-Truth Gaussian Heatmap Formulation",
+        "tex": "H_k^*(x, y) = \\exp\\left( -\\frac{(x - x_k^*)^2 + (y - y_k^*)^2}{2\\sigma^2} \\right), \\quad (x_k^*, y_k^*) \\in \\mathbb{R}^2",
+        "p": "Renders a smooth spatial probability target centered on ground truth joint coordinates with variance $\\sigma^2$."
+      },
+      {
+        "h": "Part Affinity Field (PAF) Limb Vector Integral",
+        "tex": "E = \\int_0^1 \\mathbf{L}_{c}\\left( \\mathbf{d}_j(u) \\right) \\cdot \\frac{\\mathbf{d}_{j_2} - \\mathbf{d}_{j_1}}{\\|\\mathbf{d}_{j_2} - \\mathbf{d}_{j_1}\\|_2} \\, du",
+        "p": "Measures alignment between predicted 2D directional limb field $\\mathbf{L}_c$ and the unit vector connecting candidate joint pair $(\\mathbf{d}_{j_1}, \\mathbf{d}_{j_2})$."
+      },
+      {
+        "h": "Heatmap Mean Squared Error Loss",
+        "tex": "\\mathcal{L}_{\\mathrm{heatmap}} = \\frac{1}{K} \\sum_{k=1}^K \\sum_{x, y} \\mathbf{W}(x, y) \\cdot \\left\\| H_k(x, y) - H_k^*(x, y) \\right\\|^2",
+        "p": "Evaluates pixel-wise squared error across predicted heatmaps and Gaussian targets, weighted by visibility mask $\\mathbf{W}$."
+      }
+    ],
+    "code": "import numpy as np\n\ndef generate_keypoint_gaussian_heatmap(height: int, width: int, keypoint_xy: tuple, sigma: float = 1.5) -> np.ndarray:\n    \"\"\"Generate 2D Gaussian confidence target heatmap for keypoint regression.\"\"\"\n    x_k, y_k = keypoint_xy\n    # Create coordinate grid\n    y_grid, x_grid = np.ogrid[:height, :width]\n    \n    # Squared Euclidean distance from keypoint\n    dist_sq = (x_grid - x_k)**2 + (y_grid - y_k)**2\n    \n    # 2D Gaussian distribution\n    heatmap = np.exp(-dist_sq / (2.0 * sigma**2))\n    # Suppress values near zero to save sparse memory\n    heatmap[heatmap < 0.01] = 0.0\n    return heatmap\n\n# Generate heatmap for an elbow detected at (x=12, y=8) in a 20x20 patch\nhm = generate_keypoint_gaussian_heatmap(height=20, width=20, keypoint_xy=(12, 8), sigma=1.8)\n\n# Find peak via argmax (decoding step during inference)\npeak_idx = np.unravel_index(np.argmax(hm), hm.shape)\nprint(f\"Target Keypoint:  (x=12, y=8)\")\nprint(f\"Decoded Peak:     (x={peak_idx[1]}, y={peak_idx[0]}) with confidence {hm[peak_idx]:.3f}\")\nprint(\"Heatmap smooths spatial uncertainty, making neural network training convex and stable!\")",
+    "keyPoints": [
+      "Pose estimation localizes articulated skeletal joints in 2D or 3D space.",
+      "Heatmap regression models spatial uncertainty via 2D Gaussians, outperforming direct $(x, y)$ coordinate regression.",
+      "Top-down methods detect people first and estimate pose per person, scaling linearly with crowd size.",
+      "Bottom-up methods (OpenPose) detect all joints simultaneously and group them using Part Affinity Fields (PAFs) in constant time."
+    ],
+    "pitfalls": [
+      "Quantization error from strided downsampling: Stride 32 downsampling reduces a 256x256 image to 8x8; keypoints cannot be accurately localized without sub-pixel refinement (DARK - Distribution-Aware Coordinate Representation).",
+      "Limb assignment confusion in crowded scenes: In dense crowds where people overlap, bottom-up greedy bipartite matching can mistakenly connect one person's elbow to another person's wrist; use PAF vector fields.",
+      "Direct $(x, y)$ coordinate regression: Predicting numerical pixel coordinates directly with fully connected layers fails because it ignores spatial convolutions and cannot handle occlusion."
+    ],
+    "quiz": [
+      {
+        "q": "Why do modern pose estimation networks predict 2D Gaussian heatmaps rather than directly regressing numerical $(x, y)$ coordinates?",
+        "o": [
+          "Because GPUs cannot multiply floating point numbers",
+          "Heatmap regression preserves spatial convolutional representations, handles multi-modal uncertainty, and provides smooth convex gradients around the target joint",
+          "Because coordinates only exist in 3D",
+          "To reduce image resolution"
+        ],
+        "a": 1,
+        "why": "Direct coordinate regression is non-spatial, sensitive to outliers, and fails when joints are ambiguous or occluded. Heatmaps maintain spatial feature maps with smooth gradients."
+      },
+      {
+        "q": "What is the primary operational advantage of a \"Bottom-Up\" pose estimator (like OpenPose) over a \"Top-Down\" estimator in a crowded marathon scene?",
+        "o": [
+          "Bottom-up models run strictly on mobile phones",
+          "Bottom-up inference runtime is constant $O(1)$ regardless of how many hundreds of people are in the image, whereas top-down runtime scales linearly $O(N)$ with person count",
+          "Bottom-up models do not require training data",
+          "Bottom-up models are 100% accurate"
+        ],
+        "a": 1,
+        "why": "Top-down must run a separate pose network on every single detected person ($N$ crops). Bottom-up detects all joints in a single forward pass and groups them via PAFs."
+      },
+      {
+        "q": "What are \"Part Affinity Fields\" (PAFs) in the OpenPose architecture?",
+        "o": [
+          "Radio magnetic fields around human bones",
+          "2D vector fields that encode the location and orientation of physical limbs (e.g. from elbow to wrist), guiding the bipartite grouping of joints into individual skeletons",
+          "A loss function for bounding boxes",
+          "A camera calibration technique"
+        ],
+        "a": 1,
+        "why": "PAFs are 2D vector maps pointing along bones. Integrating across candidate joint pairs provides high scores when two joints are connected by a real physical limb."
+      }
+    ],
+    "related": [
+      "two-stage-detectors-the-r-cnn-family",
+      "receptive-field-stride-and-pooling",
+      "face-detection-and-recognition"
+    ],
+    "keywords": "pose estimation, openpose, part affinity fields, paf, heatmap regression, hrnet, top-down pose, bottom-up pose, skeletal keypoints"
+  },
+  {
+    "id": "object-tracking-sort-and-deepsort",
+    "short": "Tracking: SORT & DeepSORT",
+    "title": "Multi-Object Tracking: SORT, DeepSORT, Kalman Filtering, and Re-Identification",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 17,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Tracking multiple objects across video frames using the Tracking-by-Detection paradigm, Kalman filter motion models, and deep visual appearance Re-ID.",
+    "lead": "Object detection processes each video frame in isolation: it identifies three cars in frame 10 and three cars in frame 11, but has no concept of identity: which box in frame 11 corresponds to car #1? Multi-Object Tracking (MOT) bridges this temporal gap, maintaining consistent persistent identities across occlusions, camera movements, and object intersections using the Tracking-by-Detection paradigm (SORT, DeepSORT).",
+    "analogy": "Imagine a referee at a high-speed basketball match. When players scramble together in a tight huddle under the hoop and separate, the referee does not lose track of which player is player #23. The referee tracks two cues: where the player was moving (momentum/velocity physics—Kalman filtering), and what the player looks like (facial features and team jersey—Deep Re-ID appearance matching).",
+    "intuition": [
+      "Multi-Object Tracking operates primarily via the Tracking-by-Detection paradigm: an external object detector (YOLO) runs on each frame, producing bounding boxes. The tracker assigns these detections to existing active track trajectories.",
+      "SORT (Simple Online and Realtime Tracking; Bewley et al., 2016) models object kinematics using a linear Kalman Filter. State vector $\\mathbf{x} = [u, v, s, r, \\dot{u}, \\dot{v}, \\dot{s}]^T$ predicts the next frame's bounding box position based on constant velocity motion. The Hungarian algorithm then associates predicted positions with new detections using bounding box Intersection-over-Union (IoU) distance.",
+      "While SORT runs at 260 FPS on CPU, it fails catastrophically during occlusions: when an object is blocked by a tree or another person for 10 frames, velocity drift causes the tracker to lose track or switch identities (ID Switch).",
+      "DeepSORT (Wojke et al., 2017) resolves occlusions by adding Deep Visual Appearance Re-Identification (Re-ID). A deep CNN extracts a 128-D cosine embedding from each detection crop. Association combines motion distance (Mahalanobis distance) with visual appearance distance (cosine distance between embedding galleries), allowing the tracker to recover lost identities even after long occlusions."
+    ],
+    "steps": [
+      "Run frame detector: Run high-accuracy real-time detector (YOLO) to output bounding box coordinates and confidence scores.",
+      "Predict track state via Kalman Filter: For each active track, propagate the linear Kalman motion model forward one time step to predict current-frame bounding boxes.",
+      "Extract deep appearance embeddings (DeepSORT): Pass detected bounding box image crops through a lightweight CNN to extract 128-D unit-norm Re-ID visual feature vectors.",
+      "Compute cost matrix: Calculate distance matrix combining Mahalanobis motion distance and visual cosine distance against track feature galleries.",
+      "Solve assignment via Hungarian algorithm: Match active tracks to new detections using matching cascade (prioritising recently seen tracks).",
+      "Manage track lifecycle: Promote tentative tracks to confirmed status after 3 consecutive hits; mark lost tracks as deleted if unobserved for $A_{\\max}$ consecutive frames (e.g. 30 frames)."
+    ],
+    "math": [
+      {
+        "h": "Linear Kalman Filter State Update",
+        "tex": "\\mathbf{x}_{k|k-1} = \\mathbf{F} \\mathbf{x}_{k-1|k-1}, \\quad \\mathbf{P}_{k|k-1} = \\mathbf{F} \\mathbf{P}_{k-1|k-1} \\mathbf{F}^T + \\mathbf{Q}",
+        "p": "Projects track state mean $\\mathbf{x}$ and covariance uncertainty $\\mathbf{P}$ forward in time using constant velocity transition matrix $\\mathbf{F}$."
+      },
+      {
+        "h": "Squared Mahalanobis Motion Distance",
+        "tex": "d^{(1)}(i, j) = (\\mathbf{d}_j - \\mathbf{y}_i)^T \\mathbf{S}_i^{-1} (\\mathbf{d}_j - \\mathbf{y}_i)",
+        "p": "Measures standard deviation distance between detection $\\mathbf{d}_j$ and track Kalman state $\\mathbf{y}_i$ accounting for covariance uncertainty $\\mathbf{S}_i$."
+      },
+      {
+        "h": "Deep Visual Cosine Distance Gate",
+        "tex": "d^{(2)}(i, j) = \\min\\left( \\left\\{ 1 - r_j^T r_k^{(i)} \\;\\middle|\\; r_k^{(i)} \\in \\mathcal{R}_i \\right\\} \\right)",
+        "p": "Measures minimum cosine distance between detection appearance descriptor $r_j$ and the gallery of the last $L_{\\mathrm{gallery}}$ descriptors $\\mathcal{R}_i$ for track $i$."
+      }
+    ],
+    "code": "import numpy as np\nfrom scipy.optimise import linear_sum_assignment\n\ndef associate_detections_to_tracks(predicted_boxes: np.ndarray, detected_boxes: np.ndarray, iou_threshold: float = 0.3):\n    \"\"\"Associate tracks to detections using IoU distance and Hungarian algorithm.\"\"\"\n    # Compute pairwise IoU matrix: [num_tracks, num_dets]\n    num_tracks = len(predicted_boxes)\n    num_dets = len(detected_boxes)\n    \n    cost_matrix = np.zeros((num_tracks, num_dets))\n    for t in range(num_tracks):\n        for d in range(num_dets):\n            # Simplified mock IoU calculation\n            dist = np.linalg.norm(predicted_boxes[t] - detected_boxes[d])\n            cost_matrix[t, d] = dist  # Lower distance is better match\n            \n    track_idx, det_idx = linear_sum_assignment(cost_matrix)\n    \n    matches = []\n    for t, d in zip(track_idx, det_idx):\n        if cost_matrix[t, d] < 20.0:  # Distance gating threshold\n            matches.append((t, d))\n            \n    return matches\n\n# Simulate: 2 active track predictions vs 2 new frame detections\ntracks = np.array([[100.0, 100.0], [250.0, 300.0]])  # Track 0, Track 1\ndets   = np.array([[102.0,  99.0], [248.0, 305.0]])  # Det 0, Det 1\n\nmatches = associate_detections_to_tracks(tracks, dets)\nfor t, d in matches:\n    print(f\"Track ID {t} successfully matched with Detection {d}!\")\nprint(\"Identity persistence maintained across frames!\")",
+    "keyPoints": [
+      "Multi-Object Tracking (MOT) maintains consistent identities across video frames.",
+      "Tracking-by-detection decouples detection (YOLO) from temporal association (SORT).",
+      "SORT uses a Kalman filter for motion forecasting and the Hungarian algorithm for IoU matching.",
+      "DeepSORT adds a deep appearance Re-ID network, preventing identity switches during long occlusions."
+    ],
+    "pitfalls": [
+      "ID switching during cross-overs: When two people walk past each other and cross paths, pure IoU tracking easily swaps their track IDs; appearance Re-ID is critical.",
+      "Kalman filter breakdown under camera motion: If the camera itself moves wildly (e.g. a bumpy drone), the constant velocity assumption breaks; integrate camera motion compensation (CMC).",
+      "Excessive track gallery memory: Allowing appearance galleries $\\mathcal{R}_i$ to grow indefinitely exhausts RAM; cap galleries to the last 50–100 frames per track."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary operational weakness of SORT (Simple Online and Realtime Tracking) that DeepSORT solves?",
+        "o": [
+          "SORT cannot run in real time",
+          "SORT relies exclusively on bounding box IoU and velocity; when an object is occluded or crosses paths with another, it suffers from frequent Identity Switches (ID switches)",
+          "SORT requires 10 GPUs",
+          "SORT only tracks cars"
+        ],
+        "a": 1,
+        "why": "SORT only uses geometric IoU overlap. If an object is occluded for several frames, the Kalman filter drifts, losing the ID. DeepSORT remembers visual appearance vectors."
+      },
+      {
+        "q": "What does the Kalman Filter do within the SORT and DeepSORT tracking pipelines?",
+        "o": [
+          "It classifies the breed of dogs in the video",
+          "It predicts the position of existing tracks in the next frame based on linear velocity physics, and smooths out noisy bounding box detections",
+          "It compresses video codecs",
+          "It converts RGB to black and white"
+        ],
+        "a": 1,
+        "why": "The Kalman filter tracks spatial velocity and position, projecting where an object is expected to appear in the next frame before matching."
+      },
+      {
+        "q": "What is the \"Matching Cascade\" in DeepSORT?",
+        "o": [
+          "A cascade of water cooling the GPU",
+          "An assignment priority queue that matches recently seen tracks first using appearance features, before matching tracks that have been occluded for many frames",
+          "An algorithm for deleting old video files",
+          "A neural network with 1,000 layers"
+        ],
+        "a": 1,
+        "why": "Recently observed tracks have lower uncertainty; matching them first prevents long-lost tracks with high covariance from stealing recent detections."
+      }
+    ],
+    "related": [
+      "iou-nms-and-map",
+      "one-stage-detectors-ssd-and-yolo",
+      "metric-learning-and-triplet-loss"
+    ],
+    "keywords": "multi-object tracking, mot, sort, deepsort, kalman filter, hungarian algorithm, re-identification, re-id, tracking by detection, id switch"
+  },
+  {
+    "id": "video-models-3d-cnn-and-slowfast",
+    "short": "Video models: 3D CNN & SlowFast",
+    "title": "Spatiotemporal Video Understanding: 3D Convolutions, (2+1)D Factorisation, and SlowFast Networks",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Capturing dynamic temporal motion in video using 3D convolutions, factorised (2+1)D spatial-temporal kernels, and dual-rate SlowFast streams.",
+    "lead": "Treating a video as a sequence of independent 2D frames discards the essence of video: motion dynamics. A photograph of a hand touching a door handle cannot distinguish whether the person is opening the door or closing it. Video models capture spatiotemporal structure across space and time. From 3D Convolutions (C3D, I3D) and (2+1)D factorisation to dual-pathway SlowFast networks, video architectures model high-speed motion while controlling computational explosion.",
+    "analogy": "Imagine monitoring a highway intersection. A 2D camera taking one photo per hour captures static parked cars, but cannot tell if traffic is moving. A single 3D camera filming at 60 FPS captures high-speed motion, but analyseing 60 high-resolution frames every second overwhelms the computer. The SlowFast brain acts like having two eyes: one eye glances at high-resolution snapshots once a second to identify vehicle models (Slow pathway), while the other eye tracks rapid optical motion blurs at 30 frames a second with lower spatial detail (Fast pathway).",
+    "intuition": [
+      "A video tensor has 4 dimensions: Channels $\\times$ Time $\\times$ Height $\\times$ Width ($C \\times T \\times H \\times W$). Standard 2D convolutions slide kernels over $(H, W)$, discarding temporal causality.",
+      "3D Convolutions (C3D; Tran et al.) use 3D kernels ($K_t \\times K_h \\times K_w$, e.g. $3 \\times 3 \\times 3$), sliding simultaneously across space and time to learn spatiotemporal feature detectors. However, 3D convolutions suffer from massive computational complexity and parameter explosion.",
+      "(2+1)D Factorisation (Tran et al., R(2+1)D) factorises each 3D convolution into a 2D spatial convolution ($1 \\times 3 \\times 3$) followed immediately by a 1D temporal convolution ($3 \\times 1 \\times 1$). This factorisation reduces parameter counts while inserting an additional non-linear ReLU between space and time, boosting representation capacity.",
+      "SlowFast Networks (Fehrenbrinker et al., 2019) model video using biological dual-pathway inspiration: 1) Slow Pathway: operates at low frame rate (e.g. 2 FPS) with high channel capacity to capture fine spatial semantics (what is in the scene); 2) Fast Pathway: operates at high frame rate (e.g. 16 FPS) with low channel capacity ($1/8$th channels) to capture fast motion dynamics (how things are moving). Lateral connections fuse motion features into the slow semantic stream."
+    ],
+    "steps": [
+      "Sample video clip: Sample a clip of $T$ consecutive frames (e.g. $T=16$ or $T=32$) with temporal stride $\\tau$ from raw video.",
+      "Construct dual streams (SlowFast): Subsample frames for the Slow pathway ($T_{\\mathrm{slow}} = 4$ frames) and retain dense frames for the Fast pathway ($T_{\\mathrm{fast}} = 32$ frames).",
+      "Allocate channel budgets: Allocate 80%–85% of channel capacity to the Slow pathway; reduce Fast pathway channels by $8\\times$ to bound total FLOPs.",
+      "Execute spatiotemporal factorised convolutions: Apply $(2+1)$D separable convolutions or 3D residual blocks within each pathway.",
+      "Fuse pathways via lateral connections: Unroll temporal dimensions and fuse fast motion features into the slow pathway via cross-stream convolutions.",
+      "Global spatiotemporal pooling & classification: Apply global 3D average pooling across spatial and temporal dimensions; classify action categories via Softmax."
+    ],
+    "math": [
+      {
+        "h": "3D Spatiotemporal Convolution Operation",
+        "tex": "Y(c_{\\mathrm{out}}, t, x, y) = \\sum_{c_{\\mathrm{in}}} \\sum_{i, j, k} W(c_{\\mathrm{out}}, c_{\\mathrm{in}}, k, i, j) \\cdot X(c_{\\mathrm{in}}, t + k, x + i, y + j)",
+        "p": "Slides 3D kernel $W$ of size $K_t \\times K_h \\times K_w$ across both temporal frame sequence $t$ and spatial coordinates $(x, y)$."
+      },
+      {
+        "h": "(2+1)D Kernel Factorisation Parameter Savings",
+        "tex": "\\frac{\\mathrm{Params}_{(2+1)\\mathrm{D}}}{\\mathrm{Params}_{3\\mathrm{D}}} = \\frac{K_h K_w C_{\\mathrm{in}} M + K_t M C_{\\mathrm{out}}}{K_t K_h K_w C_{\\mathrm{in}} C_{\\mathrm{out}}} < 1.0",
+        "p": "Factorising into separate spatial ($1 \\times K_h \\times K_w$) and temporal ($K_t \\times 1 \\times 1$) filters reduces parameters while doubling non-linearities."
+      },
+      {
+        "h": "SlowFast Frame Rate Ratio and Channel Budget",
+        "tex": "T_{\\mathrm{fast}} = \\alpha \\cdot T_{\\mathrm{slow}}, \\quad C_{\\mathrm{fast}} = \\beta \\cdot C_{\\mathrm{slow}}, \\quad \\alpha = 8, \\; \\beta = \\frac{1}{8}",
+        "p": "The fast pathway processes $\\alpha$ times more frames but uses only $\\beta$ of the channel capacity, keeping total compute balanced."
+      }
+    ],
+    "code": "import torch\nimport torch.nn as nn\n\nclass R2Plus1DBlock(nn.Module):\n    \"\"\"(2+1)D factorised spatiotemporal convolutional block.\"\"\"\n    def __init__(self, in_planes: int, out_planes: int, mid_planes: int):\n        super().__init__()\n        # 1. 2D Spatial Convolution: (1 x 3 x 3)\n        self.spatial_conv = nn.Conv3d(\n            in_planes, mid_planes, kernel_size=(1, 3, 3),\n            padding=(0, 1, 1), bias=False\n        )\n        self.bn1 = nn.BatchNorm3d(mid_planes)\n        self.relu = nn.ReLU(inplace=True)\n        \n        # 2. 1D Temporal Convolution: (3 x 1 x 1)\n        self.temporal_conv = nn.Conv3d(\n            mid_planes, out_planes, kernel_size=(3, 1, 1),\n            padding=(1, 0, 0), bias=False\n        )\n        self.bn2 = nn.BatchNorm3d(out_planes)\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        # Input shape: [Batch, Channels, Time, Height, Width]\n        h = self.relu(self.bn1(self.spatial_conv(x)))\n        out = self.relu(self.bn2(self.temporal_conv(h)))\n        return out\n\n# Simulate video clip: 1 clip, 3 RGB channels, 8 frames, 16x16 resolution\nclip = torch.randn(1, 3, 8, 16, 16)\nr2plus1d = R2Plus1DBlock(in_planes=3, out_planes=16, mid_planes=8)\nout = r2plus1d(clip)\n\nprint(f\"Input Video Tensor:  {clip.shape} [B, C, T, H, W]\")\nprint(f\"Processed 3D Tensor: {out.shape}\")\nprint(\"(2+1)D cleanly decoupled spatial appearance from temporal motion dynamics!\")",
+    "keyPoints": [
+      "Video architectures process 4D spatiotemporal tensors ($C \\times T \\times H \\times W$).",
+      "3D convolutions slide across space and time simultaneously, capturing motion patterns.",
+      "(2+1)D factorisation decouples spatial filtering from temporal convolutions, saving compute.",
+      "SlowFast uses two pathways: a low-framerate semantic stream and a high-framerate motion stream."
+    ],
+    "pitfalls": [
+      "GPU VRAM exhaustion: Processing batches of 3D video tensors consumes massive memory; training requires tiny batch sizes per GPU and heavy gradient accumulation.",
+      "Uniform temporal subsampling on long videos: Uniformly sampling 16 frames across a 2-hour movie skips critical actions; use hierarchical video chunking.",
+      "Inflating 2D weights improperly: When initializing 3D models from 2D ImageNet weights (I3D), dividing 2D filter weights by temporal kernel size $K_t$ is mandatory to preserve activation scaling."
+    ],
+    "quiz": [
+      {
+        "q": "Why does the (2+1)D convolutional architecture outperform standard full 3D convolutions?",
+        "o": [
+          "Because (2+1)D networks only work on 2D images",
+          "It factorises the 3D convolution into a spatial 2D conv followed by a temporal 1D conv, reducing parameters while inserting an extra non-linear activation that doubles model expressiveness",
+          "Because (2+1)D runs without GPU memory",
+          "It eliminates backpropagation"
+        ],
+        "a": 1,
+        "why": "Splitting $3 \\times 3 \\times 3$ into $(1 \\times 3 \\times 3)$ and $(3 \\times 1 \\times 1)$ cuts parameters and introduces an extra ReLU non-linearity, boosting representation capacity."
+      },
+      {
+        "q": "What is the structural philosophy of the SlowFast video architecture (Feichtenhofer et al., 2019)?",
+        "o": [
+          "It trains the model slowly on weekdays and fast on weekends",
+          "A dual-pathway design: a Slow pathway operating at low framerates with high channel capacity to model spatial semantics, and a Fast pathway operating at high framerates with low channel capacity to model motion",
+          "It replaces neural networks with optical flow vectors",
+          "It deletes half the pixels in every frame"
+        ],
+        "a": 1,
+        "why": "Inspired by primate vision: the Slow pathway captures static spatial visual categories, while the Fast pathway tracks motion with high temporal resolution and low channel cost."
+      },
+      {
+        "q": "How does the \"I3D\" (Inflated 3D ConvNet) technique initialize 3D convolutional kernels from pretrained 2D ImageNet models?",
+        "o": [
+          "By setting all 3D weights to random noise",
+          "By repeating the 2D filter weights along the temporal dimension $K_t$ times and dividing each weight by $K_t$, preserving identical output activations at step 0",
+          "By deleting the temporal dimension",
+          "By training a GAN to generate weights"
+        ],
+        "a": 1,
+        "why": "Repeating 2D weights $K_t$ times and scaling by $1/K_t$ ensures that when fed identical video frames, the 3D filter outputs the exact same response as the 2D model."
+      }
+    ],
+    "related": [
+      "convolutional_neural_networks",
+      "optical-flow",
+      "receptive-field-stride-and-pooling"
+    ],
+    "keywords": "video models, 3d cnn, slowfast, r(2+1)d, i3d, c3d, spatiotemporal convolution, action recognition, temporal modelling"
+  },
+  {
+    "id": "3d-vision-nerf-and-gaussian-splatting",
+    "short": "NeRF & 3D Gaussian splatting",
+    "title": "Neural Rendering and 3D Reconstruction: Neural Radiance Fields (NeRF) and 3D Gaussian Splatting",
+    "task": "concepts",
+    "level": 3,
+    "minutes": 18,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Synthesizing novel photorealistic 3D viewpoints using implicit coordinate MLPs (NeRF) and real-time explicit rasterisation with 3D Gaussian Splatting.",
+    "lead": "Reconstructing continuous, photorealistic 3D worlds from a collection of 2D photographs has been the holy grail of computer vision. Neural Radiance Fields (NeRF; Mildenhall et al., 2020) revolutionized the field by representing 3D scenes as continuous volumetric functions encoded inside neural network weights. 3D Gaussian Splatting (Kerbl et al., 2023) then solved NeRF's agonizingly slow rendering speeds, achieving real-time 100+ FPS novel view synthesis via explicit differentiable 3D ellipsoids.",
+    "analogy": "Imagine sculpting a glowing glass sculpture. NeRF is like having a mathematical equation that calculates the exact colour and smoke density for any $(x, y, z)$ coordinate in mid-air: to photograph the sculpture, a virtual camera shoots rays through every pixel, performing millions of mathematical volume calculations along each laser ray. 3D Gaussian Splatting is like sculpting the scene out of 500,000 tiny semi-transparent glowing fuzzy beads (Gaussians): rendering a photo simply flattens (splats) the beads directly onto the camera lens using high-speed GPU graphics rasterisation.",
+    "intuition": [
+      "Given a set of 2D photos with known camera poses (from COLMAP Structure-from-Motion), Novel View Synthesis seeks to render the scene from an unseen camera perspective.",
+      "NeRF parameterises a 3D scene as a continuous volumetric function using a Multi-Layer Perceptron (MLP): $F_\\theta: (x, y, z, \\theta, \\phi) \\to (r, g, b, \\sigma)$, mapping 3D position and 2D viewing direction to RGB colour and volume density $\\sigma$. High-frequency details are captured using Fourier Positional Encodings $\\gamma(p) = [\\sin(2^k \\pi p), \\cos(2^k \\pi p)]$.",
+      "To render a pixel, NeRF casts a camera ray $\\mathbf{r}(t) = \\mathbf{o} + t \\mathbf{d}$, samples hundreds of points along the ray, and integrates colours using numerical volume rendering. While photorealistic, rendering a single $1080p$ frame requires querying the MLP billions of times, taking 10–30 seconds per frame.",
+      "3D Gaussian Splatting replaces the implicit neural MLP with explicit 3D Gaussians. Each Gaussian possesses 3D position $\\mu$, a 3D covariance matrix $\\Sigma$ (parameterised by scale and rotation quaternion), opacity $\\alpha$, and spherical harmonics (SH) for view-dependent colour. Using tile-based GPU rasterisation, Gaussian Splatting renders photorealistic scenes at 100+ FPS with fast training."
+    ],
+    "steps": [
+      "Estimate camera poses via SfM: Run COLMAP on multi-view photos to compute intrinsic parameters $\\mathbf{K}$, extrinsic poses $[\\mathbf{R} \\mid \\mathbf{t}]$, and sparse 3D point cloud.",
+      "Initialize scene representation: For NeRF, initialize continuous coordinate MLP with positional encodings; for 3DGS, initialize 3D Gaussian ellipsoids from the sparse SfM point cloud.",
+      "Cast camera rays (NeRF): For target viewpoint, shoot rays $\\mathbf{r}(t) = \\mathbf{o} + t \\mathbf{d}$ through each pixel; sample stratified points along each ray.",
+      "Project Gaussians to 2D image plane (3DGS): Project 3D covariance matrices into 2D camera coordinates $\\Sigma' = \\mathbf{J} \\mathbf{W} \\Sigma \\mathbf{W}^T \\mathbf{J}^T$.",
+      "Tile-based rasterisation (3DGS): Sort 2D Gaussians by depth; accumulate colour and opacity along pixels using alpha blending in high-speed GPU shared memory.",
+      "Optimise parameters: Compute photometric loss $\\mathcal{L} = \\|I_{\\mathrm{rendered}} - I_{\\mathrm{ground\\_truth}}\\|^2$ and backpropagate gradients into Gaussian parameters or MLP weights."
+    ],
+    "math": [
+      {
+        "h": "Volumetric Optical Ray Rendering (NeRF)",
+        "tex": "C(\\mathbf{r}) = \\int_{t_n}^{t_f} T(t) \\cdot \\sigma(\\mathbf{r}(t)) \\cdot \\mathbf{c}(\\mathbf{r}(t), \\mathbf{d}) \\, dt, \\quad T(t) = \\exp\\left( -\\int_{t_n}^t \\sigma(\\mathbf{r}(s)) \\, ds \\right)",
+        "p": "Accumulates emitted colour $\\mathbf{c}$ along camera ray $\\mathbf{r}(t)$ weighted by volume density $\\sigma$ and cumulative transmittance $T(t)$ (probability that ray traverses without hitting an obstacle)."
+      },
+      {
+        "h": "Fourier Positional Encoding Mapping",
+        "tex": "\\gamma(p) = \\left( \\sin(2^0 \\pi p), \\; \\cos(2^0 \\pi p), \\; \\dots, \\; \\sin(2^{L-1} \\pi p), \\; \\cos(2^{L-1} \\pi p) \\right)",
+        "p": "Overcomes the spectral bias of deep MLPs, enabling coordinates to represent sharp high-frequency textures and geometric edges."
+      },
+      {
+        "h": "3D Gaussian Ellipsoid Covariance Parameterisation",
+        "tex": "G(x) = \\exp\\left( -\\frac{1}{2} (x - \\mu)^T \\Sigma^{-1} (x - \\mu) \\right), \\quad \\Sigma = \\mathbf{R} \\mathbf{S} \\mathbf{S}^T \\mathbf{R}^T",
+        "p": "Parameterises 3D covariance $\\Sigma$ via scaling matrix $\\mathbf{S}$ and rotation quaternion $\\mathbf{R}$ to enforce positive semi-definiteness."
+      }
+    ],
+    "code": "import numpy as np\n\ndef positional_encoding_1d(coords: np.ndarray, num_frequencies: int = 4) -> np.ndarray:\n    \"\"\"Fourier positional encoding mapping scalar coordinates to high-frequency vectors.\"\"\"\n    # Overcomes MLP spectral bias in NeRF (Mildenhall et al., 2020)\n    freq_bands = 2.0 ** np.arange(num_frequencies) * np.pi\n    # coords shape: [N, 1]\n    sin_components = np.sin(coords * freq_bands)\n    cos_components = np.cos(coords * freq_bands)\n    return np.column_stack([sin_components, cos_components])\n\n# Simulate encoding a 1D spatial coordinate x = 0.35\nx_coord = np.array([[0.35]])\nencoded_feature = positional_encoding_1d(x_coord, num_frequencies=4)\n\nprint(f\"Original 1D Coordinate: {x_coord[0, 0]:.2f}\")\nprint(f\"Fourier Encoded Shape: {encoded_feature.shape} (8-D sinusoidal vector)\")\nprint(\"Encoded Vector:\n\", np.round(encoded_feature[0], 3))\nprint(\"High-frequency Fourier features allow deep MLPs to represent sharp edges!\")",
+    "keyPoints": [
+      "Novel view synthesis reconstructs continuous 3D scenes from a collection of calibrated 2D photos.",
+      "NeRF models scenes as continuous volumetric functions $(x, y, z, \\theta, \\phi) \\to (\\text{RGB}, \\sigma)$ in an MLP.",
+      "Fourier positional encodings overcome spectral bias, enabling MLPs to capture high-frequency detail.",
+      "3D Gaussian Splatting uses explicit 3D ellipsoids and tile-based rasterisation for real-time 100+ FPS rendering."
+    ],
+    "pitfalls": [
+      "Camera pose inaccuracy: NeRF and Gaussian Splatting require sub-pixel accurate camera poses from COLMAP; noisy camera poses cause blurry or fractured ghosting artifacts.",
+      "Agonizingly slow NeRF rendering: Standard vanilla NeRF takes up to 30 seconds to render a single 1080p frame due to ray-marching volume integrals; use Instant-NGP or 3D Gaussian Splatting for real-time speeds.",
+      "Floaters and artifacts in unconstrained regions: In areas with sparse photographic coverage (e.g. background skies or behind furniture), 3DGS produces floating needle-like artifacts; prune low-opacity Gaussians."
+    ],
+    "quiz": [
+      {
+        "q": "Why does NeRF use Fourier Positional Encodings $\\gamma(p)$ on spatial coordinates before passing them to the MLP?",
+        "o": [
+          "Because neural networks cannot accept floating point numbers directly",
+          "Deep MLPs suffer from spectral bias (inherent bias toward low frequencies); positional encodings project low-dimensional coordinates into high frequencies, allowing the network to represent sharp textures and crisp edges",
+          "To compress the model weights into an archive",
+          "To convert colour images to grayscale"
+        ],
+        "a": 1,
+        "why": "Neural Tangent Kernel theory proves standard MLPs easily learn smooth low-frequency functions but struggle with high-frequency details. Fourier encoding bridges this spectral bias."
+      },
+      {
+        "q": "What is the primary breakthrough of 3D Gaussian Splatting (Kerbl et al., 2023) over original NeRF?",
+        "o": [
+          "3D Gaussian Splatting only works on cartoons",
+          "It replaces slow volumetric ray-marching with explicit 3D Gaussian ellipsoids and GPU tile-based rasterisation, achieving real-time rendering at 100+ FPS with competitive visual fidelity",
+          "It eliminates the need for camera poses",
+          "It generates audio from photographs"
+        ],
+        "a": 1,
+        "why": "NeRF evaluates an MLP hundreds of times per pixel along each ray. Gaussian Splatting projects explicit 3D Gaussians directly onto the screen, rasterizing in real time."
+      },
+      {
+        "q": "What does \"Volume Density\" $\\sigma(x, y, z)$ represent in NeRF's volumetric rendering equation?",
+        "o": [
+          "The weight of the camera in kilograms",
+          "The differential probability of a camera ray terminating by hitting an opaque physical particle at that infinitesimal 3D location",
+          "The brightness of ambient sunlight",
+          "The sound volume of the video"
+        ],
+        "a": 1,
+        "why": "Density $\\sigma$ represents opacity at coordinate $(x, y, z)$. High density means solid matter (ray terminates and emits colour); zero density means empty air (ray passes through)."
+      }
+    ],
+    "related": [
+      "camera-model-and-calibration",
+      "stereo-vision-and-depth",
+      "geometric-transforms-and-homography"
+    ],
+    "keywords": "nerf, neural radiance fields, 3d gaussian splatting, novel view synthesis, volume rendering, positional encoding, radiance, colmap"
+  }
 ];
