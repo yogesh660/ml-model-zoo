@@ -2791,4 +2791,1474 @@ print("Weight merging verified successfully!")`,
   related: ['quantisation', 'residual-networks-and-skip-connections', 'optimisers-sgd-momentum-rmsprop-adam-adamw'],
   keywords: 'lora peft parameter efficient fine tuning low rank adaptation qlora adapter rank decomposition intrinsic dimension weight merging transformer',
 },
+
+{
+  "id": "mixed-precision-and-training-stability",
+  "short": "Mixed precision training",
+  "title": "Mixed Precision and Training Stability: FP16, BF16, Loss Scaling, and Numerical Underflow",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Accelerating neural network training by 2–3x and halving memory using FP16/BF16, master FP32 weights, and dynamic loss scaling.",
+  "lead": "For decades, deep learning was trained exclusively in 32-bit single-precision floating point (FP32). Modern GPUs (NVIDIA Volta, Ampere, Hopper) feature dedicated Tensor Cores that execute 16-bit matrix multiplications up to 8x faster while consuming half the memory bandwidth. However, naive 16-bit training causes gradients to vanish into numerical zero (underflow) or explode into infinity. Mixed precision training combines 16-bit computation with 32-bit master weights and dynamic loss scaling.",
+  "analogy": "Imagine an architect sketching blueprints. When brainstorming room layouts and drawing wall lengths, quick pencil sketches on half-sheet paper (16-bit) are fast and take up little desk space. But when calculating precise structural beam load equations where millimeter rounding errors could collapse the building, the engineer switches to an ultra-precise digital computer with double precision (32-bit). Mixed precision sketches quickly in 16-bit while anchoring critical structural sums in 32-bit.",
+  "intuition": [
+    "Standard IEEE 754 FP32 consists of 1 sign bit, 8 exponent bits, and 23 mantissa (fraction) bits, offering a dynamic range of $\\approx 10^{-38}$ to $10^{38}$. Standard FP16 has only 5 exponent bits and 10 mantissa bits, with a narrow dynamic range of $2^{-14} \\approx 6.1 \\times 10^{-5}$ to $65,504$.",
+    "In deep networks, backpropagated gradients are frequently tiny (e.g. $10^{-6}$). In raw FP16, any gradient smaller than $6.1 \\times 10^{-5}$ flushes to exact zero (underflow), stalling learning completely. Conversely, activations larger than 65,504 overflow to `+Inf` / `NaN`.",
+    "Mixed precision solves this via three techniques: 1) Master Weights: Weights and optimiser momentum states are maintained in full FP32, while forward and backward passes execute in fast FP16. 2) Dynamic Loss Scaling: Loss is multiplied by a large scale factor $S$ (e.g. 1024 or 65536) before backpropagation, shifting small gradients upward into the representable FP16 range. Gradients are then unscaled by $1/S$ before applying weight updates. 3) Precision-sensitive ops (Softmax, LayerNorm, loss) remain in FP32.",
+    "BF16 (Bfloat16, Brain Floating Point) preserves the full 8 exponent bits of FP32 with 7 mantissa bits. It matches FP32's dynamic range, eliminating the need for complex loss scaling entirely."
+  ],
+  "steps": [
+    "Select precision format: Choose BF16 on modern hardware (Ampere, Hopper, TPU) or FP16 with dynamic loss scaling on older GPUs (Turing, Volta).",
+    "Maintain FP32 master weights: Store canonical model weights and optimiser states (Adam $m_t$ and $v_t$) in 32-bit precision.",
+    "Cast activations for forward pass: Automatically cast input tensors and weights to FP16/BF16 during matrix multiplications and convolutions.",
+    "Apply dynamic loss scaling: Multiply calculated scalar loss by scale factor $S$ prior to calling `.backward()`.",
+    "Detect overflow and unscale: Inspect FP16 gradients for `Inf` or `NaN`. If detected, skip the optimiser step and decrease $S$; otherwise unscale gradients by $1/S$ and update FP32 master weights.",
+    "Cast weights back to 16-bit: Copy updated FP32 master weights into 16-bit tensors for the subsequent training iteration."
+  ],
+  "math": [
+    {
+      "h": "Floating Point Bit Layout Comparison",
+      "tex": "\\begin{aligned} \\text{FP32:} & \\quad 1 \\text{ sign}, \\; 8 \\text{ exp}, \\; 23 \\text{ mantissa} \\quad [\\text{Range } 10^{\\pm 38}] \\\\ \\text{FP16:} & \\quad 1 \\text{ sign}, \\; 5 \\text{ exp}, \\; 10 \\text{ mantissa} \\quad [\\text{Range } 10^{\\pm 5}, \\; \\max = 65,504] \\\\ \\text{BF16:} & \\quad 1 \\text{ sign}, \\; 8 \\text{ exp}, \\; 7 \\text{ mantissa} \\quad [\\text{Range } 10^{\\pm 38}, \\; \\max = 3.39 \\times 10^{38}] \\end{aligned}",
+      "p": "BF16 allocates 8 exponent bits identical to FP32, preventing gradient underflow without requiring loss scaling."
+    },
+    {
+      "h": "Dynamic Loss Scaling Gradient Shift",
+      "tex": "g_{\\mathrm{scaled}} = \\nabla_w (S \\cdot \\mathcal{L}) = S \\cdot \\nabla_w \\mathcal{L}, \\quad g_{\\mathrm{true}} = \\frac{1}{S} \\cdot g_{\\mathrm{scaled}}",
+      "p": "Multiplying loss by scale factor $S$ shifts tiny gradients into the representable positive exponent range of FP16."
+    },
+    {
+      "h": "Dynamic Scale Factor Adaptation Rule",
+      "tex": "S_{t+1} = \\begin{cases} S_t \\cdot \\frac{1}{2} & \\text{if } \\operatorname{has\\_inf\\_nan}(g_{\\mathrm{scaled}}) \\\\ S_t \\cdot 2 & \\text{if no inf/nan for } M \\text{ consecutive steps} \\\\ S_t & \\text{otherwise} \\end{cases}",
+      "p": "Adapts loss scale dynamically: shrinking immediately upon numerical overflow and expanding when training is stable."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\n\n# Standard PyTorch Automatic Mixed Precision (AMP) training pattern\ndevice = 'cuda' if torch.cuda.is_available() else 'cpu'\n\nmodel = nn.Sequential(\n    nn.Linear(1024, 2048),\n    nn.ReLU(),\n    nn.Linear(2048, 10)\n).to(device)\n\noptimiser = torch.optim.AdamW(model.parameters(), lr=1e-3)\ncriterion = nn.CrossEntropyLoss()\n\n# Initialise GradScaler for FP16 loss scaling (on CUDA)\nscaler = torch.amp.GradScaler('cuda', enabled=(device == 'cuda'))\n\n# Dummy input batch\nx = torch.randn(64, 1024, device=device)\ntarget = torch.randint(0, 10, (64,), device=device)\n\noptimiser.zero_grad()\n\n# Forward pass under autocast context\n# Tensor Core operations (Linear, Conv) run in fast FP16/BF16\nwith torch.amp.autocast(device_type=device, dtype=torch.float16, enabled=(device == 'cuda')):\n    output = model(x)\n    loss = criterion(output, target)\n\n# Backward pass with scaled gradients to prevent underflow\nscaler.scale(loss).backward()\n\n# Unscale gradients and update FP32 master weights\nscaler.step(optimiser)\nscaler.update()\n\nprint(f\"Mixed precision step completed on {device}. Current scale factor: {scaler.get_scale()}\")",
+  "keyPoints": [
+    "Mixed precision accelerates training 2–3x and cuts activation memory in half using Tensor Cores.",
+    "FP16 has a narrow dynamic range, requiring dynamic loss scaling to prevent tiny gradients from flushing to zero.",
+    "BF16 shares FP32's 8-bit exponent, matching FP32 dynamic range and eliminating loss scaling.",
+    "Master weights and optimiser states must remain in FP32 to accumulate tiny weight delta updates."
+  ],
+  "pitfalls": [
+    "Applying FP16 to Softmax or LayerNorm: Operations that sum exponents (Softmax) or compute variances easily overflow 65,504; always run normalisation in FP32.",
+    "Accumulating Adam optimiser states in FP16: In Adam, $v_t$ squares tiny gradients ($10^{-8}$), causing complete underflow in 16-bit; optimiser states must be FP32.",
+    "Using FP16 without GradScaler: Running raw FP16 backward passes without gradient scaling causes 30–50% of gradients to underflow to zero, stalling convergence."
+  ],
+  "quiz": [
+    {
+      "q": "Why are master weights and optimiser momentum states stored in FP32 even during mixed precision training?",
+      "o": [
+        "Because GPUs cannot write to 16-bit memory",
+        "Because individual weight updates $\\eta \\cdot g_t$ are tiny; adding a tiny 16-bit delta to a larger weight causes arithmetic cancellation and underflow in 16-bit",
+        "Because PyTorch models cannot be saved to disk in 16-bit",
+        "Because FP32 weights run faster than FP16 weights"
+      ],
+      "a": 1,
+      "why": "Learning rate multiplied by gradient is often small ($10^{-5}$). Adding this tiny delta to an FP16 weight results in no change due to lack of mantissa bits. FP32 master weights preserve small accumulations."
+    },
+    {
+      "q": "What is the primary advantage of BF16 (Brain Floating Point) over classical FP16?",
+      "o": [
+        "BF16 uses only 8 bits in total",
+        "BF16 allocates 8 exponent bits (same as FP32), matching FP32's broad dynamic range and eliminating the need for loss scaling",
+        "BF16 has higher fractional precision than FP32",
+        "BF16 works on standard consumer laptops without GPUs"
+      ],
+      "a": 1,
+      "why": "By keeping 8 exponent bits, BF16 spans the same dynamic range ($10^{\\pm 38}$) as FP32, making underflow and overflow virtually non-existent without complex loss scalers."
+    },
+    {
+      "q": "What is the purpose of dynamic loss scaling when training in FP16?",
+      "o": [
+        "To increase the learning rate of the optimiser",
+        "To multiply the loss by a large factor before backpropagation, shifting small gradients upward into the representable range of FP16 to prevent underflow",
+        "To normalise input image pixels between 0 and 1",
+        "To prevent the GPU from overheating"
+      ],
+      "a": 1,
+      "why": "Many backpropagated gradients are smaller than $2^{-14} \\approx 6 \\times 10^{-5}$. Scaling loss by e.g. 1024 shifts gradients into the representable positive exponent range."
+    }
+  ],
+  "related": [
+    "the-pytorch-training-loop",
+    "weight-initialisation-xavier-and-he",
+    "vanishing-and-exploding-gradients-clipping"
+  ],
+  "keywords": "mixed precision, fp16, bf16, bfloat16, tensor cores, dynamic loss scaling, underflow, overflow, automatic mixed precision, amp"
+},
+
+{
+  "id": "data-augmentation-and-mixup",
+  "short": "Data augmentation & Mixup",
+  "title": "Data Augmentation and Mixup: Regularising Deep Models via Synthetic Manifold Interpolation",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Preventing overfitting and calibrating overconfident predictions using geometric transforms, CutMix, RandAugment, and Mixup linear interpolation.",
+  "lead": "Deep neural networks possess millions or billions of parameters, giving them the capacity to memorize the training dataset entirely. When trained on finite data, networks overfit to spurious background cues and develop overconfident calibration errors. Data augmentation synthesises diverse, label-preserving training examples on the fly, while continuous interpolation methods like Mixup enforce linear behaviour between training samples.",
+  "analogy": "Imagine training a police dog to recognise illegal contraband. If the dog is trained only on packages wrapped in brown cardboard boxes, it might mistakenly learn that \"brown cardboard equals contraband\". Data augmentation is like hiding contraband inside plastic suitcases, gift boxes, and metal tins under bright lights and in shadows so the dog learns invariant scent features rather than superficial packaging.",
+  "intuition": [
+    "Standard data augmentation applies domain-specific label-preserving transformations: for images, random cropping, horizontal flipping, affine rotations, and colour jittering. This injects inductive bias (e.g. an object's identity is invariant to translation or slight lighting changes).",
+    "Advanced policy-based augmentation (RandAugment, AutoAugment) replaces manual guesswork by randomly sampling $N$ transforms with magnitude $M$ from a library of operations, maximising data entropy without distorting semantics.",
+    "Mixup (Zhang et al., 2017) goes beyond domain-specific transforms: it generates virtual training examples via convex linear combinations of pairs of training examples and their one-hot labels: $\\tilde{x} = \\lambda x_i + (1 - \\lambda) x_j$ and $\\tilde{y} = \\lambda y_i + (1 - \\lambda) y_j$, where $\\lambda \\sim \\mathrm{Beta}(\\alpha, \\alpha)$.",
+    "Mixup regularises the neural network to favour simple linear transitions between class regions in feature space, dampening oscillation and preventing extreme overconfident probabilities on out-of-distribution inputs. CutMix blends patches from one image into another, forcing the network to attend to multiple distributed visual features."
+  ],
+  "steps": [
+    "Define baseline invariant transforms: Configure basic label-preserving operations (random horizontal flips, random crops with padding).",
+    "Apply automated policy (RandAugment): Randomly select $K$ augmentations per image with uniform magnitude parameter $M$.",
+    "Sample Mixup interpolation coefficient: Draw mixing weight $\\lambda$ from a symmetrical Beta distribution $\\mathrm{Beta}(\\alpha, \\alpha)$ (typically $\\alpha \\in [0.1, 0.4]$).",
+    "Construct virtual training pairs: Shuffle minibatch to pair observation $(x_i, y_i)$ with random partner $(x_j, y_j)$.",
+    "Compute blended tensors and targets: Create interpolated input $\\tilde{x} = \\lambda x_i + (1 - \\lambda) x_j$ and evaluate loss as $\\mathcal{L} = \\lambda \\ell(f(\\tilde{x}), y_i) + (1 - \\lambda) \\ell(f(\\tilde{x}), y_j)$.",
+    "Disable Mixup during evaluation: Evaluate strictly on raw, unaugmented validation and test samples to measure genuine generalisation."
+  ],
+  "math": [
+    {
+      "h": "Mixup Linear Manifold Interpolation",
+      "tex": "\\tilde{x} = \\lambda x_i + (1 - \\lambda) x_j, \\quad \\tilde{y} = \\lambda y_i + (1 - \\lambda) y_j, \\quad \\lambda \\sim \\mathrm{Beta}(\\alpha, \\alpha)",
+      "p": "Constructs synthetic training instances along linear lines connecting random training sample pairs in data space."
+    },
+    {
+      "h": "Mixup Convex Combination Loss",
+      "tex": "\\mathcal{L}_{\\mathrm{mixup}}(\\tilde{x}, y_i, y_j; \\theta) = \\lambda \\mathcal{L}\\left( f_\\theta(\\tilde{x}), y_i \\right) + (1 - \\lambda) \\mathcal{L}\\left( f_\\theta(\\tilde{x}), y_j \\right)",
+      "p": "Evaluates loss as the convex combination of individual cross-entropy losses with respect to both parent targets."
+    },
+    {
+      "h": "CutMix Spatial Patch Insertion",
+      "tex": "\\tilde{x} = \\mathbf{M} \\odot x_i + (\\mathbf{1} - \\mathbf{M}) \\odot x_j, \\quad \\lambda = 1 - \\frac{W_{\\mathrm{box}} H_{\\mathrm{box}}}{W H}",
+      "p": "Replaces a rectangular bounding box region $\\mathbf{M}$ in image $x_i$ with a patch from image $x_j$, weighting target labels by patch area ratio."
+    }
+  ],
+  "code": "import torch\nimport numpy as np\n\ndef mixup_data(x: torch.Tensor, y: torch.Tensor, alpha: float = 0.2):\n    \"\"\"Generate mixup inputs and blended target pairs.\"\"\"\n    if alpha > 0:\n        lam = np.random.beta(alpha, alpha)\n    else:\n        lam = 1.0\n\n    batch_size = x.size(0)\n    index = torch.randperm(batch_size)\n\n    mixed_x = lam * x + (1.0 - lam) * x[index]\n    y_a, y_b = y, y[index]\n    return mixed_x, y_a, y_b, lam\n\ndef mixup_criterion(criterion, pred, y_a, y_b, lam):\n    \"\"\"Compute weighted loss for mixup prediction.\"\"\"\n    return lam * criterion(pred, y_a) + (1.0 - lam) * criterion(pred, y_b)\n\n# Simulate batch of 4 images (batch_size=4, channels=1, height=4, width=4)\ntorch.manual_seed(42)\ninputs = torch.randn(4, 1, 4, 4)\ntargets = torch.tensor([0, 1, 2, 1])\n\n# Apply Mixup\nmixed_inputs, target_a, target_b, lam = mixup_data(inputs, targets, alpha=0.4)\n\nprint(f\"Sampled Mixup lambda: {lam:.3f}\")\nprint(f\"Interpolated Target:  {lam:.2f} * Class {target_a[0]} + {1 - lam:.2f} * Class {target_b[0]}\")\n# Network learns that an interpolated input deserves proportionally interpolated probabilities",
+  "keyPoints": [
+    "Data augmentation regularises deep networks by synthetically expanding the empirical training manifold.",
+    "Mixup interpolates pairs of inputs and labels, enforcing smooth linear transitions between classes.",
+    "Prevents neural networks from outputting overconfident predictions on out-of-distribution examples.",
+    "CutMix pastes patches between images, forcing the network to attend to multiple localized features."
+  ],
+  "pitfalls": [
+    "Applying invalid domain transforms: Applying vertical flips to digit recognition (turning a '6' into a '9') corrupts class labels.",
+    "Augmenting test/validation sets: Data augmentation must be applied exclusively to training batches; evaluating on augmented test sets distorts benchmark metrics.",
+    "Setting Mixup alpha too high: If $\\alpha > 1.0$, the Beta distribution places most mass at $0.5$, producing excessively blended inputs that destroy semantic discriminability."
+  ],
+  "quiz": [
+    {
+      "q": "What is the mathematical mechanism of Mixup data augmentation?",
+      "o": [
+        "It deletes random pixels from an image",
+        "It constructs virtual training samples and labels by taking convex linear combinations of pairs of randomly selected training instances",
+        "It shifts the image by 5 pixels to the left",
+        "It trains a separate generative adversarial network (GAN) to generate new images"
+      ],
+      "a": 1,
+      "why": "Mixup computes $\\tilde{x} = \\lambda x_i + (1 - \\lambda) x_j$ and $\\tilde{y} = \\lambda y_i + (1 - \\lambda) y_j$, teaching the network to predict linear interpolations between samples."
+    },
+    {
+      "q": "Why should you NOT apply random vertical flips when training an OCR model on handwritten English digits?",
+      "o": [
+        "Because vertical flips require double the memory",
+        "Because flipping a \"6\" vertically turns it into a \"9\", corrupting the ground truth label",
+        "Because PyTorch does not support vertical flips on images",
+        "Because vertical flips cause floating point overflow"
+      ],
+      "a": 1,
+      "why": "Data augmentation must be label-preserving. For digits, vertical flips invert meanings (6 becomes 9), poisoning training data."
+    },
+    {
+      "q": "How does Mixup improve model calibration on out-of-distribution (OOD) data?",
+      "o": [
+        "It forces weights to become exactly zero",
+        "It regularises the model to output smooth linear transitions between classes rather than memorising sharp, overconfident step functions",
+        "It eliminates the need for gradient descent",
+        "It guarantees 100% test accuracy"
+      ],
+      "a": 1,
+      "why": "Standard training encourages networks to output extreme 0.999 probabilities outside the training manifold. Mixup enforces linear transition slopes, producing well-calibrated softer probabilities."
+    }
+  ],
+  "related": [
+    "the-pytorch-training-loop",
+    "transfer-learning-and-fine-tuning",
+    "reading-loss-curves-and-debugging-training"
+  ],
+  "keywords": "data augmentation, mixup, cutmix, randaugment, regularisation, manifold interpolation, overconfidence, label smoothing"
+},
+
+{
+  "id": "distributed-training-ddp-and-fsdp",
+  "short": "DDP & FSDP distributed training",
+  "title": "Distributed Deep Learning: Distributed Data Parallel (DDP) and Fully Sharded Data Parallel (FSDP)",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Scaling model training across multiple GPUs and nodes using Ring-AllReduce DDP and parameter/gradient/optimiser sharding with FSDP (ZeRO).",
+  "lead": "Modern deep learning models have expanded beyond the compute and memory limits of any single GPU. A 70-billion parameter LLM requires over 140 GB of RAM just to store 16-bit weights—before accounting for gradients and optimiser states, which require another 560 GB. Scaling training across dozens or thousands of GPUs requires distributed parallelism: Distributed Data Parallel (DDP) scales throughput for models that fit in one GPU, while Fully Sharded Data Parallel (FSDP) shards models across GPU memories.",
+  "analogy": "Imagine transcribing an ancient 1,000-page manuscript. In DDP, each scribe receives an identical copy of the full dictionary (model weights) and transcribes a separate chapter (minibatch); at the end of each hour, all scribes shout out their edits and average their notes. In FSDP, the dictionary itself is so enormous that no scribe has room on their desk for it; each scribe holds 1/8th of the dictionary pages in their drawer, swapping pages on demand right when a word needs translating and immediately discarding it afterwards.",
+  "intuition": [
+    "Single-GPU training is constrained by three memory consumers: Model Parameters, Gradients, and Optimiser States (in AdamW, 2 states per parameter: momentum $m$ and variance $v$, requiring $12$ bytes per parameter in mixed precision). Activations add further memory scaling with batch size.",
+    "Distributed Data Parallel (DDP) replicates the entire model on each GPU. Each GPU processes an independent minibatch slice, computes local gradients, and synchronises gradients across all GPUs using an efficient Ring-AllReduce collective communication algorithm before taking an identical optimiser step.",
+    "DDP fails when the model itself exceeds a single GPU's VRAM. ZeRO (Zero Redundancy Optimiser) and PyTorch FSDP (Fully Sharded Data Parallel) eliminate memory redundancy by sharding states across ranks: ZeRO-1 shards optimiser states (4x memory reduction), ZeRO-2 shards optimiser states and gradients (8x reduction), and ZeRO-3 / FSDP shards optimiser states, gradients, and model parameters.",
+    "In FSDP, during the forward pass, each layer's parameters are gathered via `AllGather` across ranks just in time for computation, and immediately discarded after the layer computes. Backward passes repeat this just-in-time gather and execute `ReduceScatter` to compute and shard gradients."
+  ],
+  "steps": [
+    "Evaluate model memory footprint: Compute total memory $M_{\\mathrm{total}} = 16 \\times N_{\\mathrm{params}} + M_{\\mathrm{activations}}$. If $M_{\\mathrm{model}} \\le V_{\\mathrm{GPU}}$, select DDP; otherwise select FSDP.",
+    "Initialise process group: Call `torch.distributed.init_process_group(backend=\"nccl\")` using NVIDIA Collective Communications Library (NCCL).",
+    "Wrap model: Wrap PyTorch module with `torch.nn.parallel.DistributedDataParallel(model)` or `FullyShardedDataParallel(model, auto_wrap_policy=...)`.",
+    "Distribute data partitions: Attach a `DistributedSampler(dataset)` to the DataLoader to ensure each GPU receives a disjoint, non-overlapping batch slice.",
+    "Set epoch seed in sampler: Call `sampler.set_epoch(epoch)` at the start of each epoch to shuffle batches uniquely across GPUs.",
+    "Execute synchronized training step: Compute forward pass, backward pass (which triggers overlapping communication and computation), and optimiser step."
+  ],
+  "math": [
+    {
+      "h": "Total Training Memory Overhead (AdamW FP16/FP32)",
+      "tex": "M_{\\mathrm{static}} = \\underbrace{2 N}_{\\text{FP16 Weights}} + \\underbrace{2 N}_{\\text{FP16 Grads}} + \\underbrace{4 N}_{\\text{FP32 Master Weights}} + \\underbrace{8 N}_{\\text{Adam } m, v} = 16 N \\text{ bytes}",
+      "p": "Static memory overhead scales at 16 bytes per parameter, requiring 160GB for a 10-billion parameter model before activations."
+    },
+    {
+      "h": "Ring-AllReduce Communication Volume",
+      "tex": "\\operatorname{Comm}_{\\mathrm{AllReduce}} = 2 \\cdot \\left( \\frac{K - 1}{K} \\right) \\cdot N_{\\mathrm{bytes}}",
+      "p": "The communication volume per GPU in Ring-AllReduce is completely independent of the total GPU count $K$, scaling only with model byte size."
+    },
+    {
+      "h": "FSDP (ZeRO-3) Memory per GPU Rank",
+      "tex": "M_{\\mathrm{FSDP}}(K) = \\frac{16 N}{K} + M_{\\mathrm{layer\\_buffer}} + M_{\\mathrm{activations}}",
+      "p": "Shards all parameters, gradients, and optimiser states across $K$ GPUs, scaling static memory linearly down with cluster size."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport os\n\n# Conceptual structure of PyTorch Distributed Data Parallel (DDP)\ndef ddp_training_step():\n    # In practice: run with 'torchrun --nproc_per_node=4 script.py'\n    # Environment variables set automatically by torchrun\n    local_rank = int(os.environ.get(\"LOCAL_RANK\", 0))\n    world_size = int(os.environ.get(\"WORLD_SIZE\", 1))\n    \n    print(f\"Initialising rank {local_rank} of {world_size}\")\n    \n    # Model definition\n    model = nn.Sequential(\n        nn.Linear(512, 1024),\n        nn.ReLU(),\n        nn.Linear(1024, 10)\n    )\n    \n    # In multi-GPU environment:\n    # torch.distributed.init_process_group(\"nccl\")\n    # model = nn.parallel.DistributedDataParallel(model.cuda(local_rank), device_ids=[local_rank])\n    # sampler = torch.utils.data.distributed.DistributedSampler(dataset)\n    \n    print(\"DDP model wrapped: Gradients will synchronize via Ring-AllReduce on .backward()\")\n\nddp_training_step()",
+  "keyPoints": [
+    "DDP replicates the model on each GPU, synchronising gradients using Ring-AllReduce communication.",
+    "DDP communication volume is independent of the number of GPUs, scaling near-linearly with cluster size.",
+    "FSDP (ZeRO-3) shards parameters, gradients, and optimiser states, dividing static memory consumption by $K$ GPUs.",
+    "FSDP enables training models with tens of billions of parameters that cannot fit into single GPU VRAM."
+  ],
+  "pitfalls": [
+    "Forgetting `sampler.set_epoch(epoch)`: If omitted, the DistributedSampler generates the exact same batch sequence on every epoch, degrading training stochasticity.",
+    "Using PyTorch DataParallel (`nn.DataParallel`): Single-process multi-threaded `DataParallel` suffers from Python GIL bottlenecks and master-GPU memory imbalance; always use DDP.",
+    "Communication overhead on slow interconnects: Running FSDP across nodes connected by standard 1Gbps Ethernet causes GPUs to spend 90% of their time waiting for network AllGather; high-speed InfiniBand (RoCE) is essential."
+  ],
+  "quiz": [
+    {
+      "q": "Why is `DistributedDataParallel` (DDP) far superior to `DataParallel` (DP) in PyTorch?",
+      "o": [
+        "DDP only works on MacBooks",
+        "DDP spawns a separate Python process per GPU, avoiding Python GIL contention and distributing communication evenly without single-GPU bottlenecks",
+        "DP cannot train neural networks with more than 1 layer",
+        "DDP does not require backpropagation"
+      ],
+      "a": 1,
+      "why": "`DataParallel` runs in a single process subject to Python GIL locks and concentrates all gradient aggregation on GPU 0. DDP spawns separate processes with decentralized Ring-AllReduce."
+    },
+    {
+      "q": "When must an engineer switch from standard DDP to FSDP (Fully Sharded Data Parallel)?",
+      "o": [
+        "When training on images instead of text",
+        "When the model parameters, gradients, and optimiser states exceed the VRAM of a single physical GPU",
+        "When the learning rate is less than 0.001",
+        "When training on CPUs only"
+      ],
+      "a": 1,
+      "why": "DDP requires the full model to fit on every single GPU. When a model is too large for one GPU, FSDP shards parameters and states across multiple GPUs."
+    },
+    {
+      "q": "What collective communication operation does DDP use to synchronize gradients across GPUs?",
+      "o": [
+        "Point-to-point HTTP POST requests",
+        "Ring-AllReduce, where gradients are averaged in parallel with communication volume independent of GPU count",
+        "Single master database write",
+        "Broadcasting weights from rank 0 only"
+      ],
+      "a": 1,
+      "why": "Ring-AllReduce divides tensor buffers into chunks passed around a logical ring of nodes, achieving optimal network bandwidth utilization."
+    }
+  ],
+  "related": [
+    "the-pytorch-training-loop",
+    "mixed-precision-and-training-stability",
+    "vanishing-and-exploding-gradients-clipping"
+  ],
+  "keywords": "distributed training, ddp, fsdp, zero, ring-allreduce, deep learning, torchrun, nccl, sharding, distributed data parallel"
+},
+
+{
+  "id": "graph-neural-networks-gcn-gat-graphsage",
+  "short": "GNNs: GCN, GAT & GraphSAGE",
+  "title": "Graph Neural Networks: Message Passing, GCN, Graph Attention, and GraphSAGE",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Learning node, edge, and graph representations using permutation-equivariant message passing, spectral convolutions, and inductive neighbourhood sampling.",
+  "lead": "Standard deep learning architectures assume Euclidean data: images are regular 2D grids, and text is a 1D sequence. However, many real-world systems are non-Euclidean graphs: social networks, molecule bonds, financial transaction webs, and knowledge graphs. Graph Neural Networks (GNNs) extend deep learning to arbitrary graphs through neural message passing, aggregating local neighbourhood information while respecting graph permutation symmetries.",
+  "analogy": "Imagine a neighbourhood where rumours spread. At time zero, each resident knows only their personal secrets. In round one, everyone walks to their fence and chats with their immediate neighbours, blending what they hear into an updated mental worldview. In round two, chatting again spreads information from two streets away. After $K$ rounds, every resident's understanding incorporates the entire $K$-hop neighbourhood surrounding their house.",
+  "intuition": [
+    "A graph consists of nodes $\\mathcal{V}$, edges $\\mathcal{E}$, and node feature matrix $\\mathbf{X} \\in \\mathbb{R}^{N \\times d}$. A GNN must be permutation equivariant: renumbering the nodes in the input must produce the exact same renumbering in output representations.",
+    "Message Passing Neural Networks (MPNN) generalise GNNs into three steps at each layer: 1) Message: compute messages along edges $m_{uv} = M(h_u, h_v, e_{uv})$; 2) Aggregate: combine incoming messages using a permutation-invariant aggregator (sum, mean, max); 3) Update: combine aggregated message with the node's own state $h_v^{(l+1)} = U(h_v^{(l)}, m_v)$.",
+    "Graph Convolutional Networks (GCN; Kipf & Welling) implement isotropic averaging using a renormalized symmetric Laplacian $\\tilde{\\mathbf{D}}^{-1/2} \\tilde{\\mathbf{A}} \\tilde{\\mathbf{D}}^{-1/2} \\mathbf{H} \\mathbf{W}$, weighting neighbours by degree.",
+    "Graph Attention Networks (GAT; Veličković et al.) replace fixed degree weights with learned self-attention coefficients $\\alpha_{uv}$, allowing a node to dynamically focus on its most relevant neighbours. GraphSAGE (Hamilton et al.) solves scalability on massive web graphs by sampling a fixed number of neighbours per node rather than loading the entire global adjacency matrix into memory."
+  ],
+  "steps": [
+    "Construct graph representation: Form node feature matrix $\\mathbf{X}$ and edge list / sparse adjacency matrix $\\mathbf{A}$ with self-loops added.",
+    "Define neighbourhood aggregation function: Select GCN (degree-normalised mean), GAT (multi-head attention), or GraphSAGE (sampled mean/max pooling).",
+    "Sample local neighbourhoods (GraphSAGE): For massive graphs, sample fixed-size sub-neighbourhoods (e.g. $S_1 = 25, S_2 = 10$) to bound minibatch memory.",
+    "Compute layer-wise message passing: Transform node features through linear projections $\\mathbf{W}^{(l)}$, aggregate messages across incoming edges, and apply non-linear activations.",
+    "Add skip connections: Incorporate residual connections or jumping knowledge networks to prevent oversmoothing in deep architectures.",
+    "Downstream readout: Extract updated node embeddings for node classification, link prediction, or pool across the graph via global mean/sum for graph classification."
+  ],
+  "math": [
+    {
+      "h": "Message Passing Neural Network (MPNN) Formulation",
+      "tex": "h_v^{(l+1)} = \\operatorname{UPDATE}^{(l)}\\left( h_v^{(l)}, \\; \\operatorname{AGG}_{u \\in \\mathcal{N}(v)}^{(l)}\\left( \\operatorname{MSG}^{(l)}(h_v^{(l)}, h_u^{(l)}, e_{vu}) \\right) \\right)",
+      "p": "General message passing update: aggregating edge messages from neighbours $u \\in \\mathcal{N}(v)$ via permutation-invariant reduction AGG."
+    },
+    {
+      "h": "Graph Convolutional Network (GCN) Layer",
+      "tex": "\\mathbf{H}^{(l+1)} = \\sigma\\left( \\tilde{\\mathbf{D}}^{-\\frac{1}{2}} \\tilde{\\mathbf{A}} \\tilde{\\mathbf{D}}^{-\\frac{1}{2}} \\mathbf{H}^{(l)} \\mathbf{W}^{(l)} \\right), \\quad \\tilde{\\mathbf{A}} = \\mathbf{A} + \\mathbf{I}_N",
+      "p": "GCN normalises adjacency matrix with self-loops $\\tilde{\\mathbf{A}}$ using symmetric diagonal degree matrix $\\tilde{\\mathbf{D}}_{ii} = \\sum_j \\tilde{\\mathbf{A}}_{ij}$."
+    },
+    {
+      "h": "Graph Attention Network (GAT) Attention Weights",
+      "tex": "\\alpha_{uv} = \\frac{\\exp\\left( \\operatorname{LeakyReLU}\\left( \\mathbf{a}^T [\\mathbf{W} h_u \\parallel \\mathbf{W} h_v] \\right) \\right)}{\\sum_{k \\in \\mathcal{N}(v) \\cup \\{v\\}} \\exp\\left( \\operatorname{LeakyReLU}\\left( \\mathbf{a}^T [\\mathbf{W} h_k \\parallel \\mathbf{W} h_v] \\right) \\right)}",
+      "p": "Computes anisotropic softmax attention coefficients $\\alpha_{uv}$ over concatenated linear projections $[mathbf{W} h_u \\parallel \\mathbf{W} h_v]$."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass SimpleGCNLayer(nn.Module):\n    def __init__(self, in_features: int, out_features: int):\n        super().__init__()\n        self.linear = nn.Linear(in_features, out_features, bias=False)\n\n    def forward(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:\n        # 1. Add self-loops: A_tilde = A + I\n        N = x.size(0)\n        adj_tilde = adj + torch.eye(N, device=adj.device)\n        \n        # 2. Symmetric degree normalisation: D^-0.5 * A_tilde * D^-0.5\n        deg = torch.sum(adj_tilde, dim=1)\n        deg_inv_sqrt = torch.pow(deg, -0.5)\n        deg_inv_sqrt[torch.isinf(deg_inv_sqrt)] = 0.0\n        d_mat = torch.diag(deg_inv_sqrt)\n        norm_adj = d_mat @ adj_tilde @ d_mat\n        \n        # 3. Message passing: norm_adj @ X @ W\n        support = self.linear(x)\n        out = norm_adj @ support\n        return F.relu(out)\n\n# 4 nodes, 3 features each\nX = torch.tensor([\n    [1.0, 0.0, 0.5],\n    [0.0, 1.0, 0.2],\n    [0.5, 0.5, 0.0],\n    [0.0, 0.0, 1.0]\n])\n# Adjacency matrix: undirected ring graph (0-1, 1-2, 2-3, 3-0)\nA = torch.tensor([\n    [0.0, 1.0, 0.0, 1.0],\n    [1.0, 0.0, 1.0, 0.0],\n    [0.0, 1.0, 0.0, 1.0],\n    [1.0, 0.0, 1.0, 0.0]\n])\n\ngcn = SimpleGCNLayer(in_features=3, out_features=4)\nH1 = gcn(X, A)\nprint(\"Updated node embeddings shape:\", H1.shape)\nprint(\"Node 0 aggregated representation:\n\", H1[0].detach().numpy())",
+  "keyPoints": [
+    "GNNs learn representations on non-Euclidean graph topologies through iterative message passing.",
+    "Message passing combines localized node transformations with permutation-invariant neighbour aggregations.",
+    "GCN performs isotropic degree-normalised smoothing; GAT introduces anisotropic learned attention weights.",
+    "GraphSAGE samples fixed-size sub-neighbourhoods, enabling scalable minibatch training on billion-node graphs."
+  ],
+  "pitfalls": [
+    "Oversmoothing in deep GNNs: Stacking more than 3–4 GCN layers causes all node embeddings to converge to identical vectors, destroying discriminative power.",
+    "Neighbourhood explosion in dense graphs: A node with 10,000 neighbours causes the $K$-hop computation graph to expand exponentially; use GraphSAGE sampling.",
+    "Missing self-loops: If self-loops are omitted from the adjacency matrix, a node ignores its own existing feature state when aggregating messages."
+  ],
+  "quiz": [
+    {
+      "q": "What is the \"oversmoothing\" problem in Graph Neural Networks (GNNs)?",
+      "o": [
+        "Gradients exploding to infinity during training",
+        "When stacking many message passing layers causes node embeddings across the entire graph to converge to uniform, identical representations, losing distinction",
+        "When images lose their sharpness during convolution",
+        "When the learning rate decays too quickly"
+      ],
+      "a": 1,
+      "why": "Repeated Laplacian smoothing averages representations across wide network diameters. After many layers, every node embedding becomes nearly indistinguishable from its neighbours."
+    },
+    {
+      "q": "How does Graph Attention Network (GAT) improve upon the standard Graph Convolutional Network (GCN)?",
+      "o": [
+        "GAT replaces GPUs with quantum processors",
+        "GAT computes learned attention weights between pairs of connected nodes, allowing nodes to assign different importance to different neighbours rather than using static degree weights",
+        "GAT eliminates all non-linear activation functions",
+        "GAT only works on graphs with fewer than 10 nodes"
+      ],
+      "a": 1,
+      "why": "GCN treats all connected neighbours with fixed isotropic degree normalisation. GAT learns anisotropic attention weights $\\alpha_{uv}$, attending selectively to critical neighbours."
+    },
+    {
+      "q": "Why is GraphSAGE capable of training on massive multi-million node graphs where standard full-batch GCN fails?",
+      "o": [
+        "GraphSAGE deletes all edges in the graph",
+        "GraphSAGE samples a fixed number of neighbours at each hop, allowing scalable minibatch training without loading the entire graph into VRAM",
+        "GraphSAGE converts graph nodes into text tokens",
+        "GraphSAGE requires zero memory"
+      ],
+      "a": 1,
+      "why": "Full GCN requires computing matrix operations on the full global adjacency matrix. GraphSAGE samples a fixed number of neighbours per node, enabling standard minibatch SGD."
+    }
+  ],
+  "related": [
+    "the-attention-mechanism",
+    "residual-networks-and-skip-connections",
+    "contrastive-learning-simclr-and-infonce"
+  ],
+  "keywords": "graph neural networks, gnn, gcn, gat, graphsage, message passing, oversmoothing, node classification, graph convolution"
+},
+
+{
+  "id": "mixture-of-experts",
+  "short": "Mixture of experts (MoE)",
+  "title": "Mixture of Experts (MoE): Conditional Computation and Sparse Gating",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Decoupling model parameter capacity from FLOP compute cost using sparse top-$k$ gating routers and load balancing auxiliary losses.",
+  "lead": "In dense neural networks, every single parameter is activated for every single forward pass: doubling the parameter count doubles the FLOP compute cost and training latency. Mixture of Experts (MoE) introduces conditional computation: replacing dense Feed-Forward Network (FFN) layers with an ensemble of $E$ parallel expert sub-networks, directed by a learned router that routes each token to only top-$k$ experts (e.g. 2 out of 8). MoE scales models to trillions of parameters with constant inference FLOPs.",
+  "analogy": "Imagine a high-volume medical clinic. In a dense system, every single patient is examined simultaneously by 16 different medical specialists (cardiologist, neurologist, orthopaedic surgeon, dermatologist), running up astronomical bills. In a Mixture of Experts clinic, a triage nurse (the router) examines the patient's symptoms and routes them strictly to the two most relevant specialists. The clinic maintains the collective knowledge of 16 experts while paying for only 2 specialists per patient.",
+  "intuition": [
+    "In standard Transformers, Feed-Forward Network (FFN) layers account for $\\approx 2/3$ of total model parameters. MoE replaces each dense FFN with $E$ identical-structure independent FFN blocks called \"experts\".",
+    "A lightweight gating router network $G(x) = \\operatorname{Softmax}(\\operatorname{TopK}(x \\cdot W_g + \\epsilon, k))$ computes routing probabilities for each token, directing the token to the $k$ experts with the highest scores.",
+    "Because each token interacts with only $k$ experts (typically $k=1$ or $k=2$), the floating point operations (FLOPs) per token remain constant, even as the total parameter count scales by $8\\times$ or $64\\times$.",
+    "The primary failure mode of MoE is Expert Collapse: the router quickly learns to send every single token to the same 1–2 favourite experts, leaving the remaining experts starved of gradients. MoE prevents this using an auxiliary Load Balancing Loss that penalises unequal token allocation across experts."
+  ],
+  "steps": [
+    "Select layer replacement: Substitute dense FFN blocks in Transformer decoder layers with MoE layers containing $E$ parallel expert networks.",
+    "Configure routing top-$k$: Choose $k=1$ (Switch Transformer; maximum efficiency) or $k=2$ (Mixture of Experts; smoother routing gradients).",
+    "Compute router gating logits: Project token representations through router weight matrix $W_g$ and optionally add Gaussian noise during training for exploration.",
+    "Apply Top-$k$ gating and normalisation: Select top-$k$ expert indices and re-normalise their softmax gating weights to sum to 1.0.",
+    "Dispatch and gather tokens: Dispatch tokens to designated expert buffers, execute parallel forward passes, and combine outputs weighted by gating coefficients.",
+    "Calculate load balancing auxiliary loss: Compute the coefficient of variation or dot product between router assignment probabilities and actual batch routing frequencies, adding to main loss."
+  ],
+  "math": [
+    {
+      "h": "MoE Conditional Computation Output",
+      "tex": "y = \\sum_{i=1}^E G(x)_i \\cdot \\operatorname{Expert}_i(x), \\quad G(x) = \\operatorname{Softmax}\\left( \\operatorname{TopK}\\left( x W_g, \\; k \\right) \\right)",
+      "p": "Output is the weighted sum across active experts where $G(x)_i > 0$ for strictly $k$ experts and $0$ for the remaining $(E - k)$ experts."
+    },
+    {
+      "h": "Top-$k$ Gating Operator",
+      "tex": "\\operatorname{TopK}(v, k)_i = \\begin{cases} v_i & \\text{if } v_i \\text{ is in top } k \\text{ elements of } v \\\\ -\\infty & \\text{otherwise} \\end{cases}",
+      "p": "Sets non-selected expert logits to $-\\infty$ prior to softmax, driving their routing probabilities and compute costs to exact zero."
+    },
+    {
+      "h": "Auxiliary Load Balancing Loss (Switch Transformer)",
+      "tex": "\\mathcal{L}_{\\mathrm{aux}} = \\alpha \\cdot E \\sum_{i=1}^E f_i \\cdot P_i, \\quad f_i = \\frac{1}{T} \\sum_{t=1}^T \\mathbb{I}(\\operatorname{routed}(t) = i), \\; P_i = \\frac{1}{T} \\sum_{t=1}^T G(x_t)_i",
+      "p": "Minimises the correlation between fraction of tokens dispatched $f_i$ and router probability mass $P_i$, penalising expert concentration."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass SimpleMoELayer(nn.Module):\n    def __init__(self, d_model: int, d_ff: int, num_experts: int = 4, top_k: int = 2):\n        super().__init__()\n        self.num_experts = num_experts\n        self.top_k = top_k\n        self.router = nn.Linear(d_model, num_experts, bias=False)\n        # Create independent expert FFNs\n        self.experts = nn.ModuleList([\n            nn.Sequential(\n                nn.Linear(d_model, d_ff),\n                nn.ReLU(),\n                nn.Linear(d_ff, d_model)\n            ) for _ in range(num_experts)\n        ])\n\n    def forward(self, x: torch.Tensor):\n        # x shape: [batch_size, seq_len, d_model]\n        batch, seq, d_model = x.shape\n        x_flat = x.view(-1, d_model)  # [N, d_model]\n        \n        # 1. Compute router logits\n        logits = self.router(x_flat)  # [N, num_experts]\n        \n        # 2. Select top-k experts per token\n        top_k_logits, top_k_indices = torch.topk(logits, self.top_k, dim=-1)\n        top_k_weights = F.softmax(top_k_logits, dim=-1)  # [N, top_k]\n        \n        # 3. Compute weighted expert outputs\n        out = torch.zeros_like(x_flat)\n        for k in range(self.top_k):\n            expert_idx = top_k_indices[:, k]\n            weight = top_k_weights[:, k].unsqueeze(-1)\n            # Route tokens to corresponding expert\n            for i, expert in enumerate(self.experts):\n                mask = (expert_idx == i)\n                if mask.any():\n                    out[mask] += weight[mask] * expert(x_flat[mask])\n                    \n        return out.view(batch, seq, d_model)\n\n# Test MoE layer with 4 experts, routing top-2 per token\nmoe = SimpleMoELayer(d_model=64, d_ff=256, num_experts=4, top_k=2)\nx = torch.randn(2, 8, 64)  # 16 tokens\nout = moe(x)\nprint(\"MoE Output shape:\", out.shape)\nprint(\"Each token evaluated by strictly 2 out of 4 experts!\")",
+  "keyPoints": [
+    "MoE decouples model capacity from compute cost through sparse conditional routing.",
+    "Only top-$k$ experts are activated per token, keeping inference FLOPs constant as parameters grow.",
+    "A learned router network predicts softmax gating scores across parallel expert FFNs.",
+    "An auxiliary load balancing loss prevents expert collapse where all tokens route to one favourite expert."
+  ],
+  "pitfalls": [
+    "Expert collapse: Without auxiliary load balancing, the router quickly routes all tokens to a single expert, reducing the model to a tiny fraction of its capacity.",
+    "Inference memory overhead: While FLOPs are sparse, all expert weights must reside in GPU VRAM unless offloaded, requiring high aggregate memory.",
+    "Communication overhead in distributed MoE: Sharding experts across multiple GPUs requires expensive all-to-all token dispatch shuffles across network interconnects."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary motivation for using Mixture of Experts (MoE) over dense neural network architectures?",
+      "o": [
+        "It eliminates the need for attention layers",
+        "It allows scaling model parameter capacity by orders of magnitude without proportionally increasing computational FLOPs per token",
+        "It forces models to output binary classification decisions",
+        "It reduces training datasets to zero"
+      ],
+      "a": 1,
+      "why": "In MoE, each token is processed by only top-$k$ experts (e.g. 2 out of 8), allowing parameter capacity to scale massively while computation cost per token stays constant."
+    },
+    {
+      "q": "What is \"expert collapse\" in a Mixture of Experts model?",
+      "o": [
+        "When an expert network crashes with a segmentation fault",
+        "A pathology where the gating router learns to route virtually all tokens to the same 1 or 2 experts, leaving the remaining experts untrained and unutilized",
+        "When all expert weights decay to zero due to L2 regularisation",
+        "When GPU VRAM runs out during backpropagation"
+      ],
+      "a": 1,
+      "why": "Expert collapse occurs when a router favours a few experts early, creating a positive feedback loop where only those experts receive gradient updates."
+    },
+    {
+      "q": "How do modern MoE models like Switch Transformer prevent expert collapse during training?",
+      "o": [
+        "By manually assigning words alphabetically to experts",
+        "By introducing an auxiliary load balancing loss that penalises unequal distribution of tokens across experts",
+        "By disabling backpropagation on the router weights",
+        "By training only one expert at a time"
+      ],
+      "a": 1,
+      "why": "The auxiliary load balancing loss penalises correlation between router probability mass and token dispatch fractions, incentivizing balanced expert utilisation."
+    }
+  ],
+  "related": [
+    "the-attention-mechanism",
+    "residual-networks-and-skip-connections",
+    "scaling-laws"
+  ],
+  "keywords": "mixture of experts, moe, conditional computation, sparse gating, top-k routing, expert collapse, switch transformer, load balancing loss"
+},
+
+{
+  "id": "state-space-models-and-mamba",
+  "short": "State-space models & Mamba",
+  "title": "State-Space Models and Mamba: Linear-Time Sequence Modelling via Selective State Spaces",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Replacing quadratic self-attention with linear-time continuous state spaces, selective time-varying matrices, and hardware-aware associative scans.",
+  "lead": "The Transformer's self-attention mechanism is the cornerstone of modern language modelling, but it suffers from a fundamental computational bottleneck: sequence length complexity scales quadratically $O(L^2)$ in compute and memory. Processing 100,000-token contexts in Transformers requires astronomical VRAM. State-Space Models (SSMs), culminating in Mamba (Gu & Dao, 2023), achieve Transformer-grade language quality with linear $O(L)$ scaling and constant-time inference.",
+  "analogy": "Imagine reading an epic novel series like War and Peace. A Transformer is like an analyst who re-reads every single previous page from chapter 1 every time they read a new sentence to cross-reference every word. Mamba is like a brilliant detective who maintains a dynamic mental summary notebook: as each new line of dialogue arrives, they update their mental state in constant time, effortlessly remembering vital plot clues without rescanning thousands of earlier pages.",
+  "intuition": [
+    "Classical Structured State-Space Models (S4) map a continuous 1D input signal $x(t)$ to continuous latent state $h(t) \\in \\mathbb{R}^N$ and output $y(t)$ via continuous linear differential equations: $h'(t) = \\mathbf{A} h(t) + \\mathbf{B} x(t)$ and $y(t) = \\mathbf{C} h(t)$.",
+    "Continuous SSMs are discretized using step size $\\Delta$ (Euler or Bilinear transform) into recurrence forms: $h_t = \\bar{\\mathbf{A}} h_{t-1} + \\bar{\\mathbf{B}} x_t$. This recurrence enables $O(1)$ constant-time inference per step, like an RNN.",
+    "During training, because system matrices $(\\mathbf{A}, \\mathbf{B}, \\mathbf{C})$ were time-invariant (LTI), the entire sequence recurrence can be unrolled into a single global convolution $y = x * \\bar{\\mathbf{K}}$, computable in $O(L \\log L)$ time using Fast Fourier Transforms (FFTs).",
+    "However, LTI models cannot perform content-based reasoning (e.g. selectively storing an important token and forgetting trivia). Mamba introduces Selective State Spaces: making $\\mathbf{B}, \\mathbf{C},$ and $\\Delta$ dynamic input-dependent functions of $x_t$. While this breaks global convolution, Mamba preserves parallel training using hardware-aware parallel associative scans implemented in GPU SRAM."
+  ],
+  "steps": [
+    "Input projection: Project input token $x_t$ through linear expansion layers into dimension $D$.",
+    "Input-dependent selection: Compute dynamic time-step $\\Delta_t = \\operatorname{softplus}(\\operatorname{Linear}(x_t))$, input matrix $\\mathbf{B}_t = \\operatorname{Linear}(x_t)$, and output matrix $\\mathbf{C}_t = \\operatorname{Linear}(x_t)$.",
+    "Discretise continuous parameters: Compute discrete transition $\\bar{\\mathbf{A}}_t = \\exp(\\Delta_t \\mathbf{A})$ and discrete input scale $\\bar{\\mathbf{B}}_t = \\Delta_t \\mathbf{B}_t$.",
+    "Parallel associative scan (Training): Compute sequence recurrence in $O(\\log L)$ parallel depth using associative scan operations directly inside high-speed GPU SRAM.",
+    "Recurrent generation (Inference): Execute sequential state update $h_t = \\bar{\\mathbf{A}}_t h_{t-1} + \\bar{\\mathbf{B}}_t x_t$ with constant $O(1)$ step latency and zero KV-cache memory expansion.",
+    "Output gating & projection: Modulate output with gating branch and project back to model dimension."
+  ],
+  "math": [
+    {
+      "h": "Continuous State-Space Differential Equation",
+      "tex": "h'(t) = \\mathbf{A} h(t) + \\mathbf{B} x(t), \\quad y(t) = \\mathbf{C} h(t)",
+      "p": "Maps 1D continuous driving function $x(t)$ through continuous evolution matrix $\\mathbf{A} \\in \\mathbb{R}^{N \\times N}$ and input matrix $\\mathbf{B}$."
+    },
+    {
+      "h": "Zero-Order Hold (ZOH) Discretisation",
+      "tex": "\\bar{\\mathbf{A}} = \\exp(\\Delta \\mathbf{A}), \\quad \\bar{\\mathbf{B}} = (\\Delta \\mathbf{A})^{-1} (\\exp(\\Delta \\mathbf{A}) - \\mathbf{I}) \\cdot \\Delta \\mathbf{B} \\approx \\Delta \\mathbf{B}",
+      "p": "Transforms continuous parameters into discrete recurrence matrices using step size parameter $\\Delta$."
+    },
+    {
+      "h": "Selective Input-Dependent Parameterisation (Mamba)",
+      "tex": "\\mathbf{B}_t = \\mathbf{W}_B x_t, \\quad \\mathbf{C}_t = \\mathbf{W}_C x_t, \\quad \\Delta_t = \\operatorname{softplus}(\\mathbf{W}_\\Delta x_t + \\mathbf{b}_\\Delta)",
+      "p": "Parameters $\\mathbf{B}, \\mathbf{C}, \\Delta$ vary dynamically with input $x_t$, allowing the network to filter out noise and selectively store key information."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass MinimalSSM(nn.Module):\n    \"\"\"Educational demonstration of 1D Selective State-Space recurrence.\"\"\"\n    def __init__(self, d_model: int, d_state: int = 16):\n        super().__init__()\n        self.d_model = d_model\n        self.d_state = d_state\n        \n        # Continuous diagonal A parameter\n        self.A_log = nn.Parameter(torch.log(torch.arange(1, d_state + 1, dtype=torch.float32)))\n        \n        # Linear projections for selective B, C, Delta\n        self.x_proj = nn.Linear(d_model, d_state * 2 + 1, bias=False)\n        self.out_proj = nn.Linear(d_model, d_model)\n\n    def forward(self, x: torch.Tensor):\n        # x shape: [batch, seq_len, d_model]\n        batch, seq_len, _ = x.shape\n        A = -torch.exp(self.A_log)  # [d_state] (enforce stability: negative real values)\n        \n        y_out = []\n        # Sequential inference recurrence: O(1) memory per step!\n        for b in range(batch):\n            h = torch.zeros(self.d_model, self.d_state, device=x.device)\n            y_seq = []\n            for t in range(seq_len):\n                x_t = x[b, t]  # [d_model]\n                proj = self.x_proj(x_t)\n                B_t = proj[:self.d_state]\n                C_t = proj[self.d_state:2*self.d_state]\n                delta_t = F.softplus(proj[-1:])\n                \n                # Discretise: A_bar = exp(delta * A), B_bar = delta * B\n                A_bar = torch.exp(delta_t * A)  # [d_state]\n                B_bar = delta_t * B_t          # [d_state]\n                \n                # Update latent state\n                h = h * A_bar + x_t.unsqueeze(-1) * B_bar\n                # Emit output: y = h * C\n                y_t = torch.sum(h * C_t, dim=-1)  # [d_model]\n                y_seq.append(y_t)\n            y_out.append(torch.stack(y_seq))\n            \n        return self.out_proj(torch.stack(y_out))\n\nssm = MinimalSSM(d_model=32, d_state=8)\ntokens = torch.randn(2, 10, 32)\nout = ssm(tokens)\nprint(\"SSM Processed sequence shape:\", out.shape)\nprint(\"Inference scales O(1) in memory: Zero KV-cache footprint!\")",
+  "keyPoints": [
+    "Mamba achieves linear $O(L)$ training time and constant $O(1)$ inference memory per step.",
+    "Overcomes quadratic $O(L^2)$ attention bottlenecks for long sequence processing.",
+    "Selective state spaces make transition parameters input-dependent, unlocking selective memory and forgetting.",
+    "Hardware-aware parallel associative scans compute sequential recurrences efficiently in GPU SRAM."
+  ],
+  "pitfalls": [
+    "Loss of global associative recall: While Mamba excels at compression and reasoning, standard SSMs struggle with literal verbatim document retrieval compared to full KV-cache attention.",
+    "Sequential Python implementation slowness: Writing sequential loops in PyTorch is extremely slow; Mamba requires custom CUDA kernels with SRAM associative scans for training throughput.",
+    "Initialization sensitivity: Initializing matrix $\\mathbf{A}$ randomly causes gradient explosion; $\\mathbf{A}$ must be initialized with HiPPO (High-order Polynomial Projection) theory."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary computational bottleneck of the Transformer self-attention mechanism that State-Space Models (SSMs) solve?",
+      "o": [
+        "Attention cannot process text tokens",
+        "Self-attention scales quadratically $O(L^2)$ in compute and memory with sequence length $L$, making long contexts prohibitive",
+        "Transformers cannot run on GPUs",
+        "Transformers only support binary inputs"
+      ],
+      "a": 1,
+      "why": "Pairwise dot-product attention computes an $L \\times L$ attention matrix, scaling quadratically $O(L^2)$. SSMs process sequences with linear $O(L)$ complexity."
+    },
+    {
+      "q": "What crucial breakthrough did Mamba introduce over classical LTI (Linear Time-Invariant) State-Space Models like S4?",
+      "o": [
+        "Mamba removed all matrix multiplications",
+        "Selective State Spaces: making parameters $(\\mathbf{B}, \\mathbf{C}, \\Delta)$ dynamic functions of the input token, allowing content-based filtering and selective memory",
+        "Mamba replaced neural networks with decision trees",
+        "Mamba eliminated backpropagation"
+      ],
+      "a": 1,
+      "why": "Classical S4 used fixed time-invariant matrices, preventing content-dependent memory. Mamba makes matrices input-dependent, enabling selective filtering and forgetting."
+    },
+    {
+      "q": "How does Mamba's inference memory consumption compare to a Transformer with KV-cache during autoregressive generation?",
+      "o": [
+        "Mamba requires 10x more memory than a Transformer",
+        "Mamba maintains a constant-size $O(1)$ hidden state per step, requiring zero growing KV-cache regardless of how many thousands of tokens are generated",
+        "Mamba requires storing the full dataset in RAM",
+        "Both models consume identical memory"
+      ],
+      "a": 1,
+      "why": "Transformers store keys and values for every past token in a growing KV-cache. Mamba maintains a fixed-size latent state vector, updating it in $O(1)$ constant time."
+    }
+  ],
+  "related": [
+    "the-attention-mechanism",
+    "recurrent_neural_networks",
+    "lstm_networks"
+  ],
+  "keywords": "mamba, state-space models, ssm, s4, selective state spaces, linear time sequence model, associative scan, hippo, kv-cache"
+},
+
+{
+  "id": "normalising-flows",
+  "short": "Normalising flows",
+  "title": "Normalising Flows: Exact Likelihood Estimation via Invertible Transformations",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Evaluating exact probabilities and generating high-fidelity samples using invertible bijectors (RealNVP) and the change-of-variables theorem.",
+  "lead": "Generative models generally face a compromise: GANs generate sharp samples but have no tractable likelihood and suffer from mode collapse; VAEs provide tractable lower bounds (ELBO) but generate blurry samples. Normalising Flows achieve both exact analytical probability density evaluation and efficient sampling by transforming simple base distributions (like standard Gaussians) through a sequence of invertible, bijective neural network mappings.",
+  "analogy": "Imagine sculpting an intricate vase out of a standard lump of grey potter's clay. Every stretching, rolling, and folding motion of your hands is completely reversible: if you record every pull and push, you can mathematically unfold the vase back into the exact original ball of clay. Calculating the density of clay at any point on the vase simply requires tracking how much your hands stretched or compressed the material during each invertible step.",
+  "intuition": [
+    "The change-of-variables theorem from calculus states that if $x = f(z)$ where $f$ is an invertible differentiable bijection ($z = f^{-1}(x)$), the probability density function of $x$ is $p_X(x) = p_Z(f^{-1}(x)) \\cdot |\\det J_{f^{-1}}(x)|$.",
+    "By composing $K$ invertible transformations $f = f_K \\circ \\dots \\circ f_1$, a simple base density $z_0 \\sim \\mathcal{N}(0, \\mathbf{I})$ can be warped into arbitrarily complex, multimodal distributions $p_X(x)$.",
+    "The primary computational challenge is computing the determinant of the $D \\times D$ Jacobian matrix $J_f = \\frac{\\partial f}{\\partial z}$, which in general requires expensive $O(D^3)$ matrix operations.",
+    "RealNVP (Dinh et al.) solves this using Affine Coupling Layers: split the vector into two halves $(z_A, z_B)$. Keep $z_A$ unchanged, and transform $z_B$ via $x_B = z_B \\odot \\exp(s(z_A)) + t(z_A)$, where $s$ and $t$ can be arbitrary complex non-invertible neural networks. This forces the Jacobian to be triangular, making its determinant trivially computable in $O(D)$ time as the product of its diagonal elements $\\sum s(z_A)$."
+  ],
+  "steps": [
+    "Select base distribution: Define a tractable prior distribution $p_Z(z)$ (typically standard isotropic Gaussian $\\mathcal{N}(0, \\mathbf{I})$).",
+    "Design invertible coupling layer: Split input channels into $z_A$ and $z_B$. Pass $z_A$ through arbitrary deep networks to predict scale $s$ and translation $t$.",
+    "Apply affine forward transformation: Compute $x_A = z_A$ and $x_B = z_B \\odot \\exp(s(z_A)) + t(z_A)$.",
+    "Compute log-determinant: Sum scaling coefficients $\\sum_i s(z_A)_i$ in linear $O(D)$ time.",
+    "Compose multiple layers with permutations: Alternate channel splits or apply invertible $1 \\times 1$ convolutions (Glow) between coupling blocks.",
+    "Train via exact negative log-likelihood: Maximise $\\log p_X(x) = \\log p_Z(f^{-1}(x)) + \\sum_{k=1}^K \\log |\\det J_{f_k^{-1}}|$ directly via gradient descent."
+  ],
+  "math": [
+    {
+      "h": "Multivariate Change-of-Variables Theorem",
+      "tex": "p_X(x) = p_Z(f^{-1}(x)) \\cdot \\left| \\det\\left( \\frac{\\partial f^{-1}(x)}{\\partial x} \\right) \\right| = p_Z(f^{-1}(x)) \\cdot \\left| \\det\\left( \\frac{\\partial f(z)}{\\partial z} \\right) \\right|^{-1}",
+      "p": "Calculates the exact density of $x$ by evaluating the base Gaussian density of $f^{-1}(x)$ multiplied by the Jacobian determinant volume correction."
+    },
+    {
+      "h": "RealNVP Affine Coupling Transformation",
+      "tex": "\\begin{cases} x_{1:d} = z_{1:d} \\\\ x_{d+1:D} = z_{d+1:D} \\odot \\exp\\left( s(z_{1:d}) \\right) + t(z_{1:d}) \\end{cases}",
+      "p": "Transforms second partition $z_{d+1:D}$ conditionally based on arbitrary neural networks $s$ and $t$ evaluating the first partition."
+    },
+    {
+      "h": "Triangular Jacobian Determinant",
+      "tex": "J = \\begin{bmatrix} \\mathbf{I}_d & \\mathbf{0} \\\\ \\frac{\\partial x_{d+1:D}}{\\partial z_{1:d}} & \\operatorname{diag}\\left(\\exp(s(z_{1:d}))\\right) \\end{bmatrix} \\implies \\ln |\\det J| = \\sum_{i=1}^{D-d} s(z_{1:d})_i",
+      "p": "The Jacobian is block triangular; its determinant equals the product of diagonal entries, reducing computation from $O(D^3)$ to $O(D)$."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport numpy as np\n\nclass RealNVPCouplingLayer(nn.Module):\n    def __init__(self, dim: int, hidden_dim: int = 64):\n        super().__init__()\n        self.d = dim // 2\n        # Scale (s) and translation (t) can be arbitrary deep networks!\n        self.net = nn.Sequential(\n            nn.Linear(self.d, hidden_dim),\n            nn.ReLU(),\n            nn.Linear(hidden_dim, (dim - self.d) * 2)\n        )\n\n    def forward(self, z: torch.Tensor):\n        # z -> x (sampling direction)\n        z_A, z_B = z[:, :self.d], z[:, self.d:]\n        st = self.net(z_A)\n        s, t = st[:, ::2], st[:, 1::2]\n        s = torch.tanh(s)  # Stabilise scaling\n        \n        x_A = z_A\n        x_B = z_B * torch.exp(s) + t\n        x = torch.cat([x_A, x_B], dim=-1)\n        log_det_J = torch.sum(s, dim=-1)\n        return x, log_det_J\n\n    def inverse(self, x: torch.Tensor):\n        # x -> z (density evaluation direction)\n        x_A, x_B = x[:, :self.d], x[:, self.d:]\n        st = self.net(x_A)\n        s, t = st[:, ::2], st[:, 1::2]\n        s = torch.tanh(s)\n        \n        z_A = x_A\n        z_B = (x_B - t) * torch.exp(-s)\n        z = torch.cat([z_A, z_B], dim=-1)\n        log_det_J_inv = -torch.sum(s, dim=-1)\n        return z, log_det_J_inv\n\n# Test bijector invertibility\nlayer = RealNVPCouplingLayer(dim=4)\nz_orig = torch.randn(2, 4)\nx, log_det = layer(z_orig)\nz_rec, _ = layer.inverse(x)\n\nrecon_error = torch.max(torch.abs(z_orig - z_rec)).item()\nprint(f\"Coupling Layer Inversion Error: {recon_error:.2e} (Strictly Invertible!)\")\nprint(f\"Log Jacobian determinant evaluated in O(D) time: {log_det.detach().numpy()}\")",
+  "keyPoints": [
+    "Normalising flows enable exact analytical log-likelihood calculation and efficient sampling.",
+    "Warp simple Gaussian base densities into complex multimodal distributions via invertible bijections.",
+    "Affine coupling layers force the Jacobian to be triangular, computing determinants in linear $O(D)$ time.",
+    "Scale and translation functions $s$ and $t$ can be arbitrary complex, non-invertible neural networks."
+  ],
+  "pitfalls": [
+    "Dimension preservation restriction: Because bijections require bijective mapping, the latent state $z$ must have the exact same dimensionality as data $x$, causing memory growth for high-resolution images.",
+    "Unbounded scaling: If scale function $s(z_A)$ outputs large values, $\\exp(s)$ causes floating point overflow and numerical instability; constrain outputs with `tanh`.",
+    "Ignoring channel permutations: Failing to alternate which half of features is transformed leaves half the channels completely unchanged throughout the entire network."
+  ],
+  "quiz": [
+    {
+      "q": "What unique advantage do Normalising Flows possess compared to Variational Autoencoders (VAEs) and GANs?",
+      "o": [
+        "They do not require GPUs for training",
+        "They provide both exact analytical log-likelihood computation and efficient sampling via invertible bijections",
+        "They only work on discrete text tokens",
+        "They eliminate the need for loss functions"
+      ],
+      "a": 1,
+      "why": "GANs lack likelihood evaluation entirely, and VAEs only compute lower bound approximations (ELBO). Normalising Flows compute exact likelihoods via the change-of-variables theorem."
+    },
+    {
+      "q": "How does RealNVP make the calculation of the Jacobian determinant computationally tractable in linear $O(D)$ time?",
+      "o": [
+        "By assuming all off-diagonal entries are zero",
+        "By using affine coupling layers that keep half the vector unchanged, creating a block-triangular Jacobian whose determinant is simply the product of its diagonal elements",
+        "By using Monte Carlo sampling to approximate the determinant",
+        "By computing the matrix inverse using quantum algorithms"
+      ],
+      "a": 1,
+      "why": "In a triangular matrix, the determinant is the product of the diagonal elements. Affine coupling structures the transformation so the Jacobian is block triangular, evaluating in $O(D)$ steps."
+    },
+    {
+      "q": "In a RealNVP affine coupling layer, do the sub-networks $s(z_A)$ and $t(z_A)$ that compute scale and translation need to be invertible themselves?",
+      "o": [
+        "Yes, every layer in a normalising flow must be strictly invertible",
+        "No, $s$ and $t$ can be arbitrary non-invertible deep neural networks because they only evaluate $z_A$, which is passed through unchanged",
+        "They must be linear models with positive weights",
+        "They must be decision trees"
+      ],
+      "a": 1,
+      "why": "Because $z_A = x_A$ is preserved unchanged, inversion directly computes $s(x_A)$ and $t(x_A)$ in the reverse direction. Thus $s$ and $t$ can be arbitrary complex networks."
+    }
+  ],
+  "related": [
+    "variational-autoencoders",
+    "autoencoders",
+    "diffusion-models"
+  ],
+  "keywords": "normalising flows, realnvp, change of variables, bijector, exact likelihood, coupling layers, jacobian determinant, generative models"
+},
+
+{
+  "id": "self-supervised-learning-byol-dino-mae",
+  "short": "SSL: BYOL, DINO & MAE",
+  "title": "Modern Self-Supervised Learning: BYOL, DINO Self-Distillation, and Masked Autoencoders (MAE)",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Learning visual representations without negative pairs or human labels using bootstrap non-contrastive dynamics (BYOL), vision transformer self-distillation (DINO), and masked patch reconstruction (MAE).",
+  "lead": "Supervised deep learning depends on millions of costly, biased human annotations. Early contrastive self-supervised methods (SimCLR) eliminated human labels but required massive batch sizes and carefully engineered negative pairs to prevent representation collapse. Modern self-supervised learning (SSL) transcends contrastive pairs: BYOL proves negatives are unnecessary, DINO learns emergent semantic segmentation, and Masked Autoencoders (MAE) reconstruct masked patches directly.",
+  "analogy": "Imagine learning to appreciate art. Instead of having a curator hand you flashcards stating \"this is a Monet\" or comparing two random paintings to explain why they differ, you either study two distorted photographs of the same cathedral and learn what makes the scene invariant (BYOL/DINO), or look at a jigsaw puzzle where 75% of the pieces have been removed and learn to paint in the missing details based on deep structural context (MAE).",
+  "intuition": [
+    "Self-supervised learning aims to extract general-purpose semantic feature representations from unlabelled data that transfer effectively to downstream tasks with minimal fine-tuning.",
+    "BYOL (Bootstrap Your Own Latent; Grill et al.) demonstrated that negative pairs are completely optional. It uses an Online network and a Target network. The online network predicts the target network's representation of an augmented view. An asymmetric architecture (an extra predictor MLP on the online branch) combined with an Exponential Moving Average (EMA) momentum target update mathematically prevents representation collapse to constant vectors.",
+    "DINO (Self-distillation with no labels; Caron et al.) applies this paradigm to Vision Transformers (ViTs). Using centreing and sharpening operations on the teacher output, DINO avoids collapse while developing striking emergent properties: its self-attention maps naturally segment foreground objects from background clutter without any pixel-level supervision.",
+    "Masked Autoencoders (MAE; He et al.) introduce masked visual modelling: masking 75%–80% of image patches and feeding only the 20% visible patches through a deep ViT encoder. A lightweight shallow decoder then reconstructs the missing pixel patches. Because pixel reconstruction forces the model to understand global scene geometry, MAE scales visual pretraining to massive models with extreme compute efficiency."
+  ],
+  "steps": [
+    "Select SSL paradigm: Choose non-contrastive invariance (BYOL/DINO) for classification/feature extraction or generative reconstruction (MAE) for scalable pretraining.",
+    "Generate multi-crop augmentations: In DINO/BYOL, generate two global views (high resolution) and multiple local views (low resolution) per image.",
+    "Mask patch tokens (MAE): Split image into $16 \\times 16$ non-overlapping patches, randomly mask 75% of patches, and feed strictly the visible 25% tokens into the encoder.",
+    "Asymmetric architecture design: In BYOL/DINO, route one view through the online/student network and another through the EMA momentum teacher network.",
+    "Apply anti-collapse mechanisms: Apply centreing (subtracting rolling mean) and sharpening (low temperature) to teacher probabilities in DINO; use EMA and online predictor in BYOL.",
+    "Update parameters: Backpropagate loss through the online/student network; update target/teacher weights using EMA momentum $\\theta_{\\mathrm{target}} \\leftarrow \\tau \\theta_{\\mathrm{target}} + (1 - \\tau) \\theta_{\\mathrm{online}}$."
+  ],
+  "math": [
+    {
+      "h": "BYOL Mean Squared Error Regression Loss",
+      "tex": "\\mathcal{L}_{\\mathrm{byol}} = 2 - 2 \\cdot \\frac{\\langle q_\\theta(z_\\theta), \\; z'_\\xi \\rangle}{\\|q_\\theta(z_\\theta)\\|_2 \\; \\|z'_\\xi\\|_2}, \\quad z'_\\xi = f_\\xi(v')",
+      "p": "Minimises the normalised Euclidean distance between the online network prediction $q_\\theta(z_\\theta)$ and the target network projection $z'_\\xi$."
+    },
+    {
+      "h": "Exponential Moving Average (EMA) Target Dynamics",
+      "tex": "\\xi_{t+1} = \\tau \\xi_t + (1 - \\tau) \\theta_t, \\quad \\tau \\in [0.99, \\; 0.999]",
+      "p": "The target parameters $\\xi$ smoothly track the online parameters $\\theta$ via momentum coefficient $\\tau$, preventing collapse by keeping targets slowly evolving."
+    },
+    {
+      "h": "MAE Masked Pixel Reconstruction Objective",
+      "tex": "\\mathcal{L}_{\\mathrm{mae}} = \\frac{1}{|\\mathcal{M}|} \\sum_{i \\in \\mathcal{M}} \\| p_i - \\hat{p}_i \\|^2",
+      "p": "Computes Mean Squared Error strictly over masked patch set $\\mathcal{M}$, reconstructing normalised raw pixel values."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass MiniBYOL(nn.Module):\n    def __init__(self, backbone: nn.Module, dim: int = 128, momentum: float = 0.99):\n        super().__init__()\n        # Online network\n        self.online_encoder = backbone\n        self.online_projector = nn.Linear(dim, dim)\n        self.online_predictor = nn.Linear(dim, dim)  # Asymmetric predictor prevents collapse!\n        \n        # Target network (EMA copy)\n        import copy\n        self.target_encoder = copy.deepcopy(backbone)\n        self.target_projector = copy.deepcopy(self.online_projector)\n        self.momentum = momentum\n        \n        # Freeze target network gradients\n        for p in self.target_encoder.parameters():\n            p.requires_grad = False\n        for p in self.target_projector.parameters():\n            p.requires_grad = False\n\n    @torch.no_grad()\n    def update_target(self):\n        \"\"\"EMA momentum update of target network parameters.\"\"\"\n        for op, tp in zip(self.online_encoder.parameters(), self.target_encoder.parameters()):\n            tp.data = self.momentum * tp.data + (1.0 - self.momentum) * op.data\n        for op, tp in zip(self.online_projector.parameters(), self.target_projector.parameters()):\n            tp.data = self.momentum * tp.data + (1.0 - self.momentum) * op.data\n\n    def forward(self, v1: torch.Tensor, v2: torch.Tensor):\n        # Online forward pass on view 1\n        z1 = self.online_projector(self.online_encoder(v1))\n        p1 = self.online_predictor(z1)\n        \n        # Target forward pass on view 2 (no gradients)\n        with torch.no_grad():\n            z2_target = self.target_projector(self.target_encoder(v2))\n            \n        # Cosine similarity loss\n        p1_norm = F.normalise(p1, dim=-1)\n        z2_norm = F.normalise(z2_target, dim=-1)\n        loss = 2.0 - 2.0 * (p1_norm * z2_norm).sum(dim=-1).mean()\n        return loss\n\n# Test toy BYOL module\nencoder = nn.Sequential(nn.Linear(32, 64), nn.ReLU(), nn.Linear(64, 128))\nbyol = MiniBYOL(encoder, dim=128)\nv1, v2 = torch.randn(8, 32), torch.randn(8, 32)\nloss = byol(v1, v2)\nbyol.update_target()\nprint(\"BYOL Non-contrastive loss:\", round(loss.item(), 4))\nprint(\"Negative pairs needed? Exactly 0!\")",
+  "keyPoints": [
+    "Modern SSL eliminates the need for expensive human labels and complex negative pair mining.",
+    "BYOL avoids representation collapse using asymmetric online predictors and EMA momentum target encoders.",
+    "DINO self-distillation on Vision Transformers produces emergent semantic object segmentation in attention maps.",
+    "MAE masks 75% of visual patches and reconstructs pixels, scaling visual pretraining with high compute efficiency."
+  ],
+  "pitfalls": [
+    "Representation collapse in non-contrastive models: Removing the online predictor or backpropagating through the target network causes all embeddings to collapse to identical zero vectors within 10 iterations.",
+    "Low masking ratios in MAE: Masking only 15%–20% in vision (like BERT in NLP) allows the model to interpolate from adjacent border pixels without learning deep scene semantics; 75%–80% masking is required.",
+    "Ignoring normalisation in MAE pixel targets: Reconstructing raw unnormalized pixels causes models to focus on high-frequency noise; normalising each patch by its local mean and standard deviation boosts downstream transfer."
+  ],
+  "quiz": [
+    {
+      "q": "How does BYOL prevent \"representation collapse\" (where the model outputs constant vectors for all images) without using negative pairs?",
+      "o": [
+        "By using L1 weight penalties on the output layer",
+        "Through an asymmetric architecture (adding an extra predictor MLP on the online branch) and updating the target network slowly via Exponential Moving Average (EMA)",
+        "By forcing the learning rate to zero",
+        "By shuffling image channels randomly"
+      ],
+      "a": 1,
+      "why": "The asymmetric predictor combined with slow EMA momentum updates creates non-equilibrium dynamics that mathematically prevent the trivial constant solution from being a stable fixed point."
+    },
+    {
+      "q": "Why does Masked Autoencoders (MAE) mask an extremely high percentage (75%–80%) of image patches compared to BERT's 15% token masking?",
+      "o": [
+        "Because GPUs cannot compute attention on more than 20 patches",
+        "Images contain heavy spatial redundancy; a low masking ratio allows the model to easily interpolate missing pixels from immediate neighbours without learning high-level semantic abstractions",
+        "Because 80% is the golden ratio in mathematics",
+        "To reduce image file size on disk"
+      ],
+      "a": 1,
+      "why": "Visual pixels exhibit high local correlation. Removing 75% of patches removes trivial local interpolation, forcing the network to understand high-level semantics to reconstruct the image."
+    },
+    {
+      "q": "What striking emergent property is observed in Vision Transformers trained with DINO self-distillation?",
+      "o": [
+        "The model automatically learns to generate human voice audio",
+        "The self-attention maps of the last layers naturally segment distinct foreground objects and semantic parts without any pixel-level ground truth masks",
+        "The model converges in a single training epoch",
+        "All attention weights become uniform numbers"
+      ],
+      "a": 1,
+      "why": "DINO's self-distillation dynamics encourage ViT attention heads to automatically isolate foreground objects and semantic boundaries from background pixels without supervision."
+    }
+  ],
+  "related": [
+    "contrastive-learning-simclr-and-infonce",
+    "clip-and-multimodal-embeddings",
+    "autoencoders"
+  ],
+  "keywords": "self-supervised learning, byol, dino, mae, masked autoencoders, representation collapse, vision transformer, self-distillation, momentum encoder"
+},
+
+{
+  "id": "metric-learning-and-triplet-loss",
+  "short": "Metric learning & triplet loss",
+  "title": "Deep Metric Learning: Triplet Loss, Siamese Networks, and Online Semi-Hard Mining",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Learning semantic embedding spaces where Euclidean distance mirrors similarity using Siamese networks, contrastive loss, and semi-hard triplet mining.",
+  "lead": "Standard classification models assign inputs to a fixed set of $C$ classes: adding a new class (e.g. enrolling a new employee into a face recognition security system) requires retraining the entire network. Deep Metric Learning directly learns a distance metric: mapping complex inputs (faces, product images, audio snippets) into a continuous embedding space where similar instances are close together and dissimilar instances are far apart.",
+  "analogy": "Imagine a passport border control officer. The officer does not have an internal database memorizing the names of all 8 billion people on Earth (a giant softmax classifier). Instead, the officer looks at your passport photograph and looks at your physical face in person, comparing visual geometric distances to determine if you are the same person or an imposter.",
+  "intuition": [
+    "In deep metric learning, a neural network $f_\\theta(x)$ maps an input $x$ to a unit-norm embedding vector on a hypersphere $\\|f(x)\\|_2 = 1$. The semantic distance between two items is measured directly by Euclidean distance $d(u, v) = \\|f(u) - f(v)\\|_2$.",
+    "Siamese networks process pairs of items $(x_1, x_2)$ through identical shared-weight neural backbones, evaluated using Contrastive Loss which pulls positive pairs together and pushes negative pairs apart beyond a margin $m$.",
+    "Triplet Loss (FaceNet; Schroff et al.) evaluates triplets: an Anchor ($a$), a Positive from the same class ($p$), and a Negative from a different class ($n$). The objective enforces: $d(a, p)^2 + \\alpha \\le d(a, n)^2$, ensuring the negative is at least margin $\\alpha$ further from the anchor than the positive.",
+    "The critical bottleneck in triplet training is mining informative triplets. Most random triplets are \"Easy Negatives\" ($d(a, n) \\gg d(a, p) + \\alpha$), which produce zero loss and zero gradients. Training on \"Hard Negatives\" ($d(a, n) < d(a, p)$) often causes gradient collapse. The optimal regime is Semi-Hard Negative Mining: selecting negatives that are farther than the positive but still within the margin boundary."
+  ],
+  "steps": [
+    "Structure balanced minibatches: Sample $P$ classes with $K$ instances per class (e.g. $P=16, K=4$; batch size 64) to ensure abundant positive and negative pairs within every batch.",
+    "Forward pass and L2 normalisation: Pass all batch images through shared backbone and project onto the unit hypersphere ($L_2$ normalisation).",
+    "Compute pairwise distance matrix: Vectorise all-to-all Euclidean distances between batch embeddings in a single GPU matrix operation.",
+    "Execute online semi-hard triplet mining: For each anchor-positive pair, identify all negatives satisfying $d(a, p) < d(a, n) < d(a, p) + \\alpha$.",
+    "Compute margin triplet loss: Evaluate hinge loss on mined semi-hard triplets and backpropagate gradients.",
+    "Inference via nearest neighbour: Index enrolled embeddings in a fast vector search database (FAISS) and classify queries via cosine distance."
+  ],
+  "math": [
+    {
+      "h": "Triplet Margin Ranking Objective",
+      "tex": "\\mathcal{L}_{\\mathrm{triplet}}(a, p, n) = \\max\\left( 0, \\; \\|f(a) - f(p)\\|_2^2 - \\|f(a) - f(n)\\|_2^2 + \\alpha \\right)",
+      "p": "Enforces that anchor-negative squared distance exceeds anchor-positive squared distance by at least margin $\\alpha$."
+    },
+    {
+      "h": "Semi-Hard Negative Condition",
+      "tex": "\\|f(a) - f(p)\\|_2^2 < \\|f(a) - f(n)\\|_2^2 < \\|f(a) - f(p)\\|_2^2 + \\alpha",
+      "p": "Semi-hard negatives yield positive loss and non-zero gradients without being so extremely hard that they destabilise early training."
+    },
+    {
+      "h": "Hypersphere Embedding Unit Norm Constraint",
+      "tex": "\\hat{z} = \\frac{f_\\theta(x)}{\\|f_\\theta(x)\\|_2} \\implies \\|\\hat{z}\\|_2 = 1, \\quad \\|u - v\\|_2^2 = 2 - 2\\cos(u, v)",
+      "p": "Normalising embeddings to unit length makes squared Euclidean distance strictly equivalent to cosine distance."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass TripletMarginLossModule(nn.Module):\n    def __init__(self, margin: float = 0.5):\n        super().__init__()\n        self.margin = margin\n\n    def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:\n        # 1. Project onto unit hypersphere\n        a = F.normalise(anchor, p=2, dim=-1)\n        p = F.normalise(positive, p=2, dim=-1)\n        n = F.normalise(negative, p=2, dim=-1)\n        \n        # 2. Compute squared Euclidean distances\n        d_ap = torch.sum((a - p) ** 2, dim=-1)\n        d_an = torch.sum((a - n) ** 2, dim=-1)\n        \n        # 3. Triplet loss with margin\n        losses = F.relu(d_ap - d_an + self.margin)\n        return losses.mean()\n\n# Test triplet loss evaluation\nloss_fn = TripletMarginLossModule(margin=0.4)\n\n# Anchor, matching Positive, and non-matching Negative\ntorch.manual_seed(42)\nanchor = torch.randn(4, 128)\npositive = anchor + torch.randn(4, 128) * 0.1   # Close to anchor\nnegative = torch.randn(4, 128)                  # Unrelated random vector\n\nloss = loss_fn(anchor, positive, negative)\nprint(f\"Calculated Triplet Loss: {loss.item():.4f}\")\nprint(\"Loss drives d(a, p) closer while pushing d(a, n) beyond margin 0.4\")",
+  "keyPoints": [
+    "Metric learning learns continuous embedding spaces where geometric distance reflects semantic similarity.",
+    "Enables open-set recognition (face verification, visual product search) without retraining on new classes.",
+    "Triplet loss enforces that positive pairs are closer than negative pairs by at least margin $\\alpha$.",
+    "Online semi-hard mining selects informative negative samples that produce non-zero gradients without collapsing."
+  ],
+  "pitfalls": [
+    "Omitting L2 embedding normalisation: Without projection onto the unit hypersphere, networks cheat the margin by simply blowing up embedding magnitudes to infinity.",
+    "Training without mining: Random negative sampling results in 99% easy negatives with zero loss, causing training loss to flatline near zero while representations remain poor.",
+    "Offline batch generation: Pre-computing fixed triplets on disk creates stale pairs that quickly become easy after a few training epochs; mine triplets online within each batch."
+  ],
+  "quiz": [
+    {
+      "q": "Why is Deep Metric Learning preferred over standard $C$-class Softmax classification for facial recognition systems?",
+      "o": [
+        "Because Softmax classification requires infinite GPU VRAM",
+        "Metric learning supports open-set recognition: new individuals can be enrolled immediately by computing their embedding, without retraining the network",
+        "Softmax cannot process RGB images",
+        "Metric learning models run in zero milliseconds"
+      ],
+      "a": 1,
+      "why": "In a facial security system, new faces must be enrolled daily. Softmax classifiers have a fixed class count, whereas metric embeddings compare any arbitrary face via distance."
+    },
+    {
+      "q": "What characterizes a \"Semi-Hard Negative\" in triplet loss mining?",
+      "o": [
+        "A negative that is identical to the anchor",
+        "A negative that is farther from the anchor than the positive, but still within the margin boundary ($d(a, p) < d(a, n) < d(a, p) + \\alpha$)",
+        "A negative that produces negative loss",
+        "A corrupted image file"
+      ],
+      "a": 1,
+      "why": "Semi-hard negatives violate the margin condition, generating positive loss and stable learning gradients without causing optimisation collapse."
+    },
+    {
+      "q": "Why are output embeddings in metric learning almost always normalised to unit length ($L_2$ norm = 1)?",
+      "o": [
+        "To convert floating point numbers into integers",
+        "To prevent the network from trivially satisfying the margin loss by simply scaling embedding magnitudes to astronomical values",
+        "To ensure the matrix determinant equals zero",
+        "To prevent overfitting to white background pixels"
+      ],
+      "a": 1,
+      "why": "Without unit normalisation, an unconstrained network can satisfy $d(a, n) - d(a, p) > \\alpha$ by multiplying all output vectors by 1,000 without learning meaningful representations."
+    }
+  ],
+  "related": [
+    "contrastive-learning-simclr-and-infonce",
+    "collaborative-filtering",
+    "two-tower-retrieval"
+  ],
+  "keywords": "metric learning, triplet loss, siamese networks, semi-hard mining, contrastive loss, face recognition, embedding space, facenet"
+},
+
+{
+  "id": "knowledge-distillation",
+  "short": "Knowledge distillation",
+  "title": "Knowledge Distillation: Compressing Deep Networks via Soft Target Transfer",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Transferring dark knowledge from cumbersome teacher ensembles into compact student networks using temperature-scaled softmax.",
+  "lead": "State-of-the-art deep neural networks achieve high accuracy by stacking hundreds of layers and billions of parameters. However, deploying these massive models to resource-constrained environments (mobile phones, embedded edge devices, real-time microservices) is prohibitive due to high inference latency and memory footprints. Knowledge Distillation (Hinton et al.) compresses a large \"teacher\" model into a compact \"student\" model by training the student on the rich, soft probability outputs of the teacher.",
+  "analogy": "Imagine learning to play chess. If you only look at game results (\"White won\" or \"Black lost\"—hard binary labels), it takes thousands of games to understand strategy. But if a Grandmaster sits beside you and explains their thoughts (\"This move has a 65% chance of winning, but that other move is 30% viable because it attacks the bishop, while this third move is 5%\"), you absorb the master's nuanced strategic probabilities directly.",
+  "intuition": [
+    "Hard labels (one-hot vectors: $[0, 1, 0]$) discard rich inter-class information. A model classifying a BMW car might assign 0.85 to car, 0.14 to truck, and $10^{-6}$ to carrot. This soft distribution contains \"dark knowledge\": it informs the learner that a BMW shares visual similarities with a truck, but looks nothing like a carrot.",
+    "Knowledge Distillation softens probabilities by dividing logits $z_i$ by a temperature hyperparameter $T > 1$: $q_i = \\frac{\\exp(z_i / T)}{\\sum_j \\exp(z_j / T)}$. Higher temperatures expose the relative relationships among the non-target classes.",
+    "The student network is trained using a blended loss: a distillation loss (Kullback-Leibler divergence between softened student and teacher predictions) and a standard student loss (cross-entropy with hard ground-truth labels).",
+    "Because the distillation gradients are scaled down by $1/T^2$ mathematically, the distillation loss is weighted by $T^2$ to ensure balanced gradient propagation."
+  ],
+  "steps": [
+    "Train teacher model: Train a high-capacity teacher network (e.g. ensemble, ResNet-152, or massive Transformer) to peak convergence.",
+    "Freeze teacher parameters: Lock teacher weights so only the student network receives gradient updates during distillation.",
+    "Configure student network: Construct a lightweight student architecture (e.g. MobileNet or 6-layer DistilBERT) with significantly fewer parameters.",
+    "Compute softened distributions: Pass training inputs through both models, applying temperature scaling $T$ to output logits before softmax.",
+    "Evaluate blended loss: Compute KL divergence between softened student and teacher outputs (scaled by $T^2$), combined with standard cross-entropy on hard ground truth.",
+    "Deploy student in production: Discard the teacher and deploy the fast, lightweight student model with temperature reset to $T=1$."
+  ],
+  "math": [
+    {
+      "h": "Temperature-Scaled Softmax Distribution",
+      "tex": "q_i = \\frac{\\exp(z_i / T)}{\\sum_j \\exp(z_j / T)}, \\quad T > 1",
+      "p": "Higher temperature $T$ flattens the distribution, amplifying the soft probabilities of non-target classes (dark knowledge)."
+    },
+    {
+      "h": "Distillation Blended Loss Formulation",
+      "tex": "\\mathcal{L}_{\\mathrm{KD}} = (1 - \\alpha) \\mathcal{L}_{\\mathrm{CE}}(y, \\sigma(z_s)) + \\alpha \\cdot T^2 \\cdot D_{\\mathrm{KL}}\\left( \\sigma(z_t / T) \\;\\middle\\|\\; \\sigma(z_s / T) \\right)",
+      "p": "Blends hard ground-truth cross-entropy $\\mathcal{L}_{\\mathrm{CE}}$ with softened teacher-student KL divergence, scaled by $T^2$."
+    },
+    {
+      "h": "Temperature Gradient Scale Equivalence",
+      "tex": "\\lim_{T \\to \\infty} \\frac{\\partial \\mathcal{L}_{\\mathrm{distill}}}{\\partial z_i^{(s)}} \\approx \\frac{1}{2 T^2} (z_i^{(s)} - z_i^{(t)})",
+      "p": "At high temperature, distillation gradients act as mean squared error between teacher and student logits, justifying the $T^2$ multiplier."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass DistillationLoss(nn.Module):\n    def __init__(self, temperature: float = 4.0, alpha: float = 0.7):\n        super().__init__()\n        self.T = temperature\n        self.alpha = alpha\n        self.ce = nn.CrossEntropyLoss()\n        self.kl = nn.KLDivLoss(reduction='batchmean')\n\n    def forward(self, student_logits: torch.Tensor, teacher_logits: torch.Tensor, targets: torch.Tensor):\n        # 1. Hard label loss (T=1)\n        loss_ce = self.ce(student_logits, targets)\n        \n        # 2. Soft distillation loss (T > 1)\n        soft_student = F.log_softmax(student_logits / self.T, dim=-1)\n        soft_teacher = F.softmax(teacher_logits / self.T, dim=-1)\n        loss_kd = self.kl(soft_student, soft_teacher) * (self.T ** 2)\n        \n        # Combined blended loss\n        return (1.0 - self.alpha) * loss_ce + self.alpha * loss_kd\n\n# Simulation: Teacher (large) and Student (compact)\ntorch.manual_seed(42)\nteacher_logits = torch.tensor([[4.2, 1.8, -1.2], [-0.5, 3.1, 1.0]])  # Precomputed teacher output\nstudent_logits = torch.randn(2, 3, requires_grad=True)\ntrue_labels = torch.tensor([0, 1])\n\ncriterion = DistillationLoss(temperature=3.0, alpha=0.6)\nloss = criterion(student_logits, teacher_logits, true_labels)\nloss.backward()\n\nprint(f\"Distillation Blended Loss: {loss.item():.4f}\")\nprint(\"Student gradients computed smoothly from softened teacher probabilities!\")",
+  "keyPoints": [
+    "Knowledge distillation compresses large teacher models into compact students with minimal accuracy loss.",
+    "Soft teacher probabilities convey \"dark knowledge\" about inter-class geometric similarities.",
+    "Temperature scaling $T > 1$ reveals probability ratios among non-target classes.",
+    "Distillation loss is multiplied by $T^2$ to compensate for gradient shrinkage at higher temperatures."
+  ],
+  "pitfalls": [
+    "Distilling into an undersized student: If the student architecture is too tiny (e.g. compressing a 100M parameter model into 10K parameters), the student lacks capacity to absorb the teacher's manifold.",
+    "Forgetting the $T^2$ multiplier: Omitting $T^2$ in the distillation loss causes the distillation gradient to be thousands of times smaller than the hard cross-entropy gradient.",
+    "Keeping temperature high at test time: Temperature must be reset to $T=1$ during production deployment to produce crisp, calibrated predictions."
+  ],
+  "quiz": [
+    {
+      "q": "What is \"dark knowledge\" in the context of Knowledge Distillation?",
+      "o": [
+        "Encrypted weights stored in dark mode themes",
+        "The rich information contained in the relative probabilities that the teacher model assigns to the non-target, incorrect classes",
+        "Unsupervised data downloaded from the dark web",
+        "Weights that have decayed to negative values"
+      ],
+      "a": 1,
+      "why": "Soft probabilities reveal that a truck is closer to a car than to a carrot. This inter-class structure (dark knowledge) provides dense supervision for the student."
+    },
+    {
+      "q": "Why is the KL divergence loss scaled by $T^2$ in knowledge distillation?",
+      "o": [
+        "To make the loss strictly positive",
+        "Because temperature-scaled softmax gradients scale as $1/T^2$; multiplying by $T^2$ ensures the distillation loss contributes balanced gradients alongside hard cross-entropy",
+        "To convert floating point operations into integer additions",
+        "To account for leap years in training data"
+      ],
+      "a": 1,
+      "why": "Differentiating softened softmax yields gradients with a $1/T^2$ factor. Multiplying by $T^2$ prevents the distillation signal from vanishing when $T$ is high."
+    },
+    {
+      "q": "What should the temperature setting $T$ be when deploying the student model to production inference?",
+      "o": [
+        "The same high temperature used during training (e.g. $T=4.0$)",
+        "Reset to $T=1.0$ for standard, sharp probability evaluation",
+        "$T=0.0$",
+        "$T=100.0$"
+      ],
+      "a": 1,
+      "why": "High temperature is used strictly during training to soften outputs for student learning. During inference, $T=1.0$ delivers standard calibrated predictions."
+    }
+  ],
+  "related": [
+    "quantisation",
+    "pruning-and-sparsity",
+    "transfer-learning-and-fine-tuning"
+  ],
+  "keywords": "knowledge distillation, teacher student, dark knowledge, temperature scaling, model compression, hinton, distilbert, kl divergence"
+},
+
+{
+  "id": "pruning-and-sparsity",
+  "short": "Pruning & sparsity",
+  "title": "Pruning and Sparsity: Structural Compression and the Lottery Ticket Hypothesis",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 17,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Eliminating redundant parameters using magnitude pruning, structured channel removal, and sparse sub-network discovery via the Lottery Ticket Hypothesis.",
+  "lead": "Over-parameterised deep neural networks contain massive redundancy: up to 80%–95% of weights can be set to zero without degrading final test accuracy. However, unconstrained training does not produce sparse models on its own. Pruning identifies and eliminates non-essential weights, reducing model storage, memory footprints, and accelerating inference on hardware that supports sparse computation.",
+  "analogy": "Imagine a sprawling bonsai tree. When left to grow wildly, the tree develops thousands of tiny overlapping branches that block light from one another. A master gardener prunes away non-essential twigs and weak branches: the tree not only retains its essential artistic shape and health, but requires less water, fits in a smaller ceramic pot, and thrives under focused nutrition.",
+  "intuition": [
+    "Pruning removes parameters from a trained network based on an importance metric (most commonly weight magnitude $|w|$).",
+    "Unstructured Pruning sets individual scalar weights to zero, creating sparse weight tensors. While it dramatically reduces theoretical parameter counts, standard hardware (CPUs/GPUs) cannot easily accelerate unstructured random zero patterns unless running on specialized sparse Tensor Cores (e.g. NVIDIA 2:4 structured sparsity).",
+    "Structured Pruning removes entire architectural blocks—entire convolutional channels, attention heads, or linear rows/columns. This directly reduces tensor matrix dimensions, delivering immediate latency speedups on any standard hardware without specialized sparse software libraries.",
+    "The Lottery Ticket Hypothesis (Frankle & Carbin, 2018) discovered that dense, randomly-initialised networks contain sparse sub-networks (\"winning lottery tickets\") that, when trained in isolation from their original initialisation, can match the test accuracy of the original dense network in an equal number of training iterations."
+  ],
+  "steps": [
+    "Train dense baseline network: Train the full over-parameterised network to target convergence.",
+    "Select pruning granularity: Choose unstructured pruning (for compression and 2:4 sparse accelerators) or structured pruning (for general latency reduction on CPUs/GPUs).",
+    "Compute importance scores: Evaluate weight magnitudes $|w_{ij}|$, first-order gradient Taylor expansion, or channel activation norms.",
+    "Apply binary pruning mask: Zero out the lowest $P\\%$ of weights by applying a binary indicator mask $\\mathbf{M} \\in \\{0, 1\\}$.",
+    "Iterative fine-tuning (Retraining): Fine-tune the remaining unmasked weights at a lower learning rate to recover lost accuracy.",
+    "Iterative Pruning Schedule: Repeat prune-and-finetune cycles gradually (e.g. pruning 20% per cycle over 5 rounds) rather than pruning 80% in one shot (One-Shot Pruning)."
+  ],
+  "math": [
+    {
+      "h": "Magnitude-Based Unstructured Pruning Mask",
+      "tex": "m_{ij} = \\mathbb{I}\\left( |w_{ij}| \\ge \\tau_p \\right), \\quad \\tilde{\\mathbf{W}} = \\mathbf{M} \\odot \\mathbf{W}",
+      "p": "Applies binary mask $\\mathbf{M}$ keeping only weights whose absolute magnitude meets or exceeds threshold percentile $\\tau_p$."
+    },
+    {
+      "h": "L1-Norm Structured Channel Pruning",
+      "tex": "s_c = \\frac{1}{C_{\\mathrm{in}} \\times K \\times K} \\sum_{j=1}^{C_{\\mathrm{in}}} \\sum_{u=1}^K \\sum_{v=1}^K |W_{c, j, u, v}|",
+      "p": "Measures the importance of output channel $c$ by the average magnitude of its convolutional kernel weights, removing bottom channels entirely."
+    },
+    {
+      "h": "Lottery Ticket Hypothesis Formulation",
+      "tex": "\\exists \\mathbf{M} \\in \\{0, 1\\}^{|\\theta|} : \\|\\mathbf{M}\\|_0 \\ll |\\theta| \\;\\land\\; \\operatorname{Train}(\\mathbf{M} \\odot \\theta_0) \\approx \\operatorname{Train}(\\theta_0)",
+      "p": "A winning ticket sub-network $(\\mathbf{M} \\odot \\theta_0)$ achieves test accuracy comparable to the original dense network $\\theta_0$ when trained from identical initialisation."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.utils.prune as prune\n\n# Create a small convolutional model\nmodel = nn.Sequential(\n    nn.Conv2d(1, 16, kernel_size=3, padding=1),\n    nn.ReLU(),\n    nn.Linear(16, 10)\n)\n\nconv_layer = model[0]\nprint(\"Dense weight non-zero count:\", torch.count_nonzero(conv_layer.weight).item())\n\n# Apply 50% L1 unstructured magnitude pruning to conv weights\nprune.l1_unstructured(conv_layer, name='weight', amount=0.5)\n\nprint(\"Pruned weight non-zero count:\", torch.count_nonzero(conv_layer.weight).item())\nprint(\"Weight sparsity percentage:  50.0%\")\nprint(\"Mask applied:\", hasattr(conv_layer, 'weight_mask'))\n\n# To permanently remove parameters and bake mask into weights:\nprune.remove(conv_layer, 'weight')\nprint(\"Permanent sparsity verified:\", (conv_layer.weight == 0).sum().item(), \"zeros out of\", conv_layer.weight.numel())",
+  "keyPoints": [
+    "Pruning eliminates redundant parameters to compress networks and reduce inference latency.",
+    "Unstructured pruning zeros individual weights; structured pruning eliminates entire channels or attention heads.",
+    "Iterative pruning with fine-tuning recovers accuracy far more effectively than one-shot pruning.",
+    "The Lottery Ticket Hypothesis proves small sub-networks can match dense accuracy if initialized identically."
+  ],
+  "pitfalls": [
+    "Expecting latency speedups from unstructured sparsity on standard hardware: Zeroing out 70% of weights at random does not make standard dense BLAS libraries faster; it only reduces file compression size unless using 2:4 sparse accelerators.",
+    "One-shot aggressive pruning: Pruning 80% of parameters in a single step causes catastrophic accuracy collapse; always prune iteratively with fine-tuning recovery.",
+    "Pruning without fine-tuning: Forgetting to fine-tune after pruning leaves the remaining network in a degraded state without adapting to the missing weights."
+  ],
+  "quiz": [
+    {
+      "q": "Why does unstructured magnitude pruning often fail to deliver real-world wall-clock latency speedups on standard GPUs?",
+      "o": [
+        "Because GPUs cannot multiply numbers by zero",
+        "Standard dense matrix engines (BLAS) execute dense matrix multiplications; randomly scattered zeros require specialized sparse matrix hardware or libraries to translate into speedups",
+        "Because pruning causes memory leaks",
+        "Because unstructured pruning increases model parameter counts"
+      ],
+      "a": 1,
+      "why": "Dense GEMM routines process dense matrices uniformly. Random irregular zeros require sparse indexing overhead that negates FLOP savings on standard hardware unless structured (e.g. 2:4 sparsity)."
+    },
+    {
+      "q": "What is the central finding of the \"Lottery Ticket Hypothesis\" (Frankle & Carbin, 2018)?",
+      "o": [
+        "Neural network training is equivalent to a lottery casino",
+        "Dense, randomly-initialised networks contain sparse sub-networks that, when trained from their original initialisation, can match the accuracy of the original dense network",
+        "Pruned models can never exceed 50% accuracy",
+        "Random seeds have zero impact on deep learning performance"
+      ],
+      "a": 1,
+      "why": "The hypothesis proves that dense over-parameterisation serves primarily to help gradient descent find lucky \"winning ticket\" sub-networks during early initialisation."
+    },
+    {
+      "q": "How does structured pruning differ from unstructured pruning?",
+      "o": [
+        "Structured pruning only works on text data",
+        "Structured pruning removes entire architectural channels, filters, or layers, directly shrinking matrix dimensions and yielding universal hardware speedups",
+        "Structured pruning sets all weights to 1.0",
+        "Structured pruning does not require fine-tuning"
+      ],
+      "a": 1,
+      "why": "Structured pruning drops complete channels or rows, producing smaller dense matrices that run faster on any standard CPU or GPU without sparse execution libraries."
+    }
+  ],
+  "related": [
+    "quantisation",
+    "knowledge-distillation",
+    "lora-and-parameter-efficient-fine-tuning"
+  ],
+  "keywords": "pruning, sparsity, lottery ticket hypothesis, unstructured pruning, structured pruning, channel pruning, model compression, fine-tuning"
+},
+
+{
+  "id": "scaling-laws",
+  "short": "Scaling laws for LLMs",
+  "title": "Neural Scaling Laws: Chinchilla Optimality, Compute Frontiers, and Power Laws",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 17,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Predicting downstream model loss using empirical power laws across model parameters $N$, dataset tokens $D$, and FLOP compute budgets $C$.",
+  "lead": "Before training large language models that cost tens of millions of pounds in electricity and cloud GPU clusters, AI laboratories cannot rely on trial and error. Neural scaling laws (Kaplan et al., Chinchilla / Hoffmann et al.) demonstrate that cross-entropy loss follows strict, highly predictable mathematical power laws as compute, dataset size, and parameter counts scale over several orders of magnitude.",
+  "analogy": "Imagine launching a spacecraft to Mars. Rocket scientists do not guess how much liquid oxygen to pour into the tanks by trial and error on launch day; they calculate trajectory physics equations that accurately predict fuel consumption and escape velocities based on payload mass. Neural scaling laws provide that precise celestial navigation for pretraining large AI models.",
+  "intuition": [
+    "Empirical studies demonstrate that cross-entropy loss $L$ scales as a power law with three primary factors: parameter count $N$ (excluding embedding layers), training dataset size $D$ (in tokens), and total floating point compute budget $C \\approx 6 N D$.",
+    "The Kaplan et al. (OpenAI, 2020) scaling formulation suggested that model parameters $N$ should scale significantly faster than dataset tokens $D$ ($N \\propto C^{0.73}, D \\propto C^{0.27}$), leading to massive under-trained models like GPT-3 (175B parameters trained on only 300B tokens).",
+    "Hoffmann et al. (DeepMind Chinchilla, 2022) identified a critical flaw in Kaplan's learning rate schedule assumptions. When properly tuned with cosine schedules matching the training horizon, model size $N$ and token count $D$ should scale in equal, 1:1 proportion: $N \\propto C^{0.5}$ and $D \\propto C^{0.5}$.",
+    "Under Chinchilla optimality, for every doubling of compute budget $C$, parameters and training tokens should both increase by $\\sqrt{2} \\approx 1.41\\times$. This proved that earlier models were severely data-starved, leading modern architectures (Llama) to train compact models on trillions of tokens for low inference costs."
+  ],
+  "steps": [
+    "Define total compute budget $C$: Calculate available floating point operations based on cluster size, training duration, and Model FLOPs Utilization (MFU).",
+    "Calculate optimal parameter count $N^*$ and token count $D^*$: Apply Chinchilla scaling coefficients ($N^* = G \\cdot (C/6)^a, D^* = G^{-1} \\cdot (C/6)^b$, where $a \\approx b \\approx 0.5$).",
+    "Configure cosine learning rate schedule: Set the learning rate decay horizon to match the target token count $D^*$ exactly, ensuring the learning rate decays to 10% of maximum at the final step.",
+    "Train small-scale calibration runs: Train small models across $10^{18}$ to $10^{20}$ FLOPs to fit precise empirical power law constants $(A, B, E, \\alpha, \\beta)$ for the specific architecture.",
+    "Extrapolate final loss: Project final cross-entropy loss and downstream benchmark capabilities prior to committing multi-million-dollar cluster compute resources.",
+    "Consider inference-optimal trade-offs: For models serving millions of customer queries, intentionally over-train beyond the compute-optimal point (e.g. Llama training a 7B model on 2T tokens) to minimise per-token inference serving latency."
+  ],
+  "math": [
+    {
+      "h": "Chinchilla Parametric Loss Power Law",
+      "tex": "L(N, D) = E + \\frac{A}{N^\\alpha} + \\frac{B}{D^\\beta}",
+      "p": "Decomposes cross-entropy loss into irreducible entropy $E$, parameter error decaying as $N^{-\\alpha}$, and data error decaying as $D^{-\\beta}$."
+    },
+    {
+      "h": "Total Training Compute Approximation",
+      "tex": "C \\approx 6 N D \\text{ FLOPs} \\quad [\\text{Forward: } 2 N D, \\; \\text{Backward: } 4 N D]",
+      "p": "Estimates total pretraining floating point operations for standard Transformer decoder architectures."
+    },
+    {
+      "h": "Compute-Optimal Parameter-Data Allocation",
+      "tex": "N^* \\propto C^a, \\quad D^* \\propto C^b, \\quad a = \\frac{\\beta}{\\alpha + \\beta} \\approx 0.50, \\quad b = \\frac{\\alpha}{\\alpha + \\beta} \\approx 0.50",
+      "p": "Under optimal resource allocation where $\\alpha \\approx \\beta$, model parameters $N$ and training tokens $D$ should scale at identical rates."
+    }
+  ],
+  "code": "import numpy as np\n\ndef chinchilla_optimal_allocation(compute_budget_flops: float):\n    \"\"\"Calculate compute-optimal parameters N* and tokens D* given total FLOPs budget.\"\"\"\n    # Empirical Chinchilla constants (Hoffmann et al., 2022)\n    # C = 6 * N * D, with N* proportional to C^0.5 and D* proportional to C^0.5\n    # Ratio roughly yields ~20 tokens per parameter at compute optimality\n    tokens_per_param = 20.0\n    \n    # C = 6 * N * (20 * N) = 120 * N^2  =>  N* = sqrt(C / 120)\n    optimal_params = np.sqrt(compute_budget_flops / 120.0)\n    optimal_tokens = optimal_params * tokens_per_param\n    \n    return optimal_params, optimal_tokens\n\n# Scenario 1: Moderate research cluster (1e23 FLOPs)\nc1 = 1e23\nn1, d1 = chinchilla_optimal_allocation(c1)\nprint(\"=== Compute Budget: 1e23 FLOPs ===\")\nprint(f\"Optimal Parameters: {n1 / 1e9:.2f} Billion\")\nprint(f\"Optimal Data Tokens: {d1 / 1e9:.2f} Billion Tokens (~{d1/n1:.0f} tokens/param)\")\n\n# Scenario 2: Frontier cluster scale (1e25 FLOPs)\nc2 = 1e25\nn2, d2 = chinchilla_optimal_allocation(c2)\nprint(\"\n=== Compute Budget: 1e25 FLOPs ===\")\nprint(f\"Optimal Parameters: {n2 / 1e9:.2f} Billion\")\nprint(f\"Optimal Data Tokens: {d2 / 1e9:.2f} Billion Tokens (~{d2/n2:.0f} tokens/param)\")",
+  "keyPoints": [
+    "Neural scaling laws allow predicting large model loss from cheap, small-scale experimental runs.",
+    "Cross-entropy loss follows strict empirical power laws as compute, data, and parameters scale.",
+    "Chinchilla optimality dictates that model parameters and dataset tokens should scale in equal 1:1 proportion ($C^{0.5}$).",
+    "For heavy inference serving, over-training smaller models on vast token corpora (inference-optimal) minimises long-term serving costs."
+  ],
+  "pitfalls": [
+    "Decoupling the learning rate schedule from token counts: The Chinchilla law assumes the cosine learning rate decays to minimum at token $D^*$; using a schedule that assumes 10x more tokens distorts optimality.",
+    "Confusing training-optimal with inference-optimal: Chinchilla optimises compute during training; if you serve 100M queries per day, spending more training compute to train a smaller model reduces production serving costs.",
+    "Data exhaustion limits: Assuming tokens can scale infinitely ignores the looming \"data wall\"—high-quality human language on the internet is finite."
+  ],
+  "quiz": [
+    {
+      "q": "What was the major correction that the Chinchilla scaling law (Hoffmann et al., 2022) made to the earlier Kaplan et al. (2020) scaling law?",
+      "o": [
+        "Chinchilla proved that neural networks should never exceed 1 million parameters",
+        "Chinchilla showed that parameters and tokens should scale equally ($C^{0.5}$ and $C^{0.5}$), proving that previous models like GPT-3 were severely undertrained relative to their size",
+        "Chinchilla proved that Transformers scale worse than RNNs",
+        "Chinchilla showed that compute budget has zero correlation with validation loss"
+      ],
+      "a": 1,
+      "why": "Kaplan suggested scaling parameters 3x faster than tokens. Chinchilla proved both should scale equally ($\\approx 1:1$), showing GPT-3 (175B params on 300B tokens) was data-starved."
+    },
+    {
+      "q": "What is the relationship between model parameters $N$, dataset tokens $D$, and total training FLOPs $C$ for a standard Transformer?",
+      "o": [
+        "$C = N + D$",
+        "$C \\approx 6 N D$ FLOPs (2 FLOPs per parameter on forward pass, 4 on backward pass)",
+        "$C = \\log(N) \\times \\log(D)$",
+        "$C = 65,536 \\times N$"
+      ],
+      "a": 1,
+      "why": "Forward pass matrix multiplication requires $\\approx 2 N$ operations per token; backward pass requires $\\approx 4 N$ (computing parameter and activation gradients), totaling $\\approx 6 N D$."
+    },
+    {
+      "q": "Why do modern production models like Llama deliberately train far past the compute-optimal Chinchilla point (e.g. 7B params trained on 2 trillion tokens)?",
+      "o": [
+        "Because the engineers forgot to stop the training script",
+        "To optimise for inference: smaller models are drastically cheaper and faster to serve to millions of live users, justifying extra upfront training compute",
+        "Because Chinchilla laws do not apply to open-source models",
+        "To compress the model into a zip archive"
+      ],
+      "a": 1,
+      "why": "Inference-optimal scaling invests more compute during training to compress capability into smaller models, minimising inference latency and GPU serving costs over billions of queries."
+    }
+  ],
+  "related": [
+    "the-pytorch-training-loop",
+    "lora-and-parameter-efficient-fine-tuning",
+    "quantisation"
+  ],
+  "keywords": "scaling laws, chinchilla optimality, kaplan, power laws, flops, compute budget, large language models, inference optimal, token parameter ratio"
+},
+
+{
+  "id": "uncertainty-mc-dropout-and-deep-ensembles",
+  "short": "MC dropout & deep ensembles",
+  "title": "Uncertainty Estimation in Deep Learning: Monte Carlo Dropout and Deep Ensembles",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Distinguishing epistemic (model) and aleatoric (data) uncertainty in deep neural networks using Bayesian MC Dropout and Deep Ensembles.",
+  "lead": "Standard deep neural networks are notoriously overconfident: a model outputting a 99% softmax probability for cancer diagnosis might be completely guessing when presented with an unseen scan artifact. In high-stakes applications (autonomous driving, medical diagnosis, algorithmic trading), models must know when they do not know. Monte Carlo Dropout and Deep Ensembles provide practical, scalable frameworks for quantifying predictive uncertainty.",
+  "analogy": "Imagine consulting a medical panel. A single deterministic doctor might glance at a scan and state with 99% confidence that no tumour exists. If you consult an ensemble of five independent doctors, and three see nothing while two express grave concern, their disagreement immediately reveals high epistemic uncertainty, prompting a mandatory biopsy.",
+  "intuition": [
+    "Uncertainty decomposes into two distinct types: Aleatoric Uncertainty (inherent noise in the data, e.g. blurry image sensors or ambient audio static, which cannot be reduced by collecting more data) and Epistemic Uncertainty (uncertainty due to lack of knowledge in regions where training data is sparse, which can be eliminated with more data).",
+    "Standard deep networks collapse epistemic uncertainty by learning a single point estimate of weights $\\theta$. True Bayesian neural networks place a prior distribution over weights $P(\\theta)$ and infer the posterior $P(\\theta \\mid \\mathcal{D})$, but exact Bayesian inference is computationally intractable.",
+    "Monte Carlo Dropout (Gal & Ghahramani, 2016) shows that keeping standard dropout active during inference is mathematically equivalent to approximate variational inference in a deep Gaussian process. Passing the same test sample through the network $T$ times with random dropout masks samples from the predictive distribution.",
+    "Deep Ensembles (Lakshminarayanan et al.) train $M$ identical neural networks from different random initialisations. Ensembles explore distinct local minima in the non-convex loss landscape, consistently outperforming MC Dropout in calibration, out-of-distribution (OOD) detection, and uncertainty quality."
+  ],
+  "steps": [
+    "Decompose target uncertainty: Determine whether the application requires aleatoric uncertainty (predicting conditional variance $\\sigma^2(x)$) or epistemic uncertainty (model disagreement).",
+    "Select uncertainty architecture: Choose MC Dropout (low training cost; single model with stochastic inference) or Deep Ensembles (highest quality; $M=5$ models trained independently).",
+    "Predict aleatoric variance: Modify the network output layer to emit both mean $\\mu(x)$ and log-variance $s(x) = \\log \\sigma^2(x)$, trained with Gaussian negative log-likelihood loss.",
+    "Execute stochastic inference: In MC Dropout, enable `model.train()` or keep `p > 0` active during test time; pass query input $T$ times ($T \\approx 30\\text{--}50$). In Ensembles, pass query through all $M$ models.",
+    "Compute predictive statistics: Calculate the predictive mean $\\bar{y} = \\frac{1}{M} \\sum_m \\mu_m(x)$ and total predictive variance $\\operatorname{Var}(y) = \\text{Aleatoric} + \\text{Epistemic}$.",
+    "Trigger safety fallback: If epistemic variance exceeds safety threshold $\\tau_{\\mathrm{safe}}$, route the sample to human expert review or fail-safe operational modes."
+  ],
+  "math": [
+    {
+      "h": "Total Predictive Variance Decomposition (Law of Total Variance)",
+      "tex": "\\operatorname{Var}(y^* \\mid x^*) = \\underbrace{\\frac{1}{M} \\sum_{m=1}^M \\sigma_m^2(x^*)}_{\\text{Expected Aleatoric Noise}} + \\underbrace{\\frac{1}{M} \\sum_{m=1}^M \\left( \\mu_m(x^*) - \\bar{\\mu}(x^*) \\right)^2}_{\\text{Epistemic Model Disagreement}}",
+      "p": "Total predictive uncertainty decomposes into the mean predicted data variance (aleatoric) plus the variance of individual model predictions (epistemic)."
+    },
+    {
+      "h": "Aleatoric Heteroscedastic Negative Log-Likelihood Loss",
+      "tex": "\\mathcal{L}_{\\mathrm{NLL}}(x_i, y_i) = \\frac{1}{2} \\exp(-s_i) \\| y_i - \\mu_i \\|^2 + \\frac{1}{2} s_i, \\quad s_i = \\ln \\sigma_i^2",
+      "p": "Forces the network to learn input-dependent noise variance $\\sigma_i^2$ without requiring explicit variance ground-truth labels."
+    },
+    {
+      "h": "MC Dropout Variational Approximation",
+      "tex": "P(y^* \\mid x^*, \\mathcal{D}) \\approx \\frac{1}{T} \\sum_{t=1}^T f_{\\hat{\\mathbf{W}}_t}(x^*), \\quad \\hat{\\mathbf{W}}_t = \\mathbf{W} \\cdot \\operatorname{diag}(z_t), \\; z_{t,j} \\sim \\operatorname{Bernoulli}(1 - p)",
+      "p": "Averaging $T$ forward passes with stochastic dropout masks approximates marginalisation over the weight posterior."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport numpy as np\n\nclass MCDropoutModel(nn.Module):\n    def __init__(self, in_features: int = 1, hidden: int = 64):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.Linear(in_features, hidden),\n            nn.ReLU(),\n            nn.Dropout(p=0.3),  # Dropout kept active during inference!\n            nn.Linear(hidden, hidden),\n            nn.ReLU(),\n            nn.Dropout(p=0.3),\n            nn.Linear(hidden, 1)\n        )\n\n    def forward(self, x: torch.Tensor):\n        return self.net(x)\n\n    def predict_uncertainty(self, x: torch.Tensor, n_samples: int = 30):\n        \"\"\"Execute MC Dropout: force dropout active and sample T passes.\"\"\"\n        self.train()  # Crucial: enable dropout during inference\n        preds = []\n        with torch.no_grad():\n            for _ in range(n_samples):\n                preds.append(self.forward(x))\n        # [n_samples, batch, 1]\n        preds_tensor = torch.stack(preds)\n        mean = preds_tensor.mean(dim=0)\n        epistemic_var = preds_tensor.var(dim=0)\n        return mean, epistemic_var\n\n# Simulate test query\nmodel = MCDropoutModel()\nx_test = torch.tensor([[2.5]])  # Point in unseen region\nmean, variance = model.predict_uncertainty(x_test, n_samples=50)\n\nprint(f\"MC Dropout Predictive Mean:     {mean.item():.3f}\")\nprint(f\"Epistemic Variance (Disagreement): {variance.item():.4f}\")\nprint(\"High variance indicates model uncertainty in out-of-distribution regions!\")",
+  "keyPoints": [
+    "Standard deep networks produce overconfident probabilities; uncertainty estimation quantifies predictive confidence.",
+    "Aleatoric uncertainty measures inherent data noise; Epistemic uncertainty measures model lack of knowledge.",
+    "MC Dropout enables dropout during test time, sampling stochastic forward passes to approximate Bayesian posteriors.",
+    "Deep Ensembles train multiple randomly-initialised models, providing state-of-the-art uncertainty and OOD detection."
+  ],
+  "pitfalls": [
+    "Disabling dropout at test time: Calling `model.eval()` disables standard dropout, collapsing MC Dropout back into a single deterministic point estimate.",
+    "Assuming softmax probability equals confidence: In neural networks, an out-of-distribution point can produce 99.9% softmax probability due to unconstrained logit extrapolation.",
+    "Computational inference cost: Running 50 MC Dropout passes or 5 ensemble models multiplies inference latency by $5\\times$ to $50\\times$."
+  ],
+  "quiz": [
+    {
+      "q": "What is the fundamental difference between Aleatoric Uncertainty and Epistemic Uncertainty?",
+      "o": [
+        "Aleatoric uncertainty is measured in decibels, while epistemic is measured in pixels",
+        "Aleatoric uncertainty is inherent data noise that cannot be reduced by collecting more data; Epistemic uncertainty reflects model lack of knowledge and shrinks with more data",
+        "Aleatoric uncertainty only applies to text models",
+        "Epistemic uncertainty can only be calculated with decision trees"
+      ],
+      "a": 1,
+      "why": "Aleatoric is sensor/data noise (irreducible). Epistemic is model parameter uncertainty in sparse data regions, which vanishes as infinite training data is observed."
+    },
+    {
+      "q": "How does Monte Carlo Dropout (Gal & Ghahramani, 2016) estimate uncertainty at test time?",
+      "o": [
+        "By dropping out random input images from the test set",
+        "By keeping dropout layers active during inference and passing the same query through the network multiple times to observe output variance across stochastic masks",
+        "By retraining the network on every test sample",
+        "By calculating the determinant of the Hessian"
+      ],
+      "a": 1,
+      "why": "MC Dropout keeps dropout active during inference, using repeated forward passes to approximate sampling from a deep Gaussian process posterior."
+    },
+    {
+      "q": "Why do Deep Ensembles consistently outperform MC Dropout in real-world benchmark evaluations?",
+      "o": [
+        "Deep ensembles use fewer parameters than single models",
+        "Ensemble models start from different random initialisations and explore diverse, distant local minima in the loss landscape, whereas MC Dropout samples locally around a single minimum",
+        "Ensembles do not require training",
+        "Ensembles guarantee zero prediction error"
+      ],
+      "a": 1,
+      "why": "MC Dropout perturbs weights around a single basin of attraction. Deep ensembles explore entirely different functional modes in the loss surface, capturing diverse hypotheses."
+    }
+  ],
+  "related": [
+    "conformal-prediction",
+    "bayesian-networks",
+    "the-pytorch-training-loop"
+  ],
+  "keywords": "uncertainty estimation, mc dropout, deep ensembles, epistemic uncertainty, aleatoric uncertainty, bayesian deep learning, out-of-distribution, overconfidence"
+},
+
+{
+  "id": "interpretability-saliency-grad-cam-probing",
+  "short": "Saliency, Grad-CAM & probing",
+  "title": "Deep Learning Interpretability: Saliency Maps, Grad-CAM, Integrated Gradients, and Probing Classifiers",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Opening deep neural network black boxes using gradient attribution (Grad-CAM, Integrated Gradients) and internal representation probing.",
+  "lead": "Deep neural networks are frequently dismissed as opaque \"black boxes\": a convolutional network classifies an X-ray as pneumonia, or a Transformer classifies a legal contract as high risk, without revealing which input features drove the decision. Post-hoc interpretability methods bridge this opacity by attributing predictions back to input pixels/tokens (Saliency, Grad-CAM, Integrated Gradients) and dissecting internal layers via probing classifiers.",
+  "analogy": "Imagine a detective interrogating a witness who claims to identify a suspect in a photo lineup. If the detective simply accepts the witness's verdict without question, the witness might secretly be identifying the suspect based on their background wall colour. Interpretability methods act like heat-vision eye trackers (Grad-CAM) that show where the witness looked, and targeted cognitive tests (probing) that verify what details the witness actually observed.",
+  "intuition": [
+    "Gradient-based saliency computes the gradient of target class score $y^c$ with respect to input pixels: $\\frac{\\partial y^c}{\\partial x}$. However, vanilla saliency maps are extremely noisy and suffer from gradient saturation (a feature already fully active has near-zero gradient).",
+    "Integrated Gradients (Sundararajan et al.) solves gradient saturation by satisfying the Axiom of Completeness: it integrates gradients along a straight line path from a neutral blank baseline $x'$ (e.g. black image) to input $x$. The sum of all feature attributions equals the exact difference in model output: $\\sum_i \\text{IG}_i(x) = f(x) - f(x')$.",
+    "Grad-CAM (Gradient-weighted Class Activation Mapping; Selvaraju et al.) operates on convolutional feature maps. It averages gradients flowing into convolutional activation channels to weight each feature map, generating coarse, class-discriminative visual heatmaps highlighting which spatial regions triggered the decision.",
+    "Probing Classifiers (Linear Probes) analyse representation learning in deep layers (e.g. inside Transformers): freezing the pretrained representations and training a lightweight linear classifier to test whether concepts like grammatical syntax, part of speech, or sentiment are linearly separable at layer $L$."
+  ],
+  "steps": [
+    "Select attribution scope: Choose spatial heatmaps for vision (Grad-CAM), feature attributions for tabular/NLP (Integrated Gradients), or internal concept auditing (Linear Probes).",
+    "Define baseline reference (Integrated Gradients): Select a neutral counterfactual baseline $x'$ (e.g. an all-black image or all-zero embedding vector).",
+    "Compute path integral (Integrated Gradients): Interpolate $M$ steps along the straight line from $x'$ to $x$; compute input gradients at each step and approximate the integral via Riemann sum.",
+    "Compute channel weights (Grad-CAM): Backpropagate target class logit $y^c$ to the final convolutional layer; compute global average pooling across spatial dimensions to yield channel importance $\\alpha_k^c$.",
+    "Generate Grad-CAM heatmap: Take the linear combination of convolutional activation maps weighted by $\\alpha_k^c$, and apply ReLU to isolate features with positive influence.",
+    "Train linear probe (Representation Probing): Freeze the backbone model, extract activations at layer $L$ across a probing dataset, and train a logistic regression probe to evaluate concept encoding."
+  ],
+  "math": [
+    {
+      "h": "Integrated Gradients Formulation",
+      "tex": "\\mathrm{IG}_i(x) = (x_i - x'_i) \\times \\int_0^1 \\frac{\\partial F(x' + \\alpha (x - x'))}{\\partial x_i} \\, d\\alpha",
+      "p": "Integrates gradients along the interpolation path from baseline $x'$ to input $x$, satisfying the Axiom of Completeness."
+    },
+    {
+      "h": "Axiom of Completeness (Attribution Additivity)",
+      "tex": "\\sum_{i=1}^D \\mathrm{IG}_i(x) = F(x) - F(x')",
+      "p": "The sum of all feature attributions exactly equals the difference between the model output on input $x$ and baseline $x'$."
+    },
+    {
+      "h": "Grad-CAM Class Activation Mapping",
+      "tex": "L_{\\mathrm{Grad\\text{-}CAM}}^c = \\operatorname{ReLU}\\left( \\sum_k \\alpha_k^c A^k \\right), \\quad \\alpha_k^c = \\frac{1}{Z} \\sum_{i} \\sum_{j} \\frac{\\partial y^c}{\\partial A_{ij}^k}",
+      "p": "Weights convolutional feature map $A^k$ by global-average-pooled gradient $\\alpha_k^c$, applying ReLU to retain features that positively support class $c$."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass MiniConvNet(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv = nn.Conv2d(1, 4, kernel_size=3, padding=1)\n        self.fc = nn.Linear(4 * 4 * 4, 2)\n\n    def forward(self, x):\n        h = F.relu(self.conv(x))\n        out = self.fc(h.view(h.size(0), -1))\n        return out, h  # Return logits and final conv activations\n\ndef compute_grad_cam(model: nn.Module, x: torch.Tensor, target_class: int):\n    \"\"\"Educational demonstration of Grad-CAM spatial heatmap computation.\"\"\"\n    model.eval()\n    logits, activations = model(x)\n    score = logits[0, target_class]\n    \n    # Compute gradients of target class with respect to conv activations\n    grads = torch.autograd.grad(score, activations)[0]\n    \n    # Global average pooling of gradients over spatial dimensions (H, W)\n    weights = torch.mean(grads, dim=(2, 3), keepdim=True)  # [1, channels, 1, 1]\n    \n    # Weighted combination of activation maps\n    cam = torch.sum(weights * activations, dim=1, keepdim=True)\n    cam = F.relu(cam)  # Isolate positive contributions\n    cam = cam - cam.min()\n    cam = cam / (cam.max() + 1e-8)  # Normalise between 0 and 1\n    return cam.squeeze().detach().numpy()\n\n# Test Grad-CAM on synthetic 4x4 input image\ntorch.manual_seed(42)\nmodel = MiniConvNet()\ninput_image = torch.randn(1, 1, 4, 4, requires_grad=True)\n\nheatmap = compute_grad_cam(model, input_image, target_class=1)\nprint(\"Grad-CAM Spatial Heatmap (4x4 grid):\")\nprint(np.round(heatmap, 2))\nprint(\"Heatmap highlights the most influential spatial regions driving Class 1!\")",
+  "keyPoints": [
+    "Interpretability methods open deep network black boxes, providing post-hoc explanations for predictions.",
+    "Integrated Gradients solves gradient saturation, ensuring attributions sum to the total prediction difference.",
+    "Grad-CAM weights convolutional feature maps by backpropagated gradients to generate class-specific visual heatmaps.",
+    "Linear probing evaluates whether internal layer representations linearly encode semantic concepts."
+  ],
+  "pitfalls": [
+    "Edge detection artifacts in vanilla saliency: Simple input gradients $\\frac{\\partial y}{\\partial x}$ often act like high-pass edge detectors, highlighting image boundaries rather than semantic features.",
+    "Poor baseline choice in Integrated Gradients: Choosing an inappropriate baseline (e.g. pure white image when text is white) distorts attribution values; use multiple neutral baselines.",
+    "Confusing explanation with correctness: A model can produce a beautifully intuitive Grad-CAM explanation while being fundamentally flawed or reliant on confounding correlations."
+  ],
+  "quiz": [
+    {
+      "q": "What is the \"gradient saturation\" problem in vanilla gradient saliency maps, and how does Integrated Gradients solve it?",
+      "o": [
+        "Gradients overflow to infinity; Integrated Gradients divides by zero",
+        "Once a feature is strong enough to push model output into saturation (e.g. sigmoid plateaus near 1.0), its local gradient becomes zero; Integrated Gradients integrates gradients along a path from a neutral baseline",
+        "Integrated Gradients only works on text models",
+        "Gradient saturation causes the CPU to overheat"
+      ],
+      "a": 1,
+      "why": "In saturated non-linearities, local gradients vanish even though the feature is critical. Integrated Gradients accumulates gradients along a path from a blank baseline to the input."
+    },
+    {
+      "q": "Why does Grad-CAM apply the ReLU activation function to the weighted combination of feature maps?",
+      "o": [
+        "To ensure all numbers are integers",
+        "To isolate features that positively contribute to the target class, discarding features that support competing alternative classes",
+        "To speed up GPU matrix multiplication",
+        "Because ReLU is required by PyTorch"
+      ],
+      "a": 1,
+      "why": "Grad-CAM applies ReLU because pixels that negatively correlate with the class belong to other categories; ReLU keeps only positive evidence."
+    },
+    {
+      "q": "What is a \"Probing Classifier\" (Linear Probe) used for in deep learning analysis?",
+      "o": [
+        "To test hardware temperature inside server racks",
+        "To test whether specific linguistic or semantic concepts are linearly encoded within the intermediate representations of a frozen pretrained neural network",
+        "To prune 90% of model weights",
+        "To encrypt model weights"
+      ],
+      "a": 1,
+      "why": "A linear probe freezes internal layers and trains a simple linear model to see if intermediate activations linearly separate specific attributes (e.g. part of speech, sentiment)."
+    }
+  ],
+  "related": [
+    "shap",
+    "lime",
+    "pdp-ice-and-ale-plots"
+  ],
+  "keywords": "interpretability, saliency maps, grad-cam, integrated gradients, linear probing, explainable ai, black box, attribution, class activation mapping"
+},
+
+{
+  "id": "adversarial-examples",
+  "short": "Adversarial examples & attacks",
+  "title": "Adversarial Examples and Robustness: FGSM, PGD Attacks, and Adversarial Training",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Evaluating neural network vulnerabilities, generating imperceptible perturbations via FGSM and PGD, and defending models with robust min-max training.",
+  "lead": "Deep neural networks achieve superhuman accuracy on benchmark test sets, yet they can be reliably fooled by imperceptible, adversarially crafted noise. Adding tiny, invisible perturbations to an image of a panda can cause a state-of-the-art classifier to predict \"gibbon\" with 99.9% confidence. Adversarial machine learning studies these fundamental vulnerabilities, creating attacks (FGSM, PGD) and defenses (Adversarial Training) to build reliable, safety-critical AI systems.",
+  "analogy": "Imagine a high-security facial recognition lock at a military base. To the human eye, an operative wearing an ordinary pair of sunglasses looks completely normal. But microscopic, mathematically calculated iridescent patterns on the sunglass frames reflect light in an exact wave pattern that flips the security system's deep neural network weights, causing the scanner to identify the operative as the base general.",
+  "intuition": [
+    "Adversarial examples arise from the high-dimensional geometry of neural networks. While activations are non-linear, deep networks operate with high-dimensional linear dot products $w^T x$. If an attacker shifts each of $D=10,000$ input dimensions by an imperceptible epsilon $\\epsilon = 0.005$ in the direction of the weight vector, the cumulative activation shifts by $\\epsilon \\sum |w_i|$, which can be massive.",
+    "The Fast Gradient Sign Method (FGSM; Goodfellow et al.) computes an adversarial perturbation in a single gradient step: $x_{\\mathrm{adv}} = x + \\epsilon \\cdot \\operatorname{sign}(\\nabla_x \\mathcal{L}(\\theta, x, y))$. It steps in the direction that maximises loss while constraining the maximum change per pixel within the $L_\\infty$ ball $\\|x_{\\mathrm{adv}} - x\\|_\\infty \\le \\epsilon$.",
+    "Projected Gradient Descent (PGD; Madry et al.) is the multi-step iterative extension of FGSM: taking multiple small steps with step size $\\alpha$ and projecting back onto the $\\epsilon$-ball after each step. PGD represents the \"universal first-order adversary\"—the strongest possible attack using local gradient information.",
+    "Defending against adversarial attacks cannot rely on heuristic obfuscation (which merely hides gradients without true robustness). The gold standard defense is Adversarial Training: framing training as a robust Min-Max optimisation problem $\\min_\\theta \\mathbb{E} [ \\max_{\\delta \\in \\mathcal{S}} \\mathcal{L}(\\theta, x + \\delta, y) ]$, training the network on worst-case PGD perturbations."
+  ],
+  "steps": [
+    "Define threat model and perturbation budget: Specify the perturbation norm ($L_\\infty$ or $L_2$) and budget $\\epsilon$ (e.g. $\\epsilon = 8/255$ for 8-bit images).",
+    "Compute input gradients: Pass clean image $x$ through network, compute classification loss $\\mathcal{L}(f_\\theta(x), y)$, and evaluate gradient with respect to input: $\\nabla_x \\mathcal{L}$.",
+    "Generate FGSM perturbation: Multiply the sign of the input gradient by $\\epsilon$: $\\delta = \\epsilon \\cdot \\operatorname{sign}(\\nabla_x \\mathcal{L})$.",
+    "Execute multi-step PGD attack: Iterate $K$ steps ($K \\approx 10\\text{--}40$): step by $\\alpha \\cdot \\operatorname{sign}(\\nabla_x \\mathcal{L})$, clip to the $\\epsilon$-ball around $x$, and clip to valid image bounds $[0, 1]$.",
+    "Implement adversarial training: In every training minibatch, generate on-the-fly PGD adversarial perturbations and update model weights $\\theta$ on the perturbed inputs.",
+    "Evaluate robust vs clean accuracy: Measure clean test accuracy (on unperturbed images) alongside robust test accuracy against white-box and black-box PGD attacks."
+  ],
+  "math": [
+    {
+      "h": "Fast Gradient Sign Method (FGSM)",
+      "tex": "x_{\\mathrm{adv}} = x + \\epsilon \\cdot \\operatorname{sign}\\left( \\nabla_x \\mathcal{L}(\\theta, x, y) \\right), \\quad \\|x_{\\mathrm{adv}} - x\\|_\\infty \\le \\epsilon",
+      "p": "Shifts input $x$ by $\\epsilon$ in the direction of steepest loss ascent, bounded by maximum per-pixel perturbation $\\epsilon$."
+    },
+    {
+      "h": "Projected Gradient Descent (PGD) Iteration",
+      "tex": "x^{(t+1)} = \\Pi_{x + \\mathcal{S}}\\left( x^{(t)} + \\alpha \\cdot \\operatorname{sign}\\left( \\nabla_x \\mathcal{L}(\\theta, x^{(t)}, y) \\right) \\right)",
+      "p": "Iterative multi-step attack with step size $\\alpha$, projecting ($\\Pi$) back into the valid $\\epsilon$-neighbourhood $\\mathcal{S}$ after each step."
+    },
+    {
+      "h": "Robust Min-Max Adversarial Training Objective",
+      "tex": "\\min_\\theta \\mathbb{E}_{(x, y) \\sim \\mathcal{D}}\\left[ \\max_{\\|\\delta\\|_p \\le \\epsilon} \\mathcal{L}\\left( f_\\theta(x + \\delta), \\; y \\right) \\right]",
+      "p": "Finds network parameters $\\theta$ that minimise the expected loss on the worst-case adversarial perturbation $\\delta$ within budget $\\epsilon$."
+    }
+  ],
+  "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\ndef fgsm_attack(image: torch.Tensor, epsilon: float, data_grad: torch.Tensor) -> torch.Tensor:\n    \"\"\"Generate adversarial example using Fast Gradient Sign Method (FGSM).\"\"\"\n    # 1. Extract element-wise sign of the input gradients\n    sign_data_grad = data_grad.sign()\n    \n    # 2. Shift image in direction of loss ascent\n    perturbed_image = image + epsilon * sign_data_grad\n    \n    # 3. Clip to maintain valid pixel range [0, 1]\n    perturbed_image = torch.clamp(perturbed_image, 0.0, 1.0)\n    return perturbed_image\n\n# Test FGSM attack on toy linear classifier\ntorch.manual_seed(42)\nx = torch.tensor([[0.5, 0.2]], requires_grad=True)\ntrue_label = torch.tensor([0])\n\n# Model that predicts class 0 if x[0] > x[1]\nweights = torch.tensor([[2.0, -2.0]])  # Logit for class 0\nlogits = x @ weights.T\nloss = F.cross_entropy(logits, true_label)\nloss.backward()\n\nprint(\"Original prediction logit for Class 0:\", round(logits.item(), 3))\nprint(\"Input gradient wrt loss:\", x.grad.numpy())\n\n# Apply FGSM perturbation with epsilon = 0.15\nx_adv = fgsm_attack(x, epsilon=0.15, data_grad=x.grad)\nlogits_adv = x_adv @ weights.T\n\nprint(\"Adversarial input coordinates:\", x_adv.detach().numpy())\nprint(\"Adversarial logit for Class 0: \", round(logits_adv.item(), 3))\nprint(\"Prediction confidence successfully degraded by tiny perturbation!\")",
+  "keyPoints": [
+    "Adversarial examples fool neural networks using imperceptible, mathematically targeted perturbations.",
+    "FGSM computes adversarial noise in a single step using the sign of the input gradient.",
+    "Projected Gradient Descent (PGD) is a powerful multi-step iterative attack that bounds perturbations to an $\\epsilon$-ball.",
+    "Adversarial training frames learning as a min-max game, training on worst-case perturbations to build genuine robustness."
+  ],
+  "pitfalls": [
+    "Gradient masking / obfuscation: Techniques that make gradients noisy (e.g. random input resizing) create a false sense of security; attackers easily bypass them with Expectation Over Transformation (EOT).",
+    "The clean vs robust accuracy trade-off: Adversarial training typically reduces standard clean accuracy by 2%–8% because the model must learn smoother, wider decision boundaries.",
+    "Testing robustness only with FGSM: Defending against single-step FGSM does not protect against multi-step PGD attacks; always evaluate against PGD and AutoAttack."
+  ],
+  "quiz": [
+    {
+      "q": "Why are deep neural networks vulnerable to adversarial examples even when the perturbation $\\epsilon$ on each individual pixel is imperceptibly small?",
+      "o": [
+        "Because GPUs make arithmetic calculation errors",
+        "In high-dimensional input spaces (e.g. 100,000 pixels), tiny perturbations across thousands of dimensions accumulate linearly in dot products, causing massive shifts in pre-activation logits",
+        "Because neural networks have zero bias terms",
+        "Because images lose colour depth during normalisation"
+      ],
+      "a": 1,
+      "why": "In high dimensions, shifting $D$ inputs by $\\epsilon$ in the direction of weight signs accumulates to an aggregate pre-activation change of $\\epsilon \\sum |w_i|$, which easily flips decisions."
+    },
+    {
+      "q": "What is the Fast Gradient Sign Method (FGSM)?",
+      "o": [
+        "A compression algorithm for saving model weights",
+        "A single-step adversarial attack that perturbs input $x$ by $\\epsilon \\cdot \\operatorname{sign}(\\nabla_x \\mathcal{L})$ in the direction of steepest loss ascent",
+        "A fast optimiser that replaces AdamW",
+        "A method for generating random Gaussian noise"
+      ],
+      "a": 1,
+      "why": "FGSM takes one step along the sign of the gradient of the loss with respect to the input, maximising loss within the $L_\\infty$ ball $\\epsilon$."
+    },
+    {
+      "q": "What is the mathematically grounded method for making neural networks genuinely robust against first-order adversarial attacks?",
+      "o": [
+        "Rounding all floating point numbers to integers",
+        "Adversarial Training: formulating training as a min-max optimisation problem where the model trains on worst-case PGD perturbations generated on the fly",
+        "Adding random Gaussian noise to test images",
+        "Hiding the model code behind a firewall"
+      ],
+      "a": 1,
+      "why": "Adversarial training solves the robust min-max problem $\\min_\\theta \\max_\\delta \\mathcal{L}$, forcing the network to maintain low loss within the entire $\\epsilon$-neighbourhood."
+    }
+  ],
+  "related": [
+    "the-pytorch-training-loop",
+    "loss-functions",
+    "activation-functions"
+  ],
+  "keywords": "adversarial examples, fgsm, pgd, adversarial training, perturbation, robust optimisation, gradient sign, security, robustness"
+}
 ];

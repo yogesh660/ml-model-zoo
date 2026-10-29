@@ -4546,5 +4546,494 @@ print(f"Throughput speedup factor:   {throughput_batch / throughput_online:.1f}x
   ],
   "keywords": "ci/cd for ml, mlops, continuous integration, continuous delivery, continuous training, model qualification gates, golden evaluation set, automated testing",
   "usedBy": []
+},
+
+{
+  "id": "model-registry-and-versioning",
+  "short": "Model registry & versioning",
+  "title": "Model Registry and Versioning: Governance, Lineage, and Lifecycle Promotion",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Managing model governance, semantic versioning, lineage graphs, and deployment staging gates with MLflow and cloud model registries.",
+  "lead": "In enterprise production, a machine learning model is not just a saved pickle file on an engineer's laptop. Deploying unversioned models introduces operational chaos: nobody knows which training code produced the running binary, rollback becomes impossible during outages, and regulatory compliance is breached. A centralized Model Registry provides immutable versioning, audit trails, and automated lifecycle promotion gates.",
+  "analogy": "Imagine an aircraft maintenance hangar. Every replacement jet engine has a serial number, a stamped maintenance certificate, an immutable logbook of all test bench runs, and a formal signed release from the chief inspector before being bolted to an airframe. A model registry acts as that rigorous aeronautical logbook and parts warehouse for trained algorithms.",
+  "intuition": [
+    "A Model Registry bridges the gap between experimentation and production serving. While experiment tracking logs hundreds of intermediate runs, the registry stores only curated, candidate-grade models.",
+    "A registered model entity maintains an immutable sequence of versions (v1, v2, v3). Each version links directly back to its source experiment run ID, capturing the git commit hash, training dataset version, hyperparameter payload, and evaluation metrics.",
+    "Model promotion follows explicit lifecycle stages: `None` $\\to$ `Staging` (candidate undergoing integration and shadow testing) $\\to$ `Production` (live serving traffic) $\\to$ `Archived` (decommissioned models kept for auditing). Modern registries often replace rigid stages with flexible deployment aliases (e.g. `@champion`, `@challenger`).",
+    "Registries enforce governance: models must pass automated validation gates (minimum accuracy, latency thresholds, fairness checks) and require dual-control peer approvals before being promoted to production."
+  ],
+  "steps": [
+    "Register candidate model: Log the serialized model artifact from an experiment run into the registry under a unique logical model name.",
+    "Attach metadata and signature: Define explicit input/output tensor or tabular schema signatures and link evaluation metrics.",
+    "Automate qualification testing: Trigger automated CI webhooks to run regression benchmarks, schema compatibility tests, and latency profiling on the newly registered version.",
+    "Assign deployment alias or stage: Promote the validated candidate to `@challenger` or `Staging` for shadow traffic evaluation.",
+    "Promote to production with rollback guard: Atomically update the `@champion` pointer to the new version, retaining the previous version for instant one-click rollback."
+  ],
+  "math": [
+    {
+      "h": "Model Lineage Directed Acyclic Graph (DAG)",
+      "tex": "\\mathcal{G}_{\\mathrm{lineage}} = (\\mathcal{V}, \\mathcal{E}), \\quad \\mathcal{V} = \\{\\mathcal{C}_{\\mathrm{code}}, \\mathcal{D}_{\\mathrm{data}}, \\mathcal{E}_{\\mathrm{env}}, \\mathcal{M}_{\\mathrm{model}}\\}",
+      "p": "Lineage tracking models the provenance graph linking raw data partitions, code commits, and training environments to the registered model artifact."
+    },
+    {
+      "h": "Model Signature Verification Predicate",
+      "tex": "\\operatorname{Compatible}(\\mathbf{x}, \\Sigma_{\\mathrm{model}}) = \\bigwedge_{j=1}^d \\left( \\mathrm{type}(x_j) = \\tau_j \\;\\land\\; x_j \\in \\operatorname{Domain}_j \\right)",
+      "p": "Enforces that incoming production query vectors $\\mathbf{x}$ strictly conform to the expected feature schema and types $\\Sigma$ registered with the model."
+    },
+    {
+      "h": "Semantic Versioning Progression",
+      "tex": "V = \\text{MAJOR}.\\text{MINOR}.\\text{PATCH} \\quad [\\text{Breaking Schema} \\mid \\text{Retrained Architecture} \\mid \\text{Cadence Refresh}]",
+      "p": "Formalises version upgrades: patch for scheduled retraining on new data, minor for feature additions, major for breaking input schema changes."
+    }
+  ],
+  "code": "import json\nimport time\n\nclass MockModelRegistry:\n    def __init__(self):\n        self.models = {}\n\n    def register_version(self, model_name: str, run_id: str, metrics: dict, schema: dict):\n        if model_name not in self.models:\n            self.models[model_name] = {'versions': [], 'aliases': {}}\n        \n        version_num = len(self.models[model_name]['versions']) + 1\n        record = {\n            'version': version_num,\n            'registered_at': time.strftime(\"%Y-%m-%d %H:%M:%SZ\", time.gmtime()),\n            'run_id': run_id,\n            'metrics': metrics,\n            'schema': schema,\n            'status': 'Staging'\n        }\n        self.models[model_name]['versions'].append(record)\n        print(f\"Registered {model_name} v{version_num} (Run: {run_id}, AUC: {metrics.get('auc', 0):.3f})\")\n        return version_num\n\n    def promote_to_champion(self, model_name: str, version: int):\n        self.models[model_name]['aliases']['champion'] = version\n        for v in self.models[model_name]['versions']:\n            if v['version'] == version:\n                v['status'] = 'Production'\n        print(f\"Promoted {model_name} v{version} to @champion!\")\n\n# Simulate model registration and governance promotion\nregistry = MockModelRegistry()\nv1 = registry.register_version(\n    model_name=\"fraud-detection\",\n    run_id=\"run_a91b2c\",\n    metrics={\"auc\": 0.882, \"p99_latency_ms\": 12.4},\n    schema={\"amount\": \"float64\", \"merchant_category\": \"string\"}\n)\nregistry.promote_to_champion(\"fraud-detection\", version=v1)\n\n# Challenger retrained on fresh monthly data\nv2 = registry.register_version(\n    model_name=\"fraud-detection\",\n    run_id=\"run_d45e6f\",\n    metrics={\"auc\": 0.904, \"p99_latency_ms\": 11.8},\n    schema={\"amount\": \"float64\", \"merchant_category\": \"string\"}\n)\nregistry.promote_to_champion(\"fraud-detection\", version=v2)",
+  "keyPoints": [
+    "Model registries centralise governance, versioning, and lifecycle promotion across environments.",
+    "Every registered version preserves full lineage back to training code, dataset snapshots, and metrics.",
+    "Deployment aliases (`@champion`, `@challenger`) allow atomic traffic redirection and instant rollbacks.",
+    "Enforces schema validation contracts to prevent serving incompatible production feature payloads."
+  ],
+  "pitfalls": [
+    "Treating the registry as an experiment log: Registering thousands of half-baked training iterations pollutes the registry; only register viable deployment candidates.",
+    "Missing schema definitions: Registering model weights without input feature types leads to runtime deserialisation crashes when upstream schemas change.",
+    "Manual, un-audited promotions: Allowing individual engineers to change production aliases without automated test gates or dual approvals invites accidental outages."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary operational distinction between an experiment tracking system and a model registry?",
+      "o": [
+        "Experiment tracking is for Python, while model registries are strictly for Java",
+        "Experiment tracking logs all exploratory runs and metric curves, while a model registry stores and governs production-candidate models across lifecycle stages",
+        "Model registries only work on local hard drives",
+        "Experiment tracking automatically deploys models to Kubernetes"
+      ],
+      "a": 1,
+      "why": "Experiment tracking captures all iterations during research, whereas a model registry curates, versions, and manages the deployment lifecycle of viable production models."
+    },
+    {
+      "q": "Why are deployment aliases like `@champion` and `@challenger` preferred over hard-coded version numbers in serving infrastructure?",
+      "o": [
+        "They compress the network payload size",
+        "They allow serving services to query a stable alias while the registry points to new versions atomically behind the scenes without restarting services",
+        "They prevent git merge conflicts",
+        "They eliminate the need for containerisation"
+      ],
+      "a": 1,
+      "why": "Microservices call the `@champion` endpoint. Upgrading or rolling back the model simply involves moving the alias in the registry without modifying client service code."
+    },
+    {
+      "q": "What is \"model lineage\" in machine learning governance?",
+      "o": [
+        "The historical tree of git branches",
+        "The complete auditable provenance tracing a deployed model back to its exact training dataset version, code commit, hyperparameters, and environment dependencies",
+        "The hierarchy of decision tree depth splits",
+        "The inheritance of Python class structures"
+      ],
+      "a": 1,
+      "why": "Lineage provides end-to-end traceability, proving to auditors and engineers exactly what data, code, and configurations produced a production decision."
+    }
+  ],
+  "related": [
+    "experiment-tracking",
+    "ci-cd-for-ml",
+    "docker-and-reproducible-environments"
+  ],
+  "keywords": "model registry, mlflow, model versioning, model governance, model lineage, champion challenger, model lifecycle, deployment stages"
+},
+
+{
+  "id": "feature-stores",
+  "short": "Feature stores",
+  "title": "Feature Stores: Unifying Offline Training and Online Low-Latency Serving",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Eliminating training-serving skew, managing point-in-time correct historical joins, and serving low-latency online features with Feast and Hopsworks.",
+  "lead": "In enterprise machine learning, feature engineering code is often written twice: once in SQL or Python by data scientists building training sets on data warehouses, and again in Java or Go by software engineers building low-latency microservices for live scoring. This duplicate implementation creates training-serving skew—subtle differences between training and serving features that ruin production model accuracy. A Feature Store unifies feature definitions across offline training and online serving.",
+  "analogy": "Imagine a central commercial kitchen serving both a luxury restaurant and a high-volume catering delivery service. Instead of having two separate chef teams chopping onions and brewing stocks according to different recipes in separate rooms, a central prep station prepares standard ingredients to strict specifications, flash-freezing portions for future banquets (offline warehouse) while keeping fresh bowls ready on the assembly line (online low-latency cache).",
+  "intuition": [
+    "Machine learning applications require two distinct feature access patterns: High-throughput batch reads over months of history for model training (offline store: Snowflake, BigQuery, Delta Lake), and sub-10ms single-entity key-value lookups for live inference (online store: Redis, DynamoDB, Cassandra).",
+    "Without a feature store, teams suffer from training-serving skew (calculating rolling 7-day spend slightly differently in SQL vs Java), feature duplication (multiple teams re-engineering the same customer features), and lookahead data leakage during training set creation.",
+    "A Feature Store (e.g. Feast, Hopsworks, Tecton) provides a unified registry of entity-keyed feature views. Features are defined once in declarative code. The system continuously ingests raw event streams, updating the online key-value store for live queries while appending to the offline store.",
+    "Crucially, the feature store provides \"Time-Travel\" (as-of point-in-time correct historical retrieval): given a historical dataset of customer actions, it reconstructs the exact feature values as they existed at each action timestamp, preventing future leakage."
+  ],
+  "steps": [
+    "Define entities and feature views: Declare business keys (e.g. `user_id`, `merchant_id`) and associated feature definitions with explicit data types and SLAs.",
+    "Configure dual-storage backends: Connect an offline analytical warehouse (Parquet, BigQuery, Snowflake) and an online low-latency store (Redis, DynamoDB).",
+    "Continuous streaming / batch ingestion: Schedule batch syncs or stream real-time Kafka events through the feature store ingestion engine.",
+    "Point-in-time training set generation: Call `get_historical_features()` with observation timestamps to generate leak-free training matrices via automated as-of joins.",
+    "Low-latency online serving: Fetch real-time vector payloads in microservices via `get_online_features()` using entity primary keys.",
+    "Monitor feature drift and statistics: Continuously track feature distributions and missingness across both storage tiers."
+  ],
+  "math": [
+    {
+      "h": "Training-Serving Skew Definition",
+      "tex": "\\Delta_{\\mathrm{skew}} = \\mathbb{E}_{x \\sim P_{\\mathrm{live}}}\\left[ \\| f_{\\mathrm{offline}}(x) - f_{\\mathrm{online}}(x) \\| \\right] > 0 \\quad [\\text{Operational Hazard}]",
+      "p": "Training-serving skew occurs whenever offline training feature transformations $f_{\\mathrm{offline}}$ diverge from real-time online calculations $f_{\\mathrm{online}}$."
+    },
+    {
+      "h": "Point-in-Time Historical Feature Lookup",
+      "tex": "\\mathcal{F}(e, t_{\\mathrm{obs}}) = \\operatorname*{arg\\,max}_{v \\in \\mathcal{V}_e} \\left\\{ t_v \\;\\middle|\\; t_v \\le t_{\\mathrm{obs}} \\right\\}",
+      "p": "Reconstructs the exact feature state for entity $e$ at historical observation moment $t_{\\mathrm{obs}}$, strictly forbidding lookahead data access."
+    },
+    {
+      "h": "Online Latency Service Level Agreement (SLA)",
+      "tex": "P\\left( T_{\\mathrm{lookup}}(\\mathbf{e}) \\le \\tau_{\\mathrm{SLA}} \\right) \\ge 0.999, \\quad \\tau_{\\mathrm{SLA}} \\approx 5\\text{--}10\\text{ ms}",
+      "p": "Online feature stores guarantee high-availability sub-10ms p99 read latencies for real-time inference microservices."
+    }
+  ],
+  "code": "import pandas as pd\nfrom datetime import datetime, timedelta\n\n# Conceptual mini feature store simulation\nclass MiniFeatureStore:\n    def __init__(self):\n        # Offline store: immutable historical log (user_id, timestamp, feature, value)\n        self.offline_records = []\n        # Online store: fast key-value cache (user_id -> latest features)\n        self.online_cache = {}\n\n    def push_features(self, user_id: str, timestamp: datetime, features: dict):\n        # 1. Update online cache with latest values\n        self.online_cache[user_id] = {'updated_at': timestamp, **features}\n        # 2. Append to offline event log\n        for feat_name, val in features.items():\n            self.offline_records.append({\n                'user_id': user_id, 'timestamp': timestamp,\n                'feature': feat_name, 'value': val\n            })\n\n    def get_online_features(self, user_ids: list) -> dict:\n        \"\"\"Low-latency key-value lookup for live model inference (<5ms).\"\"\"\n        return {uid: self.online_cache.get(uid, {}) for uid in user_ids}\n\nfs = MiniFeatureStore()\nt0 = datetime(2026, 4, 1, 10, 0, 0)\nfs.push_features('user_123', t0, {'avg_spend_7d': 42.50, 'num_logins_30d': 14})\n\nt1 = datetime(2026, 4, 1, 15, 30, 0)\nfs.push_features('user_123', t1, {'avg_spend_7d': 85.00, 'num_logins_30d': 15})\n\n# Production microservice serving real-time fraud prediction\nonline_payload = fs.get_online_features(['user_123'])\nprint(\"Online real-time features for user_123:\")\nprint(online_payload['user_123'])\n# Returns latest state: avg_spend_7d = 85.00 instantaneously",
+  "keyPoints": [
+    "Feature stores bridge offline batch data warehouses and online low-latency caches.",
+    "Eliminates training-serving skew by using a single source of truth for feature transformation logic.",
+    "Enables point-in-time correct historical joins (\"time-travel\") that prevent target leakage.",
+    "Promotes feature reuse and discovery across data science and machine learning teams."
+  ],
+  "pitfalls": [
+    "Over-engineering simple batch use cases: If a model only runs once a week as a batch offline job, setting up an online Redis feature store adds unnecessary infrastructure overhead.",
+    "Neglecting entity TTL (time-to-live): Allowing inactive entity keys to persist indefinitely in RAM-based online caches causes memory exhaustion and skyrocketing cloud costs.",
+    "Timestamp misalignment: Pushing event ingestion time instead of the event occurrence time corrupts point-in-time correctness during historical joins."
+  ],
+  "quiz": [
+    {
+      "q": "What is \"training-serving skew\" in production machine learning?",
+      "o": [
+        "When model training runs slower than production inference",
+        "A discrepancy between feature definitions, data distributions, or computation logic between offline training and online serving environments",
+        "When the training loss curve is skewed to the left",
+        "When training uses GPUs but serving uses CPUs"
+      ],
+      "a": 1,
+      "why": "Training-serving skew happens when features are computed differently in production serving vs offline training, causing severe performance drops in live deployment."
+    },
+    {
+      "q": "Why does an online feature store use key-value stores (like Redis or DynamoDB) rather than data warehouses (like Snowflake or BigQuery)?",
+      "o": [
+        "Key-value stores support complex SQL window functions",
+        "Key-value stores provide sub-10 millisecond single-record read latencies required for real-time API scoring",
+        "Data warehouses cannot store numerical floating point values",
+        "Redis is completely free and requires zero hardware memory"
+      ],
+      "a": 1,
+      "why": "Real-time API requests have strict SLA latency budgets (10–50ms). In-memory key-value stores return feature vectors in single-digit milliseconds."
+    },
+    {
+      "q": "What capability allows a feature store to generate leak-free training datasets for historical events?",
+      "o": [
+        "Automatic random undersampling",
+        "Point-in-time correct temporal joins (\"time travel\"), matching each historical event only to feature values that existed at that exact moment",
+        "Converting all dates into UTC strings",
+        "Training a separate neural network on timestamps"
+      ],
+      "a": 1,
+      "why": "Point-in-time joins strictly match entity feature states that existed prior to or at the observation timestamp, preventing future data leakage into the training set."
+    }
+  ],
+  "related": [
+    "dates-time-zones-and-temporal-joins",
+    "data-leakage",
+    "serving-models-with-fastapi"
+  ],
+  "keywords": "feature stores, feast, hopsworks, tecton, training serving skew, time travel, point-in-time join, redis, offline store, online store"
+},
+
+{
+  "id": "orchestration-with-airflow-and-databricks",
+  "short": "Airflow & Databricks",
+  "title": "Data and ML Orchestration: Directed Acyclic Graphs with Apache Airflow and Databricks",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Scheduling, monitoring, and executing multi-step ML pipelines with Apache Airflow DAGs, Celery workers, and managed Databricks clusters.",
+  "lead": "Machine learning workflows are not single monolithic scripts; they are multi-stage dependency graphs encompassing data ingestion, cleaning, feature transformation, model training, validation gating, and batch scoring. Running these pipelines using brittle shell scripts or cron jobs leads to silent task failures, untracked dependencies, and manual operational nightmares. Orchestrators formalise workflows as Directed Acyclic Graphs (DAGs), managing task scheduling, automatic retries, backfilling, and cloud compute execution.",
+  "analogy": "Imagine the conductor of a 100-piece symphony orchestra. The conductor does not play the violins or strike the kettle drums themselves; instead, they cue each instrumental section at the precise beat, ensuring the woodwinds do not start until the brass fanfare finishes. If a trumpet player drops their sheet music, the conductor handles the recovery without halting the entire performance.",
+  "intuition": [
+    "A workflow orchestrator (such as Apache Airflow, Prefect, Dagster, or Kubeflow Pipelines) models processes as Directed Acyclic Graphs (DAGs), where nodes represent discrete tasks and directed edges represent execution dependencies.",
+    "Airflow separates orchestration (scheduling, retrying, dependency resolution) from computation (executing data transformations). Operators act as triggers: the `DatabricksSubmitRunOperator` delegates heavy Spark compute jobs to auto-scaling Databricks cloud clusters, freeing Airflow workers from memory-heavy tasks.",
+    "Key architectural concepts include Idempotency (re-running a pipeline on the same date produces identical results without side effects) and Backfilling (automatically re-executing historical pipelines across past date ranges after a code bug is fixed).",
+    "Airflow manages failure states defensively: task timeouts, exponential backoff retries, SLA alerts, and dead-man switches ensure pipeline resilience in mission-critical enterprise environments."
+  ],
+  "steps": [
+    "Design modular task DAG: Decompose ML pipeline into independent tasks (Ingest $\\to$ Clean $\\to$ Feature Eng $\\to$ Train $\\to$ Validate $\\to$ Deploy).",
+    "Define dependency order: Declare task dependencies using Python bitshift operators (`extract >> transform >> train >> validate`).",
+    "Configure execution environment: Assign lightweight tasks to local Celery/Kubernetes workers and offload heavy distributed workloads to Databricks or Spark clusters.",
+    "Implement defensive retries: Configure `retries=3`, `retry_delay=timedelta(minutes=5)`, and exponential backoff to recover from transient cloud network faults.",
+    "Ensure execution idempotency: Use date-partitioned paths (`/data/year=2026/month=04/day=01/`) and atomic database write modes (`overwrite` rather than `append`).",
+    "Set up alerting and SLA monitors: Configure Slack/PagerDuty webhooks on task failure and monitor upstream data arrival SLAs."
+  ],
+  "math": [
+    {
+      "h": "Directed Acyclic Graph (DAG) Condition",
+      "tex": "\\mathcal{G} = (\\mathcal{V}, \\mathcal{E}), \\quad \\forall v_i \\in \\mathcal{V}, \\; \\nexists \\text{ path } v_i \\to \\dots \\to v_i \\quad [\\text{Cycle-Free}]",
+      "p": "A workflow graph must contain zero directed cycles, ensuring deterministic top-down topological sorting of tasks."
+    },
+    {
+      "h": "Topological Sort Task Execution Order",
+      "tex": "(u, v) \\in \\mathcal{E} \\implies \\operatorname{pos}(u) < \\operatorname{pos}(v)",
+      "p": "Downstream task $v$ cannot execute until all upstream ancestor tasks $u$ have successfully completed with exit status zero."
+    },
+    {
+      "h": "Exponential Backoff Retry Interval",
+      "tex": "T_{\\mathrm{wait}}(k) = T_{\\mathrm{base}} \\cdot 2^{k-1} + \\mathcal{U}(0, \\sigma)",
+      "p": "Calculates the delay before retry attempt $k$, adding random jitter $\\mathcal{U}$ to prevent thundering herd congestion on external APIs."
+    }
+  ],
+  "code": "from datetime import datetime, timedelta\n\n# Simplified representation of an Apache Airflow DAG structure in Python\nclass MockTask:\n    def __init__(self, task_id: str):\n        self.task_id = task_id\n        self.downstream = []\n\n    def __rshift__(self, other):\n        \"\"\"Implement bitshift operator >> for dependency chaining.\"\"\"\n        self.downstream.append(other)\n        return other\n\n    def __repr__(self):\n        return f\"Task({self.task_id})\"\n\n# Define ML pipeline DAG tasks\ningest_raw_events   = MockTask(\"ingest_kafka_events\")\nfeature_engineering = MockTask(\"databricks_spark_feature_prep\")\ntrain_lightgbm      = MockTask(\"train_candidate_model\")\nevaluate_champion   = MockTask(\"evaluate_vs_production_champion\")\ndeploy_canary       = MockTask(\"deploy_canary_service\")\nalert_slack_failure = MockTask(\"notify_on_call_slack\")\n\n# Construct pipeline dependency flow using >>\ningest_raw_events >> feature_engineering >> train_lightgbm >> evaluate_champion >> deploy_canary\n\nprint(\"Constructed ML Orchestration DAG:\")\ncurr = ingest_raw_events\nwhile curr.downstream:\n    nxt = curr.downstream[0]\n    print(f\"[{curr.task_id}] ---> triggers ---> [{nxt.task_id}]\")\n    curr = nxt\nprint(\"Deployment gate: deploy_canary runs strictly after evaluate_champion succeeds.\")",
+  "keyPoints": [
+    "Orchestrators formalise complex ML workflows as Directed Acyclic Graphs (DAGs).",
+    "Airflow separates scheduling and dependency management from compute, offloading heavy processing to Databricks/Spark.",
+    "Idempotent task design ensures pipelines can be safely re-run and backfilled without duplicating data.",
+    "Automated retries, exponential backoff, and SLA monitoring ensure fault-tolerant production operations."
+  ],
+  "pitfalls": [
+    "Running heavy ML training on Airflow workers: Airflow schedulers and workers are meant for orchestration; running 50GB model training directly in Airflow exhausts worker RAM and crashes the scheduler.",
+    "Non-idempotent database appends: Using `INSERT INTO` without date partitioning means re-running a failed DAG run duplicates millions of rows.",
+    "Circular dependencies: Introducing cyclic dependencies creates non-terminating deadlock loops that prevent DAG compilation."
+  ],
+  "quiz": [
+    {
+      "q": "Why should heavy machine learning training workloads not be executed directly on Apache Airflow worker nodes?",
+      "o": [
+        "Airflow does not support Python scripts",
+        "Airflow workers are lightweight orchestration processes; memory-heavy jobs can exhaust worker RAM and crash the central scheduler",
+        "Airflow cannot connect to the internet",
+        "Airflow requires all tasks to finish in under 1 second"
+      ],
+      "a": 1,
+      "why": "Airflow is an orchestrator, not a distributed compute engine. Heavy workloads should be delegated to specialized engines like Databricks, Ray, or Kubernetes."
+    },
+    {
+      "q": "What is the property of \"idempotence\" in data engineering and ML orchestration?",
+      "o": [
+        "A pipeline that executes in zero milliseconds",
+        "The property where re-executing a pipeline with the exact same input parameters produces identical output states without creating duplicate data or side effects",
+        "A model that achieves 100% test accuracy",
+        "An encrypted database connection"
+      ],
+      "a": 1,
+      "why": "Idempotent pipelines can be re-run safely after errors or for historical backfilling without corrupting or duplicating existing data tables."
+    },
+    {
+      "q": "What does the `>>` bitshift operator represent in Apache Airflow Python DAG files?",
+      "o": [
+        "Bitwise binary shift of integer variables",
+        "Defining an execution dependency where the downstream task depends on the upstream task finishing successfully",
+        "Dividing numbers by two",
+        "Exporting data to CSV"
+      ],
+      "a": 1,
+      "why": "In Airflow DSL, `task_A >> task_B` defines a directed edge signifying that `task_B` will execute only after `task_A` completes successfully."
+    }
+  ],
+  "related": [
+    "ci-cd-for-ml",
+    "docker-and-reproducible-environments",
+    "feature-stores"
+  ],
+  "keywords": "airflow, databricks, orchestration, dag, directed acyclic graph, idempotency, backfilling, spark, celery worker, retries"
+},
+
+{
+  "id": "data-formats-parquet-and-delta",
+  "short": "Parquet & Delta Lake",
+  "title": "Modern Data Formats: Columnar Parquet and ACID Delta Lake Architecture",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Optimising big data ML storage with columnar compression, dictionary encoding, predicate pushdown, ACID transactions, and time travel.",
+  "lead": "Storing big data in raw text formats like CSV or JSON is disastrous for production machine learning: text files consume huge storage, lack schema enforcement, require slow row-by-row parsing, and cannot be filtered without scanning the entire file. Columnar storage formats like Apache Parquet and transactional lakehouse layers like Delta Lake compress data by up to 90%, enable sub-second predicate pushdown filtering, and provide ACID reliability with time travel.",
+  "analogy": "Imagine a library cataloguing a million books. A row-oriented CSV is like storing the entire text of every book sequentially in a single giant paper roll: finding every book published in 1985 requires reading through every single word of all million books from start to finish. A columnar format is like an organized index where all publication years are listed in one compact column; you scan only that single column in seconds and ignore the rest.",
+  "intuition": [
+    "Row-oriented formats (CSV, JSON, traditional relational tables) store all features of row 1, then row 2, etc. This is optimal for transactional writes (OLTP), but inefficient for machine learning (OLAP), where an algorithm typically selects only 10 features out of 200 columns across 50,000,000 rows.",
+    "Columnar storage (Apache Parquet) stores data column by column. Because all values in a column share the exact same data type, specialised compression algorithms (Run-Length Encoding, Dictionary Encoding, Snappy, ZSTD) achieve massive compression ratios.",
+    "Parquet files embed rich metadata in file footers, recording minimum and maximum values for every column block (row group). When an SQL or Spark query filters `WHERE country = 'GB'`, the engine reads the metadata and skips entire multi-megabyte row groups without touching disk (Predicate Pushdown / Min-Max pruning).",
+    "Delta Lake sits atop Parquet, adding a JSON transaction log (`_delta_log/`). This brings ACID transaction guarantees to data lakes, preventing readers from seeing partially written files, supporting `MERGE` upserts, and enabling \"Time Travel\" to query historical table snapshots."
+  ],
+  "steps": [
+    "Choose compression codec: Select Snappy for balanced speed/compression or ZSTD for archival storage and high-throughput network reads.",
+    "Organise into row groups: Configure Parquet row group size (typically 128MB to 512MB) to balance memory usage during compression against parallel scan efficiency.",
+    "Partition on low-cardinality keys: Partition directory trees on sensible query keys (e.g. `year=2026/month=04/`) while avoiding hive partition over-fragmentation.",
+    "Leverage predicate pushdown: Write queries with explicit column filtering so engines skip non-matching row groups using min/max footer metadata.",
+    "Enable Delta Lake ACID logging: Wrap Parquet tables with Delta Lake to guarantee atomic commits and prevent corrupted reads during pipeline crashes.",
+    "Use Delta Time Travel for model training: Query historical tables via `VERSION AS OF` or `TIMESTAMP AS OF` to ensure absolute training set reproducibility."
+  ],
+  "math": [
+    {
+      "h": "Columnar I/O Scan Reduction Ratio",
+      "tex": "\\mathrm{ScanRatio} = \\frac{\\sum_{j \\in \\mathcal{S}_{\\mathrm{query}}} \\mathrm{size}(C_j)}{\\sum_{k=1}^D \\mathrm{size}(C_k)} \\ll 1.0",
+      "p": "When a model requires feature subset $\\mathcal{S}_{\\mathrm{query}}$, columnar storage reads strictly those columns, reducing disk I/O proportionally."
+    },
+    {
+      "h": "Predicate Pushdown Pruning Condition",
+      "tex": "\\text{Skip Row Group if } \\left( v_{\\mathrm{target}} < \\min(C_{j,g}) \\;\\lor\\; v_{\\mathrm{target}} > \\max(C_{j,g}) \\right)",
+      "p": "If the target query value falls outside the min-max boundary stored in row group header $g$, the entire chunk is bypassed without decompression."
+    },
+    {
+      "h": "Delta Lake ACID Serialisability",
+      "tex": "T_{\\mathrm{commit}}(k) = \\mathrm{AtomicWrite}(\\text{\\_delta\\_log/}00000k.\\mathrm{json})",
+      "p": "State transitions in Delta Lake are recorded through atomic commit logs, guaranteeing that concurrent readers always observe consistent snapshots."
+    }
+  ],
+  "code": "import pandas as pd\nimport numpy as np\nimport os\n\n# Create synthetic dataset with diverse column types\nN = 100_000\ndf = pd.DataFrame({\n    'user_id': [f\"usr_{i:06d}\" for i in range(N)],\n    'category': np.random.choice(['electronics', 'books', 'fashion', 'home'], size=N),\n    'amount': np.random.exponential(scale=50.0, size=N),\n    'is_fraud': np.random.choice([0, 1], size=N, p=[0.99, 0.01])\n})\n\n# 1. Save as uncompressed CSV\ncsv_path = 'sample_data.csv'\ndf.to_csv(csv_path, index=False)\ncsv_size_mb = os.path.getsize(csv_path) / (1024 * 1024)\n\n# 2. Save as columnar Parquet with Snappy compression\nparquet_path = 'sample_data.parquet'\ndf.to_parquet(parquet_path, engine='pyarrow', compression='snappy')\nparquet_size_mb = os.path.getsize(parquet_path) / (1024 * 1024)\n\nprint(f\"CSV File Size:     {csv_size_mb:.2f} MB\")\nprint(f\"Parquet File Size: {parquet_size_mb:.2f} MB\")\nprint(f\"Storage Reduction: {(1.0 - parquet_size_mb / csv_size_mb) * 100:.1f}% space saved!\")\n\n# Clean up temp files\nos.remove(csv_path)\nos.remove(parquet_path)",
+  "keyPoints": [
+    "Parquet stores data column-by-column, enabling high compression ratios and partial column reads.",
+    "Predicate pushdown skips entire blocks of records using min/max statistics in file footers.",
+    "Delta Lake adds an ACID transaction log to Parquet, preventing dirty reads and corrupted writes.",
+    "Delta Time Travel enables querying historical snapshots for reproducible model training."
+  ],
+  "pitfalls": [
+    "The \"Small Files Problem\": Writing thousands of tiny 50KB Parquet files overwhelms storage metadata and degrades query speed; compact files into 128MB–1GB sizes.",
+    "Over-partitioning: Partitioning tables by high-cardinality keys (like user ID or timestamp) creates millions of empty folders; partition only by coarse keys (year, month).",
+    "Ignoring column projection: Running `SELECT *` defeats the entire efficiency advantage of columnar formats by forcing disk reads of all columns."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Apache Parquet achieve significantly higher compression ratios than CSV or JSON formats?",
+      "o": [
+        "Parquet encrypts data with 256-bit AES algorithms",
+        "Parquet stores values column-by-column; identical data types stored contiguously compress far more efficiently using dictionary encoding and run-length encoding",
+        "Parquet deletes duplicate rows automatically",
+        "CSV files cannot be compressed with gzip"
+      ],
+      "a": 1,
+      "why": "Contiguous values of identical types exhibit low entropy and repeated patterns, allowing columnar encoders (Snappy, ZSTD, Dictionary encoding) to compress tightly."
+    },
+    {
+      "q": "What is \"predicate pushdown\" in columnar query engines like Spark and DuckDB?",
+      "o": [
+        "Pushing calculations to client web browsers",
+        "Using min/max summary metadata in file footers to skip reading entire row groups that cannot contain matching rows, without decompressing the data",
+        "Sorting numbers in descending order",
+        "Converting text columns to uppercase"
+      ],
+      "a": 1,
+      "why": "Predicate pushdown evaluates filter conditions against file block metadata. If a row group's maximum value is less than the filter value, the engine skips the block entirely."
+    },
+    {
+      "q": "What critical capability does Delta Lake's transaction log (`_delta_log/`) provide for machine learning pipelines?",
+      "o": [
+        "It translates Python code into C++",
+        "It provides ACID transactions and time travel, allowing models to train on exact historical snapshots of data as they existed at a specific time",
+        "It replaces the need for GPUs during neural network training",
+        "It automatically computes feature importance scores"
+      ],
+      "a": 1,
+      "why": "Delta Lake's transaction log enables ACID guarantees and time-travel querying, ensuring datasets are not corrupted by partial writes and historical states can be reproduced exactly."
+    }
+  ],
+  "related": [
+    "spark-essentials",
+    "data-cleaning-and-validation",
+    "reproducibility"
+  ],
+  "keywords": "parquet, delta lake, columnar storage, acid transactions, predicate pushdown, time travel, compression, lakehouse, snappy"
+},
+
+{
+  "id": "spark-essentials",
+  "short": "Spark essentials",
+  "title": "Apache Spark Essentials for Machine Learning: Resilient Distributed Data and Catalyst Optimisation",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 17,
+  "noLab": true,
+  "usedBy": [],
+  "summary": "Scaling data preprocessing to terabytes with Apache Spark DataFrames, lazy evaluation, Catalyst query optimisation, and distributed shuffle management.",
+  "lead": "Single-node Python tools like pandas and NumPy are constrained by the RAM of a single physical machine. When datasets expand beyond dozens of gigabytes into terabyte scales, single-node processes crash with out-of-memory errors. Apache Spark provides distributed computing across clusters of worker machines, executing complex SQL queries, feature transformations, and matrix operations in parallel with resilient fault tolerance.",
+  "analogy": "Imagine a team sorting and counting 10 million mail packages. If one worker tries to carry the entire warehouse of mail onto their desk at once, the desk collapses under the weight. Instead, a supervisor (Spark Driver) partitions the mail into 100 balanced carts and assigns each cart to a separate sorter (Spark Executor). If one sorter trips and drops their cart, only that single cart is reloaded and recounted, while the remaining 99 continue working uninterrupted.",
+  "intuition": [
+    "Spark's architecture follows a Driver-Executor master-worker topology. The Driver node contains the central coordination process, compiling user code into execution stages. Worker nodes run Executors—JVM processes that store partition data in RAM and execute parallel tasks.",
+    "Spark operations are strictly divided into Transformations (e.g. `select`, `filter`, `groupBy`, `join`) and Actions (e.g. `count`, `collect`, `write`). Transformations are lazily evaluated: Spark records transformations as a logical plan without executing them until an Action is explicitly triggered.",
+    "Lazy evaluation enables the Catalyst Optimiser to inspect the complete workflow end-to-end. Catalyst rearranges operators, pushes filters down to Parquet files (filter pushdown), eliminates dead columns (projection pruning), and selects optimal join strategies (broadcasting small tables to eliminate network shuffles).",
+    "The primary performance bottleneck in distributed computing is data shuffling: redistributing partitions across network cables during wide transformations (such as `groupBy` or `join`). Managing partition counts and leveraging broadcast joins prevents cluster network congestion and out-of-memory executor crashes."
+  ],
+  "steps": [
+    "Initialise SparkSession: Configure driver and executor RAM budgets and cluster manager endpoints.",
+    "Load distributed data: Ingest Parquet, Delta Lake, or CSV partitions lazily into distributed DataFrames.",
+    "Formulate declarative transformations: Apply filtering, aggregations, window functions, and string tokenisation using the PySpark DataFrame API.",
+    "Inspect physical execution plan: Call `df.explain(True)` to review Catalyst optimisation, partition pruning, and broadcast join execution.",
+    "Mitigate shuffle bottlenecks: For joins where one table is under 100MB, wrap the table in `broadcast()` to eliminate full network shuffles.",
+    "Trigger terminal action: Execute an action (`write.parquet()` or `count()`) to trigger the physical DAG computation across the cluster."
+  ],
+  "math": [
+    {
+      "h": "Distributed Partition Work Distribution",
+      "tex": "T_{\\mathrm{exec}} = \\max_{k \\in \\{1, \\dots, P\\}} \\left( \\frac{\\operatorname{Vol}(p_k)}{\\mathrm{Throughput}_k} \\right) + T_{\\mathrm{shuffle}}",
+      "p": "Total job execution time is bounded by the slowest, largest partition (the straggler) plus network shuffle latency $T_{\\mathrm{shuffle}}$."
+    },
+    {
+      "h": "Broadcast Hash Join Communication Cost",
+      "tex": "\\operatorname{Comm}_{\\mathrm{broadcast}} = O(N_{\\mathrm{small}} \\cdot K_{\\mathrm{executors}}) \\ll \\operatorname{Comm}_{\\mathrm{shuffle}} = O(N_{\\mathrm{large}} + N_{\\mathrm{small}})",
+      "p": "Broadcasting small table $N_{\\mathrm{small}}$ avoids shuffling massive dataset $N_{\\mathrm{large}}$ across the network, reducing network I/O by orders of magnitude."
+    },
+    {
+      "h": "Catalyst Relational Algebra Equivalence",
+      "tex": "\\sigma_{\\mathrm{cond}}(\\pi_{\\mathcal{A}}(R)) \\equiv \\pi_{\\mathcal{A}}(\\sigma_{\\mathrm{cond}}(R))",
+      "p": "Catalyst pushes relational filter selection $\\sigma$ prior to column projection $\\pi$ to minimise intermediate data volumes in memory."
+    }
+  ],
+  "code": "from pyspark.sql import SparkSession\nfrom pyspark.sql import functions as F\n\n# Initialise local SparkSession\nspark = SparkSession.builder \\\n    .appName(\"MLFeatureEngineering\") \\\n    .master(\"local[2]\") \\\n    .config(\"spark.sql.shuffle.partitions\", \"4\") \\\n    .getOrCreate()\n\n# Create sample distributed dataset\ndata = [\n    (\"usr_1\", \"electronics\", 250.0, \"2026-04-01\"),\n    (\"usr_2\", \"books\", 15.0, \"2026-04-01\"),\n    (\"usr_1\", \"electronics\", 80.0, \"2026-04-02\"),\n    (\"usr_3\", \"home\", 450.0, \"2026-04-02\"),\n    (\"usr_2\", \"fashion\", 60.0, \"2026-04-03\"),\n]\ncolumns = [\"user_id\", \"category\", \"spend\", \"event_date\"]\ndf = spark.createDataFrame(data, columns)\n\n# Perform distributed lazy transformations\nuser_aggregates = df.filter(F.col(\"spend\") > 20.0) \\\n    .groupBy(\"user_id\") \\\n    .agg(\n        F.sum(\"spend\").alias(\"total_spend\"),\n        F.count(\"category\").alias(\"transaction_count\"),\n        F.avg(\"spend\").alias(\"avg_spend\")\n    )\n\n# Inspect Catalyst execution plan\nuser_aggregates.explain()\n\n# Trigger Action (collect results back to Driver)\nresults = user_aggregates.collect()\nfor row in results:\n    print(f\"User: {row['user_id']} | Total: £{row['total_spend']:.2f} | Count: {row['transaction_count']}\")\n\nspark.stop()",
+  "keyPoints": [
+    "Apache Spark scales data processing across distributed clusters with master-worker topology.",
+    "Transformations are lazily evaluated, allowing the Catalyst Optimiser to construct optimal physical execution plans.",
+    "Network shuffles during wide operations (`groupBy`, `join`) represent the primary performance bottleneck.",
+    "Broadcast joins copy small lookup tables to every worker, eliminating expensive full-cluster data shuffling."
+  ],
+  "pitfalls": [
+    "Data skew: If 90% of user records belong to a single \"guest\" ID, one executor processes almost the entire dataset while others sit idle (the straggler problem).",
+    "Calling `.collect()` on massive DataFrames: Calling `collect()` pulls all distributed data into the Driver node's local RAM, instantly crashing the Driver with an Out-of-Memory error.",
+    "Uncontrolled partitioning: Creating too few partitions under-utilises CPU cores; creating millions of tiny partitions creates excessive task scheduling overhead."
+  ],
+  "quiz": [
+    {
+      "q": "Why are transformations in Apache Spark (like `.filter()` or `.select()`) lazily evaluated?",
+      "o": [
+        "Because Java cannot run immediately",
+        "Lazy evaluation allows Spark's Catalyst optimiser to analyse the complete query graph and reorder operations for maximum execution efficiency before running",
+        "Because Spark requires human confirmation before performing math",
+        "To prevent hard drives from overheating"
+      ],
+      "a": 1,
+      "why": "Lazy evaluation lets the Catalyst query planner optimise the global execution graph—pushing filters down and pruning unused columns before touching disk."
+    },
+    {
+      "q": "What is a \"Broadcast Hash Join\" in Apache Spark?",
+      "o": [
+        "A join that converts all data to radio signals",
+        "A join where a small table is copied in full to every worker executor, eliminating the need to shuffle the large table across the network",
+        "A join that randomly deletes mismatched records",
+        "A join that runs exclusively on GPUs"
+      ],
+      "a": 1,
+      "why": "Broadcast joins distribute the entire small table to every node. Each node can then join its local partition of the massive table without any network shuffle."
+    },
+    {
+      "q": "What catastrophic mistake occurs if an engineer runs `df.collect()` on a 5-terabyte distributed Spark DataFrame?",
+      "o": [
+        "The cluster CPUs will permanently freeze",
+        "Spark will attempt to pull all 5 terabytes across the network into the single Driver node's RAM, instantly causing an Out-of-Memory (OOM) crash",
+        "All Parquet files on disk will be deleted",
+        "The driver node will automatically reformat the hard drive"
+      ],
+      "a": 1,
+      "why": "`collect()` transmits all distributed partitions to the central Driver memory. If the data exceeds Driver RAM, the process crashes."
+    }
+  ],
+  "related": [
+    "data-formats-parquet-and-delta",
+    "orchestration-with-airflow-and-databricks",
+    "pandas-and-polars-patterns"
+  ],
+  "keywords": "spark, pyspark, big data, catalyst optimiser, lazy evaluation, broadcast join, data skew, distributed computing, dataframe"
 }
 ];
