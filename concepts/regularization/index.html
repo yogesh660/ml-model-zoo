@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -108,64 +108,64 @@ Xs = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>07</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q1</span>Which penalty can set weights exactly to zero?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>L2</span></button><button class="opt" type="button"><b>B</b><span>L1</span></button><button class="opt" type="button"><b>C</b><span>Both</span></button><button class="opt" type="button"><b>D</b><span>Neither</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>L1</span></button><button class="opt" type="button"><b>B</b><span>L2</span></button><button class="opt" type="button"><b>C</b><span>Neither</span></button><button class="opt" type="button"><b>D</b><span>Both</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The L1 constraint region has corners on the axes.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q2</span>Early stopping in gradient descent acts like:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>More data</span></button><button class="opt" type="button"><b>B</b><span>A form of regularisation</span></button><button class="opt" type="button"><b>C</b><span>A larger learning rate</span></button><button class="opt" type="button"><b>D</b><span>Feature selection</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>More data</span></button><button class="opt" type="button"><b>B</b><span>Feature selection</span></button><button class="opt" type="button"><b>C</b><span>A larger learning rate</span></button><button class="opt" type="button"><b>D</b><span>A form of regularisation</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It limits how far weights move from their initialisation, similar to an L2 penalty.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q3</span>Why must the intercept (bias term $w_0$) NOT be penalised in regularised regression?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Penalising the intercept makes the objective function non-convex</span></button><button class="opt" type="button"><b>B</b><span>The intercept always has zero gradient in gradient descent</span></button><button class="opt" type="button"><b>C</b><span>Scikit-learn crashes with a LinAlgError if the intercept is regularised</span></button><button class="opt" type="button"><b>D</b><span>The intercept reflects the baseline average of the target; penalising it forces the model predictions towards zero even if the true target mean is $1{,}000{,}000$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Scikit-learn crashes with a LinAlgError if the intercept is regularised</span></button><button class="opt" type="button"><b>B</b><span>The intercept reflects the baseline average of the target; penalising it forces the model predictions towards zero even if the true target mean is $1{,}000{,}000$</span></button><button class="opt" type="button"><b>C</b><span>The intercept always has zero gradient in gradient descent</span></button><button class="opt" type="button"><b>D</b><span>Penalising the intercept makes the objective function non-convex</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The intercept merely centres the regression plane at the target mean. Penalising it shifts predictions towards zero without providing any protection against overfitting feature slopes.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q4</span>Why is feature standardisation (e.g. using StandardScaler) mandatory before applying L1 or L2 regularisation?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Without standardisation, features measured in larger units have smaller coefficients and escape penalisation, while features in smaller units receive unfairly harsh penalties</span></button><button class="opt" type="button"><b>B</b><span>Standardisation ensures that all features have strictly positive values</span></button><button class="opt" type="button"><b>C</b><span>Matrix inversion fails if features have non-zero means</span></button><button class="opt" type="button"><b>D</b><span>L1 regularisation cannot compute absolute values on unstandardised numbers</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Matrix inversion fails if features have non-zero means</span></button><button class="opt" type="button"><b>B</b><span>Standardisation ensures that all features have strictly positive values</span></button><button class="opt" type="button"><b>C</b><span>Without standardisation, features measured in larger units have smaller coefficients and escape penalisation, while features in smaller units receive unfairly harsh penalties</span></button><button class="opt" type="button"><b>D</b><span>L1 regularisation cannot compute absolute values on unstandardised numbers</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If feature 1 is in metres ($w_1 = 1$) and feature 2 is in millimetres ($w_2 = 0.001$), the penalty $\lambda w_1^2 = \lambda$ penalises feature 1 a million times more than feature 2 despite measuring the exact same physical quantity.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q5</span>Geometric intuition: why does the L1 penalty (Lasso) set coefficients exactly to zero, while the L2 penalty (Ridge) only shrinks them smoothly?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The L1 penalty uses a non-convex optimisation algorithm that drops features randomly</span></button><button class="opt" type="button"><b>B</b><span>The L2 ball has sharp corners on the coordinate axes that prevent sparsity</span></button><button class="opt" type="button"><b>C</b><span>The L1 norm constraint region $\{\lVert w\rVert_1 \le t\}$ has sharp vertices located on the coordinate axes where contours of the loss function naturally intersect first, setting coordinates to zero</span></button><button class="opt" type="button"><b>D</b><span>L1 regularisation requires computing matrix eigenvalues</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The L2 ball has sharp corners on the coordinate axes that prevent sparsity</span></button><button class="opt" type="button"><b>B</b><span>The L1 norm constraint region $\{\lVert w\rVert_1 \le t\}$ has sharp vertices located on the coordinate axes where contours of the loss function naturally intersect first, setting coordinates to zero</span></button><button class="opt" type="button"><b>C</b><span>The L1 penalty uses a non-convex optimisation algorithm that drops features randomly</span></button><button class="opt" type="button"><b>D</b><span>L1 regularisation requires computing matrix eigenvalues</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The diamond-shaped $L_1$ ball has sharp corners where one or more coordinates are zero. As smooth elliptical loss contours expand from the unconstrained OLS minimum, they almost always touch an $L_1$ vertex first.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q6</span>From a Bayesian perspective, L2 regularisation (Ridge) corresponds to Maximum A Posteriori (MAP) estimation under which prior distribution on the weights?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>A uniform prior over the interval $[-1, 1]$</span></button><button class="opt" type="button"><b>B</b><span>A Laplace prior centered at zero</span></button><button class="opt" type="button"><b>C</b><span>A Poisson distribution</span></button><button class="opt" type="button"><b>D</b><span>A zero-mean Gaussian (normal) prior $w_j \sim \mathcal{N}(0, \tau^2)$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A uniform prior over the interval $[-1, 1]$</span></button><button class="opt" type="button"><b>B</b><span>A Laplace prior centered at zero</span></button><button class="opt" type="button"><b>C</b><span>A zero-mean Gaussian (normal) prior $w_j \sim \mathcal{N}(0, \tau^2)$</span></button><button class="opt" type="button"><b>D</b><span>A Poisson distribution</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Under a Gaussian prior $p(w) \propto \exp\left(-\frac{\lVert w\rVert_2^2}{2\tau^2}\right)$, taking the negative logarithm yields $\frac{1}{2\tau^2}\lVert w\rVert_2^2$, which is identical to the L2 penalty with $\lambda = 1/\tau^2$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q7</span>When two input features $X_1$ and $X_2$ are strongly collinear, how do L1 (Lasso) and L2 (Ridge) regularisation handle them differently?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Ridge always sets one feature to zero, while Lasso retains both</span></button><button class="opt" type="button"><b>B</b><span>Lasso retains both features with equal weights, while Ridge zeroes out both features</span></button><button class="opt" type="button"><b>C</b><span>Ridge tends to shrink their coefficients equally and share the weight between them, whereas Lasso tends to arbitrarily pick one feature and force the other to zero</span></button><button class="opt" type="button"><b>D</b><span>Both penalties cause the weights to diverge to infinity</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Ridge tends to shrink their coefficients equally and share the weight between them, whereas Lasso tends to arbitrarily pick one feature and force the other to zero</span></button><button class="opt" type="button"><b>B</b><span>Both penalties cause the weights to diverge to infinity</span></button><button class="opt" type="button"><b>C</b><span>Lasso retains both features with equal weights, while Ridge zeroes out both features</span></button><button class="opt" type="button"><b>D</b><span>Ridge always sets one feature to zero, while Lasso retains both</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The quadratic $L_2$ penalty prefers two moderate weights over one large weight (since $1^2 + 1^2 = 2 &lt; 2^2 + 0^2 = 4$). The linear $L_1$ penalty has no preference between $(1, 1)$ and $(2, 0)$, so numerical noise leads it to pick one arbitrarily.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>What is Elastic Net regularisation, and when is it preferred over pure Lasso?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It linearly combines both L1 and L2 penalties ($\lambda_1 \lVert w\rVert_1 + \lambda_2 \lVert w\rVert_2^2$); it is preferred when there are groups of correlated features, allowing feature selection while retaining grouped predictive variables together</span></button><button class="opt" type="button"><b>B</b><span>It combines decision trees with linear models to avoid overfitting</span></button><button class="opt" type="button"><b>C</b><span>It applies regularisation only to the first principal component</span></button><button class="opt" type="button"><b>D</b><span>It sets all weights strictly to either $+1$ or $-1$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It applies regularisation only to the first principal component</span></button><button class="opt" type="button"><b>B</b><span>It combines decision trees with linear models to avoid overfitting</span></button><button class="opt" type="button"><b>C</b><span>It sets all weights strictly to either $+1$ or $-1$</span></button><button class="opt" type="button"><b>D</b><span>It linearly combines both L1 and L2 penalties ($\lambda_1 \lVert w\rVert_1 + \lambda_2 \lVert w\rVert_2^2$); it is preferred when there are groups of correlated features, allowing feature selection while retaining grouped predictive variables together</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Pure Lasso struggles with multicollinear groups by selecting one at random. Elastic Net's L2 component encourages grouped selection (correlated features enter together), while its L1 component maintains overall sparsity.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q9</span>How does Dropout in deep neural networks act as a form of regularisation?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>By randomly deactivating a fraction of neurons during each training pass, it prevents co-adaptation of features and approximates training an ensemble of exponentially many subnetworks</span></button><button class="opt" type="button"><b>B</b><span>By setting the learning rate to zero for 50% of the epochs</span></button><button class="opt" type="button"><b>C</b><span>By pruning 50% of the input data rows</span></button><button class="opt" type="button"><b>D</b><span>By forcing the network weights to follow a Laplace distribution</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By pruning 50% of the input data rows</span></button><button class="opt" type="button"><b>B</b><span>By randomly deactivating a fraction of neurons during each training pass, it prevents co-adaptation of features and approximates training an ensemble of exponentially many subnetworks</span></button><button class="opt" type="button"><b>C</b><span>By forcing the network weights to follow a Laplace distribution</span></button><button class="opt" type="button"><b>D</b><span>By setting the learning rate to zero for 50% of the epochs</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Dropout prevents neurons from relying on idiosyncratic co-dependencies with specific neighbours. Each iteration trains a thinned network, and testing averages their collective behaviour.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>For a 2D weight vector $w = [3.0, -4.0]$, what are the L1 norm $\lVert w\rVert_1$, the L2 norm squared $\lVert w\rVert_2^2$, and the Elastic Net penalty with $\lambda_1 = 2.0$ and $\lambda_2 = 0.5$ ($\Omega(w) = \lambda_1 \lVert w\rVert_1 + \lambda_2 \lVert w\rVert_2^2$)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\lVert w\rVert_1 = 5.0$, $\lVert w\rVert_2^2 = 25.0$, and total penalty $= 22.5$</span></button><button class="opt" type="button"><b>B</b><span>$\lVert w\rVert_1 = 7.0$, $\lVert w\rVert_2^2 = 25.0$, and total penalty $= 26.5$</span></button><button class="opt" type="button"><b>C</b><span>$\lVert w\rVert_1 = 7.0$, $\lVert w\rVert_2^2 = 49.0$, and total penalty $= 38.5$</span></button><button class="opt" type="button"><b>D</b><span>$\lVert w\rVert_1 = 1.0$, $\lVert w\rVert_2^2 = 7.0$, and total penalty $= 5.5$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\lVert w\rVert_1 = 1.0$, $\lVert w\rVert_2^2 = 7.0$, and total penalty $= 5.5$</span></button><button class="opt" type="button"><b>B</b><span>$\lVert w\rVert_1 = 7.0$, $\lVert w\rVert_2^2 = 49.0$, and total penalty $= 38.5$</span></button><button class="opt" type="button"><b>C</b><span>$\lVert w\rVert_1 = 7.0$, $\lVert w\rVert_2^2 = 25.0$, and total penalty $= 26.5$</span></button><button class="opt" type="button"><b>D</b><span>$\lVert w\rVert_1 = 5.0$, $\lVert w\rVert_2^2 = 25.0$, and total penalty $= 22.5$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\lVert w\rVert_1 = |3.0| + |-4.0| = 3.0 + 4.0 = 7.0$. $\lVert w\rVert_2^2 = 3.0^2 + (-4.0)^2 = 9.0 + 16.0 = 25.0$. Elastic Net penalty $= \lambda_1 \lVert w\rVert_1 + \lambda_2 \lVert w\rVert_2^2 = 2.0(7.0) + 0.5(25.0) = 14.0 + 12.5 = 26.5$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q11</span>In coordinate descent for Lasso regression with orthonormal features, the update rule uses the soft-thresholding operator $S_\lambda(\hat{w}) = \operatorname{sign}(\hat{w})\max(0, |\hat{w}| - \lambda)$. If the unregularised OLS coefficients are $\hat{w}_1 = 2.50$ and $\hat{w}_2 = -0.60$, what are their Lasso estimates when penalty threshold is $\lambda = 1.00$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$w_1 = 2.50$ and $w_2 = 0.00$</span></button><button class="opt" type="button"><b>B</b><span>$w_1 = 1.50$ and $w_2 = -0.60$</span></button><button class="opt" type="button"><b>C</b><span>$w_1 = 1.50$ and $w_2 = 0.00$</span></button><button class="opt" type="button"><b>D</b><span>$w_1 = 0.50$ and $w_2 = -1.60$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$w_1 = 0.50$ and $w_2 = -1.60$</span></button><button class="opt" type="button"><b>B</b><span>$w_1 = 1.50$ and $w_2 = 0.00$</span></button><button class="opt" type="button"><b>C</b><span>$w_1 = 1.50$ and $w_2 = -0.60$</span></button><button class="opt" type="button"><b>D</b><span>$w_1 = 2.50$ and $w_2 = 0.00$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For $\hat{w}_1 = 2.50$: $|\hat{w}_1| = 2.50 &gt; 1.00$, so $S_1(2.50) = \operatorname{sign}(2.50)(2.50 - 1.00) = +1.50$. For $\hat{w}_2 = -0.60$: $|\hat{w}_2| = 0.60 \le 1.00$, so $\max(0, 0.60 - 1.00) = 0$, giving $S_1(-0.60) = 0.00$. The parameter whose unregularised magnitude is smaller than $\lambda$ is truncated exactly to zero.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q12</span>In a 1D linear regression with orthonormal data ($x^\top x = 1$), the OLS estimate is $\hat{w}_{\text{OLS}} = 6.0$. In Ridge regression, the estimate is $\hat{w}_{\text{Ridge}} = \frac{\hat{w}_{\text{OLS}}}{1 + \lambda}$. If $\lambda = 2.0$, what is the Ridge estimate, and by what percentage is the OLS weight shrunk?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\hat{w}_{\text{Ridge}} = 3.0$, shrunk by $50.0\%$</span></button><button class="opt" type="button"><b>B</b><span>$\hat{w}_{\text{Ridge}} = 4.0$, shrunk by $33.3\%$</span></button><button class="opt" type="button"><b>C</b><span>$\hat{w}_{\text{Ridge}} = 1.0$, shrunk by $83.3\%$</span></button><button class="opt" type="button"><b>D</b><span>$\hat{w}_{\text{Ridge}} = 2.0$, shrunk by $66.7\%$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\hat{w}_{\text{Ridge}} = 2.0$, shrunk by $66.7\%$</span></button><button class="opt" type="button"><b>B</b><span>$\hat{w}_{\text{Ridge}} = 3.0$, shrunk by $50.0\%$</span></button><button class="opt" type="button"><b>C</b><span>$\hat{w}_{\text{Ridge}} = 1.0$, shrunk by $83.3\%$</span></button><button class="opt" type="button"><b>D</b><span>$\hat{w}_{\text{Ridge}} = 4.0$, shrunk by $33.3\%$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\hat{w}_{\text{Ridge}} = \frac{6.0}{1 + 2.0} = \frac{6.0}{3.0} = 2.0$. The weight is reduced from $6.0$ to $2.0$, a drop of $4.0$, which corresponds to a shrinkage of $\frac{4.0}{6.0} = \frac{2}{3} \approx 66.7\%$.</div>
           </div>
         </div>
@@ -203,11 +203,11 @@ Xs = <span class="f">StandardScaler</span>().<span class="f">fit_transform</span
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

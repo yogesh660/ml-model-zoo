@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -146,14 +146,14 @@ model = <span class="f">GRUClassifier</span>()
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Erase the memory</span></button><button class="opt" type="button"><b>B</b><span>Copy the previous state forward almost unchanged</span></button><button class="opt" type="button"><b>C</b><span>Ignore the input entirely and output zero</span></button><button class="opt" type="button"><b>D</b><span>Reset the network</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $h_t = (1 - z_t)h_{t-1} + z_t\tilde h_t \approx h_{t-1}$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q2</span>What is the reset gate for?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Clearing the output</span></button><button class="opt" type="button"><b>B</b><span>Deciding how much history to use when proposing new content</span></button><button class="opt" type="button"><b>C</b><span>Resetting the weights</span></button><button class="opt" type="button"><b>D</b><span>Choosing the learning rate</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Resetting the weights</span></button><button class="opt" type="button"><b>B</b><span>Choosing the learning rate</span></button><button class="opt" type="button"><b>C</b><span>Clearing the output</span></button><button class="opt" type="button"><b>D</b><span>Deciding how much history to use when proposing new content</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It scales $h_{t-1}$ inside the candidate computation.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q3</span>Compared with an LSTM, a GRU:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Has more gates</span></button><button class="opt" type="button"><b>B</b><span>Has no separate cell state and fewer parameters</span></button><button class="opt" type="button"><b>C</b><span>Cannot be trained with backpropagation</span></button><button class="opt" type="button"><b>D</b><span>Is a Transformer</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Has no separate cell state and fewer parameters</span></button><button class="opt" type="button"><b>B</b><span>Cannot be trained with backpropagation</span></button><button class="opt" type="button"><b>C</b><span>Is a Transformer</span></button><button class="opt" type="button"><b>D</b><span>Has more gates</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Two gates and one state vector instead of three gates plus a cell.</div>
           </div>
           <div class="q" data-answer="2">
@@ -176,9 +176,9 @@ model = <span class="f">GRUClassifier</span>()
             <div class="opts"><button class="opt" type="button"><b>A</b><span>A pure representation of the current input $x_t$ alone ($\tanh(W x_t + b)$), completely ignoring historical context</span></button><button class="opt" type="button"><b>B</b><span>A copy of the previous hidden state $h_{t-1}$</span></button><button class="opt" type="button"><b>C</b><span>A vector of zeros</span></button><button class="opt" type="button"><b>D</b><span>The linear derivative of the update gate</span></button></div>
             <div class="why" hidden><strong>Why:</strong> When $r_t = 0$, the historical context $r_t \odot h_{t-1} = 0$, so $\tilde h_t = \tanh(W x_t + b)$. This allows the GRU to discard irrelevant past history when starting a new sequence segment (such as the beginning of a sentence).</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q8</span>For the same input dimension $d_{\text{in}}$ and hidden size $d_{\text{hid}}$, roughly what is the ratio of trainable parameters in a GRU compared with a standard LSTM?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1 : 2$ (GRU has half the parameters of an LSTM)</span></button><button class="opt" type="button"><b>B</b><span>$2 : 3$</span></button><button class="opt" type="button"><b>C</b><span>$1 : 1$ (they have identical parameter counts)</span></button><button class="opt" type="button"><b>D</b><span>$3 : 4$ (GRU has 3 sets of matrix operations per step, while LSTM has 4)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1 : 2$ (GRU has half the parameters of an LSTM)</span></button><button class="opt" type="button"><b>B</b><span>$3 : 4$ (GRU has 3 sets of matrix operations per step, while LSTM has 4)</span></button><button class="opt" type="button"><b>C</b><span>$2 : 3$</span></button><button class="opt" type="button"><b>D</b><span>$1 : 1$ (they have identical parameter counts)</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A GRU computes 3 sets of projections (update gate $z_t$, reset gate $r_t$, and candidate $\tilde h_t$). A standard LSTM computes 4 sets of projections (forget gate $f_t$, input gate $i_t$, output gate $o_t$, and candidate $\tilde c_t$). Therefore, a GRU has approximately $\frac{3}{4} = 75\%$ of the parameters of an LSTM of identical width.</div>
           </div>
           <div class="q" data-answer="3">
@@ -198,7 +198,7 @@ model = <span class="f">GRUClassifier</span>()
           </div>
           <div class="q" data-answer="0">
             <p><span>Q12</span>A GRU unit receives zero inputs ($x_t = 0, \tilde h_t = 0$) while its update gate stays fixed at $z_t = 0.10$. Starting from $h_0 = 1.0$, what is the value of the hidden state $h_3$ after 3 time steps?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.729$</span></button><button class="opt" type="button"><b>B</b><span>$0.810$</span></button><button class="opt" type="button"><b>C</b><span>$0.700$</span></button><button class="opt" type="button"><b>D</b><span>$0.900$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.729$</span></button><button class="opt" type="button"><b>B</b><span>$0.700$</span></button><button class="opt" type="button"><b>C</b><span>$0.900$</span></button><button class="opt" type="button"><b>D</b><span>$0.810$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> With $\tilde h_t = 0$, $h_t = (1 - z_t) h_{t-1} = 0.90 \times h_{t-1}$. Over 3 steps, $h_3 = 0.90^3 \times h_0 = 0.729 \times 1.0 = 0.729$. Assuming a linear reduction of $0.10 \times 3 = 0.30 \implies 0.70$ is a common pitfall that overlooks geometric decay.</div>
           </div>
         </div>
@@ -236,12 +236,12 @@ model = <span class="f">GRUClassifier</span>()
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

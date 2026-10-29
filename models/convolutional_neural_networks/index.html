@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -143,64 +143,64 @@ model = <span class="f">SmallCNN</span>()
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>10</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q1</span>Why do CNNs need far fewer parameters than dense networks on images?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>They use smaller images</span></button><button class="opt" type="button"><b>B</b><span>One small filter is shared across every position</span></button><button class="opt" type="button"><b>C</b><span>They skip the bias</span></button><button class="opt" type="button"><b>D</b><span>They use pooling only</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>They use smaller images</span></button><button class="opt" type="button"><b>B</b><span>They use pooling only</span></button><button class="opt" type="button"><b>C</b><span>One small filter is shared across every position</span></button><button class="opt" type="button"><b>D</b><span>They skip the bias</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Weight sharing: the same $3\times3$ weights are applied everywhere.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q2</span>A 32×32 input, 5×5 filter, padding 0, stride 1 gives an output of:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>32×32</span></button><button class="opt" type="button"><b>B</b><span>28×28</span></button><button class="opt" type="button"><b>C</b><span>27×27</span></button><button class="opt" type="button"><b>D</b><span>16×16</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>28×28</span></button><button class="opt" type="button"><b>B</b><span>32×32</span></button><button class="opt" type="button"><b>C</b><span>16×16</span></button><button class="opt" type="button"><b>D</b><span>27×27</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $(32 + 0 - 5)/1 + 1 = 28$.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q3</span>What does max-pooling add?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>More parameters</span></button><button class="opt" type="button"><b>B</b><span>Downsampling and tolerance to small shifts</span></button><button class="opt" type="button"><b>C</b><span>Colour invariance</span></button><button class="opt" type="button"><b>D</b><span>Non-linearity only</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Colour invariance</span></button><button class="opt" type="button"><b>B</b><span>Downsampling and tolerance to small shifts</span></button><button class="opt" type="button"><b>C</b><span>Non-linearity only</span></button><button class="opt" type="button"><b>D</b><span>More parameters</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Taking the max over a window keeps the strongest response wherever it occurs in that window.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q4</span>In a convolutional layer, if an object in an image shifts 5 pixels to the right, what happens to the resulting feature map?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The feature map collapses to a scalar zero</span></button><button class="opt" type="button"><b>B</b><span>The feature values are completely inverted because spatial locality is lost</span></button><button class="opt" type="button"><b>C</b><span>The output feature map remains in the exact same coordinates without moving (strict invariance)</span></button><button class="opt" type="button"><b>D</b><span>The activated features shift 5 pixels to the right in the feature map (translation equivariance)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The activated features shift 5 pixels to the right in the feature map (translation equivariance)</span></button><button class="opt" type="button"><b>B</b><span>The output feature map remains in the exact same coordinates without moving (strict invariance)</span></button><button class="opt" type="button"><b>C</b><span>The feature map collapses to a scalar zero</span></button><button class="opt" type="button"><b>D</b><span>The feature values are completely inverted because spatial locality is lost</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Convolution is translation equivariant: shifting the input causes the output feature map to shift by the corresponding amount, preserving the spatial layout of detected patterns. Pooling subsequently introduces local translation invariance.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q5</span>Why do modern CNN architectures often use Global Average Pooling (GAP) before the final classification layer instead of flattening all features into a massive dense layer?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>GAP drastically reduces parameter count and prevents overfitting by collapsing each 2D feature map into a single average value</span></button><button class="opt" type="button"><b>B</b><span>GAP enforces that all input images must have exactly the same fixed pixel resolution</span></button><button class="opt" type="button"><b>C</b><span>GAP doubles the number of trainable parameters to improve model capacity</span></button><button class="opt" type="button"><b>D</b><span>GAP eliminates the need for activation functions throughout the entire network</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>GAP drastically reduces parameter count and prevents overfitting by collapsing each 2D feature map into a single average value</span></button><button class="opt" type="button"><b>B</b><span>GAP eliminates the need for activation functions throughout the entire network</span></button><button class="opt" type="button"><b>C</b><span>GAP enforces that all input images must have exactly the same fixed pixel resolution</span></button><button class="opt" type="button"><b>D</b><span>GAP doubles the number of trainable parameters to improve model capacity</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Flattening a $7 \times 7 \times 512$ tensor into a dense layer requires millions of parameters, making the classifier head prone to overfitting. Global average pooling reduces each spatial map to its mean scalar, producing a compact 512-dimensional vector with zero extra parameters.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q6</span>What is meant by the "effective receptive field" of a neuron in a deep convolutional network?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The total number of non-zero parameters in the neuron's filter kernel</span></button><button class="opt" type="button"><b>B</b><span>The number of channels output by the layer containing that neuron</span></button><button class="opt" type="button"><b>C</b><span>The specific region of the original raw input image that can influence that neuron's activation value</span></button><button class="opt" type="button"><b>D</b><span>The memory allocated to the neuron on the GPU during the backward pass</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of channels output by the layer containing that neuron</span></button><button class="opt" type="button"><b>B</b><span>The total number of non-zero parameters in the neuron's filter kernel</span></button><button class="opt" type="button"><b>C</b><span>The specific region of the original raw input image that can influence that neuron's activation value</span></button><button class="opt" type="button"><b>D</b><span>The memory allocated to the neuron on the GPU during the backward pass</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The receptive field is the patch of pixels in the input image that feeds into that unit through successive convolutions and pooling layers. Deeper units possess wider receptive fields, enabling them to recognise high-level shapes and full objects.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>What is the primary purpose of using a $1 \times 1$ convolutional layer (pointwise convolution) in deep networks like ResNet or Inception?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To rotate the input image by 90 degrees</span></button><button class="opt" type="button"><b>B</b><span>To perform spatial downsampling instead of max pooling</span></button><button class="opt" type="button"><b>C</b><span>To increase the spatial resolution of the feature maps</span></button><button class="opt" type="button"><b>D</b><span>To change the number of feature channels while combining cross-channel information, without altering spatial height and width</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To increase the spatial resolution of the feature maps</span></button><button class="opt" type="button"><b>B</b><span>To change the number of feature channels while combining cross-channel information, without altering spatial height and width</span></button><button class="opt" type="button"><b>C</b><span>To rotate the input image by 90 degrees</span></button><button class="opt" type="button"><b>D</b><span>To perform spatial downsampling instead of max pooling</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A $1 \times 1$ filter operates across all input channels at a single pixel location. It computes a linear combination of channels followed by a non-linearity, allowing the network to project channels up or down cheaply while leaving spatial dimensions $(H, W)$ intact.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>A convolutional layer receives a $64 \times 64$ feature map. It applies a $3 \times 3$ filter with padding $P = 1$ and stride $S = 2$. What is the spatial resolution of the output feature map?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$31 \times 31$</span></button><button class="opt" type="button"><b>B</b><span>$33 \times 33$</span></button><button class="opt" type="button"><b>C</b><span>$32 \times 32$</span></button><button class="opt" type="button"><b>D</b><span>$64 \times 64$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$64 \times 64$</span></button><button class="opt" type="button"><b>B</b><span>$31 \times 31$</span></button><button class="opt" type="button"><b>C</b><span>$33 \times 33$</span></button><button class="opt" type="button"><b>D</b><span>$32 \times 32$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Using $H_{\text{out}} = \lfloor \frac{H_{\text{in}} + 2P - F}{S} \rfloor + 1$: here $\lfloor \frac{64 + 2(1) - 3}{2} \rfloor + 1 = \lfloor \frac{63}{2} \rfloor + 1 = 31 + 1 = 32$. A stride of 2 with padding 1 cleanly halves the spatial dimension from 64 to 32.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q9</span>When training a CNN on image classification, why is data augmentation (such as random horizontal flips and random crops) applied strictly to the training split and NEVER to the validation or test splits?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Validation and test splits must measure performance on uncorrupted, real-world data distributions to provide an unbiased evaluation</span></button><button class="opt" type="button"><b>B</b><span>Data augmentation reduces the number of samples in the validation set</span></button><button class="opt" type="button"><b>C</b><span>Applying augmentation to validation data would corrupt the GPU memory cache</span></button><button class="opt" type="button"><b>D</b><span>Convolutional layers cannot process augmented images during evaluation mode</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Data augmentation reduces the number of samples in the validation set</span></button><button class="opt" type="button"><b>B</b><span>Applying augmentation to validation data would corrupt the GPU memory cache</span></button><button class="opt" type="button"><b>C</b><span>Convolutional layers cannot process augmented images during evaluation mode</span></button><button class="opt" type="button"><b>D</b><span>Validation and test splits must measure performance on uncorrupted, real-world data distributions to provide an unbiased evaluation</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Validation and test sets serve as ground-truth benchmarks for real-world generalisation. Augmenting them would introduce synthetic artefacts and prevent fair, reproducible measurement of model performance.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>A 2D convolutional layer receives an input with 32 channels and produces 64 output feature maps using $3 \times 3$ filters. Each output filter has an independent learnable bias term. How many learnable parameters does this layer contain?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>6,144</span></button><button class="opt" type="button"><b>B</b><span>18,432</span></button><button class="opt" type="button"><b>C</b><span>73,792</span></button><button class="opt" type="button"><b>D</b><span>18,496</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>6,144</span></button><button class="opt" type="button"><b>B</b><span>73,792</span></button><button class="opt" type="button"><b>C</b><span>18,496</span></button><button class="opt" type="button"><b>D</b><span>18,432</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each of the 64 filters spans all 32 input channels with a $3 \times 3$ kernel, giving $3 \times 3 \times 32 = 288$ weights per filter. Adding 1 bias per filter gives 289 parameters per filter. In total, $64 \times 289 = 18,496$ learnable parameters (completely invariant to the input image's spatial height and width).</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q11</span>A $3 \times 3$ patch of an image channel has values $\begin{bmatrix} 1 &amp; 0 &amp; 2 \\ 0 &amp; 3 &amp; 1 \\ 2 &amp; 1 &amp; 0 \end{bmatrix}$. It is convolved with a filter kernel $\begin{bmatrix} 0 &amp; 1 &amp; 0 \\ 1 &amp; -2 &amp; 1 \\ 0 &amp; 1 &amp; 0 \end{bmatrix}$ with bias $b = 1.0$. What is the linear pre-activation value $S$ at this position?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$-3.0$</span></button><button class="opt" type="button"><b>B</b><span>$+1.0$</span></button><button class="opt" type="button"><b>C</b><span>$+4.0$</span></button><button class="opt" type="button"><b>D</b><span>$-5.0$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$-3.0$</span></button><button class="opt" type="button"><b>B</b><span>$-5.0$</span></button><button class="opt" type="button"><b>C</b><span>$+1.0$</span></button><button class="opt" type="button"><b>D</b><span>$+4.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Compute the sum of elementwise products: row 1 gives $1(0) + 0(1) + 2(0) = 0$; row 2 gives $0(1) + 3(-2) + 1(1) = -5$; row 3 gives $2(0) + 1(1) + 0(0) = 1$. Adding the rows gives $0 - 5 + 1 = -4$. Finally, adding bias $b = 1.0$ yields $S = -4 + 1 = -3.0$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q12</span>During the backward pass (backpropagation) through a $2 \times 2$ max-pooling layer with stride 2, how does the incoming gradient $\frac{\partial L}{\partial y}$ get routed to the 4 input units of the pooling window?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The gradient is divided equally by 4 and distributed to all 4 input units</span></button><button class="opt" type="button"><b>B</b><span>The gradient is routed to the unit with the smallest value to push it towards the mean</span></button><button class="opt" type="button"><b>C</b><span>The full gradient is routed entirely to the single unit that had the maximum forward value, while the other 3 units receive a gradient of zero</span></button><button class="opt" type="button"><b>D</b><span>The gradient is dropped completely because pooling layers have zero learnable parameters</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The full gradient is routed entirely to the single unit that had the maximum forward value, while the other 3 units receive a gradient of zero</span></button><button class="opt" type="button"><b>B</b><span>The gradient is divided equally by 4 and distributed to all 4 input units</span></button><button class="opt" type="button"><b>C</b><span>The gradient is dropped completely because pooling layers have zero learnable parameters</span></button><button class="opt" type="button"><b>D</b><span>The gradient is routed to the unit with the smallest value to push it towards the mean</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The forward operation is $y = \max(x_1, x_2, x_3, x_4)$. The partial derivative $\frac{\partial y}{\partial x_i}$ is 1 for the winning unit ($x_i = \max$) and 0 for all other units. By the chain rule, the entire incoming gradient flows solely through the winning unit, while the losing units receive zero gradient.</div>
           </div>
         </div>
@@ -238,13 +238,13 @@ model = <span class="f">SmallCNN</span>()
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/architecture.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/architecture.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

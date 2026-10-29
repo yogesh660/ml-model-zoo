@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -134,24 +134,24 @@ hdb = <span class="f">HDBSCAN</span>(min_cluster_size=<span class="n">15</span>)
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q1</span>What problem of DBSCAN does HDBSCAN solve?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Needing k</span></button><button class="opt" type="button"><b>B</b><span>A single global density threshold</span></button><button class="opt" type="button"><b>C</b><span>Detecting noise</span></button><button class="opt" type="button"><b>D</b><span>Speed</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Detecting noise</span></button><button class="opt" type="button"><b>B</b><span>Needing k</span></button><button class="opt" type="button"><b>C</b><span>A single global density threshold</span></button><button class="opt" type="button"><b>D</b><span>Speed</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It considers all density levels and picks stable clusters from different ones.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q2</span>What is the primary hyperparameter in HDBSCAN that specifies the smallest grouping an analyst considers a legitimate cluster?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>eps</span></button><button class="opt" type="button"><b>B</b><span>n_clusters</span></button><button class="opt" type="button"><b>C</b><span>min_cluster_size</span></button><button class="opt" type="button"><b>D</b><span>max_leaf_nodes</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>max_leaf_nodes</span></button><button class="opt" type="button"><b>B</b><span>eps</span></button><button class="opt" type="button"><b>C</b><span>n_clusters</span></button><button class="opt" type="button"><b>D</b><span>min_cluster_size</span></button></div>
             <div class="why" hidden><strong>Why:</strong> <code>min_cluster_size</code> is HDBSCAN's primary intuitive parameter, setting the minimum number of observations required to form a distinct cluster rather than being treated as noise.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q3</span>What label does HDBSCAN assign to points deemed unclustered noise or background clutter?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>NaN</span></button><button class="opt" type="button"><b>B</b><span>0</span></button><button class="opt" type="button"><b>C</b><span>999</span></button><button class="opt" type="button"><b>D</b><span>-1</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>999</span></button><button class="opt" type="button"><b>B</b><span>-1</span></button><button class="opt" type="button"><b>C</b><span>NaN</span></button><button class="opt" type="button"><b>D</b><span>0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Following the scikit-learn density-based convention, HDBSCAN assigns label <code>-1</code> to points classified as noise.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q4</span>What transformation is applied to density scale $\varepsilon$ to define $\lambda$ in HDBSCAN's condensed tree?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\lambda = 1 / \varepsilon$</span></button><button class="opt" type="button"><b>B</b><span>$\lambda = \varepsilon^2$</span></button><button class="opt" type="button"><b>C</b><span>$\lambda = \log(\varepsilon)$</span></button><button class="opt" type="button"><b>D</b><span>$\lambda = \exp(-\varepsilon)$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\lambda = \varepsilon^2$</span></button><button class="opt" type="button"><b>B</b><span>$\lambda = \exp(-\varepsilon)$</span></button><button class="opt" type="button"><b>C</b><span>$\lambda = \log(\varepsilon)$</span></button><button class="opt" type="button"><b>D</b><span>$\lambda = 1 / \varepsilon$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In HDBSCAN, $\lambda = 1/\varepsilon$ represents inverse distance (density). As $\varepsilon$ shrinks toward zero, density $\lambda$ increases toward infinity.</div>
           </div>
           <div class="q" data-answer="0">
@@ -159,39 +159,39 @@ hdb = <span class="f">HDBSCAN</span>(min_cluster_size=<span class="n">15</span>)
             <div class="opts"><button class="opt" type="button"><b>A</b><span>As $\max\{\text{core}_k(a), \; \text{core}_k(b), \; d(a, b)\}$</span></button><button class="opt" type="button"><b>B</b><span>As the average of their Euclidean distance and their core distances</span></button><button class="opt" type="button"><b>C</b><span>As $\min\{\text{core}_k(a), \; \text{core}_k(b)\} \times d(a, b)$</span></button><button class="opt" type="button"><b>D</b><span>As the cosine distance between their feature vectors</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Mutual reachability distance takes the maximum of point $a$'s core distance, point $b$'s core distance, and the raw distance between them. This artificially pushes points in sparse regions far apart, preventing noise from bridging clusters.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q6</span>What happens during the tree condensation step in HDBSCAN when a cluster splits into two components?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both components are always registered as new independent clusters</span></button><button class="opt" type="button"><b>B</b><span>The algorithm restarts with a smaller sample size</span></button><button class="opt" type="button"><b>C</b><span>If one component has fewer than min_cluster_size points, it is treated as points falling out of the parent cluster rather than a genuine split</span></button><button class="opt" type="button"><b>D</b><span>The larger component is discarded as background noise</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The larger component is discarded as background noise</span></button><button class="opt" type="button"><b>B</b><span>Both components are always registered as new independent clusters</span></button><button class="opt" type="button"><b>C</b><span>The algorithm restarts with a smaller sample size</span></button><button class="opt" type="button"><b>D</b><span>If one component has fewer than min_cluster_size points, it is treated as points falling out of the parent cluster rather than a genuine split</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The condensed tree ignores splits where one branch has fewer than <code>min_cluster_size</code> points, recording them as points gradually detaching from the cluster as density increases.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q7</span>How does HDBSCAN select the final flat clusters from the condensed tree under the default "eom" (Excess of Mass) method?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It cuts the tree with a single horizontal line at a fixed $\lambda$</span></button><button class="opt" type="button"><b>B</b><span>It picks the top $k$ clusters with the highest centroid variance</span></button><button class="opt" type="button"><b>C</b><span>It selects only the individual leaf nodes of the tree</span></button><button class="opt" type="button"><b>D</b><span>It navigates the tree from the bottom up, comparing the stability of parent clusters against the sum of stabilities of their child clusters to maximise overall persistent mass</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It navigates the tree from the bottom up, comparing the stability of parent clusters against the sum of stabilities of their child clusters to maximise overall persistent mass</span></button><button class="opt" type="button"><b>B</b><span>It picks the top $k$ clusters with the highest centroid variance</span></button><button class="opt" type="button"><b>C</b><span>It cuts the tree with a single horizontal line at a fixed $\lambda$</span></button><button class="opt" type="button"><b>D</b><span>It selects only the individual leaf nodes of the tree</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The Excess of Mass (EOM) criterion compares parent stability $S(\text{parent})$ with the sum of children stabilities. If the children's combined stability is greater, the children are selected; otherwise the parent is retained.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>What does the <code>hdb.probabilities_</code> attribute quantify in a fitted HDBSCAN model?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The probability that the entire dataset is normally distributed</span></button><button class="opt" type="button"><b>B</b><span>The degree of cluster membership strength for each point, reflecting how persistently the point remained in its assigned cluster across density levels</span></button><button class="opt" type="button"><b>C</b><span>The posterior probability under a fitted Gaussian mixture</span></button><button class="opt" type="button"><b>D</b><span>The p-value of a statistical test against the null hypothesis of randomness</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The p-value of a statistical test against the null hypothesis of randomness</span></button><button class="opt" type="button"><b>B</b><span>The posterior probability under a fitted Gaussian mixture</span></button><button class="opt" type="button"><b>C</b><span>The probability that the entire dataset is normally distributed</span></button><button class="opt" type="button"><b>D</b><span>The degree of cluster membership strength for each point, reflecting how persistently the point remained in its assigned cluster across density levels</span></button></div>
             <div class="why" hidden><strong>Why:</strong> <code>hdb.probabilities_</code> indicates how tightly bound each point is to its assigned cluster, evaluated as $\frac{\lambda_p - \lambda_{\text{birth}}}{\lambda_{\text{death}} - \lambda_{\text{birth}}}$. Noise points have probability 0.0.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q9</span>If an analyst wants HDBSCAN to produce smaller, more fine-grained sub-clusters rather than broad aggregate clusters, which setting should they change?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Switch cluster_selection_method from "eom" to "leaf"</span></button><button class="opt" type="button"><b>B</b><span>Increase min_cluster_size to a much larger number</span></button><button class="opt" type="button"><b>C</b><span>Set metric="precomputed"</span></button><button class="opt" type="button"><b>D</b><span>Set algorithm="brute"</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Set algorithm="brute"</span></button><button class="opt" type="button"><b>B</b><span>Set metric="precomputed"</span></button><button class="opt" type="button"><b>C</b><span>Switch cluster_selection_method from "eom" to "leaf"</span></button><button class="opt" type="button"><b>D</b><span>Increase min_cluster_size to a much larger number</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Setting <code>cluster_selection_method="leaf"</code> selects the finest, homogeneous leaf sub-clusters at the tips of the condensed tree rather than merging them into broad parent clusters under Excess of Mass.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q10</span>Points $a$ and $b$ are separated by Euclidean distance $d(a, b) = 1.8$. In a 5-nearest neighbour density estimate, point $a$ has core distance $\text{core}_5(a) = 1.2$ and point $b$ has core distance $\text{core}_5(b) = 2.5$. What is their mutual reachability distance $d_{\text{mreach}}(a, b)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>1.2</span></button><button class="opt" type="button"><b>B</b><span>2.5</span></button><button class="opt" type="button"><b>C</b><span>1.8</span></button><button class="opt" type="button"><b>D</b><span>5.5</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>1.8</span></button><button class="opt" type="button"><b>B</b><span>2.5</span></button><button class="opt" type="button"><b>C</b><span>5.5</span></button><button class="opt" type="button"><b>D</b><span>1.2</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The mutual reachability distance is $\max\{\text{core}(a), \text{core}(b), d(a, b)\} = \max\{1.2, 2.5, 1.8\} = 2.5$. Because point $b$ sits in a sparser neighbourhood ($\text{core} = 2.5$), the effective distance between them is widened to 2.5.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q11</span>A cluster $C$ is born at density $\lambda_{\text{birth}} = 0.50$ (corresponding to $\varepsilon = 2.0$). The cluster contains 3 points whose disappearance densities are $\lambda_1 = 1.50$, $\lambda_2 = 2.00$, and $\lambda_3 = 2.50$. What is the stability $S(C) = \sum_{p \in C} (\lambda_p - \lambda_{\text{birth}})$ of this cluster?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>1.50</span></button><button class="opt" type="button"><b>B</b><span>3.00</span></button><button class="opt" type="button"><b>C</b><span>4.50</span></button><button class="opt" type="button"><b>D</b><span>6.00</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>6.00</span></button><button class="opt" type="button"><b>B</b><span>3.00</span></button><button class="opt" type="button"><b>C</b><span>4.50</span></button><button class="opt" type="button"><b>D</b><span>1.50</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Stability measures the cumulative persistence of points in the cluster above the birth threshold: $(1.50 - 0.50) + (2.00 - 0.50) + (2.50 - 0.50) = 1.00 + 1.50 + 2.00 = 4.50$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q12</span>In the condensed tree of an HDBSCAN model, a parent cluster has stability $S(\text{parent}) = 8.5$. At a higher density, the parent splits into two child clusters with stabilities $S(\text{child}_1) = 4.0$ and $S(\text{child}_2) = 5.2$. Under the Excess of Mass (EOM) selection algorithm, which cluster(s) are selected?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The parent cluster is selected because an individual cluster with stability 8.5 is larger than either child alone</span></button><button class="opt" type="button"><b>B</b><span>All points in the parent cluster are reclassified as noise</span></button><button class="opt" type="button"><b>C</b><span>All three clusters are selected simultaneously</span></button><button class="opt" type="button"><b>D</b><span>Both child clusters are selected because their combined stability (9.2) exceeds the parent's stability (8.5)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both child clusters are selected because their combined stability (9.2) exceeds the parent's stability (8.5)</span></button><button class="opt" type="button"><b>B</b><span>All three clusters are selected simultaneously</span></button><button class="opt" type="button"><b>C</b><span>The parent cluster is selected because an individual cluster with stability 8.5 is larger than either child alone</span></button><button class="opt" type="button"><b>D</b><span>All points in the parent cluster are reclassified as noise</span></button></div>
             <div class="why" hidden><strong>Why:</strong> EOM compares the parent's stability against the sum of the children's stabilities: $S(\text{children}) = 4.0 + 5.2 = 9.2 &gt; 8.5$. Because the children accumulate more persistence mass, the algorithm selects the two children.</div>
           </div>
         </div>
@@ -229,11 +229,11 @@ hdb = <span class="f">HDBSCAN</span>(min_cluster_size=<span class="n">15</span>)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

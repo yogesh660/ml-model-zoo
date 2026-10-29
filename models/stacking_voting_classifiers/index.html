@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -136,64 +136,64 @@ stack = <span class="f">StackingClassifier</span>(base, final_estimator=<span cl
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>Why does stacking use out-of-fold predictions?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To save time</span></button><button class="opt" type="button"><b>B</b><span>In-sample predictions are overconfident and leak labels into the meta-model</span></button><button class="opt" type="button"><b>C</b><span>To balance classes</span></button><button class="opt" type="button"><b>D</b><span>It does not need them</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To save time</span></button><button class="opt" type="button"><b>B</b><span>To balance classes</span></button><button class="opt" type="button"><b>C</b><span>It does not need them</span></button><button class="opt" type="button"><b>D</b><span>In-sample predictions are overconfident and leak labels into the meta-model</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Base models have memorised their training labels; the meta-model would learn to trust them too much.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q2</span>Soft voting averages:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Class labels</span></button><button class="opt" type="button"><b>B</b><span>Predicted probabilities</span></button><button class="opt" type="button"><b>C</b><span>Feature importances</span></button><button class="opt" type="button"><b>D</b><span>Model weights</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Predicted probabilities</span></button><button class="opt" type="button"><b>B</b><span>Class labels</span></button><button class="opt" type="button"><b>C</b><span>Model weights</span></button><button class="opt" type="button"><b>D</b><span>Feature importances</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Averaging probabilities lets confident models outweigh uncertain ones.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>What is a meta-model (or blender) in a Stacking Classifier?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>A model trained on the out-of-fold predictions of the base estimators to produce the final classification</span></button><button class="opt" type="button"><b>B</b><span>The base classifier that achieved the highest individual test accuracy</span></button><button class="opt" type="button"><b>C</b><span>A heuristic rule that selects a model at random</span></button><button class="opt" type="button"><b>D</b><span>A neural network that generates synthetic features</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A heuristic rule that selects a model at random</span></button><button class="opt" type="button"><b>B</b><span>The base classifier that achieved the highest individual test accuracy</span></button><button class="opt" type="button"><b>C</b><span>A model trained on the out-of-fold predictions of the base estimators to produce the final classification</span></button><button class="opt" type="button"><b>D</b><span>A neural network that generates synthetic features</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Stacking uses a two-level hierarchy: Level 0 consists of several diverse base models, and Level 1 is the meta-model (often a simple Logistic Regression) trained on the base models' out-of-fold predictions.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q4</span>Why are simple linear models (like Logistic Regression) preferred as the meta-learner in stacking?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Scikit-learn does not support non-linear meta-learners</span></button><button class="opt" type="button"><b>B</b><span>Non-linear models cannot process probability inputs</span></button><button class="opt" type="button"><b>C</b><span>Complex non-linear meta-models easily overfit the small set of base model predictions</span></button><button class="opt" type="button"><b>D</b><span>Linear models guarantee 100% training accuracy</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Complex non-linear meta-models easily overfit the small set of base model predictions</span></button><button class="opt" type="button"><b>B</b><span>Linear models guarantee 100% training accuracy</span></button><button class="opt" type="button"><b>C</b><span>Non-linear models cannot process probability inputs</span></button><button class="opt" type="button"><b>D</b><span>Scikit-learn does not support non-linear meta-learners</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The input features to the meta-model are already strong, low-dimensional predictions. A simple, regularised linear meta-model learns an effective weighted combination without overfitting.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q5</span>In scikit-learn's VotingClassifier, what does the voting='hard' setting do?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It averages the predicted class probabilities and takes the argmax</span></button><button class="opt" type="button"><b>B</b><span>It assigns double weight to tree-based models</span></button><button class="opt" type="button"><b>C</b><span>It trains each model for twice as many epochs</span></button><button class="opt" type="button"><b>D</b><span>It predicts the class label that received the majority of votes across the individual base classifiers</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It averages the predicted class probabilities and takes the argmax</span></button><button class="opt" type="button"><b>B</b><span>It assigns double weight to tree-based models</span></button><button class="opt" type="button"><b>C</b><span>It predicts the class label that received the majority of votes across the individual base classifiers</span></button><button class="opt" type="button"><b>D</b><span>It trains each model for twice as many epochs</span></button></div>
             <div class="why" hidden><strong>Why:</strong> voting='hard' uses majority rule: each base classifier casts a vote for its predicted class label, and the class with the most votes wins.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q6</span>Why does combining three identical Random Forests in a Voting Classifier provide virtually no benefit, whereas combining a Random Forest, an SVM, and Logistic Regression often works well?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Voting classifiers require features to be re-engineered for each tree</span></button><button class="opt" type="button"><b>B</b><span>Scikit-learn raises an exception if base models are of the same class</span></button><button class="opt" type="button"><b>C</b><span>Three identical models triple the training loss</span></button><button class="opt" type="button"><b>D</b><span>Models from the same algorithm family share identical inductive biases and make the same errors; ensembling only reduces error when base models make uncorrelated, complementary mistakes</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Scikit-learn raises an exception if base models are of the same class</span></button><button class="opt" type="button"><b>B</b><span>Voting classifiers require features to be re-engineered for each tree</span></button><button class="opt" type="button"><b>C</b><span>Models from the same algorithm family share identical inductive biases and make the same errors; ensembling only reduces error when base models make uncorrelated, complementary mistakes</span></button><button class="opt" type="button"><b>D</b><span>Three identical models triple the training loss</span></button></div>
             <div class="why" hidden><strong>Why:</strong> An ensemble succeeds when the errors of individual models are uncorrelated. If model A makes a mistake, diverse models B and C can outvote it; identical models make identical mistakes and reinforce each other's errors.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q7</span>What goes wrong if you train the meta-model on the base models' in-sample training predictions instead of out-of-fold predictions?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The meta-model produces negative probabilities</span></button><button class="opt" type="button"><b>B</b><span>In-sample predictions take ten times longer to compute</span></button><button class="opt" type="button"><b>C</b><span>The base models may have memorised the training data (e.g. 1-NN or deep trees achieving 100% accuracy), causing the meta-model to over-rely on overfitted models and fail on test data</span></button><button class="opt" type="button"><b>D</b><span>Training predictions cannot be converted to floats</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The base models may have memorised the training data (e.g. 1-NN or deep trees achieving 100% accuracy), causing the meta-model to over-rely on overfitted models and fail on test data</span></button><button class="opt" type="button"><b>B</b><span>In-sample predictions take ten times longer to compute</span></button><button class="opt" type="button"><b>C</b><span>Training predictions cannot be converted to floats</span></button><button class="opt" type="button"><b>D</b><span>The meta-model produces negative probabilities</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In-sample predictions leak labels because flexible base models have near-zero training error. The meta-model learns that base model predictions are infallible, failing to learn which models generalise best on unseen data.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q8</span>In scikit-learn's StackingClassifier, what does setting passthrough=True do?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It passes the original input features $X$ directly to the meta-model alongside the base model predictions</span></button><button class="opt" type="button"><b>B</b><span>It bypasses base model training and trains only the meta-model</span></button><button class="opt" type="button"><b>C</b><span>It ignores all training errors</span></button><button class="opt" type="button"><b>D</b><span>It skips cross-validation to speed up fitting</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It ignores all training errors</span></button><button class="opt" type="button"><b>B</b><span>It passes the original input features $X$ directly to the meta-model alongside the base model predictions</span></button><button class="opt" type="button"><b>C</b><span>It skips cross-validation to speed up fitting</span></button><button class="opt" type="button"><b>D</b><span>It bypasses base model training and trains only the meta-model</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By default, the meta-model only sees the base model predictions. Setting passthrough=True concatenates the original features with the base predictions, allowing the meta-model to learn context-dependent routing.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q9</span>Why is probability calibration important when using voting='soft' across heterogeneous base models (e.g. Naive Bayes and SVM)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because calibration reduces test set inference latency</span></button><button class="opt" type="button"><b>B</b><span>Because soft voting cannot average uncalibrated numbers</span></button><button class="opt" type="button"><b>C</b><span>Because SVM probabilities are always zero without calibration</span></button><button class="opt" type="button"><b>D</b><span>Because an uncalibrated model that outputs extreme, overconfident probabilities (like Naive Bayes) will hijack the average and dominate the ensemble decision</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because SVM probabilities are always zero without calibration</span></button><button class="opt" type="button"><b>B</b><span>Because soft voting cannot average uncalibrated numbers</span></button><button class="opt" type="button"><b>C</b><span>Because an uncalibrated model that outputs extreme, overconfident probabilities (like Naive Bayes) will hijack the average and dominate the ensemble decision</span></button><button class="opt" type="button"><b>D</b><span>Because calibration reduces test set inference latency</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Soft voting calculates an unweighted or weighted mean of probabilities. If one model's probabilities are pushed to $0.99$ while another's are well-calibrated around $0.65$, the overconfident model will dominate the vote regardless of whether it is more accurate.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>A weighted soft-voting ensemble combines three models with weights $w = [2, 1, 1]$ (normalised weights 0.50, 0.25, 0.25). For a test sample, their predicted probabilities for Class 1 are: Model 1 ($0.30$), Model 2 ($0.80$), Model 3 ($0.70$). What is the ensemble predicted probability for Class 1, and what class is predicted at threshold 0.50?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Probability $= 0.600$, predicted Class 1</span></button><button class="opt" type="button"><b>B</b><span>Probability $= 0.525$, predicted Class 1</span></button><button class="opt" type="button"><b>C</b><span>Probability $= 0.450$, predicted Class 0</span></button><button class="opt" type="button"><b>D</b><span>Probability $= 0.400$, predicted Class 0</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Probability $= 0.450$, predicted Class 0</span></button><button class="opt" type="button"><b>B</b><span>Probability $= 0.400$, predicted Class 0</span></button><button class="opt" type="button"><b>C</b><span>Probability $= 0.525$, predicted Class 1</span></button><button class="opt" type="button"><b>D</b><span>Probability $= 0.600$, predicted Class 1</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Weighted average is $\frac{2(0.30) + 1(0.80) + 1(0.70)}{4} = \frac{0.60 + 0.80 + 0.70}{4} = \frac{2.10}{4} = 0.525$, which is above the $0.50$ threshold, so the ensemble predicts Class 1. (Unweighted soft voting would give $1.80 / 3 = 0.600$; counting Model 1 twice pulls the result down.)</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q11</span>Three models vote on a binary classification problem: Model 1 ($P=0.49$, votes Class 0), Model 2 ($P=0.49$, votes Class 0), Model 3 ($P=0.98$, votes Class 1). What are the predictions of unweighted hard voting and unweighted soft voting?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both predict Class 0</span></button><button class="opt" type="button"><b>B</b><span>Hard voting predicts Class 1; soft voting predicts Class 0</span></button><button class="opt" type="button"><b>C</b><span>Hard voting predicts Class 0; soft voting predicts Class 1</span></button><button class="opt" type="button"><b>D</b><span>Both predict Class 1</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Hard voting predicts Class 1; soft voting predicts Class 0</span></button><button class="opt" type="button"><b>B</b><span>Both predict Class 0</span></button><button class="opt" type="button"><b>C</b><span>Hard voting predicts Class 0; soft voting predicts Class 1</span></button><button class="opt" type="button"><b>D</b><span>Both predict Class 1</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Hard voting: Models 1 and 2 vote Class 0, Model 3 votes Class 1. Class 0 wins (2 to 1). Soft voting: average probability is $(0.49 + 0.49 + 0.98) / 3 = 1.96 / 3 \approx 0.653 &gt; 0.50$, predicting Class 1.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q12</span>By the Condorcet Jury Theorem, suppose 3 independent classifiers each have an accuracy of $p = 0.70$. What is the probability that a majority vote of these 3 classifiers is correct?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$78.4\%$</span></button><button class="opt" type="button"><b>B</b><span>$70.0\%$</span></button><button class="opt" type="button"><b>C</b><span>$84.0\%$</span></button><button class="opt" type="button"><b>D</b><span>$90.0\%$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$78.4\%$</span></button><button class="opt" type="button"><b>B</b><span>$70.0\%$</span></button><button class="opt" type="button"><b>C</b><span>$90.0\%$</span></button><button class="opt" type="button"><b>D</b><span>$84.0\%$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A 3-voter majority is correct if all 3 are correct ($0.70^3 = 0.343$) or exactly 2 are correct ($3 \times 0.70^2 \times 0.30 = 0.441$). Total probability $= 0.343 + 0.441 = 0.784$ (78.4%). Ensembling improves accuracy from 70% to 78.4%.</div>
           </div>
         </div>
@@ -231,11 +231,11 @@ stack = <span class="f">StackingClassifier</span>(base, final_estimator=<span cl
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

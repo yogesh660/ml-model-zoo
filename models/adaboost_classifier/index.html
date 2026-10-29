@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -130,14 +130,14 @@ ada = <span class="f">AdaBoostClassifier</span>(estimator=<span class="f">Decisi
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>What happens to the weight of a misclassified training example after a round?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It goes down</span></button><button class="opt" type="button"><b>B</b><span>It goes up, so the next learner focuses on it</span></button><button class="opt" type="button"><b>C</b><span>It is removed</span></button><button class="opt" type="button"><b>D</b><span>Nothing</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It goes down</span></button><button class="opt" type="button"><b>B</b><span>It is removed</span></button><button class="opt" type="button"><b>C</b><span>Nothing</span></button><button class="opt" type="button"><b>D</b><span>It goes up, so the next learner focuses on it</span></button></div>
             <div class="why" hidden><strong>Why:</strong> It is multiplied by $e^{\alpha_m} &gt; 1$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q2</span>AdaBoost is gradient boosting with which loss?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Squared error</span></button><button class="opt" type="button"><b>B</b><span>Exponential loss</span></button><button class="opt" type="button"><b>C</b><span>Hinge loss</span></button><button class="opt" type="button"><b>D</b><span>Log-loss</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Exponential loss</span></button><button class="opt" type="button"><b>B</b><span>Squared error</span></button><button class="opt" type="button"><b>C</b><span>Log-loss</span></button><button class="opt" type="button"><b>D</b><span>Hinge loss</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Its weight update follows from minimising $\sum_i e^{-y_iF(x_i)}$ stage by stage.</div>
           </div>
           <div class="q" data-answer="2">
@@ -145,49 +145,49 @@ ada = <span class="f">AdaBoostClassifier</span>(estimator=<span class="f">Decisi
             <div class="opts"><button class="opt" type="button"><b>A</b><span>A high-degree polynomial Support Vector Machine</span></button><button class="opt" type="button"><b>B</b><span>A deep 20-layer neural network</span></button><button class="opt" type="button"><b>C</b><span>A decision stump (a decision tree with max_depth=1)</span></button><button class="opt" type="button"><b>D</b><span>A Gaussian Naive Bayes model</span></button></div>
             <div class="why" hidden><strong>Why:</strong> AdaBoost is specifically designed to combine very simple weak learners (classifiers slightly better than random guessing), typically one-split decision stumps (DecisionTreeClassifier(max_depth=1)).</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q4</span>In AdaBoost, what is the weight $\alpha_m$ assigned to a base learner that has a weighted training error rate $\varepsilon_m = 0.5$ (random guess in binary classification)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\alpha_m = +\infty$</span></button><button class="opt" type="button"><b>B</b><span>$\alpha_m = 1.0$</span></button><button class="opt" type="button"><b>C</b><span>$\alpha_m = 0.5$</span></button><button class="opt" type="button"><b>D</b><span>$\alpha_m = 0.0$ (it receives zero voting weight in the final ensemble)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\alpha_m = 1.0$</span></button><button class="opt" type="button"><b>B</b><span>$\alpha_m = 0.5$</span></button><button class="opt" type="button"><b>C</b><span>$\alpha_m = 0.0$ (it receives zero voting weight in the final ensemble)</span></button><button class="opt" type="button"><b>D</b><span>$\alpha_m = +\infty$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The learner weight is $\alpha_m = \frac{1}{2}\log(\frac{1 - \varepsilon_m}{\varepsilon_m})$. When $\varepsilon_m = 0.5$, $\frac{1 - 0.5}{0.5} = 1$, and $\frac{1}{2}\log(1) = 0.0$, giving a random learner zero influence.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q5</span>Why is AdaBoost notoriously sensitive to mislabelled data and severe outliers?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because AdaBoost uses exponential loss, misclassified outliers have their sample weights multiplied exponentially round after round, forcing later learners to waste capacity chasing unclassifiable noise</span></button><button class="opt" type="button"><b>B</b><span>Outliers cause coordinate descent to divide by zero</span></button><button class="opt" type="button"><b>C</b><span>AdaBoost deletes all data points that have high residual errors</span></button><button class="opt" type="button"><b>D</b><span>AdaBoost can only operate on strictly convex feature spaces</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because AdaBoost uses exponential loss, misclassified outliers have their sample weights multiplied exponentially round after round, forcing later learners to waste capacity chasing unclassifiable noise</span></button><button class="opt" type="button"><b>B</b><span>Outliers cause coordinate descent to divide by zero</span></button><button class="opt" type="button"><b>C</b><span>AdaBoost can only operate on strictly convex feature spaces</span></button><button class="opt" type="button"><b>D</b><span>AdaBoost deletes all data points that have high residual errors</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In AdaBoost, an outlier that is consistently misclassified receives weight $w_i \propto e^{\sum \alpha_m}$. This exponential weight explosion dominates the sample distribution, causing the algorithm to overfit heavily to corrupted labels.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q6</span>What is the role of the learning_rate parameter in scikit-learn's AdaBoostClassifier?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It specifies the proportion of samples used for training</span></button><button class="opt" type="button"><b>B</b><span>It controls the step size of stochastic gradient descent on the input features</span></button><button class="opt" type="button"><b>C</b><span>It sets the threshold for early stopping</span></button><button class="opt" type="button"><b>D</b><span>It scales the contribution of each base learner: $F_m(x) = F_{m-1}(x) + \eta \alpha_m h_m(x)$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It controls the step size of stochastic gradient descent on the input features</span></button><button class="opt" type="button"><b>B</b><span>It specifies the proportion of samples used for training</span></button><button class="opt" type="button"><b>C</b><span>It sets the threshold for early stopping</span></button><button class="opt" type="button"><b>D</b><span>It scales the contribution of each base learner: $F_m(x) = F_{m-1}(x) + \eta \alpha_m h_m(x)$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The learning rate $\eta \in (0, 1]$ shrinks each tree's stage contribution $\alpha_m$. Smaller learning rates act as regularisation, requiring more estimators (n_estimators) but improving generalisation.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q7</span>Why are sample weights normalised to sum to 1 ($\sum_{i=1}^n w_i = 1$) after every boosting round in AdaBoost?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To ensure the base learner training time remains constant</span></button><button class="opt" type="button"><b>B</b><span>Because scikit-learn only accepts integer weights</span></button><button class="opt" type="button"><b>C</b><span>To prevent weights from exceeding the maximum floating-point representation and to maintain a valid probability distribution over training instances</span></button><button class="opt" type="button"><b>D</b><span>To enforce zero training error on the subsequent round</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To prevent weights from exceeding the maximum floating-point representation and to maintain a valid probability distribution over training instances</span></button><button class="opt" type="button"><b>B</b><span>Because scikit-learn only accepts integer weights</span></button><button class="opt" type="button"><b>C</b><span>To enforce zero training error on the subsequent round</span></button><button class="opt" type="button"><b>D</b><span>To ensure the base learner training time remains constant</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Normalising weights by the partition function $Z_m = \sum_i w_i \exp(-\alpha_m y_i h_m(x_i))$ ensures weights form a proper probability distribution that can be passed to base learners without numerical overflow.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>Why does AdaBoost sometimes continue to decrease test set error even after training classification error reaches 0%?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it increases the classification margins $y_i F(x_i)$ of training examples, pushing decision boundaries further away from data points and improving robustness</span></button><button class="opt" type="button"><b>B</b><span>Because it starts deleting redundant trees from the ensemble</span></button><button class="opt" type="button"><b>C</b><span>Because it begins training on the test set automatically</span></button><button class="opt" type="button"><b>D</b><span>Because the learning rate automatically doubles when training error hits zero</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it begins training on the test set automatically</span></button><button class="opt" type="button"><b>B</b><span>Because the learning rate automatically doubles when training error hits zero</span></button><button class="opt" type="button"><b>C</b><span>Because it starts deleting redundant trees from the ensemble</span></button><button class="opt" type="button"><b>D</b><span>Because it increases the classification margins $y_i F(x_i)$ of training examples, pushing decision boundaries further away from data points and improving robustness</span></button></div>
             <div class="why" hidden><strong>Why:</strong> As shown by Schapire et al. (1998), subsequent boosting rounds continue to increase the margins of easy points (the distance from the boundary), creating a wider margin separator similar to SVMs.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q9</span>What is the main difference between SAMME and SAMME.R in scikit-learn's AdaBoostClassifier?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>SAMME is for regression; SAMME.R is for classification</span></button><button class="opt" type="button"><b>B</b><span>SAMME uses discrete class predictions ($h_m(x) \in \{-1, +1\}$), while SAMME.R uses real-valued predicted class probabilities to update sample weights, typically converging faster</span></button><button class="opt" type="button"><b>C</b><span>SAMME uses decision trees; SAMME.R uses neural networks</span></button><button class="opt" type="button"><b>D</b><span>SAMME requires feature scaling; SAMME.R does not</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>SAMME uses discrete class predictions ($h_m(x) \in \{-1, +1\}$), while SAMME.R uses real-valued predicted class probabilities to update sample weights, typically converging faster</span></button><button class="opt" type="button"><b>B</b><span>SAMME is for regression; SAMME.R is for classification</span></button><button class="opt" type="button"><b>C</b><span>SAMME uses decision trees; SAMME.R uses neural networks</span></button><button class="opt" type="button"><b>D</b><span>SAMME requires feature scaling; SAMME.R does not</span></button></div>
             <div class="why" hidden><strong>Why:</strong> SAMME.R (Real AdaBoost) utilises probability estimates $P(y=c \mid x)$ produced by base estimators rather than hard categorical decisions, providing continuous confidence updates that converge with fewer iterations.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q10</span>A decision stump achieves a weighted training error rate of $\varepsilon_m = 0.20$ on a binary classification problem ($y \in \{-1, +1\}$). What is its exact learner weight $\alpha_m = \frac{1}{2}\log(\frac{1 - \varepsilon_m}{\varepsilon_m})$? (Given $\log(4) \approx 1.3863$).</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\alpha_m = 0.4000$</span></button><button class="opt" type="button"><b>B</b><span>$\alpha_m = 1.3863$</span></button><button class="opt" type="button"><b>C</b><span>$\alpha_m = 0.6931$</span></button><button class="opt" type="button"><b>D</b><span>$\alpha_m = 0.8000$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\alpha_m = 0.6931$</span></button><button class="opt" type="button"><b>B</b><span>$\alpha_m = 1.3863$</span></button><button class="opt" type="button"><b>C</b><span>$\alpha_m = 0.8000$</span></button><button class="opt" type="button"><b>D</b><span>$\alpha_m = 0.4000$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> With $\varepsilon_m = 0.20$: $\frac{1 - \varepsilon_m}{\varepsilon_m} = \frac{0.80}{0.20} = 4.0$. Then $\alpha_m = \frac{1}{2}\log(4.0) = \frac{1}{2}(1.38629) \approx 0.6931$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q11</span>An observation has initial weight $w_i = 0.10$. A weak learner with weight $\alpha_m = 0.6931$ (so $e^{\alpha_m} = 2.0$ and $e^{-\alpha_m} = 0.5$) misclassifies this observation ($y_i h_m(x_i) = -1$). Before global normalisation, what is the unnormalised updated weight $w_i'$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$w_i' = 0.20$</span></button><button class="opt" type="button"><b>B</b><span>$w_i' = 0.05$</span></button><button class="opt" type="button"><b>C</b><span>$w_i' = 0.10$</span></button><button class="opt" type="button"><b>D</b><span>$w_i' = 0.40$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$w_i' = 0.05$</span></button><button class="opt" type="button"><b>B</b><span>$w_i' = 0.20$</span></button><button class="opt" type="button"><b>C</b><span>$w_i' = 0.10$</span></button><button class="opt" type="button"><b>D</b><span>$w_i' = 0.40$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The unnormalised weight update is $w_i \leftarrow w_i \exp(-\alpha_m y_i h_m(x_i))$. Since the example is misclassified, $y_i h_m(x_i) = -1$, giving $w_i' = w_i \exp(+\alpha_m) = 0.10 \times 2.0 = 0.20$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>An AdaBoost ensemble consists of 3 base learners with weights $\alpha_1 = 0.8, \alpha_2 = 0.5, \alpha_3 = 0.6$. For a test sample, their predictions are $h_1(x) = -1, h_2(x) = +1, h_3(x) = -1$. What is the raw score $F(x) = \sum_{m=1}^3 \alpha_m h_m(x)$ and the final predicted label $\operatorname{sign}(F(x))$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$F(x) = 0.0$, predicting tie</span></button><button class="opt" type="button"><b>B</b><span>$F(x) = +0.3$, predicting $+1$</span></button><button class="opt" type="button"><b>C</b><span>$F(x) = -1.9$, predicting $-1$</span></button><button class="opt" type="button"><b>D</b><span>$F(x) = -0.9$, predicting $-1$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$F(x) = 0.0$, predicting tie</span></button><button class="opt" type="button"><b>B</b><span>$F(x) = +0.3$, predicting $+1$</span></button><button class="opt" type="button"><b>C</b><span>$F(x) = -0.9$, predicting $-1$</span></button><button class="opt" type="button"><b>D</b><span>$F(x) = -1.9$, predicting $-1$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $F(x) = 0.8(-1) + 0.5(+1) + 0.6(-1) = -0.8 + 0.5 - 0.6 = -0.9$. Since $F(x) = -0.9 &lt; 0$, $\operatorname{sign}(F(x)) = -1$.</div>
           </div>
         </div>
@@ -225,11 +225,11 @@ ada = <span class="f">AdaBoostClassifier</span>(estimator=<span class="f">Decisi
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

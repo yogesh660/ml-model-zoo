@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -127,64 +127,64 @@ qda = <span class="f">QuadraticDiscriminantAnalysis</span>(reg_param=<span class
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q1</span>QDA differs from LDA by:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Using a sigmoid</span></button><button class="opt" type="button"><b>B</b><span>Estimating a separate covariance per class</span></button><button class="opt" type="button"><b>C</b><span>Ignoring the priors</span></button><button class="opt" type="button"><b>D</b><span>Using kernels</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Estimating a separate covariance per class</span></button><button class="opt" type="button"><b>B</b><span>Ignoring the priors</span></button><button class="opt" type="button"><b>C</b><span>Using kernels</span></button><button class="opt" type="button"><b>D</b><span>Using a sigmoid</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Separate covariances keep the quadratic term in each score, so boundaries curve.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q2</span>QDA with 50 features and 2 classes estimates roughly how many covariance numbers?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>50</span></button><button class="opt" type="button"><b>B</b><span>100</span></button><button class="opt" type="button"><b>C</b><span>2,550</span></button><button class="opt" type="button"><b>D</b><span>2</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>2,550</span></button><button class="opt" type="button"><b>B</b><span>100</span></button><button class="opt" type="button"><b>C</b><span>2</span></button><button class="opt" type="button"><b>D</b><span>50</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each symmetric $50\times 50$ matrix has $50\cdot 51/2 = 1275$ free numbers; two classes give 2,550.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>What geometric shapes can the decision boundaries of Quadratic Discriminant Analysis take in 2D space?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Strictly axis-aligned rectangular boxes</span></button><button class="opt" type="button"><b>B</b><span>Straight lines only</span></button><button class="opt" type="button"><b>C</b><span>Closed polygons with sharp corners</span></button><button class="opt" type="button"><b>D</b><span>Conic sections such as parabolas, ellipses, and hyperbolas</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Closed polygons with sharp corners</span></button><button class="opt" type="button"><b>B</b><span>Strictly axis-aligned rectangular boxes</span></button><button class="opt" type="button"><b>C</b><span>Conic sections such as parabolas, ellipses, and hyperbolas</span></button><button class="opt" type="button"><b>D</b><span>Straight lines only</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Because each class has its own covariance matrix $\Sigma_k$, the quadratic terms $x^\top \Sigma_k^{-1} x$ do not cancel out, resulting in general quadratic equations whose 2D level sets are conic sections (ellipses, parabolas, and hyperbolas).</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q4</span>What does the regularisation parameter reg_param in scikit-learn's QuadraticDiscriminantAnalysis do?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It regularises the covariance estimate by shrinking each $\Sigma_k$ towards the identity matrix: $(1 - \gamma)\Sigma_k + \gamma I$</span></button><button class="opt" type="button"><b>B</b><span>It drops features whose variance is below a threshold</span></button><button class="opt" type="button"><b>C</b><span>It controls the maximum depth of the quadratic expansion</span></button><button class="opt" type="button"><b>D</b><span>It sets the learning rate for stochastic gradient descent</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It regularises the covariance estimate by shrinking each $\Sigma_k$ towards the identity matrix: $(1 - \gamma)\Sigma_k + \gamma I$</span></button><button class="opt" type="button"><b>B</b><span>It sets the learning rate for stochastic gradient descent</span></button><button class="opt" type="button"><b>C</b><span>It drops features whose variance is below a threshold</span></button><button class="opt" type="button"><b>D</b><span>It controls the maximum depth of the quadratic expansion</span></button></div>
             <div class="why" hidden><strong>Why:</strong> reg_param prevents covariance matrix singularity when data is sparse by shrinking each class covariance towards an identity matrix, stabilising the determinant and matrix inversion.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q5</span>When is QDA strongly preferred over LDA?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>When the classes have markedly different covariance structures (e.g. one class is tightly concentrated while another is broadly dispersed)</span></button><button class="opt" type="button"><b>B</b><span>When the sample size $n$ is tiny and features $p$ are massive ($p \gg n$)</span></button><button class="opt" type="button"><b>C</b><span>When the true relationship between features and target is strictly linear</span></button><button class="opt" type="button"><b>D</b><span>When all features are binary indicator variables</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>When the sample size $n$ is tiny and features $p$ are massive ($p \gg n$)</span></button><button class="opt" type="button"><b>B</b><span>When the classes have markedly different covariance structures (e.g. one class is tightly concentrated while another is broadly dispersed)</span></button><button class="opt" type="button"><b>C</b><span>When the true relationship between features and target is strictly linear</span></button><button class="opt" type="button"><b>D</b><span>When all features are binary indicator variables</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If class shapes and orientations differ substantially, LDA's forced pooled covariance assumption creates severe misclassification; QDA allows each class to have its own orientation and scale.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q6</span>Why is QDA much more prone to overfitting than LDA when sample sizes are small?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>QDA uses high-order polynomial feature expansion ($x^5, x^6$)</span></button><button class="opt" type="button"><b>B</b><span>QDA discards training observations that do not lie within 1 standard deviation of the mean</span></button><button class="opt" type="button"><b>C</b><span>QDA must estimate $K$ separate covariance matrices, requiring $\mathcal{O}(K p^2)$ parameters instead of LDA's single pooled $\mathcal{O}(p^2)$ matrix</span></button><button class="opt" type="button"><b>D</b><span>QDA optimises its weights using unconstrained neural backpropagation</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>QDA discards training observations that do not lie within 1 standard deviation of the mean</span></button><button class="opt" type="button"><b>B</b><span>QDA must estimate $K$ separate covariance matrices, requiring $\mathcal{O}(K p^2)$ parameters instead of LDA's single pooled $\mathcal{O}(p^2)$ matrix</span></button><button class="opt" type="button"><b>C</b><span>QDA optimises its weights using unconstrained neural backpropagation</span></button><button class="opt" type="button"><b>D</b><span>QDA uses high-order polynomial feature expansion ($x^5, x^6$)</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In $p$ dimensions, each symmetric covariance matrix has $p(p+1)/2$ unique parameters. Estimating $K$ distinct matrices requires roughly $K$ times as many parameters as LDA, demanding significantly more training data per class to prevent noisy covariance estimates.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>What happens if a particular class $k$ in QDA contains fewer training samples than the number of features ($n_k &lt; p$)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The class prior $\pi_k$ becomes negative</span></button><button class="opt" type="button"><b>B</b><span>Scikit-learn silently converts QDA into a decision tree</span></button><button class="opt" type="button"><b>C</b><span>The decision boundary automatically collapses to a single point</span></button><button class="opt" type="button"><b>D</b><span>The sample covariance matrix $\Sigma_k$ becomes singular and non-invertible, causing $|\Sigma_k| = 0$ and $\Sigma_k^{-1}$ to fail</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The decision boundary automatically collapses to a single point</span></button><button class="opt" type="button"><b>B</b><span>The sample covariance matrix $\Sigma_k$ becomes singular and non-invertible, causing $|\Sigma_k| = 0$ and $\Sigma_k^{-1}$ to fail</span></button><button class="opt" type="button"><b>C</b><span>The class prior $\pi_k$ becomes negative</span></button><button class="opt" type="button"><b>D</b><span>Scikit-learn silently converts QDA into a decision tree</span></button></div>
             <div class="why" hidden><strong>Why:</strong> An empirical covariance matrix estimated from $n_k$ samples has rank at most $n_k - 1$. If $n_k &lt; p$, $\Sigma_k$ is rank-deficient and singular, making its inverse and log-determinant undefined without shrinkage.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>In the QDA discriminant score $\delta_k(x) = -\frac{1}{2}\log|\Sigma_k| - \frac{1}{2}(x - \mu_k)^\top \Sigma_k^{-1}(x - \mu_k) + \log\pi_k$, what is the role of the $-\frac{1}{2}\log|\Sigma_k|$ term?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It guarantees that all eigenvalues of $\Sigma_k$ are negative</span></button><button class="opt" type="button"><b>B</b><span>It normalises the Gaussian density volume, penalising classes that are broadly dispersed with large volume</span></button><button class="opt" type="button"><b>C</b><span>It scales the learning rate during coordinate descent</span></button><button class="opt" type="button"><b>D</b><span>It computes the Euclidean distance from $x$ to the origin</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It scales the learning rate during coordinate descent</span></button><button class="opt" type="button"><b>B</b><span>It guarantees that all eigenvalues of $\Sigma_k$ are negative</span></button><button class="opt" type="button"><b>C</b><span>It computes the Euclidean distance from $x$ to the origin</span></button><button class="opt" type="button"><b>D</b><span>It normalises the Gaussian density volume, penalising classes that are broadly dispersed with large volume</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The determinant $|\Sigma_k|$ measures the volume of the class's covariance ellipsoid. A large determinant means probability mass is spread over a wide region, reducing peak density; the $-\frac{1}{2}\log|\Sigma_k|$ term penalises this spatial dispersion.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q9</span>How does Gaussian Naive Bayes relate mathematically to Quadratic Discriminant Analysis?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Gaussian Naive Bayes is identical to QDA except it constrains each class covariance matrix $\Sigma_k$ to be diagonal (zero covariances between distinct features)</span></button><button class="opt" type="button"><b>B</b><span>Gaussian Naive Bayes uses a spherical pooled covariance matrix shared across all classes</span></button><button class="opt" type="button"><b>C</b><span>Gaussian Naive Bayes replaces the Gaussian distribution with a Poisson distribution</span></button><button class="opt" type="button"><b>D</b><span>Gaussian Naive Bayes is a non-parametric model that does not estimate variances</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Gaussian Naive Bayes is a non-parametric model that does not estimate variances</span></button><button class="opt" type="button"><b>B</b><span>Gaussian Naive Bayes replaces the Gaussian distribution with a Poisson distribution</span></button><button class="opt" type="button"><b>C</b><span>Gaussian Naive Bayes is identical to QDA except it constrains each class covariance matrix $\Sigma_k$ to be diagonal (zero covariances between distinct features)</span></button><button class="opt" type="button"><b>D</b><span>Gaussian Naive Bayes uses a spherical pooled covariance matrix shared across all classes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By assuming features are conditionally independent given the class, Gaussian Naive Bayes forces all off-diagonal covariance entries $\operatorname{Cov}(x_j, x_m) = 0$, reducing each class's full $p \times p$ covariance matrix to a diagonal matrix with only $p$ parameters.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>For a multiclass problem with $K = 4$ classes and $p = 10$ continuous features, how many total independent parameters must QDA estimate (including priors, means, and class covariance matrices), assuming priors sum to 1?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$43$ parameters</span></button><button class="opt" type="button"><b>B</b><span>$263$ parameters</span></button><button class="opt" type="button"><b>C</b><span>$103$ parameters</span></button><button class="opt" type="button"><b>D</b><span>$443$ parameters</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$43$ parameters</span></button><button class="opt" type="button"><b>B</b><span>$443$ parameters</span></button><button class="opt" type="button"><b>C</b><span>$263$ parameters</span></button><button class="opt" type="button"><b>D</b><span>$103$ parameters</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Priors: $K - 1 = 3$ parameters. Means: $K \times p = 4 \times 10 = 40$ parameters. Covariances: each symmetric $10 \times 10$ matrix has $10(11)/2 = 55$ parameters; 4 classes give $4 \times 55 = 220$. Total $= 3 + 40 + 220 = 263$ parameters.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q11</span>In a 1D classification task, Class 1 has $\mu_1 = 0.0, \sigma_1^2 = 1.0, \pi_1 = 0.5$ and Class 2 has $\mu_2 = 0.0, \sigma_2^2 = 4.0, \pi_2 = 0.5$. What are the decision boundaries where $\delta_1(x) = \delta_2(x)$? (Use $\log(4.0) \approx 1.386$).</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$x = \pm 0.500$</span></button><button class="opt" type="button"><b>B</b><span>$x = \pm 1.000$</span></button><button class="opt" type="button"><b>C</b><span>$x = \pm 1.359$</span></button><button class="opt" type="button"><b>D</b><span>There is only a single boundary at $x = 0.0$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$x = \pm 1.359$</span></button><button class="opt" type="button"><b>B</b><span>$x = \pm 1.000$</span></button><button class="opt" type="button"><b>C</b><span>$x = \pm 0.500$</span></button><button class="opt" type="button"><b>D</b><span>There is only a single boundary at $x = 0.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Equating scores: $-\frac{1}{2}\log(1) - \frac{x^2}{2} = -\frac{1}{2}\log(4) - \frac{x^2}{8} \implies -\frac{3}{8}x^2 = -0.693 \implies x^2 = \frac{0.693 \times 8}{3} = 1.848 \implies x = \pm 1.359$. Points inside $[-1.36, 1.36]$ belong to the compact Class 1; points outside belong to the dispersed Class 2.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>For Class 1 with mean $\mu_1 = [0, 0]^\top$ and diagonal covariance $\Sigma_1 = \begin{pmatrix} 4 &amp; 0 \\ 0 &amp; 1 \end{pmatrix}$, what is the squared Mahalanobis distance $(x - \mu_1)^\top \Sigma_1^{-1} (x - \mu_1)$ for the test point $x = [4, 1]^\top$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$2.0$</span></button><button class="opt" type="button"><b>B</b><span>$8.5$</span></button><button class="opt" type="button"><b>C</b><span>$17.0$</span></button><button class="opt" type="button"><b>D</b><span>$5.0$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$8.5$</span></button><button class="opt" type="button"><b>B</b><span>$2.0$</span></button><button class="opt" type="button"><b>C</b><span>$5.0$</span></button><button class="opt" type="button"><b>D</b><span>$17.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\Sigma_1^{-1} = \begin{pmatrix} 1/4 &amp; 0 \\ 0 &amp; 1 \end{pmatrix}$. The squared Mahalanobis distance is $\frac{(4 - 0)^2}{4} + \frac{(1 - 0)^2}{1} = \frac{16}{4} + \frac{1}{1} = 4 + 1 = 5.0$. (The standard Euclidean squared distance would be $4^2 + 1^2 = 17.0$).</div>
           </div>
         </div>
@@ -222,11 +222,11 @@ qda = <span class="f">QuadraticDiscriminantAnalysis</span>(reg_param=<span class
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -133,34 +133,34 @@ km = <span class="f">KMedoids</span>(n_clusters=<span class="n">5</span>, metric
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q1</span>Why is k-medoids more robust to outliers than k-means?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses more clusters</span></button><button class="opt" type="button"><b>B</b><span>Centres must be data points and the loss uses unsquared distance</span></button><button class="opt" type="button"><b>C</b><span>It removes outliers first</span></button><button class="opt" type="button"><b>D</b><span>It uses a Gaussian model</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses a Gaussian model</span></button><button class="opt" type="button"><b>B</b><span>It removes outliers first</span></button><button class="opt" type="button"><b>C</b><span>Centres must be data points and the loss uses unsquared distance</span></button><button class="opt" type="button"><b>D</b><span>It uses more clusters</span></button></div>
             <div class="why" hidden><strong>Why:</strong> An outlier cannot drag a medoid into empty space, and its cost grows linearly, not quadratically.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q2</span>Unlike k-means centroids, what is guaranteed about cluster prototypes in k-medoids?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>They are always normalised to unit length</span></button><button class="opt" type="button"><b>B</b><span>They lie strictly along the principal coordinate axes</span></button><button class="opt" type="button"><b>C</b><span>They must be actual data points from the dataset</span></button><button class="opt" type="button"><b>D</b><span>They represent the arithmetic mean of all cluster members</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>They represent the arithmetic mean of all cluster members</span></button><button class="opt" type="button"><b>B</b><span>They are always normalised to unit length</span></button><button class="opt" type="button"><b>C</b><span>They must be actual data points from the dataset</span></button><button class="opt" type="button"><b>D</b><span>They lie strictly along the principal coordinate axes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By definition, a medoid is chosen from the existing data observations ($\{x_1, \dots, x_n\}$), guaranteeing that prototypes represent real, interpretable instances rather than synthetic averages.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>What distance metrics can k-medoids accept that standard k-means cannot natively support without coordinate embedding?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Any arbitrary dissimilarity matrix, such as Manhattan, cosine, or string edit distance</span></button><button class="opt" type="button"><b>B</b><span>Only Mahalanobis distance</span></button><button class="opt" type="button"><b>C</b><span>Only Euclidean distance</span></button><button class="opt" type="button"><b>D</b><span>Only distances between binary integers</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Only Mahalanobis distance</span></button><button class="opt" type="button"><b>B</b><span>Only distances between binary integers</span></button><button class="opt" type="button"><b>C</b><span>Any arbitrary dissimilarity matrix, such as Manhattan, cosine, or string edit distance</span></button><button class="opt" type="button"><b>D</b><span>Only Euclidean distance</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard k-means requires computing arithmetic means $\mu = \frac{1}{|C|}\sum x_i$, which requires Euclidean vector space coordinates. K-medoids only requires pair-wise distances $d(x_i, x_j)$, making it compatible with non-Euclidean metrics and precomputed dissimilarity matrices.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q4</span>In the classic PAM (Partitioning Around Medoids) algorithm, what occurs during the SWAP step?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Clusters with low silhouette scores are deleted</span></button><button class="opt" type="button"><b>B</b><span>The number of clusters $k$ is automatically incremented</span></button><button class="opt" type="button"><b>C</b><span>Data points are randomly reassigned to new cluster labels</span></button><button class="opt" type="button"><b>D</b><span>Each medoid is candidate-swapped with non-medoids, keeping any swap that decreases total dissimilarity</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of clusters $k$ is automatically incremented</span></button><button class="opt" type="button"><b>B</b><span>Data points are randomly reassigned to new cluster labels</span></button><button class="opt" type="button"><b>C</b><span>Clusters with low silhouette scores are deleted</span></button><button class="opt" type="button"><b>D</b><span>Each medoid is candidate-swapped with non-medoids, keeping any swap that decreases total dissimilarity</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The PAM SWAP phase systematically tests swapping each current medoid with every candidate non-medoid, calculating whether replacing the prototype lowers the total cost objective $J$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q5</span>Why is the standard PAM algorithm generally unsuitable for datasets with hundreds of thousands of observations?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it cannot converge on non-linear data</span></button><button class="opt" type="button"><b>B</b><span>Because its SWAP step has a computational complexity of $O(k(n - k)^2)$ per iteration</span></button><button class="opt" type="button"><b>C</b><span>Because medoids cannot be computed in parallel on multi-core processors</span></button><button class="opt" type="button"><b>D</b><span>Because it produces only spherical clusters</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because medoids cannot be computed in parallel on multi-core processors</span></button><button class="opt" type="button"><b>B</b><span>Because it produces only spherical clusters</span></button><button class="opt" type="button"><b>C</b><span>Because its SWAP step has a computational complexity of $O(k(n - k)^2)$ per iteration</span></button><button class="opt" type="button"><b>D</b><span>Because it cannot converge on non-linear data</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Testing every candidate swap between $k$ medoids and $n - k$ non-medoids costs $O(k(n - k)^2)$ per iteration. For $n = 100,000$, $(n - k)^2 \approx 10^{10}$, making each iteration prohibitively expensive. CLARA or mini-batch methods are used instead.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q6</span>What scaling approach does the CLARA (Clustering LARge Applications) algorithm use to extend k-medoids to large datasets?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It replaces medoids with arithmetic centroids</span></button><button class="opt" type="button"><b>B</b><span>It projects data into 2D using PCA before running PAM</span></button><button class="opt" type="button"><b>C</b><span>It draws small random sub-samples of the dataset, runs PAM on each sample, and selects the best medoids based on total dataset cost</span></button><button class="opt" type="button"><b>D</b><span>It clusters features rather than sample points</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It replaces medoids with arithmetic centroids</span></button><button class="opt" type="button"><b>B</b><span>It clusters features rather than sample points</span></button><button class="opt" type="button"><b>C</b><span>It draws small random sub-samples of the dataset, runs PAM on each sample, and selects the best medoids based on total dataset cost</span></button><button class="opt" type="button"><b>D</b><span>It projects data into 2D using PCA before running PAM</span></button></div>
             <div class="why" hidden><strong>Why:</strong> CLARA draws multiple independent random samples of size $40 + 2k$, runs PAM on each sample to identify candidate medoids, and evaluates which set of medoids gives the lowest total dissimilarity across the entire dataset.</div>
           </div>
           <div class="q" data-answer="3">
@@ -169,37 +169,37 @@ km = <span class="f">KMedoids</span>(n_clusters=<span class="n">5</span>, metric
 km = KMedoids(n_clusters=3, metric="precomputed", method="pam")
 km.fit(D)</code>
 What shape and structure must the input array <code>D</code> have?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>A 1D array of cluster labels of length $n$</span></button><button class="opt" type="button"><b>B</b><span>A 2D feature matrix of shape $(n, p)$ containing numerical coordinates</span></button><button class="opt" type="button"><b>C</b><span>A binary adjacency matrix containing only 0 and 1</span></button><button class="opt" type="button"><b>D</b><span>A square symmetric dissimilarity matrix of shape $(n, n)$ where $D_{ij}$ is the distance between point $i$ and point $j$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A 2D feature matrix of shape $(n, p)$ containing numerical coordinates</span></button><button class="opt" type="button"><b>B</b><span>A binary adjacency matrix containing only 0 and 1</span></button><button class="opt" type="button"><b>C</b><span>A 1D array of cluster labels of length $n$</span></button><button class="opt" type="button"><b>D</b><span>A square symmetric dissimilarity matrix of shape $(n, n)$ where $D_{ij}$ is the distance between point $i$ and point $j$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> When <code>metric="precomputed"</code> is specified, the input to <code>.fit()</code> must be a square $(n \times n)$ pairwise dissimilarity matrix where entry $(i, j)$ represents $d(x_i, x_j)$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>Which attribute of a fitted scikit-learn-extra <code>KMedoids</code> model returns the row indices of the selected exemplar instances?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>km.medoid_indices_</span></button><button class="opt" type="button"><b>B</b><span>km.cluster_centers_</span></button><button class="opt" type="button"><b>C</b><span>km.exemplar_points_</span></button><button class="opt" type="button"><b>D</b><span>km.prototypes_</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>km.prototypes_</span></button><button class="opt" type="button"><b>B</b><span>km.exemplar_points_</span></button><button class="opt" type="button"><b>C</b><span>km.cluster_centers_</span></button><button class="opt" type="button"><b>D</b><span>km.medoid_indices_</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In scikit-learn-extra, <code>km.medoid_indices_</code> contains the integer row indices in the training dataset corresponding to the $k$ chosen medoids.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q9</span>How does k-medoids behave when one cluster has a single extreme outlier with a feature value $100\times$ larger than all other points?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The medoid shifts directly to the outlier, creating an empty cluster</span></button><button class="opt" type="button"><b>B</b><span>The medoid stays near the dense bulk of real points because minimising sum of unsquared distances is resistant to single extreme values</span></button><button class="opt" type="button"><b>C</b><span>The algorithm crashes because distance calculation overflows</span></button><button class="opt" type="button"><b>D</b><span>The outlier is automatically assigned to a new $(k + 1)$-th cluster</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The outlier is automatically assigned to a new $(k + 1)$-th cluster</span></button><button class="opt" type="button"><b>B</b><span>The medoid stays near the dense bulk of real points because minimising sum of unsquared distances is resistant to single extreme values</span></button><button class="opt" type="button"><b>C</b><span>The medoid shifts directly to the outlier, creating an empty cluster</span></button><button class="opt" type="button"><b>D</b><span>The algorithm crashes because distance calculation overflows</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Unlike the mean (which shifts substantially toward extreme outliers due to squared distance penalties), the medoid minimises unsquared distances $\sum d(x_i, m)$. The single outlier contributes linearly and is easily outvoted by the majority of dense points.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q10</span>Consider 5 points on a 1D line: $\{1, 2, 4, 8, 10\}$. If $k = 1$ medoid is chosen from these points under Manhattan distance $d(x_i, m) = |x_i - m|$, which point is the medoid and what is the minimum total distance?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Medoid is $m = 2$, total distance $= 17$</span></button><button class="opt" type="button"><b>B</b><span>Medoid is $m = 5$, total distance $= 14$</span></button><button class="opt" type="button"><b>C</b><span>Medoid is $m = 8$, total distance $= 19$</span></button><button class="opt" type="button"><b>D</b><span>Medoid is $m = 4$, total distance $= 15$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Medoid is $m = 8$, total distance $= 19$</span></button><button class="opt" type="button"><b>B</b><span>Medoid is $m = 2$, total distance $= 17$</span></button><button class="opt" type="button"><b>C</b><span>Medoid is $m = 5$, total distance $= 14$</span></button><button class="opt" type="button"><b>D</b><span>Medoid is $m = 4$, total distance $= 15$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For Manhattan distance in 1D, the sum of absolute deviations is minimised at the sample median. Here the median is 4. The distances are $|1-4| + |2-4| + |4-4| + |8-4| + |10-4| = 3 + 2 + 0 + 4 + 6 = 15$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q11</span>Suppose four customers $\{A, B, C, D\}$ have the following pairwise distance matrix:
 $d(A, B) = 2, d(A, C) = 5, d(A, D) = 6$
 $d(B, C) = 4, d(B, D) = 5$
 $d(C, D) = 3$
 (with all $d(X, X) = 0$).
 If you must select $k = 1$ medoid to represent all four customers, which customer yields the minimum total distance, and what is that total distance?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Customer $A$ with total distance 13</span></button><button class="opt" type="button"><b>B</b><span>Customer $C$ with total distance 12</span></button><button class="opt" type="button"><b>C</b><span>Customer $B$ with total distance 11</span></button><button class="opt" type="button"><b>D</b><span>Customer $D$ with total distance 14</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Customer $A$ with total distance 13</span></button><button class="opt" type="button"><b>B</b><span>Customer $B$ with total distance 11</span></button><button class="opt" type="button"><b>C</b><span>Customer $C$ with total distance 12</span></button><button class="opt" type="button"><b>D</b><span>Customer $D$ with total distance 14</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The sum of distances for each candidate is: $A: 0+2+5+6 = 13$; $B: 2+0+4+5 = 11$; $C: 5+4+0+3 = 12$; $D: 6+5+3+0 = 14$. Customer $B$ minimises total dissimilarity with a sum of 11.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>In a dataset with $n = 50$ points and $k = 3$ clusters, how many candidate swaps must the classic PAM algorithm evaluate in a single full pass of the SWAP step?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>141</span></button><button class="opt" type="button"><b>B</b><span>47</span></button><button class="opt" type="button"><b>C</b><span>1,176</span></button><button class="opt" type="button"><b>D</b><span>19,600</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>47</span></button><button class="opt" type="button"><b>B</b><span>19,600</span></button><button class="opt" type="button"><b>C</b><span>141</span></button><button class="opt" type="button"><b>D</b><span>1,176</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In PAM, each of the $k = 3$ current medoids is considered for replacement by each of the $n - k = 47$ non-medoids. The number of candidate swap pairs tested in one pass is $k(n - k) = 3 \times 47 = 141$.</div>
           </div>
         </div>
@@ -237,11 +237,11 @@ If you must select $k = 1$ medoid to represent all four customers, which custome
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

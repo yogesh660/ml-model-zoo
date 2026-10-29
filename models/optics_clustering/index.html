@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -133,39 +133,39 @@ plt.<span class="f">plot</span>(opt.reachability_[opt.ordering_]); plt.<span cla
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q1</span>In a reachability plot, a cluster appears as:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>A spike</span></button><button class="opt" type="button"><b>B</b><span>A valley of low reachability</span></button><button class="opt" type="button"><b>C</b><span>A flat line at the top</span></button><button class="opt" type="button"><b>D</b><span>A single point</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A flat line at the top</span></button><button class="opt" type="button"><b>B</b><span>A single point</span></button><button class="opt" type="button"><b>C</b><span>A valley of low reachability</span></button><button class="opt" type="button"><b>D</b><span>A spike</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Points inside a dense region are reached with small distances.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q2</span>What two primary outputs does the OPTICS algorithm compute to represent the multi-scale density structure of a dataset?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>A specific ordering of points and a corresponding reachability distance for each point</span></button><button class="opt" type="button"><b>B</b><span>A set of $k$ centroids and a covariance matrix</span></button><button class="opt" type="button"><b>C</b><span>A decision tree with entropy thresholds</span></button><button class="opt" type="button"><b>D</b><span>A 2D projection using t-SNE</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A specific ordering of points and a corresponding reachability distance for each point</span></button><button class="opt" type="button"><b>B</b><span>A 2D projection using t-SNE</span></button><button class="opt" type="button"><b>C</b><span>A decision tree with entropy thresholds</span></button><button class="opt" type="button"><b>D</b><span>A set of $k$ centroids and a covariance matrix</span></button></div>
             <div class="why" hidden><strong>Why:</strong> OPTICS does not output explicit flat clusters directly; it generates an ordering of observations (<code>ordering_</code>) alongside reachability distances (<code>reachability_</code>) whose plot displays the entire density landscape.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q3</span>How is reachability distance $\text{reach}(o, p)$ defined from a core point $p$ to an observation $o$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{reach}(o, p) = \min\{\text{core}(p), \; d(p, o)\}$</span></button><button class="opt" type="button"><b>B</b><span>$\text{reach}(o, p) = \text{core}(p) + d(p, o)$</span></button><button class="opt" type="button"><b>C</b><span>$\text{reach}(o, p) = \max\{\text{core}(p), \; d(p, o)\}$</span></button><button class="opt" type="button"><b>D</b><span>$\text{reach}(o, p) = \sqrt{\text{core}(p) \cdot d(p, o)}$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{reach}(o, p) = \text{core}(p) + d(p, o)$</span></button><button class="opt" type="button"><b>B</b><span>$\text{reach}(o, p) = \sqrt{\text{core}(p) \cdot d(p, o)}$</span></button><button class="opt" type="button"><b>C</b><span>$\text{reach}(o, p) = \min\{\text{core}(p), \; d(p, o)\}$</span></button><button class="opt" type="button"><b>D</b><span>$\text{reach}(o, p) = \max\{\text{core}(p), \; d(p, o)\}$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The reachability distance from core point $p$ to $o$ is $\max\{\text{core}(p), d(p, o)\}$. It cannot be smaller than $p$'s core distance, which prevents sparse points from appearing prematurely close.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q4</span>In a reachability plot, what do sharp peaks (spikes of high reachability distance) between two valleys signify?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The exact centre of a dense cluster</span></button><button class="opt" type="button"><b>B</b><span>Duplicate data points</span></button><button class="opt" type="button"><b>C</b><span>Errors in algorithm convergence</span></button><button class="opt" type="button"><b>D</b><span>Noise points or boundaries transitioning between different clusters</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Errors in algorithm convergence</span></button><button class="opt" type="button"><b>B</b><span>Duplicate data points</span></button><button class="opt" type="button"><b>C</b><span>The exact centre of a dense cluster</span></button><button class="opt" type="button"><b>D</b><span>Noise points or boundaries transitioning between different clusters</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Inside a cluster, reachability is low because neighbouring points are close. Moving to a new cluster or jumping across sparse noise requires a large step, creating a sharp upward spike in the plot.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q5</span>How can flat clusters equivalent to DBSCAN clusterings at a specific radius $\varepsilon$ be extracted from an OPTICS ordering?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>By taking the derivative of the ordering index</span></button><button class="opt" type="button"><b>B</b><span>By drawing a horizontal threshold line across the reachability plot at height $\varepsilon$</span></button><button class="opt" type="button"><b>C</b><span>By pruning leaf nodes with fewer than $k$ elements</span></button><button class="opt" type="button"><b>D</b><span>By running k-means on the ordering array</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By running k-means on the ordering array</span></button><button class="opt" type="button"><b>B</b><span>By taking the derivative of the ordering index</span></button><button class="opt" type="button"><b>C</b><span>By pruning leaf nodes with fewer than $k$ elements</span></button><button class="opt" type="button"><b>D</b><span>By drawing a horizontal threshold line across the reachability plot at height $\varepsilon$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Cutting an OPTICS reachability plot with a horizontal threshold line at height $\varepsilon$ directly extracts the connected components that DBSCAN would find with that same $\varepsilon$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q6</span>What is the purpose of the $\xi$ (Xi) parameter in scikit-learn's <code>OPTICS(cluster_method="xi")</code>?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It sets the minimum steepness percentage of the downward and upward slopes required to define a valley as a cluster</span></button><button class="opt" type="button"><b>B</b><span>It defines the number of clusters $k$</span></button><button class="opt" type="button"><b>C</b><span>It specifies the maximum iterations for priority queue traversal</span></button><button class="opt" type="button"><b>D</b><span>It determines the learning rate for gradient updates</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It determines the learning rate for gradient updates</span></button><button class="opt" type="button"><b>B</b><span>It defines the number of clusters $k$</span></button><button class="opt" type="button"><b>C</b><span>It sets the minimum steepness percentage of the downward and upward slopes required to define a valley as a cluster</span></button><button class="opt" type="button"><b>D</b><span>It specifies the maximum iterations for priority queue traversal</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The $\xi$ (Xi) extraction method detects clusters as valleys bounded by steep downward and upward slopes. $\xi$ defines the minimum relative steepness ($1 - \xi$) required to recognise a cluster boundary.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q7</span>What happens if a point $p$ has fewer than <code>min_samples</code> neighbours within <code>max_eps</code>?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The algorithm crashes with a memory fault</span></button><button class="opt" type="button"><b>B</b><span>It is automatically merged into the nearest cluster</span></button><button class="opt" type="button"><b>C</b><span>Its core distance is undefined (set to infinity), so it cannot be used as a core point to pass reachability to neighbours</span></button><button class="opt" type="button"><b>D</b><span>It is duplicated to satisfy the minimum sample count</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It is automatically merged into the nearest cluster</span></button><button class="opt" type="button"><b>B</b><span>It is duplicated to satisfy the minimum sample count</span></button><button class="opt" type="button"><b>C</b><span>The algorithm crashes with a memory fault</span></button><button class="opt" type="button"><b>D</b><span>Its core distance is undefined (set to infinity), so it cannot be used as a core point to pass reachability to neighbours</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If a point does not have at least <code>min_samples</code> neighbours within <code>max_eps</code>, it is not a core point; its core distance is undefined (infinity), so it cannot establish reachability to other points.</div>
           </div>
           <div class="q" data-answer="3">
@@ -173,27 +173,27 @@ plt.<span class="f">plot</span>(opt.reachability_[opt.ordering_]); plt.<span cla
 <code>from sklearn.cluster import OPTICS
 opt = OPTICS(min_samples=10, xi=0.05).fit(X)</code>
 In which order must the reachability array be indexed to correctly display the classic reachability plot?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>opt.reachability_ directly without reindexing</span></button><button class="opt" type="button"><b>B</b><span>opt.ordering_[opt.reachability_]</span></button><button class="opt" type="button"><b>C</b><span>np.sort(opt.reachability_)</span></button><button class="opt" type="button"><b>D</b><span>opt.reachability_[opt.ordering_]</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>opt.reachability_ directly without reindexing</span></button><button class="opt" type="button"><b>B</b><span>np.sort(opt.reachability_)</span></button><button class="opt" type="button"><b>C</b><span>opt.ordering_[opt.reachability_]</span></button><button class="opt" type="button"><b>D</b><span>opt.reachability_[opt.ordering_]</span></button></div>
             <div class="why" hidden><strong>Why:</strong> <code>opt.reachability_</code> stores distances in the original dataset order. To view the characteristic valleys of dense clusters, it must be indexed by the traversal order: <code>opt.reachability_[opt.ordering_]</code>.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q9</span>How does nested hierarchical clustering appear visually in an OPTICS reachability plot?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>As a shallow broad valley that contains one or more deeper, narrower sub-valleys separated by minor rises</span></button><button class="opt" type="button"><b>B</b><span>As a straight diagonal line from bottom-left to top-right</span></button><button class="opt" type="button"><b>C</b><span>As a sequence of completely flat horizontal plates</span></button><button class="opt" type="button"><b>D</b><span>As a periodic sinusoidal wave</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>As a sequence of completely flat horizontal plates</span></button><button class="opt" type="button"><b>B</b><span>As a shallow broad valley that contains one or more deeper, narrower sub-valleys separated by minor rises</span></button><button class="opt" type="button"><b>C</b><span>As a straight diagonal line from bottom-left to top-right</span></button><button class="opt" type="button"><b>D</b><span>As a periodic sinusoidal wave</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A broad, shallow valley represents a large diffuse cluster, while deeper depressions nested within that valley represent tighter, higher-density sub-clusters embedded inside it.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q10</span>Suppose <code>min_samples=4</code>. For a point $p$, the distances to its nearest neighbours (including itself at distance 0) are: $[0.0, 0.4, 0.7, 1.1, 1.6]$. For another point $o$, the distance to $p$ is $d(p, o) = 0.8$. What is $\text{core}(p)$, and what is the reachability distance $\text{reach}(o, p)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{core}(p) = 0.8, \text{reach}(o, p) = 0.8$</span></button><button class="opt" type="button"><b>B</b><span>$\text{core}(p) = 1.1, \text{reach}(o, p) = 0.8$</span></button><button class="opt" type="button"><b>C</b><span>$\text{core}(p) = 1.1, \text{reach}(o, p) = 1.1$</span></button><button class="opt" type="button"><b>D</b><span>$\text{core}(p) = 1.6, \text{reach}(o, p) = 1.6$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{core}(p) = 0.8, \text{reach}(o, p) = 0.8$</span></button><button class="opt" type="button"><b>B</b><span>$\text{core}(p) = 1.1, \text{reach}(o, p) = 1.1$</span></button><button class="opt" type="button"><b>C</b><span>$\text{core}(p) = 1.1, \text{reach}(o, p) = 0.8$</span></button><button class="opt" type="button"><b>D</b><span>$\text{core}(p) = 1.6, \text{reach}(o, p) = 1.6$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The 4th nearest neighbour distance is $\text{core}(p) = 1.1$. The reachability distance from $p$ to $o$ is $\max\{\text{core}(p), d(p, o)\} = \max\{1.1, 0.8\} = 1.1$. Even though $o$ is only $0.8$ units away, reachability cannot drop below $p$'s core distance.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q11</span>Point $p$ has core distance $\text{core}(p) = 1.5$. Two candidate neighbours $A$ and $B$ have distances $d(p, A) = 1.2$ and $d(p, B) = 2.1$. What are the reachability distances $\text{reach}(A, p)$ and $\text{reach}(B, p)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{reach}(A, p) = 1.2$ and $\text{reach}(B, p) = 2.1$</span></button><button class="opt" type="button"><b>B</b><span>$\text{reach}(A, p) = 2.7$ and $\text{reach}(B, p) = 3.6$</span></button><button class="opt" type="button"><b>C</b><span>$\text{reach}(A, p) = 1.5$ and $\text{reach}(B, p) = 1.5$</span></button><button class="opt" type="button"><b>D</b><span>$\text{reach}(A, p) = 1.5$ and $\text{reach}(B, p) = 2.1$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\text{reach}(A, p) = 1.5$ and $\text{reach}(B, p) = 1.5$</span></button><button class="opt" type="button"><b>B</b><span>$\text{reach}(A, p) = 1.2$ and $\text{reach}(B, p) = 2.1$</span></button><button class="opt" type="button"><b>C</b><span>$\text{reach}(A, p) = 2.7$ and $\text{reach}(B, p) = 3.6$</span></button><button class="opt" type="button"><b>D</b><span>$\text{reach}(A, p) = 1.5$ and $\text{reach}(B, p) = 2.1$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\text{reach}(A, p) = \max\{1.5, 1.2\} = 1.5$ because $d(p, A) &lt; \text{core}(p)$. For point $B$, $d(p, B) = 2.1 &gt; 1.5$, so $\text{reach}(B, p) = \max\{1.5, 2.1\} = 2.1$.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q12</span>In an OPTICS reachability plot, points 60 to 170 inclusive all have reachability distance $\le 0.8$, while the surrounding points have reachability exceeding $1.5$. If clusters are extracted using a horizontal cut at $\varepsilon = 0.8$ with min_samples = 10, how many points form this cluster?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>110</span></button><button class="opt" type="button"><b>B</b><span>111</span></button><button class="opt" type="button"><b>C</b><span>170</span></button><button class="opt" type="button"><b>D</b><span>60</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>170</span></button><button class="opt" type="button"><b>B</b><span>111</span></button><button class="opt" type="button"><b>C</b><span>110</span></button><button class="opt" type="button"><b>D</b><span>60</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Points 60 through 170 inclusive have reachability distances at or below the cut threshold $\varepsilon = 0.8$. The number of observations in this contiguous cluster segment is $170 - 60 + 1 = 111$.</div>
           </div>
         </div>
@@ -231,11 +231,11 @@ In which order must the reachability array be indexed to correctly display the c
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

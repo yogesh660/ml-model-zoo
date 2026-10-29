@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -133,19 +133,19 @@ birch = <span class="f">Birch</span>(threshold=<span class="n">0.4</span>, branc
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q1</span>What makes BIRCH’s one-pass approach possible?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Random sampling</span></button><button class="opt" type="button"><b>B</b><span>Clustering Features can be merged by addition</span></button><button class="opt" type="button"><b>C</b><span>It stores every point</span></button><button class="opt" type="button"><b>D</b><span>It uses a GPU</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Clustering Features can be merged by addition</span></button><button class="opt" type="button"><b>B</b><span>It stores every point</span></button><button class="opt" type="button"><b>C</b><span>Random sampling</span></button><button class="opt" type="button"><b>D</b><span>It uses a GPU</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $(N, LS, SS)$ summaries are additive, so sub-clusters update in constant time.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q2</span>What three statistical components comprise a Clustering Feature (CF) triplet $(N, LS, SS)$ in BIRCH?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Number of points $N$, Linear Sum of points $LS$, and Squared Sum of points $SS$</span></button><button class="opt" type="button"><b>B</b><span>Number of clusters $N$, Linkage Score $LS$, and Silhouette Score $SS$</span></button><button class="opt" type="button"><b>C</b><span>Neighbourhood size $N$, Leaf Size $LS$, and Split Step $SS$</span></button><button class="opt" type="button"><b>D</b><span>Normal vector $N$, Latent Space $LS$, and Singular values $SS$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Normal vector $N$, Latent Space $LS$, and Singular values $SS$</span></button><button class="opt" type="button"><b>B</b><span>Neighbourhood size $N$, Leaf Size $LS$, and Split Step $SS$</span></button><button class="opt" type="button"><b>C</b><span>Number of clusters $N$, Linkage Score $LS$, and Silhouette Score $SS$</span></button><button class="opt" type="button"><b>D</b><span>Number of points $N$, Linear Sum of points $LS$, and Squared Sum of points $SS$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A Clustering Feature is defined as $CF = (N, LS, SS)$ where $N$ is the count of observations, $LS = \sum x_i$ is the vector sum, and $SS = \sum \lVert x_i \rVert^2$ is the sum of squared magnitudes.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q3</span>What does the <code>threshold</code> parameter represent in BIRCH?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The maximum number of clusters permitted in the final partition</span></button><button class="opt" type="button"><b>B</b><span>The minimum distance between two non-adjacent nodes</span></button><button class="opt" type="button"><b>C</b><span>The maximum allowable radius for any leaf sub-cluster in the CF-tree</span></button><button class="opt" type="button"><b>D</b><span>The minimum p-value required to split a node</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The minimum distance between two non-adjacent nodes</span></button><button class="opt" type="button"><b>B</b><span>The maximum number of clusters permitted in the final partition</span></button><button class="opt" type="button"><b>C</b><span>The minimum p-value required to split a node</span></button><button class="opt" type="button"><b>D</b><span>The maximum allowable radius for any leaf sub-cluster in the CF-tree</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The <code>threshold</code> parameter sets the maximum allowable spatial radius (or diameter) for sub-clusters stored in the leaf nodes of the CF-tree.</div>
           </div>
           <div class="q" data-answer="3">
@@ -155,42 +155,42 @@ birch = <span class="f">Birch</span>(threshold=<span class="n">0.4</span>, branc
           </div>
           <div class="q" data-answer="3">
             <p><span>Q5</span>Why must features be standard-scaled before fitting a BIRCH model with a fixed threshold?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because BIRCH fails to compile on non-zero centred data</span></button><button class="opt" type="button"><b>B</b><span>Because standardising converts the CF-tree into a binary search tree</span></button><button class="opt" type="button"><b>C</b><span>Because scikit-learn's BIRCH requires inputs between 0 and 1</span></button><button class="opt" type="button"><b>D</b><span>Because the radius calculation $R = \sqrt{SS/N - \lVert\mu\rVert^2}$ uses Euclidean distance, so unscaled features with large numerical ranges dominate the sub-cluster radius</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because standardising converts the CF-tree into a binary search tree</span></button><button class="opt" type="button"><b>B</b><span>Because scikit-learn's BIRCH requires inputs between 0 and 1</span></button><button class="opt" type="button"><b>C</b><span>Because BIRCH fails to compile on non-zero centred data</span></button><button class="opt" type="button"><b>D</b><span>Because the radius calculation $R = \sqrt{SS/N - \lVert\mu\rVert^2}$ uses Euclidean distance, so unscaled features with large numerical ranges dominate the sub-cluster radius</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The sub-cluster radius $R$ is calculated using Euclidean norms. If one feature has scale $10,000$ and another $0.1$, the large feature completely controls the radius check against <code>threshold</code>.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q6</span>What happens during Phase 4 (the final phase) of the complete BIRCH clustering pipeline?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The CF-tree is deleted and k-means is run on the raw dataset</span></button><button class="opt" type="button"><b>B</b><span>A global clustering algorithm (such as agglomerative clustering or k-means) clusters the leaf sub-cluster centres into the desired final $k$ clusters</span></button><button class="opt" type="button"><b>C</b><span>Each leaf entry is split into individual data points</span></button><button class="opt" type="button"><b>D</b><span>Points with small memberships are labelled as noise</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Each leaf entry is split into individual data points</span></button><button class="opt" type="button"><b>B</b><span>A global clustering algorithm (such as agglomerative clustering or k-means) clusters the leaf sub-cluster centres into the desired final $k$ clusters</span></button><button class="opt" type="button"><b>C</b><span>Points with small memberships are labelled as noise</span></button><button class="opt" type="button"><b>D</b><span>The CF-tree is deleted and k-means is run on the raw dataset</span></button></div>
             <div class="why" hidden><strong>Why:</strong> After compressing millions of points into a modest number of leaf CF summaries in one pass, Phase 4 runs a standard clustering algorithm (like agglomerative clustering) on those sub-cluster centroids to produce the final $k$ clusters.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q7</span>Which scikit-learn method allows BIRCH to process streaming data or massive datasets in sequential chunks larger than system memory?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>birch.fit_predict_stream()</span></button><button class="opt" type="button"><b>B</b><span>birch.append_leaf()</span></button><button class="opt" type="button"><b>C</b><span>birch.stream_absorb()</span></button><button class="opt" type="button"><b>D</b><span>birch.partial_fit()</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>birch.stream_absorb()</span></button><button class="opt" type="button"><b>B</b><span>birch.fit_predict_stream()</span></button><button class="opt" type="button"><b>C</b><span>birch.partial_fit()</span></button><button class="opt" type="button"><b>D</b><span>birch.append_leaf()</span></button></div>
             <div class="why" hidden><strong>Why:</strong> <code>Birch.partial_fit()</code> absorbs incoming batches of data into the existing CF-tree incrementally without reloading previous data into RAM.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>What is a primary limitation of BIRCH regarding the shapes of clusters it can discover?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It can only discover perfectly linear clusters</span></button><button class="opt" type="button"><b>B</b><span>It cannot cluster datasets with more than 3 features</span></button><button class="opt" type="button"><b>C</b><span>Because sub-cluster absorption is governed by a spherical radius threshold, it inherently favours spherical/convex clusters and struggles with arbitrary shapes</span></button><button class="opt" type="button"><b>D</b><span>It forces all clusters to have identical counts $N$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It can only discover perfectly linear clusters</span></button><button class="opt" type="button"><b>B</b><span>It cannot cluster datasets with more than 3 features</span></button><button class="opt" type="button"><b>C</b><span>It forces all clusters to have identical counts $N$</span></button><button class="opt" type="button"><b>D</b><span>Because sub-cluster absorption is governed by a spherical radius threshold, it inherently favours spherical/convex clusters and struggles with arbitrary shapes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The sub-cluster condition $R \le \text{threshold}$ enforces spherical boundaries around sub-cluster centroids, making BIRCH ill-suited for complex non-convex shapes like spirals or concentric rings.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q9</span>How does increasing the <code>threshold</code> parameter affect the CF-tree produced by BIRCH?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It allows leaf sub-clusters to expand to larger radii, resulting in fewer, coarser sub-clusters</span></button><button class="opt" type="button"><b>B</b><span>It produces a deeper tree with far more leaf sub-clusters</span></button><button class="opt" type="button"><b>C</b><span>It increases the required memory linearly with sample size</span></button><button class="opt" type="button"><b>D</b><span>It forces every point into its own separate leaf node</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It produces a deeper tree with far more leaf sub-clusters</span></button><button class="opt" type="button"><b>B</b><span>It allows leaf sub-clusters to expand to larger radii, resulting in fewer, coarser sub-clusters</span></button><button class="opt" type="button"><b>C</b><span>It forces every point into its own separate leaf node</span></button><button class="opt" type="button"><b>D</b><span>It increases the required memory linearly with sample size</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A larger threshold permits individual leaf entries to cover wider spatial areas before splitting, resulting in fewer, coarser sub-clusters that absorb more observations.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>Given a 1D sub-cluster with $N = 4$ points $\{2, 4, 6, 8\}$, what are its Linear Sum $LS$, Squared Sum $SS$, centroid $\mu$, and radius $R$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$LS = 20, SS = 120, \mu = 5.0, R = \sqrt{5} \approx 2.24$</span></button><button class="opt" type="button"><b>B</b><span>$LS = 20, SS = 120, \mu = 4.0, R = 5.0$</span></button><button class="opt" type="button"><b>C</b><span>$LS = 20, SS = 100, \mu = 5.0, R = 0.0$</span></button><button class="opt" type="button"><b>D</b><span>$LS = 16, SS = 120, \mu = 5.0, R = 2.0$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$LS = 20, SS = 100, \mu = 5.0, R = 0.0$</span></button><button class="opt" type="button"><b>B</b><span>$LS = 20, SS = 120, \mu = 4.0, R = 5.0$</span></button><button class="opt" type="button"><b>C</b><span>$LS = 20, SS = 120, \mu = 5.0, R = \sqrt{5} \approx 2.24$</span></button><button class="opt" type="button"><b>D</b><span>$LS = 16, SS = 120, \mu = 5.0, R = 2.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $LS = 2+4+6+8 = 20$, $SS = 4+16+36+64 = 120$, $\mu = 20/4 = 5.0$. The radius is $R = \sqrt{SS/N - \mu^2} = \sqrt{120/4 - 25} = \sqrt{30 - 25} = \sqrt{5} \approx 2.24$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q11</span>Sub-cluster $CF_1$ has $N_1 = 3, LS_1 = [6.0, 9.0], SS_1 = 45.0$. Sub-cluster $CF_2$ has $N_2 = 2, LS_2 = [4.0, 6.0], SS_2 = 30.0$. If $CF_1$ and $CF_2$ are merged into $CF_{\text{new}} = CF_1 + CF_2$, what is the centroid $\mu_{\text{new}}$ of the merged sub-cluster?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu_{\text{new}} = [5.0, 7.5]$</span></button><button class="opt" type="button"><b>B</b><span>$\mu_{\text{new}} = [10.0, 15.0]$</span></button><button class="opt" type="button"><b>C</b><span>$\mu_{\text{new}} = [2.0, 3.0]$</span></button><button class="opt" type="button"><b>D</b><span>$\mu_{\text{new}} = [1.5, 2.0]$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu_{\text{new}} = [10.0, 15.0]$</span></button><button class="opt" type="button"><b>B</b><span>$\mu_{\text{new}} = [2.0, 3.0]$</span></button><button class="opt" type="button"><b>C</b><span>$\mu_{\text{new}} = [5.0, 7.5]$</span></button><button class="opt" type="button"><b>D</b><span>$\mu_{\text{new}} = [1.5, 2.0]$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By the additivity theorem of Clustering Features, $N_{\text{new}} = 3 + 2 = 5$ and $LS_{\text{new}} = [6+4, 9+6] = [10.0, 15.0]$. The merged centroid is $\mu_{\text{new}} = LS_{\text{new}} / N_{\text{new}} = [10/5, 15/5] = [2.0, 3.0]$.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q12</span>A leaf sub-cluster currently holds $N = 2$ points at coordinates $[0, 0]$ and $[2, 0]$ (so $LS = [2, 0]$, $SS = 4$, $\mu = [1, 0]$, $R = 1.0$). A new point arrives at $[4, 0]$. If the threshold is set to $\text{threshold} = 1.6$, can this leaf sub-cluster absorb the new point?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Yes, because $R_{\text{new}} = 1.20$, which is below the threshold</span></button><button class="opt" type="button"><b>B</b><span>No, because the new radius would be $\sqrt{8/3} \approx 1.63$, exceeding the threshold of $1.60$</span></button><button class="opt" type="button"><b>C</b><span>Yes, because any sub-cluster with fewer than 5 points absorbs unconditionally</span></button><button class="opt" type="button"><b>D</b><span>No, because the new point has an even coordinate</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Yes, because $R_{\text{new}} = 1.20$, which is below the threshold</span></button><button class="opt" type="button"><b>B</b><span>No, because the new radius would be $\sqrt{8/3} \approx 1.63$, exceeding the threshold of $1.60$</span></button><button class="opt" type="button"><b>C</b><span>No, because the new point has an even coordinate</span></button><button class="opt" type="button"><b>D</b><span>Yes, because any sub-cluster with fewer than 5 points absorbs unconditionally</span></button></div>
             <div class="why" hidden><strong>Why:</strong> With the new point, $N = 3$, $LS = [6, 0]$, $SS = 4 + 16 = 20$, and $\mu = [2, 0]$. The updated radius is $R = \sqrt{20/3 - 2^2} = \sqrt{8/3} \approx 1.633$. Because $1.633 &gt; 1.60$, the threshold is breached, so a new sub-cluster entry must be created.</div>
           </div>
         </div>
@@ -228,11 +228,11 @@ birch = <span class="f">Birch</span>(threshold=<span class="n">0.4</span>, branc
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

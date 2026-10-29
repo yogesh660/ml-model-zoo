@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -108,64 +108,64 @@ softmax = np.<span class="f">exp</span>(logits - logits.<span class="f">max</spa
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>07</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>What is the maximum slope of the sigmoid?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>1</span></button><button class="opt" type="button"><b>B</b><span>0.5</span></button><button class="opt" type="button"><b>C</b><span>0.25</span></button><button class="opt" type="button"><b>D</b><span>Unbounded</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>1</span></button><button class="opt" type="button"><b>B</b><span>0.5</span></button><button class="opt" type="button"><b>C</b><span>Unbounded</span></button><button class="opt" type="button"><b>D</b><span>0.25</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\sigma(0)(1 - \sigma(0)) = 0.5 \times 0.5$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q2</span>Which link keeps predicted counts positive in Poisson regression?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Identity</span></button><button class="opt" type="button"><b>B</b><span>Log (inverse: exp)</span></button><button class="opt" type="button"><b>C</b><span>Logit</span></button><button class="opt" type="button"><b>D</b><span>Probit</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Log (inverse: exp)</span></button><button class="opt" type="button"><b>B</b><span>Logit</span></button><button class="opt" type="button"><b>C</b><span>Identity</span></button><button class="opt" type="button"><b>D</b><span>Probit</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\mathbb E[y] = e^{w^\top x} &gt; 0$ for any score.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q3</span>What is the fundamental purpose of a "link function" in Generalised Linear Models (GLMs)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It normalises feature variances to exactly 1.0</span></button><button class="opt" type="button"><b>B</b><span>It connects neural network layers without using matrix multiplication</span></button><button class="opt" type="button"><b>C</b><span>It joins separate SQL tables before training an estimator</span></button><button class="opt" type="button"><b>D</b><span>It maps the expected value of the target distribution from its constrained domain (such as probabilities in $(0, 1)$ or counts in $(0, \infty)$) to the unbounded real line $(-\infty, \infty)$ where the linear predictor operates</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It maps the expected value of the target distribution from its constrained domain (such as probabilities in $(0, 1)$ or counts in $(0, \infty)$) to the unbounded real line $(-\infty, \infty)$ where the linear predictor operates</span></button><button class="opt" type="button"><b>B</b><span>It joins separate SQL tables before training an estimator</span></button><button class="opt" type="button"><b>C</b><span>It connects neural network layers without using matrix multiplication</span></button><button class="opt" type="button"><b>D</b><span>It normalises feature variances to exactly 1.0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In GLMs, the linear combination $w^\top x$ can evaluate to any real number in $(-\infty, \infty)$. The link function $g(\mu) = w^\top x$ transforms the parameter $\mu = \mathbb{E}[y \mid x]$ so that predictions respect the natural bounds of the response distribution.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q4</span>Why did deep neural networks largely replace sigmoid activation functions in hidden layers with Rectified Linear Units (ReLU)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The sigmoid's derivative saturates near 0 for inputs far from zero ($|z| \gg 0$) and has a maximum value of only $0.25$, causing gradients to vanish exponentially across successive backpropagation layers</span></button><button class="opt" type="button"><b>B</b><span>The sigmoid activation function is non-deterministic</span></button><button class="opt" type="button"><b>C</b><span>The sigmoid function cannot be computed on GPUs</span></button><button class="opt" type="button"><b>D</b><span>The sigmoid requires 100 times more memory than ReLU</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The sigmoid function cannot be computed on GPUs</span></button><button class="opt" type="button"><b>B</b><span>The sigmoid's derivative saturates near 0 for inputs far from zero ($|z| \gg 0$) and has a maximum value of only $0.25$, causing gradients to vanish exponentially across successive backpropagation layers</span></button><button class="opt" type="button"><b>C</b><span>The sigmoid requires 100 times more memory than ReLU</span></button><button class="opt" type="button"><b>D</b><span>The sigmoid activation function is non-deterministic</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Because $\sigma'(z) \le 0.25$, multiplying through $L$ hidden layers scales gradients by at most $(0.25)^L$. By layer 10, gradients shrink by a factor of $10^{-6}$ (vanishing gradient). ReLU's derivative is 1 for positive inputs, eliminating saturation.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q5</span>When computing the softmax function $\operatorname{softmax}(z)_c = \frac{e^{z_c}}{\sum_{j} e^{z_j}}$ on a vector like $z = [1000, 1001, 1002]$, what computational problem occurs, and how is it resolved?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$e^{1000}$ triggers floating-point overflow; subtracting the maximum value $m = \max(z)$ from every element before exponentiating ($\frac{e^{z_c - m}}{\sum e^{z_j - m}}$) yields identical results with zero overflow risk</span></button><button class="opt" type="button"><b>B</b><span>The denominator becomes zero; resolved by adding a large positive constant to $z$</span></button><button class="opt" type="button"><b>C</b><span>The probabilities do not sum to 1.0; resolved by dividing by $N$</span></button><button class="opt" type="button"><b>D</b><span>The exponential function converts negative numbers to NaN; resolved by taking absolute values</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The probabilities do not sum to 1.0; resolved by dividing by $N$</span></button><button class="opt" type="button"><b>B</b><span>The denominator becomes zero; resolved by adding a large positive constant to $z$</span></button><button class="opt" type="button"><b>C</b><span>$e^{1000}$ triggers floating-point overflow; subtracting the maximum value $m = \max(z)$ from every element before exponentiating ($\frac{e^{z_c - m}}{\sum e^{z_j - m}}$) yields identical results with zero overflow risk</span></button><button class="opt" type="button"><b>D</b><span>The exponential function converts negative numbers to NaN; resolved by taking absolute values</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In IEEE 754 float64, $e^{710} = \infty$. Computing $\exp(1000)$ gives infinity, causing invalid arithmetic. Because shifting logits by $\max(z)$ leaves the softmax ratio unchanged, subtracting $\max(z)$ guarantees that the maximum exponent is $e^0 = 1$, preventing overflow.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q6</span>How does temperature scaling $T &gt; 0$ affect the softmax probability distribution $\operatorname{softmax}(z / T)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>As $T \to \infty$, it becomes an argmax distribution; as $T \to 0$, it becomes uniform</span></button><button class="opt" type="button"><b>B</b><span>As $T \to \infty$, the distribution flattens into a uniform distribution; as $T \to 0$, it sharpens towards a one-hot distribution (argmax)</span></button><button class="opt" type="button"><b>C</b><span>Temperature changes the number of classes in the output layer</span></button><button class="opt" type="button"><b>D</b><span>Temperature scales the learning rate during backpropagation</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>As $T \to \infty$, the distribution flattens into a uniform distribution; as $T \to 0$, it sharpens towards a one-hot distribution (argmax)</span></button><button class="opt" type="button"><b>B</b><span>Temperature changes the number of classes in the output layer</span></button><button class="opt" type="button"><b>C</b><span>Temperature scales the learning rate during backpropagation</span></button><button class="opt" type="button"><b>D</b><span>As $T \to \infty$, it becomes an argmax distribution; as $T \to 0$, it becomes uniform</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Dividing by large $T$ compresses logits toward zero ($z/T \approx 0$), making all exponentials $e^0 = 1$ and yielding uniform probabilities ($1/K$). Dividing by small $T \to 0$ magnifies logit differences, so the largest logit dominates completely.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>How does the Probit link function $p = \Phi(w^\top x)$ differ from the Logit link function $p = \sigma(w^\top x)$ in binary classification?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Probit produces probabilities outside the interval $[0, 1]$</span></button><button class="opt" type="button"><b>B</b><span>Probit can only be used for multi-class classification</span></button><button class="opt" type="button"><b>C</b><span>Probit uses the standard normal cumulative distribution function (CDF) $\Phi(z)$ instead of the logistic function; its tails decay faster, but its shape is very close to a sigmoid with inputs rescaled by $\approx 1.7$</span></button><button class="opt" type="button"><b>D</b><span>Probit does not require computing integrals or exponentials</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Probit does not require computing integrals or exponentials</span></button><button class="opt" type="button"><b>B</b><span>Probit uses the standard normal cumulative distribution function (CDF) $\Phi(z)$ instead of the logistic function; its tails decay faster, but its shape is very close to a sigmoid with inputs rescaled by $\approx 1.7$</span></button><button class="opt" type="button"><b>C</b><span>Probit can only be used for multi-class classification</span></button><button class="opt" type="button"><b>D</b><span>Probit produces probabilities outside the interval $[0, 1]$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Probit models binary outcomes via a latent Gaussian variable: $y^* = w^\top x + \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, 1)$, whereas logit corresponds to $\varepsilon$ following a standard logistic distribution. They produce near-identical decision boundaries up to a scale factor of $\approx 1.7$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q8</span>For a multi-class problem with $K = 2$ classes and logit outputs $z = [z_1, z_2]$, what does the softmax probability $\operatorname{softmax}(z)_1$ simplify to?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\sigma(z_1 + z_2)$</span></button><button class="opt" type="button"><b>B</b><span>$\sigma(z_1) \times \sigma(z_2)$</span></button><button class="opt" type="button"><b>C</b><span>$\frac{1}{2}(z_1 - z_2)$</span></button><button class="opt" type="button"><b>D</b><span>The standard logistic sigmoid of the score difference: $\sigma(z_1 - z_2)$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The standard logistic sigmoid of the score difference: $\sigma(z_1 - z_2)$</span></button><button class="opt" type="button"><b>B</b><span>$\sigma(z_1 + z_2)$</span></button><button class="opt" type="button"><b>C</b><span>$\frac{1}{2}(z_1 - z_2)$</span></button><button class="opt" type="button"><b>D</b><span>$\sigma(z_1) \times \sigma(z_2)$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\operatorname{softmax}(z)_1 = \frac{e^{z_1}}{e^{z_1} + e^{z_2}} = \frac{e^{z_1}/e^{z_2}}{e^{z_1}/e^{z_2} + 1} = \frac{e^{z_1 - z_2}}{1 + e^{z_1 - z_2}} = \sigma(z_1 - z_2)$. Binary logistic regression is precisely the two-class case of softmax regression.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q9</span>Why does Generalised Linear Model theory advise pairing each distribution family with its "canonical link" function (such as Bernoulli with logit, Poisson with log, Gaussian with identity)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The canonical link ensures the Hessian matrix of the negative log-likelihood is positive semi-definite everywhere, guaranteeing a strictly convex optimisation problem with no sub-optimal local minima</span></button><button class="opt" type="button"><b>B</b><span>Canonical links force the model residuals to equal exactly zero</span></button><button class="opt" type="button"><b>C</b><span>Canonical links eliminate the need for intercept terms</span></button><button class="opt" type="button"><b>D</b><span>Canonical links ensure the model trains in a single epoch</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Canonical links eliminate the need for intercept terms</span></button><button class="opt" type="button"><b>B</b><span>The canonical link ensures the Hessian matrix of the negative log-likelihood is positive semi-definite everywhere, guaranteeing a strictly convex optimisation problem with no sub-optimal local minima</span></button><button class="opt" type="button"><b>C</b><span>Canonical links ensure the model trains in a single epoch</span></button><button class="opt" type="button"><b>D</b><span>Canonical links force the model residuals to equal exactly zero</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The canonical link equates the linear predictor $w^\top x$ to the natural parameter of the exponential family distribution. This ensures that the log-likelihood is strictly concave in $w$, making gradient-based fitting reliably fast and globally optimal.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q10</span>For a neuron with standard logistic sigmoid activation $\sigma(z) = \frac{1}{1 + e^{-z}}$, suppose the current output is $\sigma(z) = 0.80$. What is the exact value of the derivative $\sigma'(z)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.25$</span></button><button class="opt" type="button"><b>B</b><span>$0.16$</span></button><button class="opt" type="button"><b>C</b><span>$0.80$</span></button><button class="opt" type="button"><b>D</b><span>$0.04$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.25$</span></button><button class="opt" type="button"><b>B</b><span>$0.04$</span></button><button class="opt" type="button"><b>C</b><span>$0.80$</span></button><button class="opt" type="button"><b>D</b><span>$0.16$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The derivative of the sigmoid is $\sigma'(z) = \sigma(z)(1 - \sigma(z))$. With $\sigma(z) = 0.80$, $\sigma'(z) = 0.80 \times (1 - 0.80) = 0.80 \times 0.20 = 0.16$.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q11</span>A 3-class model outputs raw logits $z = [1.0, 2.0, 3.0]$. Using the numerically stable softmax formulation with $m = \max(z) = 3.0$, the shifted logits are $z - 3.0 = [-2.0, -1.0, 0.0]$. Given $e^{-2} \approx 0.1353$, $e^{-1} \approx 0.3679$, and $e^0 = 1.0$, what is the softmax probability of Class 3?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.500$ (or $50.0\%$)</span></button><button class="opt" type="button"><b>B</b><span>$0.333$ (or $33.3\%$)</span></button><button class="opt" type="button"><b>C</b><span>$0.750$ (or $75.0\%$)</span></button><button class="opt" type="button"><b>D</b><span>$0.665$ (or $66.5\%$)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.333$ (or $33.3\%$)</span></button><button class="opt" type="button"><b>B</b><span>$0.750$ (or $75.0\%$)</span></button><button class="opt" type="button"><b>C</b><span>$0.500$ (or $50.0\%$)</span></button><button class="opt" type="button"><b>D</b><span>$0.665$ (or $66.5\%$)</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The sum of exponentiated shifted logits is $S = e^{-2} + e^{-1} + e^0 \approx 0.1353 + 0.3679 + 1.0000 = 1.5032$. The probability for Class 3 is $\frac{e^0}{S} = \frac{1.0000}{1.5032} \approx 0.6652 = 66.5\%$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q12</span>In Poisson regression, the expected count is modelled as $\mu = \mathbb{E}[y \mid x] = e^{w_0 + w_1 x_1}$. If intercept $w_0 = 1.0$ and $w_1 = 0.6931$ (where $e^{0.6931} \approx 2.0$), what is the expected count $\mu$ when $x_1 = 2$? (Given $e \approx 2.718$).</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu = 2e \approx 5.44$</span></button><button class="opt" type="button"><b>B</b><span>$\mu = 2.386$</span></button><button class="opt" type="button"><b>C</b><span>$\mu = 4e \approx 10.87$</span></button><button class="opt" type="button"><b>D</b><span>$\mu = 8e \approx 21.75$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu = 8e \approx 21.75$</span></button><button class="opt" type="button"><b>B</b><span>$\mu = 2.386$</span></button><button class="opt" type="button"><b>C</b><span>$\mu = 2e \approx 5.44$</span></button><button class="opt" type="button"><b>D</b><span>$\mu = 4e \approx 10.87$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Linear predictor $\eta = w_0 + w_1 x_1 = 1.0 + 0.6931(2) = 1.0 + 2\ln(2) = 1.0 + \ln(4)$. Expected count $\mu = e^{1.0 + \ln(4)} = e^{1.0} \times e^{\ln(4)} = e \times 4 = 4e \approx 4 \times 2.71828 = 10.873$.</div>
           </div>
         </div>
@@ -203,11 +203,11 @@ softmax = np.<span class="f">exp</span>(logits - logits.<span class="f">max</spa
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

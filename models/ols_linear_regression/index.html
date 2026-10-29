@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -148,9 +148,9 @@ pred = model.<span class="f">predict</span>(X_te)
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>11</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>Why does one far-away outlier move an OLS line so much?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the loss squares each residual, so large errors dominate</span></button><button class="opt" type="button"><b>B</b><span>Because OLS uses gradient descent with a large learning rate</span></button><button class="opt" type="button"><b>C</b><span>Because the intercept is fixed at zero</span></button><button class="opt" type="button"><b>D</b><span>Because OLS ignores points far from the mean</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because OLS uses gradient descent with a large learning rate</span></button><button class="opt" type="button"><b>B</b><span>Because OLS ignores points far from the mean</span></button><button class="opt" type="button"><b>C</b><span>Because the intercept is fixed at zero</span></button><button class="opt" type="button"><b>D</b><span>Because the loss squares each residual, so large errors dominate</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A residual of 10 contributes 100 to the loss while ten residuals of 1 contribute 10 in total. The fit bends toward the outlier to shrink that one huge term.</div>
           </div>
           <div class="q" data-answer="1">
@@ -158,9 +158,9 @@ pred = model.<span class="f">predict</span>(X_te)
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Too many rows</span></button><button class="opt" type="button"><b>B</b><span>Features that are (nearly) linear combinations of each other</span></button><button class="opt" type="button"><b>C</b><span>A target with a large variance</span></button><button class="opt" type="button"><b>D</b><span>Using an intercept</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Collinear columns make $X^\top X$ (nearly) singular. Small changes in the data then produce wild swings in $\hat\beta$. Ridge regression fixes this by adding $\lambda I$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>An $R^2$ of 0 on the test set means:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model is perfect</span></button><button class="opt" type="button"><b>B</b><span>The model does no better than always predicting the mean</span></button><button class="opt" type="button"><b>C</b><span>The model predicts the exact opposite of the target</span></button><button class="opt" type="button"><b>D</b><span>The features are uncorrelated with each other</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model predicts the exact opposite of the target</span></button><button class="opt" type="button"><b>B</b><span>The model is perfect</span></button><button class="opt" type="button"><b>C</b><span>The model does no better than always predicting the mean</span></button><button class="opt" type="button"><b>D</b><span>The features are uncorrelated with each other</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $R^2$ compares your errors with the errors of the constant mean prediction. It can even go negative on test data when the model is worse than that.</div>
           </div>
         </div>
@@ -198,13 +198,13 @@ pred = model.<span class="f">predict</span>(X_te)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/architecture.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/architecture.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

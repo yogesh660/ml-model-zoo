@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -135,64 +135,64 @@ bnb = <span class="f">make_pipeline</span>(<span class="f">CountVectorizer</span
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q1</span>Why is Laplace smoothing needed?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To speed up training</span></button><button class="opt" type="button"><b>B</b><span>An unseen word would give probability 0 and veto the class</span></button><button class="opt" type="button"><b>C</b><span>To balance the classes</span></button><button class="opt" type="button"><b>D</b><span>To normalise document length</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To balance the classes</span></button><button class="opt" type="button"><b>B</b><span>To speed up training</span></button><button class="opt" type="button"><b>C</b><span>An unseen word would give probability 0 and veto the class</span></button><button class="opt" type="button"><b>D</b><span>To normalise document length</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A single zero in a product makes the whole product zero.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q2</span>What does Bernoulli NB use that Multinomial NB ignores?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Word counts</span></button><button class="opt" type="button"><b>B</b><span>The absence of words</span></button><button class="opt" type="button"><b>C</b><span>Word order</span></button><button class="opt" type="button"><b>D</b><span>Document length</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Document length</span></button><button class="opt" type="button"><b>B</b><span>The absence of words</span></button><button class="opt" type="button"><b>C</b><span>Word order</span></button><button class="opt" type="button"><b>D</b><span>Word counts</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Bernoulli multiplies in $1 - \theta$ for every vocabulary word that does not appear.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q3</span>What type of input features does Multinomial Naive Bayes expect?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Image pixel intensities normalised between $-1$ and $+1$</span></button><button class="opt" type="button"><b>B</b><span>Continuous real-valued features with zero mean and unit variance</span></button><button class="opt" type="button"><b>C</b><span>Non-negative discrete count data (such as word occurrence counts or token frequencies)</span></button><button class="opt" type="button"><b>D</b><span>High-dimensional complex numbers</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>High-dimensional complex numbers</span></button><button class="opt" type="button"><b>B</b><span>Non-negative discrete count data (such as word occurrence counts or token frequencies)</span></button><button class="opt" type="button"><b>C</b><span>Image pixel intensities normalised between $-1$ and $+1$</span></button><button class="opt" type="button"><b>D</b><span>Continuous real-valued features with zero mean and unit variance</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Multinomial Naive Bayes models the probability of generating a bag of words from a multinomial distribution, requiring non-negative integer or count representations ($x_i \ge 0$).</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q4</span>In Laplace smoothing for Multinomial NB, $\hat{\theta}_{kw} = \frac{N_{kw} + \alpha}{N_k + \alpha V}$, what does $V$ represent?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The total number of training documents across all classes</span></button><button class="opt" type="button"><b>B</b><span>The learning rate of the model</span></button><button class="opt" type="button"><b>C</b><span>The variance of the document lengths</span></button><button class="opt" type="button"><b>D</b><span>The size of the vocabulary (total number of distinct feature words)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The variance of the document lengths</span></button><button class="opt" type="button"><b>B</b><span>The size of the vocabulary (total number of distinct feature words)</span></button><button class="opt" type="button"><b>C</b><span>The total number of training documents across all classes</span></button><button class="opt" type="button"><b>D</b><span>The learning rate of the model</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $V$ is the total number of distinct words in the vocabulary. Adding $\alpha$ to each word count requires adding $\alpha V$ to the denominator so that the estimated probabilities $\sum_w \hat{\theta}_{kw}$ still sum strictly to 1.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q5</span>What setting for alpha corresponds to Lidstone smoothing rather than standard Laplace smoothing?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>A fractional value $0 &lt; \alpha &lt; 1$ (such as alpha = 0.1 or alpha = 0.5)</span></button><button class="opt" type="button"><b>B</b><span>alpha = 1.0</span></button><button class="opt" type="button"><b>C</b><span>alpha = 0.0</span></button><button class="opt" type="button"><b>D</b><span>alpha = -1.0</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>alpha = -1.0</span></button><button class="opt" type="button"><b>B</b><span>A fractional value $0 &lt; \alpha &lt; 1$ (such as alpha = 0.1 or alpha = 0.5)</span></button><button class="opt" type="button"><b>C</b><span>alpha = 1.0</span></button><button class="opt" type="button"><b>D</b><span>alpha = 0.0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard Laplace smoothing uses additive pseudo-count $\alpha = 1$. Using a fractional pseudo-count $0 &lt; \alpha &lt; 1$ is known as Lidstone smoothing, which adds less uniform smoothing when vocabularies are vast.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q6</span>Why does standard Bernoulli Naive Bayes struggle when applied to long documents compared to Multinomial Naive Bayes?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Bernoulli NB ignores word counts entirely and counts word absence; in long documents almost every common vocabulary word appears at least once, causing Bernoulli feature vectors to saturate with 1s</span></button><button class="opt" type="button"><b>B</b><span>Bernoulli NB requires $\mathcal{O}(2^V)$ memory</span></button><button class="opt" type="button"><b>C</b><span>Bernoulli NB crashes when document length exceeds 100 words</span></button><button class="opt" type="button"><b>D</b><span>Bernoulli NB assumes words appear in alphabetical order</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Bernoulli NB ignores word counts entirely and counts word absence; in long documents almost every common vocabulary word appears at least once, causing Bernoulli feature vectors to saturate with 1s</span></button><button class="opt" type="button"><b>B</b><span>Bernoulli NB crashes when document length exceeds 100 words</span></button><button class="opt" type="button"><b>C</b><span>Bernoulli NB requires $\mathcal{O}(2^V)$ memory</span></button><button class="opt" type="button"><b>D</b><span>Bernoulli NB assumes words appear in alphabetical order</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In long documents, nearly all vocabulary words occur at least once, so binary presence vectors lose all discriminative power; whether a keyword appeared once by accident or 50 times deliberately cannot be distinguished by Bernoulli NB.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>Why will scikit-learn's MultinomialNB raise a ValueError if passed features preprocessed with StandardScaler?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>StandardScaler converts sparse matrices into dense matrices</span></button><button class="opt" type="button"><b>B</b><span>StandardScaler deletes the vocabulary index</span></button><button class="opt" type="button"><b>C</b><span>StandardScaler causes division by zero in word counts</span></button><button class="opt" type="button"><b>D</b><span>StandardScaler produces negative numbers by subtracting the mean, and Multinomial Naive Bayes relies on multinomial counts that cannot be negative</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>StandardScaler deletes the vocabulary index</span></button><button class="opt" type="button"><b>B</b><span>StandardScaler produces negative numbers by subtracting the mean, and Multinomial Naive Bayes relies on multinomial counts that cannot be negative</span></button><button class="opt" type="button"><b>C</b><span>StandardScaler causes division by zero in word counts</span></button><button class="opt" type="button"><b>D</b><span>StandardScaler converts sparse matrices into dense matrices</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The multinomial log-likelihood is $\sum x_w \log\theta_w$. Negative values of $x_w$ have no probabilistic interpretation as occurrence counts and break the multinomial assumption. Count data should be scaled with MinMaxScaler or used directly as counts or TF-IDF.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q8</span>Can Multinomial Naive Bayes be trained on fractional TF-IDF feature weights rather than integer word counts?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>No, scikit-learn requires all inputs to be integers</span></button><button class="opt" type="button"><b>B</b><span>Only if TF-IDF values are rounded to the nearest integer</span></button><button class="opt" type="button"><b>C</b><span>Yes, while derived from integer counts, the multinomial log-likelihood $\sum x_w \log\theta_w$ is mathematically well-defined for non-negative continuous weights like TF-IDF</span></button><button class="opt" type="button"><b>D</b><span>Only if alpha = 0</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Yes, while derived from integer counts, the multinomial log-likelihood $\sum x_w \log\theta_w$ is mathematically well-defined for non-negative continuous weights like TF-IDF</span></button><button class="opt" type="button"><b>B</b><span>Only if alpha = 0</span></button><button class="opt" type="button"><b>C</b><span>No, scikit-learn requires all inputs to be integers</span></button><button class="opt" type="button"><b>D</b><span>Only if TF-IDF values are rounded to the nearest integer</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In practice, scikit-learn's MultinomialNB accepts non-negative continuous values such as TF-IDF features; the linear combination $\sum x_w \log\theta_w$ works effectively as a weighted log-likelihood.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q9</span>What happens during inference when a new test document contains words that never appeared anywhere in the training vocabulary?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model assigns probability zero to all classes</span></button><button class="opt" type="button"><b>B</b><span>The out-of-vocabulary words receive probability 1.0 in all classes</span></button><button class="opt" type="button"><b>C</b><span>The model crashes with an IndexError</span></button><button class="opt" type="button"><b>D</b><span>The vectoriser completely ignores words not present in the learned vocabulary, so they contribute nothing to any class score</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The vectoriser completely ignores words not present in the learned vocabulary, so they contribute nothing to any class score</span></button><button class="opt" type="button"><b>B</b><span>The out-of-vocabulary words receive probability 1.0 in all classes</span></button><button class="opt" type="button"><b>C</b><span>The model crashes with an IndexError</span></button><button class="opt" type="button"><b>D</b><span>The model assigns probability zero to all classes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The fitted CountVectorizer has a fixed vocabulary mapping. Any token not seen during training is simply skipped during vectorisation and omitted from the dot product.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q10</span>A spam training corpus has vocabulary size $V = 100$. In the spam class, total word tokens count $N_{\text{spam}} = 400$. The word "prize" occurs $N_{\text{spam, prize}} = 8$ times. With Laplace smoothing ($\alpha = 1.0$), what is the smoothed probability $\hat{\theta}_{\text{spam, prize}}$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$8 / 400 = 0.0200$</span></button><button class="opt" type="button"><b>B</b><span>$9 / 500 = 0.0180$</span></button><button class="opt" type="button"><b>C</b><span>$9 / 401 = 0.0224$</span></button><button class="opt" type="button"><b>D</b><span>$8 / 500 = 0.0160$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$8 / 500 = 0.0160$</span></button><button class="opt" type="button"><b>B</b><span>$9 / 401 = 0.0224$</span></button><button class="opt" type="button"><b>C</b><span>$8 / 400 = 0.0200$</span></button><button class="opt" type="button"><b>D</b><span>$9 / 500 = 0.0180$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The Laplace smoothed formula is $\hat{\theta}_{kw} = \frac{N_{kw} + \alpha}{N_k + \alpha V} = \frac{8 + 1}{400 + 1 \times 100} = \frac{9}{500} = 0.0180$.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q11</span>A test document consists of two words: "win cash". Class A has prior $\pi_A = 0.60$, with word probabilities $\theta_{A, \text{win}} = 0.10, \theta_{A, \text{cash}} = 0.05$. Class B has prior $\pi_B = 0.40$, with word probabilities $\theta_{B, \text{win}} = 0.02, \theta_{B, \text{cash}} = 0.01$. Under Multinomial Naive Bayes, what is the unnormalised joint score $P(\text{class}, \text{doc})$ for Class A and Class B?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Class A $= 0.00500$, Class B $= 0.00020$</span></button><button class="opt" type="button"><b>B</b><span>Class A $= 0.15000$, Class B $= 0.03000$</span></button><button class="opt" type="button"><b>C</b><span>Class A $= 0.00300$, Class B $= 0.00008$</span></button><button class="opt" type="button"><b>D</b><span>Class A $= 0.06000$, Class B $= 0.00800$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Class A $= 0.06000$, Class B $= 0.00800$</span></button><button class="opt" type="button"><b>B</b><span>Class A $= 0.15000$, Class B $= 0.03000$</span></button><button class="opt" type="button"><b>C</b><span>Class A $= 0.00300$, Class B $= 0.00008$</span></button><button class="opt" type="button"><b>D</b><span>Class A $= 0.00500$, Class B $= 0.00020$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Joint probability is $\pi_k \times \theta_{k, \text{win}} \times \theta_{k, \text{cash}}$. For Class A: $0.60 \times 0.10 \times 0.05 = 0.00300$. For Class B: $0.40 \times 0.02 \times 0.01 = 0.00008$. Class A is $37.5$ times more likely.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q12</span>In a Bernoulli Naive Bayes model with vocabulary $V = \{\text{free}, \text{meeting}\}$, Class 1 has $\theta_{1, \text{free}} = 0.8, \theta_{1, \text{meeting}} = 0.1$. A document contains only the single word "meeting" (so "free" is absent). If Class 1 has prior $\pi_1 = 0.5$, what is its joint score under Bernoulli NB?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.5 \times (1 - 0.8) \times 0.1 = 0.010$</span></button><button class="opt" type="button"><b>B</b><span>$0.5 \times 0.1 = 0.050$</span></button><button class="opt" type="button"><b>C</b><span>$0.5 \times 0.8 \times 0.1 = 0.040$</span></button><button class="opt" type="button"><b>D</b><span>$0.5 \times (1 - 0.1) = 0.450$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.5 \times 0.8 \times 0.1 = 0.040$</span></button><button class="opt" type="button"><b>B</b><span>$0.5 \times (1 - 0.8) \times 0.1 = 0.010$</span></button><button class="opt" type="button"><b>C</b><span>$0.5 \times 0.1 = 0.050$</span></button><button class="opt" type="button"><b>D</b><span>$0.5 \times (1 - 0.1) = 0.450$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Bernoulli NB multiplies the presence probability for words in the document AND the absence probability $(1 - \theta)$ for vocabulary words NOT in the document: $\pi_1 \times (1 - \theta_{1, \text{free}}) \times \theta_{1, \text{meeting}} = 0.5 \times 0.2 \times 0.1 = 0.010$.</div>
           </div>
         </div>
@@ -230,11 +230,11 @@ bnb = <span class="f">make_pipeline</span>(<span class="f">CountVectorizer</span
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

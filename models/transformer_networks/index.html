@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -159,57 +159,57 @@ y = torch.<span class="f">tensor</span>(digits.target)
           </div>
           <div class="q" data-answer="1">
             <p><span>Q2</span>Why are positional encodings needed?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To speed up training</span></button><button class="opt" type="button"><b>B</b><span>Attention by itself ignores word order</span></button><button class="opt" type="button"><b>C</b><span>To normalise the values</span></button><button class="opt" type="button"><b>D</b><span>To mask future tokens</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To mask future tokens</span></button><button class="opt" type="button"><b>B</b><span>Attention by itself ignores word order</span></button><button class="opt" type="button"><b>C</b><span>To speed up training</span></button><button class="opt" type="button"><b>D</b><span>To normalise the values</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Shuffling the tokens would otherwise give the same set of outputs.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>How does attention’s cost grow with sequence length $T$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Linearly</span></button><button class="opt" type="button"><b>B</b><span>Quadratically</span></button><button class="opt" type="button"><b>C</b><span>Logarithmically</span></button><button class="opt" type="button"><b>D</b><span>Not at all</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Not at all</span></button><button class="opt" type="button"><b>B</b><span>Linearly</span></button><button class="opt" type="button"><b>C</b><span>Quadratically</span></button><button class="opt" type="button"><b>D</b><span>Logarithmically</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A $T \times T$ score matrix.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q4</span>What does a causal mask do?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Hides future tokens so each token only attends to itself and the past</span></button><button class="opt" type="button"><b>B</b><span>Removes padding</span></button><button class="opt" type="button"><b>C</b><span>Drops attention heads</span></button><button class="opt" type="button"><b>D</b><span>Reverses the sequence</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Hides future tokens so each token only attends to itself and the past</span></button><button class="opt" type="button"><b>B</b><span>Drops attention heads</span></button><button class="opt" type="button"><b>C</b><span>Removes padding</span></button><button class="opt" type="button"><b>D</b><span>Reverses the sequence</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Needed for text generation, where the next token must not be visible.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q5</span>Why is the dot product $QK^\top$ divided by $\sqrt{d_k}$ in scaled dot-product attention?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To convert the matrix into an orthogonal basis</span></button><button class="opt" type="button"><b>B</b><span>To prevent negative values in the resulting score matrix</span></button><button class="opt" type="button"><b>C</b><span>To enforce that the attention weights sum to $\sqrt{d_k}$ rather than 1.0</span></button><button class="opt" type="button"><b>D</b><span>Without scaling, for large key dimensions $d_k$ the dot products grow large, pushing the softmax into regions with extremely small gradients</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To prevent negative values in the resulting score matrix</span></button><button class="opt" type="button"><b>B</b><span>Without scaling, for large key dimensions $d_k$ the dot products grow large, pushing the softmax into regions with extremely small gradients</span></button><button class="opt" type="button"><b>C</b><span>To enforce that the attention weights sum to $\sqrt{d_k}$ rather than 1.0</span></button><button class="opt" type="button"><b>D</b><span>To convert the matrix into an orthogonal basis</span></button></div>
             <div class="why" hidden><strong>Why:</strong> When components of $q$ and $k$ are independent with zero mean and unit variance, $\operatorname{Var}(q \cdot k) = d_k$. As $d_k$ increases, dot products have large magnitudes, driving softmax probabilities towards 0 and 1, which causes vanishing gradients during backpropagation.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q6</span>Token 1 has computed attention weights of $0.80$ to itself and $0.20$ to Token 2. The value vectors are $v_1 = [10.0, 0.0]^\top$ and $v_2 = [0.0, 20.0]^\top$. What is the resulting attention output vector for Token 1?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$[5.0, 10.0]^\top$</span></button><button class="opt" type="button"><b>B</b><span>$[10.0, 20.0]^\top$</span></button><button class="opt" type="button"><b>C</b><span>$[8.0, 4.0]^\top$</span></button><button class="opt" type="button"><b>D</b><span>$[2.0, 8.0]^\top$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$[8.0, 4.0]^\top$</span></button><button class="opt" type="button"><b>B</b><span>$[2.0, 8.0]^\top$</span></button><button class="opt" type="button"><b>C</b><span>$[5.0, 10.0]^\top$</span></button><button class="opt" type="button"><b>D</b><span>$[10.0, 20.0]^\top$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The output is the weighted average of the value vectors: $0.80 \times [10.0, 0.0]^\top + 0.20 \times [0.0, 20.0]^\top = [8.0, 0.0]^\top + [0.0, 4.0]^\top = [8.0, 4.0]^\top$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q7</span>What is the primary benefit of using Multi-Head Attention rather than a single large attention head with the same total dimension $d_{\text{model}}$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It reduces the overall parameter count of the Transformer by half</span></button><button class="opt" type="button"><b>B</b><span>It eliminates the need for feed-forward sub-layers</span></button><button class="opt" type="button"><b>C</b><span>It allows the model to jointly attend to information from different representation subspaces and positions simultaneously</span></button><button class="opt" type="button"><b>D</b><span>It prevents the quadratic complexity of self-attention</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It prevents the quadratic complexity of self-attention</span></button><button class="opt" type="button"><b>B</b><span>It eliminates the need for feed-forward sub-layers</span></button><button class="opt" type="button"><b>C</b><span>It reduces the overall parameter count of the Transformer by half</span></button><button class="opt" type="button"><b>D</b><span>It allows the model to jointly attend to information from different representation subspaces and positions simultaneously</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Multiple heads project queries, keys, and values into different lower-dimensional subspaces. This allows distinct heads to specialise in different relationships—such as grammatical dependencies, coreference resolution, or relative position—which a single averaging operation would blur together.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q8</span>Inside a standard Transformer block (such as GPT or BERT), what is the function of the position-wise Feed-Forward Network (FFN) that follows the multi-head attention layer?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It downsamples the sequence length by half</span></button><button class="opt" type="button"><b>B</b><span>It computes cross-token attention between adjacent sentences</span></button><button class="opt" type="button"><b>C</b><span>It aggregates all token vectors into a single sentence representation</span></button><button class="opt" type="button"><b>D</b><span>It processes each token position independently and identically, applying a non-linear feature transformation (typically expanding 4× wider before projecting back)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It aggregates all token vectors into a single sentence representation</span></button><button class="opt" type="button"><b>B</b><span>It downsamples the sequence length by half</span></button><button class="opt" type="button"><b>C</b><span>It computes cross-token attention between adjacent sentences</span></button><button class="opt" type="button"><b>D</b><span>It processes each token position independently and identically, applying a non-linear feature transformation (typically expanding 4× wider before projecting back)</span></button></div>
             <div class="why" hidden><strong>Why:</strong> While attention mixes information across different token positions, the FFN operates position-wise: it applies the same two-layer MLP with non-linearity (e.g. GELU or ReLU) to each token vector separately, allowing complex feature processing per token.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q9</span>In modern Transformer blocks (Pre-LN formulation, as used in GPT-2 and LLaMA), how is the residual connection and Layer Normalisation (LN) structured for input $X$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$H = X + \operatorname{MHA}(\operatorname{LN}(X))$</span></button><button class="opt" type="button"><b>B</b><span>$H = \operatorname{MHA}(X) + \operatorname{LN}(X)$</span></button><button class="opt" type="button"><b>C</b><span>$H = \operatorname{LN}(X + \operatorname{MHA}(X))$</span></button><button class="opt" type="button"><b>D</b><span>$H = \operatorname{MHA}(X) / \sqrt{d}$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$H = \operatorname{MHA}(X) + \operatorname{LN}(X)$</span></button><button class="opt" type="button"><b>B</b><span>$H = \operatorname{MHA}(X) / \sqrt{d}$</span></button><button class="opt" type="button"><b>C</b><span>$H = X + \operatorname{MHA}(\operatorname{LN}(X))$</span></button><button class="opt" type="button"><b>D</b><span>$H = \operatorname{LN}(X + \operatorname{MHA}(X))$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In Pre-LN, normalisation is applied to the input branch before entering the attention sub-layer, and the original input $X$ is added directly via the residual connection: $H = X + \operatorname{MHA}(\operatorname{LN}(X))$. This preserves an unhindered gradient highway throughout dozens of stacked blocks.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q10</span>Given query vector $q = [2.0, -1.0, 2.0, 1.0]$ and key vector $k = [1.0, 2.0, 3.0, 2.0]$ with key dimension $d_k = 4$, what is the scaled attention score $\frac{q \cdot k}{\sqrt{d_k}}$ before softmax?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$4.0$</span></button><button class="opt" type="button"><b>B</b><span>$8.0$</span></button><button class="opt" type="button"><b>C</b><span>$2.0$</span></button><button class="opt" type="button"><b>D</b><span>$16.0$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$4.0$</span></button><button class="opt" type="button"><b>B</b><span>$2.0$</span></button><button class="opt" type="button"><b>C</b><span>$8.0$</span></button><button class="opt" type="button"><b>D</b><span>$16.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The raw dot product is $q \cdot k = (2 \times 1) + (-1 \times 2) + (2 \times 3) + (1 \times 2) = 2 - 2 + 6 + 2 = 8.0$. Dividing by $\sqrt{d_k} = \sqrt{4} = 2.0$ yields $\frac{8.0}{2.0} = 4.0$. Failing to divide by $\sqrt{d_k}$ leaves the unscaled score $8.0$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q11</span>In a Transformer with model embedding dimension $d_{\text{model}} = 768$ and $h = 12$ attention heads, how is each head's query, key, and value dimension $d_k$ typically configured, and why?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$d_k = 768$, so the total concatenated projection size is $12 \times 768 = 9,216$</span></button><button class="opt" type="button"><b>B</b><span>$d_k = \sqrt{768} \approx 28$, to match the scaling denominator</span></button><button class="opt" type="button"><b>C</b><span>$d_k = d_{\text{model}} / h = 768 / 12 = 64$, ensuring that concatenating all 12 head outputs yields dimension 768 with computational cost matching single-head attention</span></button><button class="opt" type="button"><b>D</b><span>$d_k = 12$, matching the number of heads</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$d_k = \sqrt{768} \approx 28$, to match the scaling denominator</span></button><button class="opt" type="button"><b>B</b><span>$d_k = d_{\text{model}} / h = 768 / 12 = 64$, ensuring that concatenating all 12 head outputs yields dimension 768 with computational cost matching single-head attention</span></button><button class="opt" type="button"><b>C</b><span>$d_k = 768$, so the total concatenated projection size is $12 \times 768 = 9,216$</span></button><button class="opt" type="button"><b>D</b><span>$d_k = 12$, matching the number of heads</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard Transformer architectures split the model width across the heads: $d_k = d_v = d_{\text{model}} / h = 768 / 12 = 64$. Concatenating the twelve 64-dimensional outputs reconstructs a 768-dimensional vector, keeping parameter count and FLOPs roughly equal to a single full-rank head.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>In next-token generation with logit vector $z$, what happens mathematically to the probability distribution as the sampling temperature $\tau \to 0$ versus when $\tau \to \infty$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>As $\tau \to 0$, the distribution becomes uniform over all tokens; as $\tau \to \infty$, it becomes deterministic</span></button><button class="opt" type="button"><b>B</b><span>The temperature only modifies negative logits, leaving positive logits unaffected</span></button><button class="opt" type="button"><b>C</b><span>As $\tau \to 0$, all token probabilities become 0.0</span></button><button class="opt" type="button"><b>D</b><span>As $\tau \to 0$, the distribution converges to a one-hot distribution placed entirely on the highest logit ($\operatorname{argmax}$ greedy selection); as $\tau \to \infty$, it converges to a uniform distribution over the entire vocabulary</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>As $\tau \to 0$, the distribution becomes uniform over all tokens; as $\tau \to \infty$, it becomes deterministic</span></button><button class="opt" type="button"><b>B</b><span>The temperature only modifies negative logits, leaving positive logits unaffected</span></button><button class="opt" type="button"><b>C</b><span>As $\tau \to 0$, the distribution converges to a one-hot distribution placed entirely on the highest logit ($\operatorname{argmax}$ greedy selection); as $\tau \to \infty$, it converges to a uniform distribution over the entire vocabulary</span></button><button class="opt" type="button"><b>D</b><span>As $\tau \to 0$, all token probabilities become 0.0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Dividing logits by small $\tau &gt; 0$ magnifies differences between scores: in the limit $\tau \to 0$, the largest logit dominates the softmax sum, yielding probability 1.0 for the top token (greedy decoding). Conversely, as $\tau \to \infty$, $z / \tau \to 0$, and $e^0 = 1$ for all tokens, converging to a completely uniform random distribution.</div>
           </div>
         </div>
@@ -247,13 +247,13 @@ y = torch.<span class="f">tensor</span>(digits.target)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/architecture.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/architecture.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

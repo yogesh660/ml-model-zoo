@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -106,54 +106,54 @@ y = np.<span class="f">array</span>([<span class="n">100</span>, <span class="n"
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>07</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>RMSE is much larger than MAE. This suggests:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model is unbiased</span></button><button class="opt" type="button"><b>B</b><span>A few large errors dominate</span></button><button class="opt" type="button"><b>C</b><span>All errors are similar</span></button><button class="opt" type="button"><b>D</b><span>$R^2$ is negative</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model is unbiased</span></button><button class="opt" type="button"><b>B</b><span>All errors are similar</span></button><button class="opt" type="button"><b>C</b><span>$R^2$ is negative</span></button><button class="opt" type="button"><b>D</b><span>A few large errors dominate</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Squaring amplifies large errors; with equal errors RMSE = MAE.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q2</span>Why is MAPE risky for intermittent demand?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It is too slow</span></button><button class="opt" type="button"><b>B</b><span>Division by actuals near zero blows it up</span></button><button class="opt" type="button"><b>C</b><span>It ignores large errors</span></button><button class="opt" type="button"><b>D</b><span>It is unitless</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Division by actuals near zero blows it up</span></button><button class="opt" type="button"><b>B</b><span>It is too slow</span></button><button class="opt" type="button"><b>C</b><span>It is unitless</span></button><button class="opt" type="button"><b>D</b><span>It ignores large errors</span></button></div>
             <div class="why" hidden><strong>Why:</strong> One week with demand 1 and forecast 5 contributes 400%.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q3</span>What does the Coefficient of Determination ($R^2$) measure in regression?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The percentage of predictions that are within 5% of the true target value</span></button><button class="opt" type="button"><b>B</b><span>The probability that the regression coefficients are non-zero</span></button><button class="opt" type="button"><b>C</b><span>The proportion of variance in the dependent variable explained by the model relative to a naive baseline that always predicts the mean $\bar{y}$</span></button><button class="opt" type="button"><b>D</b><span>The ratio of training loss to validation loss</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The proportion of variance in the dependent variable explained by the model relative to a naive baseline that always predicts the mean $\bar{y}$</span></button><button class="opt" type="button"><b>B</b><span>The probability that the regression coefficients are non-zero</span></button><button class="opt" type="button"><b>C</b><span>The percentage of predictions that are within 5% of the true target value</span></button><button class="opt" type="button"><b>D</b><span>The ratio of training loss to validation loss</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $R^2 = 1 - \frac{\mathrm{SS}_{\text{res}}}{\mathrm{SS}_{\text{tot}}}$ compares the residual sum of squares against the total variance around the mean $\bar{y}$. An $R^2$ of $0.80$ means 80% of target variance is captured by the model.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q4</span>Under what condition does Root Mean Squared Error (RMSE) equal Mean Absolute Error (MAE) exactly?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>When the target follows a standard normal distribution</span></button><button class="opt" type="button"><b>B</b><span>When the dataset has zero outliers</span></button><button class="opt" type="button"><b>C</b><span>When $R^2 = 1.0$</span></button><button class="opt" type="button"><b>D</b><span>When all individual absolute prediction errors $|y_i - \hat{y}_i|$ are identical across all samples</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>When $R^2 = 1.0$</span></button><button class="opt" type="button"><b>B</b><span>When all individual absolute prediction errors $|y_i - \hat{y}_i|$ are identical across all samples</span></button><button class="opt" type="button"><b>C</b><span>When the dataset has zero outliers</span></button><button class="opt" type="button"><b>D</b><span>When the target follows a standard normal distribution</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By the Cauchy-Schwarz inequality, $\sqrt{\frac{1}{n}\sum e_i^2} \ge \frac{1}{n}\sum |e_i|$. Equality holds if and only if all $|e_i|$ are identical constants (e.g. every prediction misses by exactly 3.0 units).</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q5</span>Why can $R^2$ be negative when evaluated on unseen held-out test data?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>If the model's test predictions have a higher residual sum of squares than simply predicting the training target mean $\bar{y}$, $\mathrm{SS}_{\text{res}} &gt; \mathrm{SS}_{\text{tot}}$, driving $R^2 = 1 - \mathrm{SS}_{\text{res}}/\mathrm{SS}_{\text{tot}} &lt; 0$</span></button><button class="opt" type="button"><b>B</b><span>Because $R^2$ is only defined between $-1$ and $+1$ like Pearson correlation</span></button><button class="opt" type="button"><b>C</b><span>Because test data always contains negative values</span></button><button class="opt" type="button"><b>D</b><span>A negative $R^2$ indicates that the learning rate was too high</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>If the model's test predictions have a higher residual sum of squares than simply predicting the training target mean $\bar{y}$, $\mathrm{SS}_{\text{res}} &gt; \mathrm{SS}_{\text{tot}}$, driving $R^2 = 1 - \mathrm{SS}_{\text{res}}/\mathrm{SS}_{\text{tot}} &lt; 0$</span></button><button class="opt" type="button"><b>B</b><span>Because $R^2$ is only defined between $-1$ and $+1$ like Pearson correlation</span></button><button class="opt" type="button"><b>C</b><span>A negative $R^2$ indicates that the learning rate was too high</span></button><button class="opt" type="button"><b>D</b><span>Because test data always contains negative values</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A naive dummy baseline predicting $\bar{y}$ achieves $R^2 = 0$. If an overfitted model makes severe errors on test data such that $\mathrm{SS}_{\text{res}} &gt; \mathrm{SS}_{\text{tot}}$, it performs worse than the flat mean, resulting in a negative $R^2$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q6</span>Why is Weighted Absolute Percentage Error ($\mathrm{WAPE} = 100 \frac{\sum |y_i - \hat{y}_i|}{\sum |y_i|}$) preferred over standard MAPE for retail inventory forecasting with intermittent demand?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>WAPE divides the total absolute error by total volume, avoiding catastrophic division by zero and preventing small actual values from distorting the overall metric</span></button><button class="opt" type="button"><b>B</b><span>WAPE is bounded strictly between 0% and 100%</span></button><button class="opt" type="button"><b>C</b><span>WAPE can only be computed when sales are strictly negative</span></button><button class="opt" type="button"><b>D</b><span>WAPE squares errors to penalise stockouts more heavily</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>WAPE is bounded strictly between 0% and 100%</span></button><button class="opt" type="button"><b>B</b><span>WAPE divides the total absolute error by total volume, avoiding catastrophic division by zero and preventing small actual values from distorting the overall metric</span></button><button class="opt" type="button"><b>C</b><span>WAPE squares errors to penalise stockouts more heavily</span></button><button class="opt" type="button"><b>D</b><span>WAPE can only be computed when sales are strictly negative</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If actual sales on Tuesday are $y = 0$, MAPE divides by zero and fails. If sales are $y = 1$ and forecast is $4$, MAPE adds $300\%$. WAPE aggregates errors across all days before dividing by total sales, providing a robust, volume-weighted percentage.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>A business stakeholder asks: "Can our regression model have an impressive $R^2 = 0.95$ and still be unacceptable for production deployment?" What is the correct response?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>No: $R^2 \ge 0.90$ is mathematically guaranteed to meet all production criteria</span></button><button class="opt" type="button"><b>B</b><span>No: $R^2 = 0.95$ guarantees that 95% of predictions are within 1 unit of the actuals</span></button><button class="opt" type="button"><b>C</b><span>Yes: if the target variable has massive overall variance (e.g. house prices ranging from \$100k to \$10M), the unexplained 5% of variance can still translate to large absolute errors (e.g. RMSE of \$150k) that violate business requirements</span></button><button class="opt" type="button"><b>D</b><span>Yes: because $R^2$ ignores all positive errors</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Yes: because $R^2$ ignores all positive errors</span></button><button class="opt" type="button"><b>B</b><span>Yes: if the target variable has massive overall variance (e.g. house prices ranging from \$100k to \$10M), the unexplained 5% of variance can still translate to large absolute errors (e.g. RMSE of \$150k) that violate business requirements</span></button><button class="opt" type="button"><b>C</b><span>No: $R^2 = 0.95$ guarantees that 95% of predictions are within 1 unit of the actuals</span></button><button class="opt" type="button"><b>D</b><span>No: $R^2 \ge 0.90$ is mathematically guaranteed to meet all production criteria</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $R^2$ is a relative measure of variance explained, not an absolute error metric. A high $R^2$ on highly dispersed data can still conceal absolute errors that are unacceptable in real-world dollar terms.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>What asymmetry bias is inherent in Mean Absolute Percentage Error (MAPE)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Over-forecasting is capped at $50\%$, while under-forecasting is unbounded</span></button><button class="opt" type="button"><b>B</b><span>Under-forecasting is capped at a maximum error of $100\%$ (when $\hat{y} = 0$), whereas over-forecasting has no upper bound and can exceed $1{,}000\%$, systematically penalising over-prediction much more severely</span></button><button class="opt" type="button"><b>C</b><span>MAPE ignores errors when predictions are greater than actuals</span></button><button class="opt" type="button"><b>D</b><span>MAPE is only symmetric when actuals follow a Poisson distribution</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>MAPE ignores errors when predictions are greater than actuals</span></button><button class="opt" type="button"><b>B</b><span>Over-forecasting is capped at $50\%$, while under-forecasting is unbounded</span></button><button class="opt" type="button"><b>C</b><span>MAPE is only symmetric when actuals follow a Poisson distribution</span></button><button class="opt" type="button"><b>D</b><span>Under-forecasting is capped at a maximum error of $100\%$ (when $\hat{y} = 0$), whereas over-forecasting has no upper bound and can exceed $1{,}000\%$, systematically penalising over-prediction much more severely</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For actual $y = 100$: if forecast is $\hat{y} = 0$, error is $|100 - 0| / 100 = 100\%$. But if forecast is $\hat{y} = 300$, error is $|100 - 300| / 100 = 200\%$. If forecast is $1000$, error is $900\%$. MAPE heavily punishes models that forecast above actuals.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q9</span>You train two regression models on the same test set. Model A has $\mathrm{MAE} = 10.0$ and $\mathrm{RMSE} = 12.0$. Model B has $\mathrm{MAE} = 8.0$ and $\mathrm{RMSE} = 25.0$. If large individual prediction errors carry catastrophic commercial costs, which model should you choose?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Model B, because its MAE is 2.0 units lower</span></button><button class="opt" type="button"><b>B</b><span>Model B, because lower MAE always guarantees lower maximum error</span></button><button class="opt" type="button"><b>C</b><span>Either model, as RMSE and MAE convey identical information</span></button><button class="opt" type="button"><b>D</b><span>Model A, because its much lower RMSE ($12.0$ vs $25.0$) shows it avoids rare, severe large errors that dominate quadratic penalties</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Model A, because its much lower RMSE ($12.0$ vs $25.0$) shows it avoids rare, severe large errors that dominate quadratic penalties</span></button><button class="opt" type="button"><b>B</b><span>Either model, as RMSE and MAE convey identical information</span></button><button class="opt" type="button"><b>C</b><span>Model B, because lower MAE always guarantees lower maximum error</span></button><button class="opt" type="button"><b>D</b><span>Model B, because its MAE is 2.0 units lower</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Model B has a lower median/average error on typical points (lower MAE), but its high RMSE ($25.0$) indicates it makes several huge, catastrophic blunders. When severe misses must be avoided, RMSE is the primary selection criterion.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q10</span>A test set has $n = 4$ observations with actual values $y = [10, 20, 30, 40]$ and predictions $\hat{y} = [10, 22, 28, 44]$. What are the Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{MAE} = 8.0$ and $\mathrm{RMSE} = 6.00$</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{MAE} = 2.0$ and $\mathrm{RMSE} = 2.00$</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{MAE} = 2.0$ and $\mathrm{RMSE} \approx 2.45$</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{MAE} = 2.5$ and $\mathrm{RMSE} \approx 3.16$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{MAE} = 2.0$ and $\mathrm{RMSE} \approx 2.45$</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{MAE} = 2.5$ and $\mathrm{RMSE} \approx 3.16$</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{MAE} = 2.0$ and $\mathrm{RMSE} = 2.00$</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{MAE} = 8.0$ and $\mathrm{RMSE} = 6.00$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Errors: $e_1 = 10 - 10 = 0$, $e_2 = 20 - 22 = -2$, $e_3 = 30 - 28 = 2$, $e_4 = 40 - 44 = -4$. Absolute errors: $[0, 2, 2, 4]$. $\mathrm{MAE} = (0 + 2 + 2 + 4) / 4 = 8 / 4 = 2.0$. Squared errors: $[0, 4, 4, 16]$. Mean squared error $= (0 + 4 + 4 + 16) / 4 = 24 / 4 = 6.0$. $\mathrm{RMSE} = \sqrt{6.0} \approx 2.449 \approx 2.45$.</div>
           </div>
           <div class="q" data-answer="0">
@@ -161,9 +161,9 @@ y = np.<span class="f">array</span>([<span class="n">100</span>, <span class="n"
             <div class="opts"><button class="opt" type="button"><b>A</b><span>$R^2 = -3.0$</span></button><button class="opt" type="button"><b>B</b><span>$R^2 = 0.0$</span></button><button class="opt" type="button"><b>C</b><span>$R^2 = 1.0$</span></button><button class="opt" type="button"><b>D</b><span>$R^2 = -1.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Residuals: $y - \hat{y} \in \{2 - 6, 4 - 4, 6 - 2\} = \{-4, 0, 4\}$. Squared residuals: $(-4)^2 + 0^2 + 4^2 = 16 + 0 + 16 = 32$. $\mathrm{SS}_{\text{res}} = 32$. Therefore $R^2 = 1 - \frac{\mathrm{SS}_{\text{res}}}{\mathrm{SS}_{\text{tot}}} = 1 - \frac{32}{8} = 1 - 4.0 = -3.0$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>A forecast is evaluated across two periods: Period 1 has actual $y_1 = 100$ and prediction $\hat{y}_1 = 120$. Period 2 has actual $y_2 = 10$ and prediction $\hat{y}_2 = 15$. What are the Mean Absolute Percentage Error (MAPE) and the Weighted Absolute Percentage Error (WAPE)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{MAPE} = 22.7\%$ and $\mathrm{WAPE} = 35.0\%$</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{MAPE} = 25.0\%$ and $\mathrm{WAPE} = 25.0\%$</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{MAPE} = 70.0\%$ and $\mathrm{WAPE} \approx 45.5\%$</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{MAPE} = 35.0\%$ and $\mathrm{WAPE} \approx 22.7\%$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{MAPE} = 25.0\%$ and $\mathrm{WAPE} = 25.0\%$</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{MAPE} = 22.7\%$ and $\mathrm{WAPE} = 35.0\%$</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{MAPE} = 35.0\%$ and $\mathrm{WAPE} \approx 22.7\%$</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{MAPE} = 70.0\%$ and $\mathrm{WAPE} \approx 45.5\%$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Percentage errors: Period 1: $\frac{|100 - 120|}{100} = \frac{20}{100} = 20.0\%$. Period 2: $\frac{|10 - 15|}{10} = \frac{5}{10} = 50.0\%$. $\mathrm{MAPE} = \frac{20.0\% + 50.0\%}{2} = 35.0\%$. Total absolute errors $= 20 + 5 = 25$. Total actuals $= 100 + 10 = 110$. $\mathrm{WAPE} = 100 \times \frac{25}{110} \approx 22.727\% \approx 22.7\%$.</div>
           </div>
         </div>
@@ -201,11 +201,11 @@ y = np.<span class="f">array</span>([<span class="n">100</span>, <span class="n"
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

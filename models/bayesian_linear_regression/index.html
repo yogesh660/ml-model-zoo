@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -130,39 +130,39 @@ mean, std = model.<span class="f">predict</span>(X_te, return_std=<span class="k
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>The posterior mean of Bayesian linear regression with a zero-mean Gaussian prior equals:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The OLS solution</span></button><button class="opt" type="button"><b>B</b><span>The ridge solution with $\lambda = \alpha/\beta$</span></button><button class="opt" type="button"><b>C</b><span>The lasso solution</span></button><button class="opt" type="button"><b>D</b><span>Zero</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The lasso solution</span></button><button class="opt" type="button"><b>B</b><span>The OLS solution</span></button><button class="opt" type="button"><b>C</b><span>Zero</span></button><button class="opt" type="button"><b>D</b><span>The ridge solution with $\lambda = \alpha/\beta$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Maximising Gaussian likelihood times a Gaussian prior is the same as minimising squared error plus an L2 penalty.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q2</span>Why does the prediction band widen away from the data?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The noise level increases there</span></button><button class="opt" type="button"><b>B</b><span>The term $x_*^\top S_N x_*$ grows when $x_*$ points in directions the data did not pin down</span></button><button class="opt" type="button"><b>C</b><span>The prior mean changes</span></button><button class="opt" type="button"><b>D</b><span>It is a plotting artefact</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The prior mean changes</span></button><button class="opt" type="button"><b>B</b><span>The term $x_*^\top S_N x_*$ grows when $x_*$ points in directions the data did not pin down</span></button><button class="opt" type="button"><b>C</b><span>It is a plotting artefact</span></button><button class="opt" type="button"><b>D</b><span>The noise level increases there</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Weight uncertainty matters more for inputs far from where training data constrained the line.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q3</span>What mathematical property makes the posterior weight distribution Gaussian in standard Bayesian linear regression?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The central limit theorem guarantees normality for any sample size</span></button><button class="opt" type="button"><b>B</b><span>The Laplacian prior distribution cancels out the quadratic likelihood</span></button><button class="opt" type="button"><b>C</b><span>Conjugacy: the Gaussian prior is conjugate to the Gaussian likelihood, producing an exact Gaussian posterior</span></button><button class="opt" type="button"><b>D</b><span>The target variable $y$ is always normalised between 0 and 1</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The Laplacian prior distribution cancels out the quadratic likelihood</span></button><button class="opt" type="button"><b>B</b><span>The central limit theorem guarantees normality for any sample size</span></button><button class="opt" type="button"><b>C</b><span>Conjugacy: the Gaussian prior is conjugate to the Gaussian likelihood, producing an exact Gaussian posterior</span></button><button class="opt" type="button"><b>D</b><span>The target variable $y$ is always normalised between 0 and 1</span></button></div>
             <div class="why" hidden><strong>Why:</strong> When a linear model has Gaussian observation noise and a Gaussian prior on the weights, the prior is conjugate to the likelihood, resulting in an exact closed-form Gaussian posterior $\mathcal{N}(m_N, S_N)$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q4</span>In the Bayesian linear regression predictive variance $\sigma_*^2 = \frac{1}{\beta} + x_*^\top S_N x_*$, what do the two components represent?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both terms represent regularisation shrinkage parameters</span></button><button class="opt" type="button"><b>B</b><span>The first is model bias; the second is parameter estimation variance</span></button><button class="opt" type="button"><b>C</b><span>The first is training error; the second is test cross-validation error</span></button><button class="opt" type="button"><b>D</b><span>The first is irreducible observation noise (aleatoric); the second is parameter uncertainty (epistemic) from having finite data</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both terms represent regularisation shrinkage parameters</span></button><button class="opt" type="button"><b>B</b><span>The first is irreducible observation noise (aleatoric); the second is parameter uncertainty (epistemic) from having finite data</span></button><button class="opt" type="button"><b>C</b><span>The first is model bias; the second is parameter estimation variance</span></button><button class="opt" type="button"><b>D</b><span>The first is training error; the second is test cross-validation error</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\frac{1}{\beta}$ is the intrinsic data noise variance ($\sigma^2$), which persists even with infinite data. The second term $x_*^\top S_N x_*$ is the epistemic uncertainty about the true weights, which shrinks towards zero as more training data pins down the parameters.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q5</span>What does setting a very large prior precision $\alpha \to \infty$ for the weights $\beta \sim \mathcal{N}(0, \alpha^{-1}I)$ express?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Strong prior belief that the weights are close to zero, shrinking the posterior mean heavily towards zero</span></button><button class="opt" type="button"><b>B</b><span>Strong prior belief that the weights have infinite variance and can take any value</span></button><button class="opt" type="button"><b>C</b><span>Total indifference to the weights, making the estimate identical to unregularised OLS</span></button><button class="opt" type="button"><b>D</b><span>That the observation noise is zero</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>That the observation noise is zero</span></button><button class="opt" type="button"><b>B</b><span>Strong prior belief that the weights are close to zero, shrinking the posterior mean heavily towards zero</span></button><button class="opt" type="button"><b>C</b><span>Strong prior belief that the weights have infinite variance and can take any value</span></button><button class="opt" type="button"><b>D</b><span>Total indifference to the weights, making the estimate identical to unregularised OLS</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Precision is the reciprocal of variance ($\alpha = 1/\sigma_0^2$). As $\alpha \to \infty$, the prior variance collapses to 0 around the origin, exerting infinite shrinkage and forcing posterior weights to 0.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q6</span>In scikit-learn's BayesianRidge, what do the fitted attributes model.alpha_ and model.lambda_ represent?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>alpha_ is the L1 mixing ratio and lambda_ is the overall penalty strength</span></button><button class="opt" type="button"><b>B</b><span>alpha_ is the number of support vectors and lambda_ is the kernel bandwidth</span></button><button class="opt" type="button"><b>C</b><span>alpha_ is the estimated noise precision ($\beta = 1/\sigma^2$) and lambda_ is the estimated weight precision ($\alpha = 1/\sigma_w^2$)</span></button><button class="opt" type="button"><b>D</b><span>alpha_ is the intercept and lambda_ is the slope</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>alpha_ is the L1 mixing ratio and lambda_ is the overall penalty strength</span></button><button class="opt" type="button"><b>B</b><span>alpha_ is the estimated noise precision ($\beta = 1/\sigma^2$) and lambda_ is the estimated weight precision ($\alpha = 1/\sigma_w^2$)</span></button><button class="opt" type="button"><b>C</b><span>alpha_ is the intercept and lambda_ is the slope</span></button><button class="opt" type="button"><b>D</b><span>alpha_ is the number of support vectors and lambda_ is the kernel bandwidth</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In scikit-learn's notation for BayesianRidge, alpha_ denotes the precision of the Gaussian noise and lambda_ denotes the precision of the weight prior (the reverse of Christopher Bishop's PRML notation where $\alpha$ is weight precision and $\beta$ is noise precision).</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q7</span>How does BayesianRidge estimate its regularisation hyperparameters without requiring cross-validation?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>By maximising the marginal likelihood (evidence) $p(y \mid X, \alpha, \lambda)$ integrated over all possible weights</span></button><button class="opt" type="button"><b>B</b><span>By running 10-fold cross-validation automatically in the background</span></button><button class="opt" type="button"><b>C</b><span>By setting them to the sample variance of the training labels</span></button><button class="opt" type="button"><b>D</b><span>By running a grid search over 100 fixed values</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By running 10-fold cross-validation automatically in the background</span></button><button class="opt" type="button"><b>B</b><span>By setting them to the sample variance of the training labels</span></button><button class="opt" type="button"><b>C</b><span>By running a grid search over 100 fixed values</span></button><button class="opt" type="button"><b>D</b><span>By maximising the marginal likelihood (evidence) $p(y \mid X, \alpha, \lambda)$ integrated over all possible weights</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Empirical Bayes (or type-II maximum likelihood) integrates out the model weights $\beta$ to compute the marginal likelihood of the observations given the precision parameters, updating them iteratively until convergence.</div>
           </div>
           <div class="q" data-answer="3">
@@ -175,9 +175,9 @@ mean, std = model.<span class="f">predict</span>(X_te, return_std=<span class="k
             <div class="opts"><button class="opt" type="button"><b>A</b><span>The posterior distribution after seeing a batch of data serves directly as the prior distribution for the next incoming data point</span></button><button class="opt" type="button"><b>B</b><span>It uses stochastic gradient descent with constant learning rate</span></button><button class="opt" type="button"><b>C</b><span>It stores all previous raw training points in memory forever</span></button><button class="opt" type="button"><b>D</b><span>It recomputes OLS from scratch using recursive feature elimination</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By Bayes' theorem, $p(\mathbf{w} \mid \mathcal{D}_1, \mathcal{D}_2) \propto p(\mathcal{D}_2 \mid \mathbf{w}) p(\mathbf{w} \mid \mathcal{D}_1)$. The posterior after data $\mathcal{D}_1$ becomes the prior for $\mathcal{D}_2$, allowing exact recursive Bayesian updating without storing past raw data.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>In a 1D Bayesian linear model without intercept ($y = w x + \epsilon$), the prior on $w$ is $\mathcal{N}(0, \alpha^{-1})$ with prior precision $\alpha = 2.0$. The noise precision is $\beta = 1.0$. You observe two data points: $(x_1=1, y_1=3)$ and $(x_2=2, y_2=5)$. What is the posterior precision $S_N^{-1}$ and the posterior variance $S_N$ of $w$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$S_N^{-1} = 5.0$, $S_N = 0.20$</span></button><button class="opt" type="button"><b>B</b><span>$S_N^{-1} = 7.0$, $S_N = 1/7 \approx 0.143$</span></button><button class="opt" type="button"><b>C</b><span>$S_N^{-1} = 12.0$, $S_N = 1/12 \approx 0.083$</span></button><button class="opt" type="button"><b>D</b><span>$S_N^{-1} = 3.0$, $S_N = 0.333$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$S_N^{-1} = 3.0$, $S_N = 0.333$</span></button><button class="opt" type="button"><b>B</b><span>$S_N^{-1} = 5.0$, $S_N = 0.20$</span></button><button class="opt" type="button"><b>C</b><span>$S_N^{-1} = 7.0$, $S_N = 1/7 \approx 0.143$</span></button><button class="opt" type="button"><b>D</b><span>$S_N^{-1} = 12.0$, $S_N = 1/12 \approx 0.083$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In 1D, the posterior precision is $S_N^{-1} = \alpha + \beta \sum x_i^2$. Here $\sum x_i^2 = 1^2 + 2^2 = 1 + 4 = 5$. With $\alpha = 2.0$ and $\beta = 1.0$, $S_N^{-1} = 2.0 + 1.0(5) = 7.0$. The posterior variance is the inverse of precision: $S_N = 1 / 7.0 \approx 0.143$.</div>
           </div>
           <div class="q" data-answer="0">
@@ -185,9 +185,9 @@ mean, std = model.<span class="f">predict</span>(X_te, return_std=<span class="k
             <div class="opts"><button class="opt" type="button"><b>A</b><span>$m_N = 1.857$</span></button><button class="opt" type="button"><b>B</b><span>$m_N = 2.600$</span></button><button class="opt" type="button"><b>C</b><span>$m_N = 2.000$</span></button><button class="opt" type="button"><b>D</b><span>$m_N = 1.250$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The posterior mean is $m_N = \beta S_N \sum x_i y_i$. The cross-product sum is $\sum x_i y_i = (1)(3) + (2)(5) = 3 + 10 = 13$. With $\beta = 1.0$ and $S_N = 1/7$, $m_N = 1.0 \times \frac{1}{7} \times 13 = \frac{13}{7} \approx 1.857$. (The unregularised OLS slope would be $13/5 = 2.600$).</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q12</span>For the model with posterior mean $m_N = \frac{13}{7}$, posterior variance $S_N = \frac{1}{7}$, and noise precision $\beta = 1.0$ (noise variance $\sigma^2 = 1.0$), what is the predictive distribution (mean and variance) for a new query point at $x_* = 3$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu_* = 5.571$, $\sigma_*^2 = 1.286$</span></button><button class="opt" type="button"><b>B</b><span>$\mu_* = 7.800$, $\sigma_*^2 = 1.000$</span></button><button class="opt" type="button"><b>C</b><span>$\mu_* = 6.000$, $\sigma_*^2 = 1.500$</span></button><button class="opt" type="button"><b>D</b><span>$\mu_* = 5.571$, $\sigma_*^2 = 2.286$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mu_* = 6.000$, $\sigma_*^2 = 1.500$</span></button><button class="opt" type="button"><b>B</b><span>$\mu_* = 5.571$, $\sigma_*^2 = 2.286$</span></button><button class="opt" type="button"><b>C</b><span>$\mu_* = 7.800$, $\sigma_*^2 = 1.000$</span></button><button class="opt" type="button"><b>D</b><span>$\mu_* = 5.571$, $\sigma_*^2 = 1.286$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The predictive mean is $\mu_* = m_N x_* = \frac{13}{7} \times 3 = \frac{39}{7} \approx 5.571$. The predictive variance is $\sigma_*^2 = \frac{1}{\beta} + x_*^2 S_N = 1.0 + 3^2 \times \frac{1}{7} = 1.0 + \frac{9}{7} = \frac{16}{7} \approx 2.286$.</div>
           </div>
         </div>
@@ -225,11 +225,11 @@ mean, std = model.<span class="f">predict</span>(X_te, return_std=<span class="k
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

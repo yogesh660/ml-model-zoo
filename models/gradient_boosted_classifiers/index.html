@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -135,59 +135,59 @@ hgb = <span class="f">HistGradientBoostingClassifier</span>(learning_rate=<span 
             <div class="opts"><button class="opt" type="button"><b>A</b><span>The labels</span></button><button class="opt" type="button"><b>B</b><span>The negative gradient $y - p$</span></button><button class="opt" type="button"><b>C</b><span>Bootstrap samples</span></button><button class="opt" type="button"><b>D</b><span>The previous tree’s errors in accuracy</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $y - p$ is the negative gradient of log-loss with respect to the raw score $F$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q2</span>Which rows have the largest Hessian $p(1-p)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Confidently correct rows</span></button><button class="opt" type="button"><b>B</b><span>Rows where $p \approx 0.5$</span></button><button class="opt" type="button"><b>C</b><span>Confidently wrong rows</span></button><button class="opt" type="button"><b>D</b><span>All rows equally</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Confidently wrong rows</span></button><button class="opt" type="button"><b>B</b><span>Confidently correct rows</span></button><button class="opt" type="button"><b>C</b><span>All rows equally</span></button><button class="opt" type="button"><b>D</b><span>Rows where $p \approx 0.5$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $p(1-p)$ peaks at 0.25 when $p = 0.5$.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q3</span>On what scale do the additive trees in a binary Gradient Boosted Classifier predict?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>On the Euclidean distance scale</span></button><button class="opt" type="button"><b>B</b><span>Directly on the raw probability scale $[0, 1]$</span></button><button class="opt" type="button"><b>C</b><span>On the discrete integer label scale $\{-1, +1\}$</span></button><button class="opt" type="button"><b>D</b><span>On the log-odds (logit) scale $F(x) \in (-\infty, +\infty)$, which is converted to probabilities using the logistic sigmoid $\sigma(F)$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>On the discrete integer label scale $\{-1, +1\}$</span></button><button class="opt" type="button"><b>B</b><span>Directly on the raw probability scale $[0, 1]$</span></button><button class="opt" type="button"><b>C</b><span>On the Euclidean distance scale</span></button><button class="opt" type="button"><b>D</b><span>On the log-odds (logit) scale $F(x) \in (-\infty, +\infty)$, which is converted to probabilities using the logistic sigmoid $\sigma(F)$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Trees output unconstrained real values $F_m(x)$ that accumulate additively. This raw ensemble score $F(x) = \sum \eta f_m(x)$ represents log-odds, transformed into probability $P(y=1) = \frac{1}{1 + e^{-F(x)}}$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q4</span>What is the initial prediction $F_0(x)$ before any trees are added in binary Gradient Boosting with log-loss?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$F_0 = 0.0$</span></button><button class="opt" type="button"><b>B</b><span>A random Gaussian vector</span></button><button class="opt" type="button"><b>C</b><span>The log-odds of the overall empirical positive class proportion: $\log(\frac{\bar{y}}{1 - \bar{y}})$</span></button><button class="opt" type="button"><b>D</b><span>The mean of the first input feature</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A random Gaussian vector</span></button><button class="opt" type="button"><b>B</b><span>$F_0 = 0.0$</span></button><button class="opt" type="button"><b>C</b><span>The mean of the first input feature</span></button><button class="opt" type="button"><b>D</b><span>The log-odds of the overall empirical positive class proportion: $\log(\frac{\bar{y}}{1 - \bar{y}})$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Initialising the base score to the log-odds of the positive class prevalence $F_0 = \log(\frac{p}{1-p})$ minimises initial log-loss, ensuring the baseline model matches the empirical marginal class distribution.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q5</span>How does Gradient Boosting differ from AdaBoost in how successive trees are trained?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>AdaBoost re-weights data points based on discrete classification mistakes; Gradient Boosting fits each tree to the continuous negative gradients (pseudo-residuals) of the loss function</span></button><button class="opt" type="button"><b>B</b><span>AdaBoost trains all trees in parallel, while Gradient Boosting is sequential</span></button><button class="opt" type="button"><b>C</b><span>Gradient Boosting can only use linear regression models as base learners</span></button><button class="opt" type="button"><b>D</b><span>AdaBoost does not use decision trees</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Gradient Boosting can only use linear regression models as base learners</span></button><button class="opt" type="button"><b>B</b><span>AdaBoost re-weights data points based on discrete classification mistakes; Gradient Boosting fits each tree to the continuous negative gradients (pseudo-residuals) of the loss function</span></button><button class="opt" type="button"><b>C</b><span>AdaBoost does not use decision trees</span></button><button class="opt" type="button"><b>D</b><span>AdaBoost trains all trees in parallel, while Gradient Boosting is sequential</span></button></div>
             <div class="why" hidden><strong>Why:</strong> While AdaBoost re-weights samples under exponential loss, Gradient Boosting performs gradient descent in function space, fitting each new regression tree directly to the negative gradients of any differentiable loss function (such as log-loss).</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q6</span>For binary classification with labels $y \in \{0, 1\}$ and predicted probabilities $p = \sigma(F)$, why is the negative gradient of log-loss $r = y - p$ called a pseudo-residual?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it measures the difference between the true label (0 or 1) and the predicted probability ($p$), behaving intuitively like a residual error in regression</span></button><button class="opt" type="button"><b>B</b><span>Because it is an imaginary number</span></button><button class="opt" type="button"><b>C</b><span>Because it only applies to out-of-fold validation data</span></button><button class="opt" type="button"><b>D</b><span>Because it is always equal to zero on the training set</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because it only applies to out-of-fold validation data</span></button><button class="opt" type="button"><b>B</b><span>Because it is an imaginary number</span></button><button class="opt" type="button"><b>C</b><span>Because it is always equal to zero on the training set</span></button><button class="opt" type="button"><b>D</b><span>Because it measures the difference between the true label (0 or 1) and the predicted probability ($p$), behaving intuitively like a residual error in regression</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For negative log-likelihood, $-\frac{\partial L}{\partial F} = y - p$. When $y = 1$ and $p = 0.2$, the gradient is $+0.8$, pushing the tree to increase the log-odds; when $y = 0$ and $p = 0.9$, the gradient is $-0.9$, pushing log-odds down.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q7</span>In modern implementations like LightGBM or XGBoost, how is the optimal output value $\gamma_{jm}$ for leaf $j$ computed after finding the tree structure?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>By taking the mode of the labels in that leaf</span></button><button class="opt" type="button"><b>B</b><span>By averaging the feature values across samples in that leaf</span></button><button class="opt" type="button"><b>C</b><span>By taking a Newton–Raphson step: negative sum of gradients divided by the sum of Hessians: $-\frac{\sum g_i}{\sum h_i + \lambda}$</span></button><button class="opt" type="button"><b>D</b><span>By running gradient descent with 1,000 epochs per leaf</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By averaging the feature values across samples in that leaf</span></button><button class="opt" type="button"><b>B</b><span>By taking the mode of the labels in that leaf</span></button><button class="opt" type="button"><b>C</b><span>By taking a Newton–Raphson step: negative sum of gradients divided by the sum of Hessians: $-\frac{\sum g_i}{\sum h_i + \lambda}$</span></button><button class="opt" type="button"><b>D</b><span>By running gradient descent with 1,000 epochs per leaf</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Using a second-order Taylor expansion of the loss function, the optimal leaf weight is given analytically by $-\frac{\sum g_i}{\sum h_i + \lambda}$, where $g_i$ is the gradient, $h_i = p_i(1-p_i)$ is the Hessian, and $\lambda$ is an L2 regularisation parameter.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q8</span>What is subsample (stochastic gradient boosting) in gradient boosted trees?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Downsampling the majority class to 50%</span></button><button class="opt" type="button"><b>B</b><span>Selecting a random subset of classes in multiclass problems</span></button><button class="opt" type="button"><b>C</b><span>Dropping all samples whose target is 0</span></button><button class="opt" type="button"><b>D</b><span>Sampling a fraction of rows without replacement before growing each tree, which injects randomness, reduces overfitting, and speeds up training</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Downsampling the majority class to 50%</span></button><button class="opt" type="button"><b>B</b><span>Sampling a fraction of rows without replacement before growing each tree, which injects randomness, reduces overfitting, and speeds up training</span></button><button class="opt" type="button"><b>C</b><span>Selecting a random subset of classes in multiclass problems</span></button><button class="opt" type="button"><b>D</b><span>Dropping all samples whose target is 0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Subsampling (typically $0.5 \le \text{subsample} &lt; 1.0$) fits each successive tree on a fresh random sub-sample of the training rows, reducing variance in a manner analogous to bagging.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q9</span>Why is early stopping based on a validation set considered essential when training Gradient Boosted Classifiers?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because gradient boosting trees will keep reducing training loss until they memorise noise and overfit</span></button><button class="opt" type="button"><b>B</b><span>Because trees become corrupt after 100 rounds</span></button><button class="opt" type="button"><b>C</b><span>Because scikit-learn crashes if training runs longer than 1 minute</span></button><button class="opt" type="button"><b>D</b><span>Because learning rates automatically decrease to zero</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because trees become corrupt after 100 rounds</span></button><button class="opt" type="button"><b>B</b><span>Because scikit-learn crashes if training runs longer than 1 minute</span></button><button class="opt" type="button"><b>C</b><span>Because learning rates automatically decrease to zero</span></button><button class="opt" type="button"><b>D</b><span>Because gradient boosting trees will keep reducing training loss until they memorise noise and overfit</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Unlike random forests, boosting greedily minimises training loss at every step. Without early stopping on validation loss, adding hundreds or thousands of trees will eventually overfit noisy training points.</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q10</span>A binary classification model currently outputs raw log-odds $F = 0.0$ for two training examples: Example 1 has label $y_1 = 1$, and Example 2 has label $y_2 = 0$. What are the predicted probabilities $p_1, p_2$ and their negative gradients (pseudo-residuals) $r_i = y_i - p_i$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p_1 = 1.00, p_2 = 0.00$; $r_1 = 0.00, r_2 = 0.00$</span></button><button class="opt" type="button"><b>B</b><span>$p_1 = p_2 = 0.50$; $r_1 = +0.50, r_2 = -0.50$</span></button><button class="opt" type="button"><b>C</b><span>$p_1 = p_2 = 0.50$; $r_1 = +1.00, r_2 = 0.00$</span></button><button class="opt" type="button"><b>D</b><span>$p_1 = 0.73, p_2 = 0.27$; $r_1 = +0.27, r_2 = -0.27$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p_1 = p_2 = 0.50$; $r_1 = +1.00, r_2 = 0.00$</span></button><button class="opt" type="button"><b>B</b><span>$p_1 = p_2 = 0.50$; $r_1 = +0.50, r_2 = -0.50$</span></button><button class="opt" type="button"><b>C</b><span>$p_1 = 1.00, p_2 = 0.00$; $r_1 = 0.00, r_2 = 0.00$</span></button><button class="opt" type="button"><b>D</b><span>$p_1 = 0.73, p_2 = 0.27$; $r_1 = +0.27, r_2 = -0.27$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $p = \sigma(0.0) = \frac{1}{1 + e^0} = 0.50$. For Example 1 ($y_1 = 1$): $r_1 = 1 - 0.50 = +0.50$. For Example 2 ($y_2 = 0$): $r_2 = 0 - 0.50 = -0.50$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q11</span>A test sample starts with baseline raw score $F_0 = 0.0$ (so probability $p_0 = 0.50$). The first boosting tree outputs leaf value $f_1(x) = +2.0$ for this sample, and the learning rate is $\eta = 0.10$. What is the updated probability $p_1$? (Given $e^{-0.20} \approx 0.8187$).</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p_1 = 0.700$</span></button><button class="opt" type="button"><b>B</b><span>$p_1 = 0.600$</span></button><button class="opt" type="button"><b>C</b><span>$p_1 = 0.550$</span></button><button class="opt" type="button"><b>D</b><span>$p_1 = 0.500$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p_1 = 0.700$</span></button><button class="opt" type="button"><b>B</b><span>$p_1 = 0.500$</span></button><button class="opt" type="button"><b>C</b><span>$p_1 = 0.600$</span></button><button class="opt" type="button"><b>D</b><span>$p_1 = 0.550$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The raw log-odds updates to $F_1 = F_0 + \eta f_1(x) = 0.0 + 0.10(2.0) = +0.20$. The updated probability is $\sigma(0.20) = \frac{1}{1 + e^{-0.20}} \approx \frac{1}{1 + 0.8187} \approx 0.5498$ (or $0.550$).</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q12</span>The Hessian of binary log-loss with respect to the raw score $F$ is $h = p(1 - p)$. What is the maximum possible value of the Hessian across all possible predictions $F \in (-\infty, \infty)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.10$</span></button><button class="opt" type="button"><b>B</b><span>$0.50$</span></button><button class="opt" type="button"><b>C</b><span>$1.00$</span></button><button class="opt" type="button"><b>D</b><span>$0.25$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.50$</span></button><button class="opt" type="button"><b>B</b><span>$0.10$</span></button><button class="opt" type="button"><b>C</b><span>$1.00$</span></button><button class="opt" type="button"><b>D</b><span>$0.25$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The quadratic function $p(1 - p)$ reaches its maximum when $p = 0.5$, yielding $0.5(1 - 0.5) = 0.25$. Confident predictions ($p \to 0$ or $p \to 1$) produce Hessians near 0.</div>
           </div>
         </div>
@@ -225,11 +225,11 @@ hgb = <span class="f">HistGradientBoostingClassifier</span>(learning_rate=<span 
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

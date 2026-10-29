@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -132,24 +132,24 @@ model = <span class="f">TransformedTargetRegressor</span>(regressor=svr, transfo
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>09</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>Which training points are support vectors in SVR?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>All points</span></button><button class="opt" type="button"><b>B</b><span>Points strictly inside the tube</span></button><button class="opt" type="button"><b>C</b><span>Points on or outside the ε-tube</span></button><button class="opt" type="button"><b>D</b><span>Only outliers</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Only outliers</span></button><button class="opt" type="button"><b>B</b><span>Points strictly inside the tube</span></button><button class="opt" type="button"><b>C</b><span>All points</span></button><button class="opt" type="button"><b>D</b><span>Points on or outside the ε-tube</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Points comfortably inside the tube incur no loss and get zero dual weight.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q2</span>Increasing ε usually leads to:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>More support vectors</span></button><button class="opt" type="button"><b>B</b><span>Fewer support vectors and a smoother fit</span></button><button class="opt" type="button"><b>C</b><span>A narrower tube</span></button><button class="opt" type="button"><b>D</b><span>Higher C</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A narrower tube</span></button><button class="opt" type="button"><b>B</b><span>More support vectors</span></button><button class="opt" type="button"><b>C</b><span>Fewer support vectors and a smoother fit</span></button><button class="opt" type="button"><b>D</b><span>Higher C</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A wider tube contains more points for free, so fewer points constrain the solution.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q3</span>What is the $\varepsilon$-insensitive loss function used in Support Vector Regression?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$L_\varepsilon(y, f(x)) = \max(0, |y - f(x)| - \varepsilon)$</span></button><button class="opt" type="button"><b>B</b><span>$L_\varepsilon(y, f(x)) = \frac{1}{2}(y - f(x))^2$</span></button><button class="opt" type="button"><b>C</b><span>$L_\varepsilon(y, f(x)) = -\log(1 + e^{-y f(x)})$</span></button><button class="opt" type="button"><b>D</b><span>$L_\varepsilon(y, f(x)) = \max(0, 1 - y f(x))$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$L_\varepsilon(y, f(x)) = \max(0, 1 - y f(x))$</span></button><button class="opt" type="button"><b>B</b><span>$L_\varepsilon(y, f(x)) = -\log(1 + e^{-y f(x)})$</span></button><button class="opt" type="button"><b>C</b><span>$L_\varepsilon(y, f(x)) = \frac{1}{2}(y - f(x))^2$</span></button><button class="opt" type="button"><b>D</b><span>$L_\varepsilon(y, f(x)) = \max(0, |y - f(x)| - \varepsilon)$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The $\varepsilon$-insensitive loss assigns zero penalty to any prediction error smaller than or equal to $\varepsilon$, and penalises errors linearly as $|y - f(x)| - \varepsilon$ beyond the tube boundary.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q4</span>What does regularisation parameter $C$ control in Support Vector Regression?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The half-width of the tube</span></button><button class="opt" type="button"><b>B</b><span>The number of features dropped during recursive elimination</span></button><button class="opt" type="button"><b>C</b><span>The degree of the polynomial kernel</span></button><button class="opt" type="button"><b>D</b><span>The tradeoff between model flatness ($\frac{1}{2}\lVert w\rVert^2$) and penalising errors that exceed $\varepsilon$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The tradeoff between model flatness ($\frac{1}{2}\lVert w\rVert^2$) and penalising errors that exceed $\varepsilon$</span></button><button class="opt" type="button"><b>B</b><span>The half-width of the tube</span></button><button class="opt" type="button"><b>C</b><span>The degree of the polynomial kernel</span></button><button class="opt" type="button"><b>D</b><span>The number of features dropped during recursive elimination</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $C$ governs how heavily points lying outside the $\varepsilon$-tube are penalised. A large $C$ forces the model to fit every point strictly, while a small $C$ prioritises a flatter, smoother function.</div>
           </div>
           <div class="q" data-answer="0">
@@ -157,34 +157,34 @@ model = <span class="f">TransformedTargetRegressor</span>(regressor=svr, transfo
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Lagrange multipliers associated with points above ($y_i - f(x_i) \ge \varepsilon$) and below ($f(x_i) - y_i \ge \varepsilon$) the tube</span></button><button class="opt" type="button"><b>B</b><span>The learning rates for forward and backward passes</span></button><button class="opt" type="button"><b>C</b><span>The variance and mean of the Gaussian kernel</span></button><button class="opt" type="button"><b>D</b><span>The eigenvalues of the Gram matrix</span></button></div>
             <div class="why" hidden><strong>Why:</strong> SVR uses two sets of non-negative Lagrange multipliers: $\alpha_i$ for points lying on or above the upper tube boundary, and $\alpha_i^*$ for points lying on or below the lower tube boundary. At most one can be non-zero for any given point.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q6</span>Why is target scaling particularly crucial in SVR when using a fixed default $\varepsilon = 0.1$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>SVR throws a runtime error if targets have non-zero mean</span></button><button class="opt" type="button"><b>B</b><span>$\varepsilon$ is measured in the native units of the target variable; if targets are in millions, $\varepsilon = 0.1$ requires impossibly tight fitting and turns almost every sample into a support vector</span></button><button class="opt" type="button"><b>C</b><span>Scaling the target forces the kernel Gram matrix to be positive definite</span></button><button class="opt" type="button"><b>D</b><span>Unscaled targets cause dual coefficients $\alpha_i$ to become complex numbers</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Scaling the target forces the kernel Gram matrix to be positive definite</span></button><button class="opt" type="button"><b>B</b><span>Unscaled targets cause dual coefficients $\alpha_i$ to become complex numbers</span></button><button class="opt" type="button"><b>C</b><span>$\varepsilon$ is measured in the native units of the target variable; if targets are in millions, $\varepsilon = 0.1$ requires impossibly tight fitting and turns almost every sample into a support vector</span></button><button class="opt" type="button"><b>D</b><span>SVR throws a runtime error if targets have non-zero mean</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Because $\varepsilon$ is an absolute threshold in target units, $\varepsilon = 0.1$ is microscopic if targets range in hundreds of thousands, forcing nearly all data points to become support vectors. Standardising $y$ ensures $\varepsilon = 0.1$ represents $0.1$ standard deviations.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q7</span>In SVR with an RBF kernel $K(x, x') = \exp(-\gamma \lVert x - x'\rVert^2)$, what happens when $\gamma$ is set to an excessively large value?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model approaches a linear straight line</span></button><button class="opt" type="button"><b>B</b><span>All support vectors receive identical dual weights</span></button><button class="opt" type="button"><b>C</b><span>The kernel radius becomes tiny, so each support vector exerts only a sharp, narrow spike of influence around itself, leading to severe overfitting</span></button><button class="opt" type="button"><b>D</b><span>The dual problem becomes unconstrained and solves in a single iteration</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model approaches a linear straight line</span></button><button class="opt" type="button"><b>B</b><span>The dual problem becomes unconstrained and solves in a single iteration</span></button><button class="opt" type="button"><b>C</b><span>The kernel radius becomes tiny, so each support vector exerts only a sharp, narrow spike of influence around itself, leading to severe overfitting</span></button><button class="opt" type="button"><b>D</b><span>All support vectors receive identical dual weights</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Large $\gamma$ means kernel similarity decays rapidly with distance. Each support vector acts only within an isolated narrow neighbourhood, producing a jagged function that collapses to the bias $b$ almost everywhere between training points.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q8</span>In the SVR dual formulation, what determines whether a support vector lies exactly on the boundary of the $\varepsilon$-tube versus strictly outside it?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Boundary points are always clustered at the origin</span></button><button class="opt" type="button"><b>B</b><span>Points on the tube boundary have $\alpha_i^{(*)} = 0$, while points outside have $\alpha_i^{(*)} = C$</span></button><button class="opt" type="button"><b>C</b><span>Boundary points have slack variable $\xi_i &gt; 1$, while exterior points have $\xi_i = 0$</span></button><button class="opt" type="button"><b>D</b><span>A point lies on the tube boundary when $0 &lt; \alpha_i^{(*)} &lt; C$, and strictly outside when $\alpha_i^{(*)} = C$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Points on the tube boundary have $\alpha_i^{(*)} = 0$, while points outside have $\alpha_i^{(*)} = C$</span></button><button class="opt" type="button"><b>B</b><span>A point lies on the tube boundary when $0 &lt; \alpha_i^{(*)} &lt; C$, and strictly outside when $\alpha_i^{(*)} = C$</span></button><button class="opt" type="button"><b>C</b><span>Boundary points are always clustered at the origin</span></button><button class="opt" type="button"><b>D</b><span>Boundary points have slack variable $\xi_i &gt; 1$, while exterior points have $\xi_i = 0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By the Karush–Kuhn–Tucker conditions, points strictly inside have $\alpha_i^{(*)} = 0$. Points exactly on the boundary have zero slack $\xi_i = 0$ but non-zero dual weight $0 &lt; \alpha_i^{(*)} &lt; C$ (free support vectors). Points violating the tube have positive slack $\xi_i &gt; 0$ and their dual weight is capped at the box constraint $\alpha_i^{(*)} = C$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q9</span>What is the computational bottleneck when training an SVR model on large datasets?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Computing the inverse of the target vector</span></button><button class="opt" type="button"><b>B</b><span>Standardising the features before training</span></button><button class="opt" type="button"><b>C</b><span>Solving the quadratic programming problem, which scales between $\mathcal{O}(n^2)$ and $\mathcal{O}(n^3)$ in time and requires $\mathcal{O}(n^2)$ kernel evaluations</span></button><button class="opt" type="button"><b>D</b><span>Performing recursive tree splits on continuous features</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Performing recursive tree splits on continuous features</span></button><button class="opt" type="button"><b>B</b><span>Solving the quadratic programming problem, which scales between $\mathcal{O}(n^2)$ and $\mathcal{O}(n^3)$ in time and requires $\mathcal{O}(n^2)$ kernel evaluations</span></button><button class="opt" type="button"><b>C</b><span>Standardising the features before training</span></button><button class="opt" type="button"><b>D</b><span>Computing the inverse of the target vector</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard SVR solves a quadratic program with $2n$ variables and an $n \times n$ kernel matrix. While decomposition algorithms like SMO help, training time still scales roughly quadratically with sample size $n$, making exact kernel SVR slow for massive datasets.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q10</span>An SVR model with $\varepsilon = 1.5$ predicts the following values for three training samples: Sample 1 ($y_1 = 10.0, \hat{y}_1 = 11.0$), Sample 2 ($y_2 = 5.0, \hat{y}_2 = 1.0$), Sample 3 ($y_3 = 8.0, \hat{y}_3 = 9.5$). What is the total $\varepsilon$-insensitive loss $\sum_{i=1}^3 L_\varepsilon(y_i, \hat{y}_i)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$5.0$</span></button><button class="opt" type="button"><b>B</b><span>$2.5$</span></button><button class="opt" type="button"><b>C</b><span>$4.0$</span></button><button class="opt" type="button"><b>D</b><span>$1.0$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1.0$</span></button><button class="opt" type="button"><b>B</b><span>$5.0$</span></button><button class="opt" type="button"><b>C</b><span>$4.0$</span></button><button class="opt" type="button"><b>D</b><span>$2.5$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Sample 1 error is $|10.0 - 11.0| = 1.0 \le 1.5$, so loss is $0$. Sample 2 error is $|5.0 - 1.0| = 4.0 &gt; 1.5$, giving loss $4.0 - 1.5 = 2.5$. Sample 3 error is $|8.0 - 9.5| = 1.5 \le 1.5$, so loss is $0$. Total loss is $0 + 2.5 + 0 = 2.5$.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q11</span>An SVR model with bias $b = 1.0$ has two support vectors: $x_1 = 0.0$ with $(\alpha_1 - \alpha_1^*) = +2.0$, and $x_2 = 2.0$ with $(\alpha_2 - \alpha_2^*) = -1.0$. Using a Gaussian RBF kernel $K(x, x') = \exp(-\gamma (x - x')^2)$ with $\gamma = 0.5$, what is the predicted value $f(x_*)$ at query point $x_* = 0.0$? (Note: $e^{-2.0} \approx 0.135$).</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$f(x_*) = 2.865$</span></button><button class="opt" type="button"><b>B</b><span>$f(x_*) = 3.000$</span></button><button class="opt" type="button"><b>C</b><span>$f(x_*) = 1.865$</span></button><button class="opt" type="button"><b>D</b><span>$f(x_*) = 2.135$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$f(x_*) = 2.865$</span></button><button class="opt" type="button"><b>B</b><span>$f(x_*) = 3.000$</span></button><button class="opt" type="button"><b>C</b><span>$f(x_*) = 2.135$</span></button><button class="opt" type="button"><b>D</b><span>$f(x_*) = 1.865$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $K(0, 0) = \exp(0) = 1.0$, and $K(2, 0) = \exp(-0.5 \times (2-0)^2) = \exp(-2.0) \approx 0.135$. The prediction is $(\alpha_1 - \alpha_1^*) K(x_1, 0) + (\alpha_2 - \alpha_2^*) K(x_2, 0) + b = (+2.0)(1.0) + (-1.0)(0.135) + 1.0 = 2.0 - 0.135 + 1.0 = 2.865$.</div>
           </div>
           <div class="q" data-answer="1">
@@ -227,11 +227,11 @@ model = <span class="f">TransformedTargetRegressor</span>(regressor=svr, transfo
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

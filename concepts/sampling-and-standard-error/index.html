@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -115,29 +115,29 @@ sample_sizes = [<span class="n">25</span>, <span class="n">100</span>, <span cla
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>06</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q1</span>What is the primary conceptual difference between standard deviation and standard error?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard deviation measures dispersion of individual observations; standard error measures the variability of a sample statistic across samples</span></button><button class="opt" type="button"><b>B</b><span>Standard error is for discrete data; standard deviation is for continuous data</span></button><button class="opt" type="button"><b>C</b><span>Standard error is always larger than standard deviation</span></button><button class="opt" type="button"><b>D</b><span>Standard deviation decreases with sample size, while standard error remains constant</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard error is for discrete data; standard deviation is for continuous data</span></button><button class="opt" type="button"><b>B</b><span>Standard deviation measures dispersion of individual observations; standard error measures the variability of a sample statistic across samples</span></button><button class="opt" type="button"><b>C</b><span>Standard error is always larger than standard deviation</span></button><button class="opt" type="button"><b>D</b><span>Standard deviation decreases with sample size, while standard error remains constant</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard deviation describes the spread of individual observations in a population or sample. Standard error describes the spread of the sampling distribution of an estimator (e.g. sample mean).</div>
           </div>
           <div class="q" data-answer="1">
             <p><span>Q2</span>If a sample of 64 observations has a sample standard deviation of $s = 16$, what is the estimated standard error of the mean?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.25</span></button><button class="opt" type="button"><b>B</b><span>2.0</span></button><button class="opt" type="button"><b>C</b><span>4.0</span></button><button class="opt" type="button"><b>D</b><span>8.0</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.25</span></button><button class="opt" type="button"><b>B</b><span>2.0</span></button><button class="opt" type="button"><b>C</b><span>8.0</span></button><button class="opt" type="button"><b>D</b><span>4.0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\operatorname{SE}(\bar{x}) = s / \sqrt{n} = 16 / \sqrt{64} = 16 / 8 = 2.0$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q3</span>What happens to the population standard deviation $\sigma$ and the standard error of the mean $\operatorname{SE}(\bar{X})$ as the sample size $n$ grows arbitrarily large?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both converge to zero</span></button><button class="opt" type="button"><b>B</b><span>$\sigma$ grows toward infinity; $\operatorname{SE}(\bar{X})$ remains constant</span></button><button class="opt" type="button"><b>C</b><span>$\sigma$ remains fixed (it is a population constant); $\operatorname{SE}(\bar{X})$ converges toward zero</span></button><button class="opt" type="button"><b>D</b><span>Both remain constant</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both remain constant</span></button><button class="opt" type="button"><b>B</b><span>$\sigma$ remains fixed (it is a population constant); $\operatorname{SE}(\bar{X})$ converges toward zero</span></button><button class="opt" type="button"><b>C</b><span>Both converge to zero</span></button><button class="opt" type="button"><b>D</b><span>$\sigma$ grows toward infinity; $\operatorname{SE}(\bar{X})$ remains constant</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The population standard deviation $\sigma$ is a fixed physical attribute of the population. The standard error $\sigma / \sqrt{n}$ measures sampling uncertainty and converges to 0 as $n \to \infty$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q4</span>For a binary classification test set of $n = 400$ instances with an observed accuracy of $\hat{p} = 0.80$, what is the estimated standard error of the accuracy estimate?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.04</span></button><button class="opt" type="button"><b>B</b><span>0.16</span></button><button class="opt" type="button"><b>C</b><span>0.20</span></button><button class="opt" type="button"><b>D</b><span>0.02</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.20</span></button><button class="opt" type="button"><b>B</b><span>0.16</span></button><button class="opt" type="button"><b>C</b><span>0.02</span></button><button class="opt" type="button"><b>D</b><span>0.04</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\operatorname{SE}(\hat{p}) = \sqrt{\hat{p}(1 - \hat{p}) / n} = \sqrt{(0.80 \times 0.20) / 400} = \sqrt{0.16 / 400} = \sqrt{0.0004} = 0.02$ (or 2 percentage points).</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q5</span>At what true population proportion $p$ is the standard error $\operatorname{SE}(\hat{p}) = \sqrt{p(1-p)/n}$ at its maximum for any fixed sample size $n$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p = 0.50$</span></button><button class="opt" type="button"><b>B</b><span>$p = 0.05$</span></button><button class="opt" type="button"><b>C</b><span>$p = 0.95$</span></button><button class="opt" type="button"><b>D</b><span>$p = 1.00$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p = 0.05$</span></button><button class="opt" type="button"><b>B</b><span>$p = 0.95$</span></button><button class="opt" type="button"><b>C</b><span>$p = 1.00$</span></button><button class="opt" type="button"><b>D</b><span>$p = 0.50$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The Bernoulli variance $p(1 - p)$ is a quadratic curve peaking at $p = 0.50$ (where $p(1 - p) = 0.25$). As $p$ approaches 0 or 1, the variance and standard error shrink toward zero.</div>
           </div>
           <div class="q" data-answer="3">
@@ -145,19 +145,19 @@ sample_sizes = [<span class="n">25</span>, <span class="n">100</span>, <span cla
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Bessel's correction factor $\frac{n}{n - 1}$</span></button><button class="opt" type="button"><b>B</b><span>Student's $t$ critical multiplier</span></button><button class="opt" type="button"><b>C</b><span>Bonferroni's correction $\frac{\alpha}{k}$</span></button><button class="opt" type="button"><b>D</b><span>The Finite Population Correction (FPC), $\sqrt{\frac{N - n}{N - 1}}$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The Finite Population Correction factor $\sqrt{(N-n)/(N-1)}$ accounts for the reduction in sampling variability when a sizable fraction of the finite population is sampled without replacement.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q7</span>Study A surveys 100 participants and reports $\operatorname{SE} = 6.0$. If Study B samples the same population and desires a standard error of $\operatorname{SE} = 1.5$, how many participants must Study B recruit?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>400</span></button><button class="opt" type="button"><b>B</b><span>1,600</span></button><button class="opt" type="button"><b>C</b><span>800</span></button><button class="opt" type="button"><b>D</b><span>2,400</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>800</span></button><button class="opt" type="button"><b>B</b><span>400</span></button><button class="opt" type="button"><b>C</b><span>2,400</span></button><button class="opt" type="button"><b>D</b><span>1,600</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard error shrinks as $1/\sqrt{n}$. To cut the standard error by a factor of $6.0 / 1.5 = 4$, the sample size must increase by a factor of $4^2 = 16$. Thus $n = 100 \times 16 = 1{,}600$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q8</span>In Python, evaluating <code>s / np.sqrt(len(data))</code> where <code>s = np.std(data, ddof=1)</code> computes:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The population standard deviation</span></button><button class="opt" type="button"><b>B</b><span>The median absolute deviation</span></button><button class="opt" type="button"><b>C</b><span>The estimated standard error of the sample mean using Bessel's correction</span></button><button class="opt" type="button"><b>D</b><span>The variance of individual data points</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The estimated standard error of the sample mean using Bessel's correction</span></button><button class="opt" type="button"><b>B</b><span>The median absolute deviation</span></button><button class="opt" type="button"><b>C</b><span>The variance of individual data points</span></button><button class="opt" type="button"><b>D</b><span>The population standard deviation</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Dividing the sample standard deviation by $\sqrt{n}$ calculates the standard error of the mean. Using <code>ddof=1</code> ensures the sample variance estimator is unbiased.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q9</span>An online survey collects 250,000 voluntary responses and calculates a tiny standard error of $\pm 0.1\%$. Why can this precision be deceptive?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The formula $\sqrt{p(1-p)/n}$ is mathematically invalid for sample sizes over 100,000</span></button><button class="opt" type="button"><b>B</b><span>Standard error only measures random sampling variability, not systematic selection bias from voluntary participation</span></button><button class="opt" type="button"><b>C</b><span>Standard error cannot be computed on proportion data</span></button><button class="opt" type="button"><b>D</b><span>Surveys must always have a minimum standard error of 5%</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard error only measures random sampling variability, not systematic selection bias from voluntary participation</span></button><button class="opt" type="button"><b>B</b><span>Standard error cannot be computed on proportion data</span></button><button class="opt" type="button"><b>C</b><span>Surveys must always have a minimum standard error of 5%</span></button><button class="opt" type="button"><b>D</b><span>The formula $\sqrt{p(1-p)/n}$ is mathematically invalid for sample sizes over 100,000</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard error only reflects random sampling fluctuations under probability sampling. It cannot diagnose or fix systematic sampling bias (e.g. self-selection), which undermines the estimate regardless of sample size.</div>
           </div>
           <div class="q" data-answer="2">
@@ -165,14 +165,14 @@ sample_sizes = [<span class="n">25</span>, <span class="n">100</span>, <span cla
             <div class="opts"><button class="opt" type="button"><b>A</b><span>2.00 hours</span></button><button class="opt" type="button"><b>B</b><span>1.44 hours</span></button><button class="opt" type="button"><b>C</b><span>1.79 hours</span></button><button class="opt" type="button"><b>D</b><span>0.89 hours</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The unadjusted standard error is $s / \sqrt{n} = 20 / 10 = 2.0\text{ hours}$. Multiplying by the FPC factor $\sqrt{400/499} \approx 0.8953$ gives $2.0 \times 0.8953 \approx 1.79\text{ hours}$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q11</span>An A/B test has two independent groups: Group A ($n_A = 100, s_A^2 = 300$) and Group B ($n_B = 100, s_B^2 = 100$). What is the standard error of the difference between the two sample means, $\operatorname{SE}(\bar{x}_A - \bar{x}_B)$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>2.0</span></button><button class="opt" type="button"><b>B</b><span>4.0</span></button><button class="opt" type="button"><b>C</b><span>1.0</span></button><button class="opt" type="button"><b>D</b><span>5.0</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>4.0</span></button><button class="opt" type="button"><b>B</b><span>1.0</span></button><button class="opt" type="button"><b>C</b><span>5.0</span></button><button class="opt" type="button"><b>D</b><span>2.0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For independent samples, variances of the sample means sum: $\operatorname{Var}(\bar{x}_A - \bar{x}_B) = \frac{s_A^2}{n_A} + \frac{s_B^2}{n_B} = \frac{300}{100} + \frac{100}{100} = 3 + 1 = 4$. Taking the square root gives $\operatorname{SE} = \sqrt{4} = 2.0$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q12</span>A model achieves test accuracy $\hat{p} = 0.90$. To ensure the standard error of this accuracy estimate is at most 0.015 (1.5 percentage points), what is the minimum test sample size $n$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>100</span></button><button class="opt" type="button"><b>B</b><span>225</span></button><button class="opt" type="button"><b>C</b><span>600</span></button><button class="opt" type="button"><b>D</b><span>400</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>600</span></button><button class="opt" type="button"><b>B</b><span>400</span></button><button class="opt" type="button"><b>C</b><span>225</span></button><button class="opt" type="button"><b>D</b><span>100</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Setting $\sqrt{\hat{p}(1-\hat{p})/n} \le 0.015$ gives $(0.90 \times 0.10) / n \le 0.015^2 = 0.000225$. Thus $n \ge 0.09 / 0.000225 = 400$.</div>
           </div>
         </div>
@@ -210,11 +210,11 @@ sample_sizes = [<span class="n">25</span>, <span class="n">100</span>, <span cla
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

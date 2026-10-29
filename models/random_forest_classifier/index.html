@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -132,17 +132,17 @@ rf.<span class="f">fit</span>(X_tr, y_tr)
         <div class="quiz">
           <div class="q" data-answer="1">
             <p><span>Q1</span>Why does a random forest generalise better than one deep tree?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Its trees are shallower</span></button><button class="opt" type="button"><b>B</b><span>Averaging decorrelated trees reduces variance</span></button><button class="opt" type="button"><b>C</b><span>It uses boosting</span></button><button class="opt" type="button"><b>D</b><span>It drops noisy rows</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It uses boosting</span></button><button class="opt" type="button"><b>B</b><span>Averaging decorrelated trees reduces variance</span></button><button class="opt" type="button"><b>C</b><span>It drops noisy rows</span></button><button class="opt" type="button"><b>D</b><span>Its trees are shallower</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each tree overfits differently; averaging cancels the parts that are not shared.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q2</span>Out-of-bag accuracy is computed on:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The test set</span></button><button class="opt" type="button"><b>B</b><span>For each row, only trees that did not see it in training</span></button><button class="opt" type="button"><b>C</b><span>A random 10% split</span></button><button class="opt" type="button"><b>D</b><span>The training set</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The training set</span></button><button class="opt" type="button"><b>B</b><span>A random 10% split</span></button><button class="opt" type="button"><b>C</b><span>The test set</span></button><button class="opt" type="button"><b>D</b><span>For each row, only trees that did not see it in training</span></button></div>
             <div class="why" hidden><strong>Why:</strong> About 37% of rows are left out of each bootstrap sample.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>In scikit-learn's RandomForestClassifier, what is the default number of features considered at each split (max_features) for $p$ total features?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p$ (all features, like standard bagging)</span></button><button class="opt" type="button"><b>B</b><span>$p / 2$</span></button><button class="opt" type="button"><b>C</b><span>$\log_2(p)$</span></button><button class="opt" type="button"><b>D</b><span>$\lfloor\sqrt{p}\rfloor$ (the square root of the number of features)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$p$ (all features, like standard bagging)</span></button><button class="opt" type="button"><b>B</b><span>$\log_2(p)$</span></button><button class="opt" type="button"><b>C</b><span>$\lfloor\sqrt{p}\rfloor$ (the square root of the number of features)</span></button><button class="opt" type="button"><b>D</b><span>$p / 2$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By default, RandomForestClassifier sets max_features='sqrt', drawing a fresh random subset of $\sqrt{p}$ features at every node split to decorrelate individual trees.</div>
           </div>
           <div class="q" data-answer="0">
@@ -152,32 +152,32 @@ rf.<span class="f">fit</span>(X_tr, y_tr)
           </div>
           <div class="q" data-answer="2">
             <p><span>Q5</span>Why does Random Forest randomly subset features at each split instead of using standard bagging where each tree can consider all features?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To reduce the memory needed to store the dataset in RAM</span></button><button class="opt" type="button"><b>B</b><span>To force all decision trees to be strictly linear hyperplanes</span></button><button class="opt" type="button"><b>C</b><span>If a few features are overwhelmingly predictive, every bagged tree will select them for the top splits, making the trees strongly correlated and limiting variance reduction</span></button><button class="opt" type="button"><b>D</b><span>To ensure that training accuracy is exactly 100%</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To force all decision trees to be strictly linear hyperplanes</span></button><button class="opt" type="button"><b>B</b><span>To reduce the memory needed to store the dataset in RAM</span></button><button class="opt" type="button"><b>C</b><span>If a few features are overwhelmingly predictive, every bagged tree will select them for the top splits, making the trees strongly correlated and limiting variance reduction</span></button><button class="opt" type="button"><b>D</b><span>To ensure that training accuracy is exactly 100%</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If one or two dominant features exist, standard bagging trees all make the same initial splits, becoming structurally similar. Forcing each split to choose from a random feature subset decorrelates the trees, so their average achieves far lower ensemble variance.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q6</span>What mathematical property explains why approximately 36.8% of training rows are left out of each bootstrap sample in a Random Forest?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Trees automatically prune the bottom 36.8% of leaf nodes</span></button><button class="opt" type="button"><b>B</b><span>Scikit-learn hardcodes an internal 63/37 train-validation split</span></button><button class="opt" type="button"><b>C</b><span>The Central Limit Theorem guarantees that 36.8% of rows are outliers</span></button><button class="opt" type="button"><b>D</b><span>For a dataset of size $n$, the probability that a specific row is never picked in $n$ draws with replacement is $(1 - 1/n)^n \to 1/e \approx 0.368$ as $n \to \infty$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The Central Limit Theorem guarantees that 36.8% of rows are outliers</span></button><button class="opt" type="button"><b>B</b><span>Scikit-learn hardcodes an internal 63/37 train-validation split</span></button><button class="opt" type="button"><b>C</b><span>For a dataset of size $n$, the probability that a specific row is never picked in $n$ draws with replacement is $(1 - 1/n)^n \to 1/e \approx 0.368$ as $n \to \infty$</span></button><button class="opt" type="button"><b>D</b><span>Trees automatically prune the bottom 36.8% of leaf nodes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In sampling with replacement of size $n$, the probability of not selecting row $i$ on any single draw is $1 - 1/n$. Over $n$ independent draws, the probability of never selecting it is $(1 - 1/n)^n \to e^{-1} \approx 0.3679$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>What happens as you increase n_estimators (the number of trees) in a Random Forest Classifier?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Test error stabilises to a limiting value; random forests do not overfit simply by adding more trees</span></button><button class="opt" type="button"><b>B</b><span>The model begins to severely overfit the training data</span></button><button class="opt" type="button"><b>C</b><span>Training error increases monotonically towards 50%</span></button><button class="opt" type="button"><b>D</b><span>The trees become increasingly correlated</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Training error increases monotonically towards 50%</span></button><button class="opt" type="button"><b>B</b><span>Test error stabilises to a limiting value; random forests do not overfit simply by adding more trees</span></button><button class="opt" type="button"><b>C</b><span>The trees become increasingly correlated</span></button><button class="opt" type="button"><b>D</b><span>The model begins to severely overfit the training data</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By the Law of Large Numbers, averaging more independent, identically distributed random trees converges to the expected tree output without increasing generalisation variance; adding trees costs computation but does not cause overfitting.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q8</span>In Random Forest classification, what is the difference between hard voting and soft voting?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Hard voting uses deep trees; soft voting uses shallow stumps</span></button><button class="opt" type="button"><b>B</b><span>Hard voting uses L1 regularisation; soft voting uses L2 regularisation</span></button><button class="opt" type="button"><b>C</b><span>Hard voting counts the discrete majority class predicted across all trees; soft voting averages the predicted class probability distributions across all trees</span></button><button class="opt" type="button"><b>D</b><span>Hard voting only works for binary classification; soft voting is multiclass only</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Hard voting uses deep trees; soft voting uses shallow stumps</span></button><button class="opt" type="button"><b>B</b><span>Hard voting only works for binary classification; soft voting is multiclass only</span></button><button class="opt" type="button"><b>C</b><span>Hard voting uses L1 regularisation; soft voting uses L2 regularisation</span></button><button class="opt" type="button"><b>D</b><span>Hard voting counts the discrete majority class predicted across all trees; soft voting averages the predicted class probability distributions across all trees</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Hard voting assigns the label selected by the majority of individual trees ($\text{mode}(\hat{y}_b)$). Soft voting computes $\hat{P}(c \mid x) = \frac{1}{B}\sum_{b=1}^B \hat{P}_b(c \mid x)$ and takes the argmax, giving greater weight to trees that are confident.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q9</span>Why can default impurity-based feature importance (feature_importances_) in a Random Forest be misleading for high-cardinality categorical features?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>High-cardinality features are automatically dropped by CART</span></button><button class="opt" type="button"><b>B</b><span>Features with many unique values provide many more candidate split thresholds, giving them artificial opportunities to reduce Gini impurity even if they contain pure noise</span></button><button class="opt" type="button"><b>C</b><span>Scikit-learn converts all high-cardinality features into constants</span></button><button class="opt" type="button"><b>D</b><span>Impurity importance only measures negative correlations</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Features with many unique values provide many more candidate split thresholds, giving them artificial opportunities to reduce Gini impurity even if they contain pure noise</span></button><button class="opt" type="button"><b>B</b><span>High-cardinality features are automatically dropped by CART</span></button><button class="opt" type="button"><b>C</b><span>Impurity importance only measures negative correlations</span></button><button class="opt" type="button"><b>D</b><span>Scikit-learn converts all high-cardinality features into constants</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A categorical variable with many levels (like zip codes or IDs) offers exponentially many binary split combinations, allowing trees to overfit and artificially inflating their Gini impurity reduction score. Permutation importance on held-out data avoids this bias.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q10</span>Suppose individual trees in a Random Forest have variance $\sigma^2 = 1.0$ and pairwise correlation $\rho = 0.20$. What is the theoretical ensemble variance $\operatorname{Var}(\bar{T}) = \rho \sigma^2 + \frac{1 - \rho}{B}\sigma^2$ as the number of trees $B \to \infty$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.00$</span></button><button class="opt" type="button"><b>B</b><span>$1.00$</span></button><button class="opt" type="button"><b>C</b><span>$0.80$</span></button><button class="opt" type="button"><b>D</b><span>$0.20$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.80$</span></button><button class="opt" type="button"><b>B</b><span>$1.00$</span></button><button class="opt" type="button"><b>C</b><span>$0.00$</span></button><button class="opt" type="button"><b>D</b><span>$0.20$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The variance of the average of $B$ correlated random variables is $\rho \sigma^2 + \frac{1-\rho}{B}\sigma^2$. As $B \to \infty$, the second term $\frac{1-\rho}{B}\sigma^2 \to 0$, leaving $\rho \sigma^2 = 0.20 \times 1.0 = 0.20$. This demonstrates that the minimum achievable variance is strictly bounded by the tree correlation $\rho$.</div>
           </div>
           <div class="q" data-answer="2">
@@ -185,9 +185,9 @@ rf.<span class="f">fit</span>(X_tr, y_tr)
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Both voting methods predict Class 0</span></button><button class="opt" type="button"><b>B</b><span>Hard voting predicts Class 1; soft voting predicts Class 0</span></button><button class="opt" type="button"><b>C</b><span>Hard voting predicts Class 0; soft voting predicts Class 1</span></button><button class="opt" type="button"><b>D</b><span>Both voting methods predict Class 1</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Hard voting: Tree 1 votes 1 ($0.90 \ge 0.5$), Trees 2 and 3 vote 0 ($0.40, 0.35 &lt; 0.5$). Majority is Class 0 (2 to 1). Soft voting: average probability is $(0.90 + 0.40 + 0.35) / 3 = 1.65 / 3 = 0.55 \ge 0.5$, predicting Class 1.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q12</span>In a small dataset of $n = 4$ observations $\{A, B, C, D\}$, what is the exact probability that observation $A$ is selected at least once in a bootstrap sample of size 4 drawn with replacement?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1 - (3/4)^4 = 175 / 256 \approx 68.36\%$</span></button><button class="opt" type="button"><b>B</b><span>$1/4 = 25.00\%$</span></button><button class="opt" type="button"><b>C</b><span>$(3/4)^4 = 81 / 256 \approx 31.64\%$</span></button><button class="opt" type="button"><b>D</b><span>$50.00\%$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$50.00\%$</span></button><button class="opt" type="button"><b>B</b><span>$1 - (3/4)^4 = 175 / 256 \approx 68.36\%$</span></button><button class="opt" type="button"><b>C</b><span>$1/4 = 25.00\%$</span></button><button class="opt" type="button"><b>D</b><span>$(3/4)^4 = 81 / 256 \approx 31.64\%$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> On each draw, the probability of not selecting $A$ is $3/4$. Over 4 independent draws with replacement, the probability that $A$ is never selected is $(3/4)^4 = 81 / 256 \approx 31.64\%$. Therefore, the probability that $A$ is selected at least once is $1 - 81/256 = 175 / 256 \approx 68.36\%$.</div>
           </div>
         </div>
@@ -225,11 +225,11 @@ rf.<span class="f">fit</span>(X_tr, y_tr)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

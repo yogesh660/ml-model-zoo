@@ -27,9 +27,16 @@ Live: https://yogesh660.github.io/ml-model-zoo/
 ## Planned lessons
 - `content/curriculum.js` modules mix live ids (strings) with planned lessons (`['Title', 'Core'|'Extended'|'Capstone']`; a trailing ` ⚙` means a live lab is planned). Helpers `C()`, `X()`, `K()` build those arrays.
 - Each planned lesson gets a stub page at `concepts/<slug(title)>/` (`plannedPage` in `scripts/build.js`); it is in the hub syllabus and search but not in progress counts.
-- To write one: add the lesson to the track's file (`statistics, datascience, mltoolbox, deeplearning, vision, nlp, ai` in `content/`) with `task: 'concepts'` and `id` = that slug, then replace the array in the curriculum with the id. Using `task: 'concepts'` keeps the URL the stub already had.
+- To write one: add the lesson to the track's file (`statistics, datascience, mltoolbox, deeplearning, vision, nlp, ai` in `content/`) with `task: 'concepts'` and `id` = that slug. `curriculum.js` turns the planned entry into a live lesson by itself (it checks `content/*.js` for the slug), so no curriculum edit is needed. `[[links]]`, `related` and `prereq` may point at planned lessons (they link to the "coming soon" page).
 - `noLab: true` skips the lab section (and the "Live lab" tag) for lessons without one; otherwise `labIntro` and `tryThis` are required. The build validates required lesson fields and warns about US spellings.
 - Paths carry a `track` (stats, ml, ds, dl, cv, nlp, ai) that drives the hub filter buttons.
+
+## Content branch queue (Antigravity branches)
+- `node scripts/dev/merge-queue.js status` lists every `content/*` and `feature/quizzes-*` branch, how many of its lessons are still to bring in, and which branches are fully merged (safe to delete).
+- `node scripts/dev/merge-queue.js take N` brings the next N planned lessons (curriculum order) from the branches into `content/*.js`, builds, and prints review notes (hard quiz questions with answers, Python parse check). Never overwrites an existing lesson.
+- Quiz branches (`feature/quizzes-*`): merge, resolve HTML conflicts with `--ours`, rebuild, run `node scripts/dev/quiz-check.js --hard` and re-solve the hard calculations.
+- Quiz options are shuffled per question at build time (`quizOrder` in `scripts/build.js`), so the order in the source file does not matter.
+- The proxy in cloud sessions cannot delete remote branches: report the deletable ones for the owner to delete by hand.
 
 ## Lesson object (content/*.js)
 - All prose uses `r\`…\`` (String.raw); `$…$` / `$$…$$` is KaTeX; `[[lesson-id]]` or `[[lesson-id|text]]` links (build fails on unknown ids).

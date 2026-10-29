@@ -136,7 +136,7 @@ function rich(s, rootRel) {
   if (!s) return '';
   let out = String(s).replace(/\$\$([\s\S]+?)\$\$|\$([^$]+?)\$/g, m => m.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
   out = out.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, id, text) => {
-    const l = byId[id];
+    const l = byId[id] || PLANNED.find(x => x.id === id); // a link to a planned lesson goes to its "coming soon" page
     if (!l) throw new Error(`unknown lesson link [[${id}]]`);
     return `<a class="inline" href="${rootRel}${hrefFromRoot(l)}">${text || l.short}</a>`;
   });
@@ -479,12 +479,26 @@ function metricsSection(l, rootRel) {
       </section>`;
 }
 
+// Quiz options are shown in a fixed pseudo-random order per question (seeded by lesson id and position),
+// so the right answer is not always in the same place whatever order the source file lists them in.
+function quizOrder(l) {
+  return (l.quiz || []).map((q, i) => {
+    if (/\b(above|previous|first (two|option)|both (of )?(the )?(first|last)|last option|all of the|none of the)\b/i.test(q.o.join(' ') + q.q)) return q;
+    let h = 2166136261; for (const c of `${l.id}:${i}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+    const rnd = () => (h = (Math.imul(h, 1664525) + 1013904223) >>> 0) / 4294967296;
+    const order = [0, 1, 2, 3];
+    for (let k = 3; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+    return { ...q, o: order.map(k => q.o[k]), a: order.indexOf(q.a) };
+  });
+}
+
 function lessonPage(l) {
   const rootRel = '../../';
   const idx = ORDER.indexOf(l), prev = ORDER[idx - 1], next = ORDER[idx + 1];
   const isModel = l.kind === 'models';
   const R = s => rich(s, rootRel);
-  const link = id => { const t = byId[id]; if (!t) throw new Error(`unknown lesson "${id}" in ${l.id}`); return `${rootRel}${hrefFromRoot(t)}`; };
+  const find = id => byId[id] || PLANNED.find(x => x.id === id); // live lessons, or planned ones (their "coming soon" page)
+  const link = id => { const t = find(id); if (!t) throw new Error(`unknown lesson "${id}" in ${l.id}`); return `${rootRel}${hrefFromRoot(t)}`; };
 
   const sections = [];
   const add = (id, label, html) => sections.push({ id, label, html });
@@ -531,7 +545,7 @@ function lessonPage(l) {
         ${l.pitfalls && l.pitfalls.length ? `<h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls">${l.pitfalls.map(p => `<li>${icon('warn')}<span>${R(p)}</span></li>`).join('')}</ul>` : ''}`);
   const metrics = isModel ? metricsSection(l, rootRel) : '';
   add('quiz', 'Check yourself', `
-        <div class="quiz">${(l.quiz || []).map((q, i) => `
+        <div class="quiz">${quizOrder(l).map((q, i) => `
           <div class="q" data-answer="${q.a}">
             <p><span>Q${i + 1}</span>${R(q.q)}</p>
             <div class="opts">${q.o.map((o, j) => `<button class="opt" type="button"><b>${'ABCD'[j]}</b><span>${R(o)}</span></button>`).join('')}</div>
@@ -541,7 +555,7 @@ function lessonPage(l) {
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>`);
   const relIds = [...new Set([...(l.related || []), ...(l.concepts || []), ...(l.usedBy || [])])].filter(id => id !== l.id);
   add('related', isModel ? 'Related lessons' : 'Where it shows up', `
-        <div class="related">${relIds.map(id => `<a href="${link(id)}"><small class="kicker">${byId[id].kind === 'concepts' ? 'Concept' : byId[id].path.title}</small><b>${esc(byId[id].short)}</b></a>`).join('')}</div>`);
+        <div class="related">${relIds.map(id => `<a href="${link(id)}"><small class="kicker">${find(id).planned ? 'Coming soon' : find(id).kind === 'concepts' ? 'Concept' : find(id).path.title}</small><b>${esc(find(id).short)}</b></a>`).join('')}</div>`);
 
   // number sections; metrics slot in before the quiz
   const parts = [];
@@ -569,7 +583,7 @@ function lessonPage(l) {
           <dt>Level</dt><dd>${LEVELS[l.level]}</dd>
           <dt>Used by</dt><dd>${(l.usedBy || []).length} model lesson${(l.usedBy || []).length === 1 ? '' : 's'}</dd>`;
 
-  const prereq = (l.prereq || []).length ? `<span class="prereq">Before this: ${(l.prereq || []).map(id => `<a href="${link(id)}">${esc(byId[id].short)}</a>`).join(' ')}</span>` : '';
+  const prereq = (l.prereq || []).length ? `<span class="prereq">Before this: ${(l.prereq || []).map(id => `<a href="${link(id)}">${esc(find(id).short)}</a>`).join(' ')}</span>` : '';
 
   const main = `
 <div class="progress" aria-hidden="true"></div>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -119,50 +119,50 @@ alpha = <span class="n">0.05</span>
         <div class="quiz">
           <div class="q" data-answer="1">
             <p><span>Q1</span>What does a p-value of 0.03 strictly mean in an experimental hypothesis test?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>There is a 3% probability that the null hypothesis is true</span></button><button class="opt" type="button"><b>B</b><span>If the null hypothesis were true, there is a 3% probability of observing data at least as extreme as the actual result</span></button><button class="opt" type="button"><b>C</b><span>There is a 97% probability that the experimental intervention is effective</span></button><button class="opt" type="button"><b>D</b><span>The experiment has an error rate of 3% across repeated trials</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The experiment has an error rate of 3% across repeated trials</span></button><button class="opt" type="button"><b>B</b><span>If the null hypothesis were true, there is a 3% probability of observing data at least as extreme as the actual result</span></button><button class="opt" type="button"><b>C</b><span>There is a 3% probability that the null hypothesis is true</span></button><button class="opt" type="button"><b>D</b><span>There is a 97% probability that the experimental intervention is effective</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The p-value is the conditional probability $P(\text{data as or more extreme} \mid H_0)$. It says nothing about $P(H_0 \mid \text{data})$ without specifying prior probabilities via Bayes' theorem.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q2</span>Why does collecting an enormous sample size (e.g. $n = 1,000,000$) create a challenge for interpreting p-values?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard errors expand, making p-values unreliable</span></button><button class="opt" type="button"><b>B</b><span>The central limit theorem ceases to apply</span></button><button class="opt" type="button"><b>C</b><span>Tiny, practically meaningless differences between groups become statistically significant with $p &lt; 0.001$</span></button><button class="opt" type="button"><b>D</b><span>The test statistic no longer follows its theoretical null distribution</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The central limit theorem ceases to apply</span></button><button class="opt" type="button"><b>B</b><span>Tiny, practically meaningless differences between groups become statistically significant with $p &lt; 0.001$</span></button><button class="opt" type="button"><b>C</b><span>Standard errors expand, making p-values unreliable</span></button><button class="opt" type="button"><b>D</b><span>The test statistic no longer follows its theoretical null distribution</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Standard error shrinks as $1/\sqrt{n}$. With millions of observations, trivial deviations with zero practical importance easily generate massive test statistics and tiny p-values.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="2">
             <p><span>Q3</span>If an analyst carries out a hypothesis test at $\alpha = 0.05$ and finds $p = 0.22$, which conclusion is formally valid?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The null hypothesis is proven true</span></button><button class="opt" type="button"><b>B</b><span>The sample data provides insufficient evidence to reject the null hypothesis at the 5% level</span></button><button class="opt" type="button"><b>C</b><span>The probability that the alternative hypothesis is true is 0.22</span></button><button class="opt" type="button"><b>D</b><span>The test should be switched to a one-sided test to achieve significance</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The test should be switched to a one-sided test to achieve significance</span></button><button class="opt" type="button"><b>B</b><span>The probability that the alternative hypothesis is true is 0.22</span></button><button class="opt" type="button"><b>C</b><span>The sample data provides insufficient evidence to reject the null hypothesis at the 5% level</span></button><button class="opt" type="button"><b>D</b><span>The null hypothesis is proven true</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Failing to reject $H_0$ means the observed data is reasonably consistent with chance; it never proves the null hypothesis holds true.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q4</span>Under the null hypothesis for a continuous test statistic, what probability distribution does the p-value follow?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standard normal distribution $\mathcal{N}(0, 1)$</span></button><button class="opt" type="button"><b>B</b><span>Student's $t$-distribution with $n-1$ degrees of freedom</span></button><button class="opt" type="button"><b>C</b><span>Uniform distribution on $[0, 1]$</span></button><button class="opt" type="button"><b>D</b><span>Exponential distribution with parameter $\lambda = 1$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Exponential distribution with parameter $\lambda = 1$</span></button><button class="opt" type="button"><b>B</b><span>Standard normal distribution $\mathcal{N}(0, 1)$</span></button><button class="opt" type="button"><b>C</b><span>Uniform distribution on $[0, 1]$</span></button><button class="opt" type="button"><b>D</b><span>Student's $t$-distribution with $n-1$ degrees of freedom</span></button></div>
             <div class="why" hidden><strong>Why:</strong> By the probability integral transform, any continuous random variable transformed by its own cumulative distribution function follows $\text{Uniform}(0, 1)$. Hence $P(p \le \alpha \mid H_0) = \alpha$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q5</span>In statistical hypothesis testing, what role does the null hypothesis ($H_0$) serve?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It represents the researcher's desired experimental discovery or breakthrough</span></button><button class="opt" type="button"><b>B</b><span>It specifies the statistical power of the test</span></button><button class="opt" type="button"><b>C</b><span>It defines the mathematical distribution of the alternative parameter</span></button><button class="opt" type="button"><b>D</b><span>It serves as the baseline default model of "no effect", "no difference", or pure random chance</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It serves as the baseline default model of "no effect", "no difference", or pure random chance</span></button><button class="opt" type="button"><b>B</b><span>It represents the researcher's desired experimental discovery or breakthrough</span></button><button class="opt" type="button"><b>C</b><span>It defines the mathematical distribution of the alternative parameter</span></button><button class="opt" type="button"><b>D</b><span>It specifies the statistical power of the test</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The null hypothesis acts as the baseline sceptical model (presumption of innocence or absence of effect) that the collected sample data must demonstrate sufficient evidence to reject.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q6</span>Why must the significance threshold $\alpha$ (e.g. $\alpha = 0.05$) be specified before collecting or analysing experimental data?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To prevent post-hoc rationalisation, where researchers adjust the threshold to fit observed results</span></button><button class="opt" type="button"><b>B</b><span>Because statistical software cannot execute test scripts without an initial $\alpha$ parameter</span></button><button class="opt" type="button"><b>C</b><span>Because $\alpha$ must always match the sample standard deviation</span></button><button class="opt" type="button"><b>D</b><span>To force the p-value to be uniformly distributed under the alternative hypothesis</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To force the p-value to be uniformly distributed under the alternative hypothesis</span></button><button class="opt" type="button"><b>B</b><span>Because statistical software cannot execute test scripts without an initial $\alpha$ parameter</span></button><button class="opt" type="button"><b>C</b><span>To prevent post-hoc rationalisation, where researchers adjust the threshold to fit observed results</span></button><button class="opt" type="button"><b>D</b><span>Because $\alpha$ must always match the sample standard deviation</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Setting $\alpha$ prior to data collection guarantees methodological objectivity and controls the false positive rate. Choosing or adjusting $\alpha$ after inspecting the data introduces confirmation bias and p-hacking.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="3">
             <p><span>Q7</span>Suppose an analyst computes a test statistic whose sampling distribution under $H_0$ is symmetric around 0. The one-sided p-value for testing $H_1: \mu &gt; \mu_0$ is found to be $0.02$. If the analyst had instead pre-specified a two-sided test ($H_1: \mu \ne \mu_0$), what would the two-sided p-value be?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.04</span></button><button class="opt" type="button"><b>B</b><span>0.02</span></button><button class="opt" type="button"><b>C</b><span>0.01</span></button><button class="opt" type="button"><b>D</b><span>0.98</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.98</span></button><button class="opt" type="button"><b>B</b><span>0.01</span></button><button class="opt" type="button"><b>C</b><span>0.02</span></button><button class="opt" type="button"><b>D</b><span>0.04</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For a symmetric null distribution, a two-sided test considers departures in both tails. The two-sided p-value is double the one-sided tail probability: $2 \times 0.02 = 0.04$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="0">
             <p><span>Q8</span>An engineer runs the following code in Python to test whether a model's latency change is significant:
 <code>z_stat = -2.10
 p_value = 2.0 * (1.0 - stats.norm.cdf(abs(z_stat)))</code>
 Why does the calculation use <code>abs(z_stat)</code> and multiply by <code>2.0</code>?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To ensure the resulting p-value is greater than 1.0</span></button><button class="opt" type="button"><b>B</b><span>To correct for degrees of freedom in small sample sizes</span></button><button class="opt" type="button"><b>C</b><span>To convert a normal distribution test into a Student's t-test</span></button><button class="opt" type="button"><b>D</b><span>To calculate a two-sided p-value from a symmetric normal distribution regardless of the sign of z_stat</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To calculate a two-sided p-value from a symmetric normal distribution regardless of the sign of z_stat</span></button><button class="opt" type="button"><b>B</b><span>To correct for degrees of freedom in small sample sizes</span></button><button class="opt" type="button"><b>C</b><span>To convert a normal distribution test into a Student's t-test</span></button><button class="opt" type="button"><b>D</b><span>To ensure the resulting p-value is greater than 1.0</span></button></div>
             <div class="why" hidden><strong>Why:</strong> <code>abs(z_stat)</code> projects the statistic into the positive tail, <code>1.0 - stats.norm.cdf(...)</code> evaluates the upper tail probability, and multiplying by 2 accounts for both tails in a two-sided test.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q9</span>A clinical trial evaluates two competing drugs against a placebo: Drug A yields $p = 0.048$ while Drug B yields $p = 0.052$. What is the main error in concluding that "Drug A is effective, whereas Drug B has no effect"?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The tests should have been performed without a control group</span></button><button class="opt" type="button"><b>B</b><span>The difference between "statistically significant" and "not statistically significant" is not itself statistically significant; an arbitrary threshold creates an illusion of a sharp divide</span></button><button class="opt" type="button"><b>C</b><span>Drug B has a lower p-value than Drug A</span></button><button class="opt" type="button"><b>D</b><span>Both drugs should have used a threshold of $\alpha = 0.50$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both drugs should have used a threshold of $\alpha = 0.50$</span></button><button class="opt" type="button"><b>B</b><span>The tests should have been performed without a control group</span></button><button class="opt" type="button"><b>C</b><span>Drug B has a lower p-value than Drug A</span></button><button class="opt" type="button"><b>D</b><span>The difference between "statistically significant" and "not statistically significant" is not itself statistically significant; an arbitrary threshold creates an illusion of a sharp divide</span></button></div>
             <div class="why" hidden><strong>Why:</strong> As Andrew Gelman highlighted, the difference between "significant" and "not significant" is not necessarily statistically significant. A minute difference ($p = 0.048$ vs $0.052$) reflects routine sampling variance, not an ontological qualitative difference in drug efficacy.</div>
           </div>
           <div class="q" data-answer="0">
@@ -170,14 +170,14 @@ Why does the calculation use <code>abs(z_stat)</code> and multiply by <code>2.0<
             <div class="opts"><button class="opt" type="button"><b>A</b><span>$\operatorname{SE}_0 = 0.02$, $z = 2.50$</span></button><button class="opt" type="button"><b>B</b><span>$\operatorname{SE}_0 = 0.04$, $z = 1.25$</span></button><button class="opt" type="button"><b>C</b><span>$\operatorname{SE}_0 = 0.05$, $z = 1.00$</span></button><button class="opt" type="button"><b>D</b><span>$\operatorname{SE}_0 = 0.02$, $z = 5.00$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Under $H_0$, the standard error is $\operatorname{SE}_0 = \sqrt{p_0(1 - p_0) / n} = \sqrt{0.20 \times 0.80 / 400} = \sqrt{0.16 / 400} = \sqrt{0.0004} = 0.02$. The test statistic is $z = (\hat{p} - p_0) / \operatorname{SE}_0 = (0.25 - 0.20) / 0.02 = 0.05 / 0.02 = 2.50$.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q11</span>A researcher tests 100 hypotheses where only 10 represent genuine effects (prior probability $P(H_1) = 0.10$). The test has significance level $\alpha = 0.05$ and statistical power of $80\%$ ($1 - \beta = 0.80$). If a randomly selected test yields $p &lt; 0.05$, what is the posterior probability that this significant finding is actually a true effect (the positive predictive value)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>95%</span></button><button class="opt" type="button"><b>B</b><span>80%</span></button><button class="opt" type="button"><b>C</b><span>5%</span></button><button class="opt" type="button"><b>D</b><span>64%</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>80%</span></button><button class="opt" type="button"><b>B</b><span>64%</span></button><button class="opt" type="button"><b>C</b><span>95%</span></button><button class="opt" type="button"><b>D</b><span>5%</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Out of 100 hypotheses, 10 are real ($H_1$) and 90 are null ($H_0$). The test detects $10 \times 0.80 = 8.0$ true positives and falsely rejects $90 \times 0.05 = 4.5$ false positives. Total positive calls = $8.0 + 4.5 = 12.5$. The posterior probability that a positive finding is genuine is $8.0 / 12.5 = 64\%$, demonstrating why $p &lt; 0.05$ does not imply a 95% chance that the hypothesis is true.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q12</span>An analyst tests 20 completely independent features that are pure Gaussian noise with zero true relationship to an outcome ($H_0$ is true for all 20). If each feature is tested at significance level $\alpha = 0.05$, what is the exact probability that at least one feature produces a falsely significant result ($p \le 0.05$)?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$5.0\%$</span></button><button class="opt" type="button"><b>B</b><span>$20 \times 0.05 = 100.0\%$</span></button><button class="opt" type="button"><b>C</b><span>$1 - (0.95)^{20} \approx 64.2\%$</span></button><button class="opt" type="button"><b>D</b><span>$(0.05)^{20} \approx 9.5 \times 10^{-27}$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1 - (0.95)^{20} \approx 64.2\%$</span></button><button class="opt" type="button"><b>B</b><span>$(0.05)^{20} \approx 9.5 \times 10^{-27}$</span></button><button class="opt" type="button"><b>C</b><span>$5.0\%$</span></button><button class="opt" type="button"><b>D</b><span>$20 \times 0.05 = 100.0\%$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The probability of correctly failing to reject $H_0$ on all 20 independent tests is $(1 - 0.05)^{20} = 0.95^{20} \approx 0.3585$. The family-wise error rate (probability of at least one false positive) is $1 - 0.3585 = 0.6415$ (or roughly $64.2\%$).</div>
           </div>
         </div>
@@ -215,11 +215,11 @@ Why does the calculation use <code>abs(z_stat)</code> and multiply by <code>2.0<
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

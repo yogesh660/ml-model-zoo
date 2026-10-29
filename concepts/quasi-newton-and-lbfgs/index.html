@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -111,62 +111,62 @@
         <div class="quiz">
           <div class="q" data-answer="1">
             <p><span>Q1</span>Why is L-BFGS practical where Newton’s method is not?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It avoids gradients</span></button><button class="opt" type="button"><b>B</b><span>It stores only a few recent gradient changes instead of a full $p\times p$ Hessian</span></button><button class="opt" type="button"><b>C</b><span>It uses random steps</span></button><button class="opt" type="button"><b>D</b><span>It needs no line search</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It avoids gradients</span></button><button class="opt" type="button"><b>B</b><span>It stores only a few recent gradient changes instead of a full $p\times p$ Hessian</span></button><button class="opt" type="button"><b>C</b><span>It needs no line search</span></button><button class="opt" type="button"><b>D</b><span>It uses random steps</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Memory and compute stay linear in $p$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q2</span>On a convex quadratic, Newton’s method converges in:</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>One step</span></button><button class="opt" type="button"><b>B</b><span>About $p$ steps</span></button><button class="opt" type="button"><b>C</b><span>Many steps</span></button><button class="opt" type="button"><b>D</b><span>Never</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Many steps</span></button><button class="opt" type="button"><b>B</b><span>One step</span></button><button class="opt" type="button"><b>C</b><span>Never</span></button><button class="opt" type="button"><b>D</b><span>About $p$ steps</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The quadratic model is exact, so the Newton step lands on the minimum.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q3</span>What is the computational complexity of inverting a full $p \times p$ Hessian matrix in standard Newton's method with $p$ parameters?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$O(p)$</span></button><button class="opt" type="button"><b>B</b><span>$O(p \log p)$</span></button><button class="opt" type="button"><b>C</b><span>$O(p^3)$</span></button><button class="opt" type="button"><b>D</b><span>$O(p^2)$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$O(p^3)$</span></button><button class="opt" type="button"><b>B</b><span>$O(p \log p)$</span></button><button class="opt" type="button"><b>C</b><span>$O(p)$</span></button><button class="opt" type="button"><b>D</b><span>$O(p^2)$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Inverting a general $p \times p$ matrix (or solving the linear system $H d = -g$) via Gaussian elimination or Cholesky decomposition costs $O(p^3)$ operations, which becomes prohibitively slow when $p$ exceeds thousands.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q4</span>What condition must the Hessian matrix $H(\theta_t)$ satisfy to guarantee that the Newton step $d = -H^{-1}\nabla J$ is a descent direction?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$H$ must be an orthogonal matrix</span></button><button class="opt" type="button"><b>B</b><span>All entries of $H$ must be strictly negative</span></button><button class="opt" type="button"><b>C</b><span>The determinant of $H$ must equal zero</span></button><button class="opt" type="button"><b>D</b><span>$H$ must be symmetric positive definite</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>All entries of $H$ must be strictly negative</span></button><button class="opt" type="button"><b>B</b><span>The determinant of $H$ must equal zero</span></button><button class="opt" type="button"><b>C</b><span>$H$ must be an orthogonal matrix</span></button><button class="opt" type="button"><b>D</b><span>$H$ must be symmetric positive definite</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For $d$ to be a descent direction, we must have $\nabla J^\top d = -\nabla J^\top H^{-1} \nabla J &lt; 0$ for non-zero gradient. This holds if and only if $H^{-1}$ (and thus $H$) is positive definite.</div>
           </div>
           <div class="q" data-answer="0">
             <p><span>Q5</span>In L-BFGS, what does the hyperparameter $m$ represent?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of recent parameter and gradient displacement pairs $(s_k, y_k)$ stored to approximate the inverse Hessian action</span></button><button class="opt" type="button"><b>B</b><span>The mini-batch size used for stochastic updates</span></button><button class="opt" type="button"><b>C</b><span>The maximum number of line-search backtracking steps per iteration</span></button><button class="opt" type="button"><b>D</b><span>The degree of the polynomial kernel in quasi-Newton space</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of recent parameter and gradient displacement pairs $(s_k, y_k)$ stored to approximate the inverse Hessian action</span></button><button class="opt" type="button"><b>B</b><span>The mini-batch size used for stochastic updates</span></button><button class="opt" type="button"><b>C</b><span>The degree of the polynomial kernel in quasi-Newton space</span></button><button class="opt" type="button"><b>D</b><span>The maximum number of line-search backtracking steps per iteration</span></button></div>
             <div class="why" hidden><strong>Why:</strong> L-BFGS avoids saving the full matrix by keeping a memory buffer of the $m$ most recent vector pairs $s_k = \theta_{k+1} - \theta_k$ and $y_k = g_{k+1} - g_k$, typically setting $m \in [5, 20]$.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q6</span>What is the "secant condition" $B_{t+1} s_t = y_t$ that quasi-Newton methods enforce at each iteration?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It forces the learning rate to decay inversely with time $t$</span></button><button class="opt" type="button"><b>B</b><span>It ensures the updated curvature approximation $B_{t+1}$ maps the parameter displacement $s_t = \theta_{t+1} - \theta_t$ to the observed change in gradients $y_t = \nabla J_{t+1} - \nabla J_t$</span></button><button class="opt" type="button"><b>C</b><span>It checks whether the Hessian determinant is strictly positive</span></button><button class="opt" type="button"><b>D</b><span>It ensures the loss function is strictly non-negative at the new iterate</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It ensures the updated curvature approximation $B_{t+1}$ maps the parameter displacement $s_t = \theta_{t+1} - \theta_t$ to the observed change in gradients $y_t = \nabla J_{t+1} - \nabla J_t$</span></button><button class="opt" type="button"><b>B</b><span>It forces the learning rate to decay inversely with time $t$</span></button><button class="opt" type="button"><b>C</b><span>It ensures the loss function is strictly non-negative at the new iterate</span></button><button class="opt" type="button"><b>D</b><span>It checks whether the Hessian determinant is strictly positive</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Taylor expansion of the gradient gives $\nabla J(\theta + s) - \nabla J(\theta) \approx H s$. The secant condition requires the surrogate Hessian $B_{t+1}$ to reproduce this observed gradient difference along the latest step vector $s_t$.</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>Why is L-BFGS rarely used for training deep neural networks with stochastic mini-batches, where SGD or Adam are standard?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>L-BFGS can only be implemented in C, not in PyTorch or TensorFlow</span></button><button class="opt" type="button"><b>B</b><span>L-BFGS requires the loss function to have zero gradients at all saddle points</span></button><button class="opt" type="button"><b>C</b><span>Curvature estimates in L-BFGS rely on differences between consecutive gradients; stochastic mini-batch sampling introduces high noise, breaking the secant approximation and corrupting the Hessian estimate</span></button><button class="opt" type="button"><b>D</b><span>L-BFGS cannot handle non-linear activation functions</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>L-BFGS cannot handle non-linear activation functions</span></button><button class="opt" type="button"><b>B</b><span>Curvature estimates in L-BFGS rely on differences between consecutive gradients; stochastic mini-batch sampling introduces high noise, breaking the secant approximation and corrupting the Hessian estimate</span></button><button class="opt" type="button"><b>C</b><span>L-BFGS requires the loss function to have zero gradients at all saddle points</span></button><button class="opt" type="button"><b>D</b><span>L-BFGS can only be implemented in C, not in PyTorch or TensorFlow</span></button></div>
             <div class="why" hidden><strong>Why:</strong> L-BFGS computes $y_t = g_{t+1} - g_t$. In mini-batch training, $g_{t+1}$ and $g_t$ are evaluated on different batches of data, so $y_t$ reflects batch sampling noise rather than true loss surface curvature.</div>
           </div>
           <div class="q" data-answer="3">
             <p><span>Q8</span>What is the purpose of a line search (such as satisfying the Wolfe conditions) in quasi-Newton algorithms?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To reorder features by their statistical correlation before making a gradient update</span></button><button class="opt" type="button"><b>B</b><span>To compute the global minimum of the entire loss landscape in a single evaluation</span></button><button class="opt" type="button"><b>C</b><span>To randomly permute the data rows before inverting the Hessian</span></button><button class="opt" type="button"><b>D</b><span>To find a step size $\alpha_t$ along the search direction $d_t$ that guarantees a sufficient decrease in loss and maintains positive definiteness in curvature updates</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To compute the global minimum of the entire loss landscape in a single evaluation</span></button><button class="opt" type="button"><b>B</b><span>To randomly permute the data rows before inverting the Hessian</span></button><button class="opt" type="button"><b>C</b><span>To reorder features by their statistical correlation before making a gradient update</span></button><button class="opt" type="button"><b>D</b><span>To find a step size $\alpha_t$ along the search direction $d_t$ that guarantees a sufficient decrease in loss and maintains positive definiteness in curvature updates</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A pure unit Newton step ($d_t$) may overshoot if the local quadratic approximation does not hold globally. Line search selects $\alpha_t$ so that $J(\theta_t + \alpha_t d_t)$ drops sufficiently (Armijo rule) and satisfies the curvature condition ($s_t^\top y_t &gt; 0$).</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="0">
             <p><span>Q9</span>On a non-convex surface far from any minimum, what risk does standard Newton's method face if the Hessian matrix has negative eigenvalues?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>The learning rate increases to infinity</span></button><button class="opt" type="button"><b>B</b><span>The gradient automatically shrinks to zero</span></button><button class="opt" type="button"><b>C</b><span>The Newton step can point in an ascent direction toward a local maximum or saddle point instead of descending toward a minimum</span></button><button class="opt" type="button"><b>D</b><span>The number of parameters increases by a factor of 2</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The Newton step can point in an ascent direction toward a local maximum or saddle point instead of descending toward a minimum</span></button><button class="opt" type="button"><b>B</b><span>The gradient automatically shrinks to zero</span></button><button class="opt" type="button"><b>C</b><span>The learning rate increases to infinity</span></button><button class="opt" type="button"><b>D</b><span>The number of parameters increases by a factor of 2</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If $H$ is not positive definite, $-H^{-1}\nabla J$ may not be a descent direction. For example, near a local maximum where $H$ is negative definite, the step jumps directly towards the peak!</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q10</span>Consider a 1D quadratic objective $J(\theta) = 3\theta^2 - 12\theta + 7$. Starting from initial guess $\theta_0 = 10$, what are the first derivative $J'(\theta_0)$, the second derivative $J''(\theta_0)$, and the next point $\theta_1$ after one Newton step $\theta_1 = \theta_0 - \frac{J'(\theta_0)}{J''(\theta_0)}$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$J' = 48$, $J'' = 3$, and $\theta_1 = -6.0$</span></button><button class="opt" type="button"><b>B</b><span>$J' = 18$, $J'' = 6$, and $\theta_1 = 7.0$</span></button><button class="opt" type="button"><b>C</b><span>$J' = 24$, $J'' = 6$, and $\theta_1 = 6.0$</span></button><button class="opt" type="button"><b>D</b><span>$J' = 48$, $J'' = 6$, and $\theta_1 = 2.0$ (the exact global minimum)</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$J' = 18$, $J'' = 6$, and $\theta_1 = 7.0$</span></button><button class="opt" type="button"><b>B</b><span>$J' = 48$, $J'' = 3$, and $\theta_1 = -6.0$</span></button><button class="opt" type="button"><b>C</b><span>$J' = 48$, $J'' = 6$, and $\theta_1 = 2.0$ (the exact global minimum)</span></button><button class="opt" type="button"><b>D</b><span>$J' = 24$, $J'' = 6$, and $\theta_1 = 6.0$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Derivative: $J'(\theta) = 6\theta - 12$. At $\theta_0 = 10$, $J'(10) = 60 - 12 = 48$. Second derivative: $J''(\theta) = 6$. Newton step: $\Delta \theta = -\frac{48}{6} = -8$. New iterate: $\theta_1 = 10 - 8 = 2.0$. The true minimum of $3\theta^2 - 12\theta + 7$ is at $\theta^* = 12 / 6 = 2.0$, reaching the exact optimum in one step.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q11</span>For an optimisation problem with $p = 500$ parameters, how many float values must be stored in memory for the full $p \times p$ Hessian matrix in standard Newton's method, versus the storage needed for $m = 10$ displacement vector pairs in L-BFGS?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Newton: $500$ values; L-BFGS: $50$ values</span></button><button class="opt" type="button"><b>B</b><span>Newton: $250{,}000$ values; L-BFGS: $10{,}000$ values</span></button><button class="opt" type="button"><b>C</b><span>Newton: $1{,}000{,}000$ values; L-BFGS: $500{,}000$ values</span></button><button class="opt" type="button"><b>D</b><span>Newton: $250{,}000$ values; L-BFGS: $500{,}000$ values</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Newton: $250{,}000$ values; L-BFGS: $10{,}000$ values</span></button><button class="opt" type="button"><b>B</b><span>Newton: $250{,}000$ values; L-BFGS: $500{,}000$ values</span></button><button class="opt" type="button"><b>C</b><span>Newton: $1{,}000{,}000$ values; L-BFGS: $500{,}000$ values</span></button><button class="opt" type="button"><b>D</b><span>Newton: $500$ values; L-BFGS: $50$ values</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Full Hessian: $p^2 = 500 \times 500 = 250{,}000$ floats (or $p(p+1)/2 = 125{,}250$ if symmetric). L-BFGS: stores $m$ vector pairs $(s_k, y_k)$, each of length $p$. Total storage $= 2 \times m \times p = 2 \times 10 \times 500 = 10{,}000$ floats—a 25-fold memory reduction.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>In a 2D optimisation problem, suppose the current gradient is $g = \begin{bmatrix} 2 \\ 8 \end{bmatrix}$ and the Hessian is diagonal: $H = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 4 \end{bmatrix}$. What is the Newton direction $d = -H^{-1}g$, and how does it compare to the steepest descent direction $-g$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Newton direction $d = \begin{bmatrix} -2 \\ -2 \end{bmatrix}$; it rescales the steep direction by $1/4$, steering the step directly toward the minimum rather than oscillating across the steep ridge</span></button><button class="opt" type="button"><b>B</b><span>Newton direction $d = \begin{bmatrix} -2 \\ -32 \end{bmatrix}$; it accelerates in the direction of greatest slope</span></button><button class="opt" type="button"><b>C</b><span>Newton direction $d = \begin{bmatrix} -1 \\ -4 \end{bmatrix}$; it halves both coordinates</span></button><button class="opt" type="button"><b>D</b><span>Newton direction $d = \begin{bmatrix} 2 \\ 2 \end{bmatrix}$; it points in an ascent direction</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Newton direction $d = \begin{bmatrix} -1 \\ -4 \end{bmatrix}$; it halves both coordinates</span></button><button class="opt" type="button"><b>B</b><span>Newton direction $d = \begin{bmatrix} 2 \\ 2 \end{bmatrix}$; it points in an ascent direction</span></button><button class="opt" type="button"><b>C</b><span>Newton direction $d = \begin{bmatrix} -2 \\ -2 \end{bmatrix}$; it rescales the steep direction by $1/4$, steering the step directly toward the minimum rather than oscillating across the steep ridge</span></button><button class="opt" type="button"><b>D</b><span>Newton direction $d = \begin{bmatrix} -2 \\ -32 \end{bmatrix}$; it accelerates in the direction of greatest slope</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $H^{-1} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1/4 \end{bmatrix}$. Thus $d = -H^{-1}g = -\begin{bmatrix} 1(2) \\ (1/4)(8) \end{bmatrix} = \begin{bmatrix} -2 \\ -2 \end{bmatrix}$. Steepest descent direction $-g = \begin{bmatrix} -2 \\ -8 \end{bmatrix}$ is pulled 4 times stronger along the second axis, causing zigzagging. Newton's step normalises by curvature, yielding equal progress along both axes.</div>
           </div>
         </div>
@@ -204,11 +204,11 @@
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>

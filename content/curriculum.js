@@ -5,9 +5,14 @@
 // Planned lessons get a "coming soon" page at concepts/<slug of the title>/. To turn one into a real
 // lesson, write it in content/*.js with that same slug as its id and replace the array with the id.
 // A trailing " ⚙" in a title means the lesson will have a live algorithm lab.
-const C = (...t) => t.map(x => [x, 'Core']);
-const X = (...t) => t.map(x => [x, 'Extended']);
-const K = (...t) => t.map(x => [x, 'Capstone']);
+// A planned lesson turns into a live one by itself as soon as a lesson with the same slug exists in
+// content/*.js, so no edit is needed here when a lesson is written.
+const slug = t => t.replace(/ \u2699$/, '').normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/['\u2019]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const LIVE = new Set(['concepts', 'regression', 'classification', 'clustering', 'neural', 'sequences', 'language', 'statistics', 'datascience', 'mltoolbox', 'deeplearning', 'vision', 'nlp', 'ai'].flatMap(f => require('./' + f).map(l => l.id)));
+const planned = tier => (...t) => t.map(x => (LIVE.has(slug(x)) ? slug(x) : [x, tier]));
+const C = planned('Core');
+const X = planned('Extended');
+const K = planned('Capstone');
 
 module.exports = [
   {

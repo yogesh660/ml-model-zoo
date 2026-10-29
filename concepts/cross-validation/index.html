@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -108,39 +108,39 @@ scores = <span class="f">cross_validate</span>(model, X, y, cv=cv, scoring=[<spa
       <section class="reveal" id="quiz">
         <h2 class="h3"><span>07</span> Check yourself</h2>
         <div class="quiz">
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="3">
             <p><span>Q1</span>Why put the scaler inside the cross-validation pipeline?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It is faster</span></button><button class="opt" type="button"><b>B</b><span>So the validation fold’s statistics never influence training</span></button><button class="opt" type="button"><b>C</b><span>Scaling is optional</span></button><button class="opt" type="button"><b>D</b><span>To stratify classes</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Scaling is optional</span></button><button class="opt" type="button"><b>B</b><span>To stratify classes</span></button><button class="opt" type="button"><b>C</b><span>It is faster</span></button><button class="opt" type="button"><b>D</b><span>So the validation fold’s statistics never influence training</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Fitting the scaler on all data leaks validation information.</div>
           </div>
           <div class="q" data-answer="2">
             <p><span>Q2</span>For forecasting next month’s sales, which split is right?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Shuffled K-fold</span></button><button class="opt" type="button"><b>B</b><span>Stratified K-fold</span></button><button class="opt" type="button"><b>C</b><span>Forward-chaining time series split</span></button><button class="opt" type="button"><b>D</b><span>Leave-one-out</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Stratified K-fold</span></button><button class="opt" type="button"><b>B</b><span>Leave-one-out</span></button><button class="opt" type="button"><b>C</b><span>Forward-chaining time series split</span></button><button class="opt" type="button"><b>D</b><span>Shuffled K-fold</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Training must only use data from before the validation period.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q3</span>What is Stratified $K$-fold cross-validation, and when is it essential?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It trains on 100% of the data and validates on out-of-bag samples</span></button><button class="opt" type="button"><b>B</b><span>It splits data by sorting rows by date to prevent lookahead bias</span></button><button class="opt" type="button"><b>C</b><span>It clusters features into strata using $k$-means before training</span></button><button class="opt" type="button"><b>D</b><span>It splits the dataset so that each fold contains approximately the same percentage of each target class as the complete dataset; it is essential for imbalanced classification</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It trains on 100% of the data and validates on out-of-bag samples</span></button><button class="opt" type="button"><b>B</b><span>It splits the dataset so that each fold contains approximately the same percentage of each target class as the complete dataset; it is essential for imbalanced classification</span></button><button class="opt" type="button"><b>C</b><span>It splits data by sorting rows by date to prevent lookahead bias</span></button><button class="opt" type="button"><b>D</b><span>It clusters features into strata using $k$-means before training</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In imbalanced datasets (e.g. 5% positive class), standard random splitting can produce folds with almost zero positive examples. Stratification guarantees representative class proportions across all folds.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q4</span>What is Group $K$-fold cross-validation, and what kind of leakage does it prevent?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>It ensures all rows belonging to the same entity (e.g. medical patient or hospital) remain strictly in the same fold, preventing the model from memorising patient-specific traits to predict held-out records of that same patient</span></button><button class="opt" type="button"><b>B</b><span>It groups continuous features into categorical bins before training</span></button><button class="opt" type="button"><b>C</b><span>It forces the model to train exclusively on group averages</span></button><button class="opt" type="button"><b>D</b><span>It prevents memory overflow during large batch gradient descent</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It forces the model to train exclusively on group averages</span></button><button class="opt" type="button"><b>B</b><span>It ensures all rows belonging to the same entity (e.g. medical patient or hospital) remain strictly in the same fold, preventing the model from memorising patient-specific traits to predict held-out records of that same patient</span></button><button class="opt" type="button"><b>C</b><span>It prevents memory overflow during large batch gradient descent</span></button><button class="opt" type="button"><b>D</b><span>It groups continuous features into categorical bins before training</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If a patient has 20 medical records scattered across both train and validation folds, the model memorises patient-specific quirks rather than generalising pathology. GroupKFold keeps entire groups intact in either train or test.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="2">
             <p><span>Q5</span>Why is Nested Cross-Validation used when tuning hyperparameters?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>To speed up grid search by skipping 50% of the hyperparameter combinations</span></button><button class="opt" type="button"><b>B</b><span>To eliminate the need for an independent test set entirely</span></button><button class="opt" type="button"><b>C</b><span>To convert a regression model into a classification model</span></button><button class="opt" type="button"><b>D</b><span>To produce an unbiased estimate of model performance: the inner loop tunes hyperparameters, while the outer loop evaluates the generalisation error of the tuned model on untouched validation folds</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To convert a regression model into a classification model</span></button><button class="opt" type="button"><b>B</b><span>To eliminate the need for an independent test set entirely</span></button><button class="opt" type="button"><b>C</b><span>To produce an unbiased estimate of model performance: the inner loop tunes hyperparameters, while the outer loop evaluates the generalisation error of the tuned model on untouched validation folds</span></button><button class="opt" type="button"><b>D</b><span>To speed up grid search by skipping 50% of the hyperparameter combinations</span></button></div>
             <div class="why" hidden><strong>Why:</strong> If you tune hyperparameters on the same CV folds used to report performance, you pick the configuration that got lucky on those folds, producing an optimistically biased score. Nested CV decouples tuning from evaluation.</div>
           </div>
-          <div class="q" data-answer="1">
+          <div class="q" data-answer="0">
             <p><span>Q6</span>What is the main theoretical drawback of Leave-One-Out Cross-Validation (LOOCV, where $K = n$) compared to 5-fold or 10-fold CV?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>LOOCV has higher bias than 5-fold CV</span></button><button class="opt" type="button"><b>B</b><span>The $n$ training sets are almost identical (each sharing $n-2$ examples), causing the validation errors to be strongly positively correlated, which can yield a higher variance estimate of test error despite low bias</span></button><button class="opt" type="button"><b>C</b><span>LOOCV requires all target labels to be continuous</span></button><button class="opt" type="button"><b>D</b><span>LOOCV can only be used on linear models</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The $n$ training sets are almost identical (each sharing $n-2$ examples), causing the validation errors to be strongly positively correlated, which can yield a higher variance estimate of test error despite low bias</span></button><button class="opt" type="button"><b>B</b><span>LOOCV has higher bias than 5-fold CV</span></button><button class="opt" type="button"><b>C</b><span>LOOCV requires all target labels to be continuous</span></button><button class="opt" type="button"><b>D</b><span>LOOCV can only be used on linear models</span></button></div>
             <div class="why" hidden><strong>Why:</strong> In LOOCV, each of the $n$ models is trained on $(n-1)/n$ of the data. Because the models are nearly identical, their test errors are highly correlated. The variance of the mean of correlated variables is higher than that of less correlated folds in 10-fold CV.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="1">
             <p><span>Q7</span>After completing $K$-fold cross-validation and choosing the optimal hyperparameters, what is the standard next step before deploying the model?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Refit the model with the chosen hyperparameters on the entire dataset (all $K$ folds combined)</span></button><button class="opt" type="button"><b>B</b><span>Deploy the model from whichever individual fold achieved the highest validation score</span></button><button class="opt" type="button"><b>C</b><span>Average the weight vectors of the $K$ separate models arithmetically</span></button><button class="opt" type="button"><b>D</b><span>Discard the hyperparameters and retrain with default settings</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Discard the hyperparameters and retrain with default settings</span></button><button class="opt" type="button"><b>B</b><span>Refit the model with the chosen hyperparameters on the entire dataset (all $K$ folds combined)</span></button><button class="opt" type="button"><b>C</b><span>Deploy the model from whichever individual fold achieved the highest validation score</span></button><button class="opt" type="button"><b>D</b><span>Average the weight vectors of the $K$ separate models arithmetically</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Cross-validation serves to evaluate the modelling process and select hyperparameters. Once chosen, refitting on 100% of the non-test data uses all available information, producing the best final model for production.</div>
           </div>
           <div class="q" data-answer="1">
@@ -150,22 +150,22 @@ scores = <span class="f">cross_validate</span>(model, X, y, cv=cv, scoring=[<spa
           </div>
           <div class="q" data-answer="2">
             <p><span>Q9</span>Why does applying a standard shuffled $K$-fold cross-validation to chronological time series data (e.g. daily stock prices) produce invalid results?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Shuffled K-fold cannot handle floating-point date stamps</span></button><button class="opt" type="button"><b>B</b><span>Time series data cannot be evaluated with Mean Squared Error</span></button><button class="opt" type="button"><b>C</b><span>It causes temporal leakage: future data is shuffled into the training set and used to predict past validation samples, creating unrealistically high validation accuracy that fails completely in real-world deployment</span></button><button class="opt" type="button"><b>D</b><span>The number of folds $K$ must be equal to the number of months in the year</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Time series data cannot be evaluated with Mean Squared Error</span></button><button class="opt" type="button"><b>B</b><span>Shuffled K-fold cannot handle floating-point date stamps</span></button><button class="opt" type="button"><b>C</b><span>It causes temporal leakage: future data is shuffled into the training set and used to predict past validation samples, creating unrealistically high validation accuracy that fails completely in real-world deployment</span></button><button class="opt" type="button"><b>D</b><span>The number of folds $K$ must be equal to the number of months in the year</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Autocorrelated time series let future points leak information backward. A model that knows tomorrow's price can trivially interpolate today's price. Rolling-origin / forward-chaining splits are required.</div>
           </div>
-          <div class="q" data-answer="3">
+          <div class="q" data-answer="1">
             <p><span>Q10</span>In a 5-fold cross-validation on a regression dataset of $n = 500$ samples, how many samples are in the training set and validation set for each fold?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Training: $100$ samples; Validation: $400$ samples</span></button><button class="opt" type="button"><b>B</b><span>Training: $450$ samples; Validation: $50$ samples</span></button><button class="opt" type="button"><b>C</b><span>Training: $250$ samples; Validation: $250$ samples</span></button><button class="opt" type="button"><b>D</b><span>Training: $400$ samples; Validation: $100$ samples</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Training: $100$ samples; Validation: $400$ samples</span></button><button class="opt" type="button"><b>B</b><span>Training: $400$ samples; Validation: $100$ samples</span></button><button class="opt" type="button"><b>C</b><span>Training: $450$ samples; Validation: $50$ samples</span></button><button class="opt" type="button"><b>D</b><span>Training: $250$ samples; Validation: $250$ samples</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each fold holds out $1/K = 1/5 = 20\%$ of the data for validation ($500 / 5 = 100$ samples) and trains on the remaining $(K-1)/K = 4/5 = 80\%$ ($4 \times 100 = 400$ samples).</div>
           </div>
-          <div class="q" data-answer="2">
+          <div class="q" data-answer="3">
             <p><span>Q11</span>A 5-fold cross-validation produces accuracy scores across the five folds of: $[0.80, 0.82, 0.85, 0.84, 0.89]$. What are the mean cross-validation accuracy and the sample variance $s^2 = \frac{1}{K-1}\sum (x_i - \bar{x})^2$?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>Mean $= 0.840$ and sample variance $s^2 = 0.00440$</span></button><button class="opt" type="button"><b>B</b><span>Mean $= 0.850$ and sample variance $s^2 = 0.00150$</span></button><button class="opt" type="button"><b>C</b><span>Mean $= 0.840$ and sample variance $s^2 = 0.00115$</span></button><button class="opt" type="button"><b>D</b><span>Mean $= 0.820$ and sample variance $s^2 = 0.00220$</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Mean $= 0.850$ and sample variance $s^2 = 0.00150$</span></button><button class="opt" type="button"><b>B</b><span>Mean $= 0.820$ and sample variance $s^2 = 0.00220$</span></button><button class="opt" type="button"><b>C</b><span>Mean $= 0.840$ and sample variance $s^2 = 0.00440$</span></button><button class="opt" type="button"><b>D</b><span>Mean $= 0.840$ and sample variance $s^2 = 0.00115$</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Sum $= 0.80 + 0.82 + 0.85 + 0.84 + 0.89 = 4.20$. Mean $\bar{x} = 4.20 / 5 = 0.840$. Deviations: $[-0.04, -0.02, +0.01, 0.00, +0.05]$. Squared deviations: $[0.0016, 0.0004, 0.0001, 0.0000, 0.0025]$. Sum of squared deviations $= 0.0046$. Sample variance $s^2 = 0.0046 / (5 - 1) = 0.0046 / 4 = 0.00115$.</div>
           </div>
-          <div class="q" data-answer="0">
+          <div class="q" data-answer="2">
             <p><span>Q12</span>You perform nested cross-validation with 5 outer folds and 4 inner folds to evaluate a grid of 6 hyperparameter combinations. How many total model fits are executed across the entire nested cross-validation process?</p>
-            <div class="opts"><button class="opt" type="button"><b>A</b><span>$120$ fits</span></button><button class="opt" type="button"><b>B</b><span>$30$ fits</span></button><button class="opt" type="button"><b>C</b><span>$24$ fits</span></button><button class="opt" type="button"><b>D</b><span>$20$ fits</span></button></div>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$24$ fits</span></button><button class="opt" type="button"><b>B</b><span>$30$ fits</span></button><button class="opt" type="button"><b>C</b><span>$120$ fits</span></button><button class="opt" type="button"><b>D</b><span>$20$ fits</span></button></div>
             <div class="why" hidden><strong>Why:</strong> For each of the 5 outer folds, the inner cross-validation evaluates all 6 hyperparameter settings across 4 inner folds ($6 \times 4 = 24$ fits). Across all 5 outer folds, this requires $5 \times 24 = 120$ inner fits.</div>
           </div>
         </div>
@@ -203,11 +203,11 @@ scores = <span class="f">cross_validate</span>(model, X, y, cv=cv, scoring=[<spa
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
-<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/site.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvtga7q7" defer></script>
+<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
 </body>
 </html>
