@@ -3853,4 +3853,2374 @@ print("3-step ahead forecasts:", [round(float(f), 2) for f in forecast_h])`,
     related: ['arima-and-sarima', 'stationarity-acf-and-pacf', 'regression-metrics'],
     keywords: 'exponential smoothing ets holt winters state space forecasting trend seasonal level damping',
   },
+
+  {
+    id: "joint-marginal-and-conditional-distributions",
+    short: "Joint & Conditional Dist.",
+    title: "Joint, marginal and conditional distributions",
+    task: "concepts",
+    module: "Probability",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Multivariate probability distributions formalise the simultaneous behaviour of multiple random variables. The joint distribution P(X=x, Y=y) captures all co-occurrence probabilities. Marginalisation collapses dimensions by integrating or summing out nuisance variables, while conditioning isolates the distribution of one variable given fixed observations of another via Bayes' rule P(X | Y) = P(X, Y) / P(Y). Understanding the decomposition of joint spaces into marginals and conditionals is fundamental to probabilistic graphical models, Markov decision processes, and multivariate density estimation.",
+    lead: "When working with tabular datasets, image channels, or sensor networks, variables rarely operate in isolation. How does knowing an applicant's credit score alter the probability distribution of their loan default risk, and how can we recover the standalone distribution of default risk across the entire population? Joint distributions capture complete multivariate reality, while marginalisation and conditioning allow us to slice and project high-dimensional uncertainty down to actionable inferences.",
+    intuition: [
+      "The 2D Table of Reality: Imagine a 2D contingency grid where columns represent education levels and rows represent income brackets. The joint distribution assigns a probability to every individual cell (x, y), such that all cell probabilities sum to 1.",
+      "Marginalisation (Collapsing Dimensions): If you only want to know the distribution of income regardless of education, you sum horizontally across all columns. You are projecting the 2D grid onto the vertical margin—hence the term \"marginal distribution\". Mathematically, marginalisation integrates out the unwanted variable: P(X) = sum_y P(X, y).",
+      "Conditioning (Slicing the Distribution): If you learn a specific candidate holds a PhD, you discard every column except the \"PhD\" column. You take that single column slice, but because its cells do not sum to 1, you normalise by dividing by the marginal probability of having a PhD. That renormalised slice is the conditional distribution P(Income | Education = PhD).",
+      "Independence and Covariance: Two variables are statistically independent if and only if knowing one yields zero information about the other: P(X, Y) = P(X)P(Y), which implies P(Y | X) = P(Y). When variables are dependent, conditioning reshapes the distribution, shifting both its conditional expectation and conditional variance."
+    ],
+    analogy: "Think of an aerial heat map of a crowded festival park where altitude represents the joint probability of finding a person at GPS coordinate (x, y). The marginal distribution of the east-west axis X is the silhouette of the crowd projected onto a northern wall: you look from the side and sum up everyone at that longitude regardless of latitude. The conditional distribution given latitude Y=y0 is like putting up a physical laser tape along latitude y0 and examining only the crowd profile walking along that exact east-west path, normalised so total presence sums to 100%.",
+    steps: [
+      {
+        "title": "Specify or estimate joint distribution",
+        "desc": "Construct the full joint probability mass function P(X, Y) or joint density f_{X,Y}(x, y).",
+        "detail": "Tabulate discrete co-occurrences or model continuous densities using multivariate parametric distributions (e.g. bivariate normal) or non-parametric kernel density estimators."
+      },
+      {
+        "title": "Compute marginal distributions via summation or integration",
+        "desc": "Collapse the joint distribution across the dimension of the unobserved variable.",
+        "detail": "Sum across columns to obtain row marginals P(X=x) = sum_y P(X=x, Y=y), or integrate continuous densities f_X(x) = int f_{X,Y}(x, y) dy. Check that the marginal distribution sums to 1."
+      },
+      {
+        "title": "Derive conditional distributions by slicing and normalising",
+        "desc": "Isolate the target variable's distribution conditioned on an observed evidence value.",
+        "detail": "Extract the slice where the conditioning variable equals the observed evidence, and divide by the marginal probability of that evidence: P(Y=y | X=x) = P(X=x, Y=y) / P(X=x)."
+      },
+      {
+        "title": "Evaluate conditional expectation and variance",
+        "desc": "Compute the expected value and dispersion of the conditioned variable.",
+        "detail": "Calculate E[Y | X=x] = sum_y y * P(Y=y | X=x) and Var(Y | X=x). Verify consistency using the Law of Total Expectation E[Y] = E[E[Y|X]] and Law of Total Variance."
+      },
+      {
+        "title": "Test for statistical independence",
+        "desc": "Check whether the joint distribution factorises into the product of its marginals.",
+        "detail": "Confirm if P(X=x, Y=y) = P(X=x)P(Y=y) holds for all (x, y) pairs. If it holds everywhere, X and Y are independent; otherwise, they are dependent."
+      }
+    ],
+    math: [
+      {
+        "h": "Joint, Marginal, and Conditional Probability Densities",
+        "tex": "f_X(x) = \\int_{-\\infty}^{\\infty} f_{X,Y}(x, y) \\, dy, \\qquad f_{Y \\mid X}(y \\mid x) = \\frac{f_{X,Y}(x, y)}{f_X(x)} \\quad \\text{for } f_X(x) > 0",
+        "p": "For continuous random variables, the marginal density f_X(x) integrates the joint density f_{X,Y}(x, y) across all possible values of y. The conditional density f_{Y \\mid X}(y \\mid x) represents the cross-sectional slice of the joint density at x, normalised so that \\int f_{Y \\mid X}(y \\mid x) \\, dy = 1."
+      },
+      {
+        "h": "Law of Total Expectation and Total Variance (Eve's Law)",
+        "tex": "\\mathbb{E}[Y] = \\mathbb{E}\\Big[\\mathbb{E}[Y \\mid X]\\Big], \\qquad \\text{Var}(Y) = \\mathbb{E}\\Big[\\text{Var}(Y \\mid X)\\Big] + \\text{Var}\\Big(\\mathbb{E}[Y \\mid X]\\Big)",
+        "p": "Eve's Law decomposes the total variance of Y into two orthogonal components: the expected value of the conditional variance (unexplained within-group variance or noise) plus the variance of the conditional expectation (explained between-group variance). This identity forms the foundational mathematics of ANOVA and decision tree split criteria."
+      },
+      {
+        "h": "Bivariate Gaussian Conditional Distribution",
+        "tex": "Y \\mid (X = x) \\sim \\mathcal{N}\\left( \\mu_Y + \\rho \\frac{\\sigma_Y}{\\sigma_X}(x - \\mu_X), \\; \\sigma_Y^2(1 - \\rho^2) \\right)",
+        "p": "When X and Y follow a joint bivariate normal distribution with correlation \\rho, the conditional distribution of Y given X=x remains strictly Gaussian. Its conditional mean shifts linearly with x, and its conditional variance shrinks by a factor of (1 - \\rho^2), demonstrating how conditioning reduces uncertainty."
+      }
+    ],
+    code: "\"\"\"\nJoint, Marginal, and Conditional Distributions\nDemonstrates discrete joint probability tables, marginal collapse,\nconditional slicing, and verification of Eve's Law of Total Variance.\n\"\"\"\n\nimport numpy as np\n\n# 1. Define a 2D discrete joint distribution table P(Income, Education)\n# Rows: Income Levels (Low, Medium, High)\n# Columns: Education Levels (HighSchool, Bachelors, Postgraduate)\njoint_table = np.array([\n    [0.18, 0.08, 0.02],  # Low Income\n    [0.12, 0.25, 0.13],  # Medium Income\n    [0.02, 0.07, 0.13]   # High Income\n])\n\nincome_levels = [\"Low\", \"Medium\", \"High\"]\nincome_values = np.array([25000, 60000, 120000])  # Representative numeric values in GBP\neducation_levels = [\"HighSchool\", \"Bachelors\", \"Postgraduate\"]\n\nprint(\"=== 1. Joint Probability Table P(Income, Education) ===\")\nprint(\"Total Joint Sum (must equal 1.0):\", round(np.sum(joint_table), 4))\nfor i, inc in enumerate(income_levels):\n    row_str = \"  \" + f\"{inc:6s} | \" + \" \".join(f\"{joint_table[i, j]:6.2f}\" for j in range(3))\n    print(row_str)\n\n# 2. Marginal Distributions\np_education = np.sum(joint_table, axis=0)  # Sum down rows (marginal education)\np_income = np.sum(joint_table, axis=1)     # Sum across columns (marginal income)\n\nprint(\"\\n=== 2. Marginal Distributions ===\")\nfor j, edu in enumerate(education_levels):\n    print(f\"  P(Education = {edu:12s}) = {p_education[j]:.3f}\")\n\nprint(\"\")\nfor i, inc in enumerate(income_levels):\n    print(f\"  P(Income = {inc:6s}) = {p_income[i]:.3f}\")\n\n# 3. Conditional Distributions P(Income | Education)\n# For each column j, divide cell by p_education[j]\ncond_income_given_edu = joint_table / p_education[np.newaxis, :]\n\nprint(\"\\n=== 3. Conditional Distributions P(Income | Education) ===\")\nfor j, edu in enumerate(education_levels):\n    print(f\"P(Income | Education = {edu}):\")\n    for i, inc in enumerate(income_levels):\n        print(f\"  P({inc:6s} | {edu}) = {cond_income_given_edu[i, j]:.3f}\")\n\n# 4. Conditional Expectations and Eve's Law Verification\ncond_means = np.sum(income_values[:, np.newaxis] * cond_income_given_edu, axis=0)\ncond_vars = np.sum(((income_values[:, np.newaxis] - cond_means)**2) * cond_income_given_edu, axis=0)\n\noverall_mean = np.sum(income_values * p_income)\noverall_var = np.sum(((income_values - overall_mean)**2) * p_income)\n\nexpected_cond_var = np.sum(cond_vars * p_education)     # E[Var(Y|X)]\nvar_of_cond_mean = np.sum(((cond_means - overall_mean)**2) * p_education)  # Var(E[Y|X])\n\nprint(\"\\n=== 4. Verification of Eve's Law of Total Variance ===\")\nprint(f\"Overall Marginal Mean Income: £{overall_mean:,.2f}\")\nfor j, edu in enumerate(education_levels):\n    print(f\"  E[Income | {edu:12s}] = £{cond_means[j]:,.2f} | Std = £{np.sqrt(cond_vars[j]):,.2f}\")\n\nprint(f\"\\nTotal Population Variance:          {overall_var:,.0f}\")\nprint(f\"E[Var(Income | Education)] (Within): {expected_cond_var:,.0f}\")\nprint(f\"Var(E[Income | Education]) (Between):{var_of_cond_mean:,.0f}\")\nprint(f\"Within + Between Sum:               {expected_cond_var + var_of_cond_mean:,.0f}\")\nprint(\"Eve's Law Holds Exactly:\", np.isclose(overall_var, expected_cond_var + var_of_cond_mean))\n",
+    keyPoints: [
+      "The joint distribution specifies the simultaneous probability of all variable configurations across the multidimensional state space.",
+      "Marginalisation collapses dimensions by integrating or summing out unobserved nuisance variables.",
+      "Conditioning takes a slice along an observed variable and renormalises it by dividing by that variable's marginal probability.",
+      "Eve's Law of Total Variance decomposes total variance into expected conditional variance (within-group noise) plus variance of conditional expectation (between-group signal)."
+    ],
+    pitfalls: [
+      "Confusing P(X | Y) with P(Y | X): Conditional probabilities are directional and asymmetric; inverting them requires Bayes' theorem.",
+      "Forgetting to renormalise conditional slices: A raw row or column of a joint table sums to the marginal probability, not 1; dividing by the marginal is mandatory.",
+      "Assuming zero covariance implies independence: Covariance measures only linear relationships; non-linear dependencies can have zero covariance while remaining strongly dependent."
+    ],
+    quiz: [
+      {
+        "q": "How is a marginal distribution P(X) obtained from a discrete joint distribution P(X, Y)?",
+        "o": [
+          "By summing the joint probabilities over all possible values of the unwanted variable Y: P(X=x) = sum_y P(X=x, Y=y)",
+          "By multiplying P(X, Y) by P(Y)",
+          "By differentiating P(X, Y) with respect to X",
+          "By setting all values of Y equal to zero"
+        ],
+        "a": 0,
+        "why": "Marginalisation integrates or sums over all states of the unobserved variable, collapsing the joint distribution onto the marginal axis."
+      },
+      {
+        "q": "According to Eve's Law of Total Variance, what two components comprise the total variance Var(Y)?",
+        "o": [
+          "The expected value of the conditional variance E[Var(Y|X)] plus the variance of the conditional expectation Var(E[Y|X])",
+          "The sum of the marginal variances Var(X) + Var(Y)",
+          "The square of the covariance Cov(X, Y)^2 plus the correlation coefficient",
+          "The mean of X multiplied by the variance of Y"
+        ],
+        "a": 0,
+        "why": "Eve's Law states Var(Y) = E[Var(Y|X)] + Var(E[Y|X]), decomposing overall variance into unexplained within-group dispersion and explained between-group variation."
+      },
+      {
+        "q": "Under a bivariate normal distribution, how does the conditional variance Var(Y | X=x) compare to the marginal variance Var(Y)?",
+        "o": [
+          "It shrinks by a factor of (1 - rho^2), reflecting reduced uncertainty due to the correlation rho with X",
+          "It is always strictly larger than Var(Y)",
+          "It changes depending on the specific numeric value of x",
+          "It is always identically equal to zero"
+        ],
+        "a": 0,
+        "why": "For bivariate Gaussians, Var(Y | X=x) = sigma_Y^2 * (1 - rho^2). Unless rho=0, observing X strictly reduces uncertainty about Y, independent of the value of x."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "probability-rules-and-bayes-theorem",
+      "random-variables-and-distributions"
+    ],
+    related: [
+      "probability-rules-and-bayes-theorem",
+      "expectation-variance-and-covariance",
+      "bayesian_linear_regression"
+    ],
+    keywords: "joint distribution marginal distribution conditional distribution bayes law of total expectation eves law bivariate normal covariance"
+  },
+
+  {
+    id: "map-and-bayesian-estimation",
+    short: "MAP & Bayesian Estimation",
+    title: "MAP and Bayesian estimation",
+    task: "concepts",
+    module: "Estimation",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Maximum A Posteriori (MAP) and full Bayesian estimation extend classical point estimation by incorporating prior probability distributions over model parameters. While Maximum Likelihood Estimation (MLE) seeks parameters that maximise data likelihood alone, MAP identifies the single mode of the posterior distribution, functioning as a Bayesian bridge to penalised regularisation (such as L2 ridge and L1 lasso). Full Bayesian estimation rejects single point estimates entirely, retaining the complete posterior probability distribution p(\\theta | D) to compute posterior predictive distributions with principled parameter uncertainty.",
+    lead: "What happens when you flip a coin 3 times and get 3 heads? Maximum Likelihood Estimation insists the coin has a 100% chance of landing heads on every flip. Intuitively, we know coins are usually fair; our prior belief anchors our judgment against extreme conclusions from small samples. How do we formalise prior domain knowledge into statistical estimators, and what is the crucial distinction between choosing a single \"best\" parameter (MAP) versus maintaining a full distribution over all possible parameters (Bayesian estimation)?",
+    intuition: [
+      "MLE vs MAP vs Full Bayes:\n- Maximum Likelihood Estimation (MLE): Seeks argmax_theta p(D | theta). It considers only the observed dataset. On small or sparse samples, it severely overfits, placing zero probability on unobserved events.\n- Maximum A Posteriori (MAP): Seeks argmax_theta p(theta | D) = argmax_theta [p(D | theta) p(theta)]. It combines data evidence with a prior belief distribution, yielding a single optimal point estimate (the posterior mode).\n- Full Bayesian Estimation: Rejects single point estimates entirely. It maintains the entire posterior distribution p(theta | D). When predicting a new outcome y*, it integrates over all possible values of theta, weighted by their posterior credibility.",
+      "The Secret Identity of Regularisation: In machine learning, L2 weight decay (Ridge regression) and L1 penalty (Lasso regression) are often presented as heuristic loss penalties. In reality, MAP estimation reveals their true origin: an L2 penalty is mathematically identical to assuming an independent zero-mean Gaussian prior on weights, while an L1 penalty is identical to assuming a Laplacian prior. Regularisation is literally MAP estimation in disguise!",
+      "Epistemic vs Aleatoric Uncertainty: Point estimators (both MLE and MAP) cannot express epistemic uncertainty (uncertainty stemming from lack of training data). Full Bayesian estimation explicitly tracks epistemic uncertainty: when data is scarce, the posterior distribution is wide, yielding broad prediction intervals that widen safely in uncharted feature space."
+    ],
+    analogy: "Imagine a jury deliberating on a criminal trial. An MLE juror considers only the physical evidence presented in the courtroom, ignoring whether the defendant has a pristine record or a history of identical crimes. A MAP juror combines the evidence with their background knowledge of human behaviour to pick the single verdict they feel is most probable. A full Bayesian deliberation does not pick a single juror's hunch; it polls all possible interpretations, weighting every plausible scenario by how well it fits both the evidence and prior reality to arrive at a calibrated distribution of reasonable doubt.",
+    steps: [
+      {
+        "title": "Define parametric likelihood function",
+        "desc": "Specify the probability distribution of observing data given parameters p(D | theta).",
+        "detail": "Formulate the generative likelihood model (e.g. Binomial for binary trials, Gaussian for continuous regression targets). Compute the log-likelihood function."
+      },
+      {
+        "title": "Specify prior probability distribution",
+        "desc": "Select a prior p(theta) reflecting prior knowledge or regularisation constraints.",
+        "detail": "Choose an uninformative prior, an empirical domain prior, or a conjugate prior (such as Beta for Binomial, or Normal-Inverse-Gamma for Linear Regression) to enable analytical tractability."
+      },
+      {
+        "title": "Compute unnormalised posterior distribution",
+        "desc": "Multiply likelihood by prior according to Bayes' rule: p(theta | D) proportional to p(D | theta) * p(theta).",
+        "detail": "Work in log-space: log p(theta | D) = log p(D | theta) + log p(theta) + constant. Identify the functional form of the posterior distribution."
+      },
+      {
+        "title": "Derive the MAP point estimate",
+        "desc": "Maximise the log-posterior with respect to model parameters.",
+        "detail": "Set gradient nabla_theta [log p(D | theta) + log p(theta)] = 0. Solve analytically or via numerical gradient ascent to obtain theta_MAP."
+      },
+      {
+        "title": "Compute full Bayesian posterior predictive distribution",
+        "desc": "Integrate likelihood predictions over the entire posterior parameter distribution.",
+        "detail": "Evaluate p(y* | D) = int p(y* | theta) p(theta | D) d theta. Extract credible intervals to quantify parameter and observation uncertainty simultaneously."
+      }
+    ],
+    math: [
+      {
+        "h": "MAP Objective and Log-Posterior Formulation",
+        "tex": "\\hat{\\theta}_{\\text{MAP}} = \\arg\\max_\\theta \\left\\{ \\sum_{i=1}^N \\log p(x_i \\mid \\theta) + \\log p(\\theta) \\right\\} = \\arg\\min_\\theta \\Big\\{ \\text{NLL}(\\theta) - \\log p(\\theta) \\Big\\}",
+        "p": "MAP estimation maximises the joint probability of data and parameters. Minimising negative log-likelihood with a negative log-prior penalty demonstrates the direct equivalence between MAP estimation and regularised loss minimisation."
+      },
+      {
+        "h": "MAP Equivalence to L2 Regularisation (Gaussian Prior)",
+        "tex": "\\theta_j \\sim \\mathcal{N}(0, \\sigma_0^2) \\implies \\log p(\\theta) = -\\frac{\\|\\theta\\|_2^2}{2\\sigma_0^2} - C \\implies \\mathcal{L}_{\\text{MAP}}(\\theta) = \\text{NLL}(\\theta) + \\frac{\\lambda}{2} \\|\\theta\\|_2^2, \\quad \\lambda = \\frac{1}{\\sigma_0^2}",
+        "p": "Assuming an independent zero-mean normal prior over model parameters produces a quadratic penalty identical to Ridge regression (L2 weight decay). Smaller prior variance \\sigma_0^2 corresponds to stronger regularisation hyperparameter \\lambda."
+      },
+      {
+        "h": "Posterior Predictive Distribution (Full Bayesian)",
+        "tex": "p(y^* \\mid \\mathcal{D}) = \\int_\\Theta p(y^* \\mid \\theta) \\, p(\\theta \\mid \\mathcal{D}) \\, d\\theta, \\qquad \\text{where } p(\\theta \\mid \\mathcal{D}) = \\frac{p(\\mathcal{D} \\mid \\theta) p(\\theta)}{\\int_\\Theta p(\\mathcal{D} \\mid \\theta') p(\\theta') \\, d\\theta'}",
+        "p": "Instead of committing to a single point estimate \\hat{\\theta}, full Bayesian inference integrates across all parameter possibilities. The marginalisation accounts for parameter uncertainty, avoiding overconfident predictions in regions with sparse data."
+      }
+    ],
+    code: "\"\"\"\nComparison of Maximum Likelihood (MLE), Maximum A Posteriori (MAP),\nand Full Bayesian Estimation on a Small Bernoulli Sample.\n\"\"\"\n\nimport numpy as np\n\n# Scenario: We flip a coin N=5 times and observe k=4 heads.\n# We want to estimate theta (probability of heads).\nN = 5\nk = 4  # 4 heads out of 5 flips\n\n# 1. Maximum Likelihood Estimation (MLE)\n# theta_MLE = k / N\ntheta_mle = k / N\n\n# 2. Maximum A Posteriori (MAP) Estimation with Beta(alpha, beta) Prior\n# Suppose our prior belief is centered at a fair coin: Beta(alpha=3, beta=3)\n# (equivalent to having seen 2 virtual heads and 2 virtual tails prior to the experiment)\nalpha_prior = 3.0\nbeta_prior = 3.0\n\n# Posterior is Beta(alpha + k, beta + N - k)\nalpha_post = alpha_prior + k\nbeta_post = beta_prior + (N - k)\n\n# Mode of Beta(a, b) for a, b > 1 is (a - 1) / (a + b - 2)\ntheta_map = (alpha_post - 1) / (alpha_post + beta_post - 2)\n\n# 3. Full Bayesian Estimation (Posterior Mean and Credible Interval)\n# Posterior Mean E[theta | D] = a / (a + b)\ntheta_bayes_mean = alpha_post / (alpha_post + beta_post)\n\n# 4. Posterior Predictive Distribution for next flip being Heads\n# P(Y* = 1 | D) = int theta * p(theta | D) d theta = E[theta | D]\np_next_heads_mle = theta_mle\np_next_heads_map = theta_map\np_next_heads_bayes = theta_bayes_mean\n\nprint(f\"=== Experiment: {k} Heads in {N} Flips ===\")\nprint(f\"MLE Estimate:            theta = {theta_mle:.3f} (80% heads)\")\nprint(f\"Prior:                   Beta(alpha={alpha_prior}, beta={beta_prior}) -> Prior Mode = 0.500\")\nprint(f\"Posterior Distribution:  Beta(alpha={alpha_post:.1f}, beta={beta_post:.1f})\")\nprint(f\"MAP Estimate (Mode):     theta = {theta_map:.3f} (shrunk toward prior)\")\nprint(f\"Bayes Posterior Mean:    theta = {theta_bayes_mean:.3f}\")\n\n# Numerical evaluation of 95% Equal-Tailed Credible Interval\n# Discretise theta in [0, 1] to calculate exact CDF\nthetas = np.linspace(0.001, 0.999, 10000)\n# Unnormalised Beta PDF: theta^(a-1) * (1-theta)^(b-1)\nlog_pdf = (alpha_post - 1) * np.log(thetas) + (beta_post - 1) * np.log(1 - thetas)\npdf = np.exp(log_pdf - np.max(log_pdf))\npdf /= np.trapz(pdf, thetas)\ncdf = np.cumsum(pdf) * (thetas[1] - thetas[0])\n\nci_lower = thetas[np.searchsorted(cdf, 0.025)]\nci_upper = thetas[np.searchsorted(cdf, 0.975)]\n\nprint(f\"\\n95% Bayesian Credible Interval: [{ci_lower:.3f}, {ci_upper:.3f}]\")\nprint(f\"Predictive Probability for Next Flip Heads:\")\nprint(f\"  Under MLE:        {p_next_heads_mle:.3f}\")\nprint(f\"  Under Full Bayes: {p_next_heads_bayes:.3f} (accounts for small sample size)\")\n",
+    keyPoints: [
+      "MLE finds the parameter value that maximises data likelihood alone, which overfits severely on small samples.",
+      "MAP incorporates a prior distribution, finding the posterior mode; it is mathematically equivalent to penalised regularisation (L2 = Gaussian prior, L1 = Laplace prior).",
+      "Full Bayesian estimation avoids single point estimates, maintaining the full posterior distribution and integrating over parameter uncertainty for predictions.",
+      "As sample size N approaches infinity, the data likelihood dominates the prior, causing MLE, MAP, and Bayesian posterior mean to converge to the same value."
+    ],
+    pitfalls: [
+      "Treating the MAP estimate as a full Bayesian solution: MAP is still a point estimate that discards parameter uncertainty and variance.",
+      "Using improper priors with MAP without verifying posterior propriety: Maximising an unnormalised objective with ill-defined priors can yield divergent solutions.",
+      "Assuming priors are purely subjective: Priors can represent empirical historical data, physical constraints (e.g. non-negative mass), or regularisation inductors."
+    ],
+    quiz: [
+      {
+        "q": "What machine learning regularisation technique is mathematically equivalent to MAP estimation with a zero-mean Gaussian prior?",
+        "o": [
+          "L2 regularisation (Ridge regression / weight decay)",
+          "L1 regularisation (Lasso regression)",
+          "Dropout regularisation",
+          "Early stopping"
+        ],
+        "a": 0,
+        "why": "The negative log-probability of a Gaussian prior is proportional to the squared Euclidean norm ||theta||_2^2, which corresponds directly to an L2 Ridge penalty."
+      },
+      {
+        "q": "Why does full Bayesian estimation produce superior predictive uncertainty compared to MAP estimation?",
+        "o": [
+          "Because full Bayesian prediction integrates over the entire posterior parameter distribution p(theta | D), whereas MAP reduces the posterior to a single point estimate (the mode)",
+          "Because Bayesian estimation never uses Bayes' theorem",
+          "Because MAP requires GPU matrix multiplication whereas Bayes runs on CPU",
+          "Because full Bayesian models have zero parameters"
+        ],
+        "a": 0,
+        "why": "MAP commits to a single parameter vector, ignoring how wide or flat the posterior surface is. Full Bayesian inference marginalises over all plausible parameters, preserving epistemic uncertainty in predictions."
+      },
+      {
+        "q": "As sample size N grows toward infinity, what happens to the relationship between MLE and MAP estimates?",
+        "o": [
+          "The likelihood grows proportionally with N while the prior remains constant, causing the MAP estimate to converge asymptotically to the MLE estimate",
+          "The prior overpowers the likelihood and forces the estimate to the prior mean",
+          "The MAP estimate diverges to infinity",
+          "The difference between them becomes permanently fixed at 1.0"
+        ],
+        "a": 0,
+        "why": "Data evidence scales with N. For large datasets, the likelihood dominates the prior term in log-space, making MAP and MLE numerically identical in the large-sample limit."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "maximum-likelihood-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "maximum-likelihood-estimation",
+      "conjugate-priors-beta-binomial",
+      "ridge_regression",
+      "bayesian_linear_regression"
+    ],
+    keywords: "map estimation maximum a posteriori bayesian estimation prior posterior predictive ridge lasso regularisation conjugate prior"
+  },
+
+  {
+    id: "estimator-properties-bias-consistency-cramer-rao-bound",
+    short: "Estimator Properties",
+    title: "Estimator properties: bias, consistency, Cramér–Rao bound",
+    task: "concepts",
+    module: "Estimation",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Statistical estimation evaluates how empirical sample statistics infer unknown true population parameters. The four fundamental criteria of estimator quality are Bias (systematic deviation from the true parameter), Consistency (convergence in probability to the truth as sample size approaches infinity), Efficiency (achieving the lowest possible variance among unbiased estimators), and Sufficiency. The Cramér–Rao Lower Bound (CRLB) establishes the theoretical lower limit on estimator variance, governed by the inverse of the Fisher Information matrix I(\\theta)^{-1}.",
+    lead: "When estimating the variance of a population from n sample points, why do statisticians divide the sum of squared deviations by n-1 instead of n? Why does an estimator that works well on 50 samples fail to converge as you gather 50,000 samples? Evaluating estimators requires a rigorous mathematical vocabulary: bias, consistency, efficiency, and asymptotic normality. The Cramér–Rao inequality sets the ultimate speed limit: no matter how clever your estimator is, its precision is physically bounded by the information contained in the data.",
+    intuition: [
+      "Bias vs Consistency:\n- Bias is a finite-sample property: across repeated hypothetical experiments of fixed size n, does your estimator hit the bullseye on average? Bias(theta_hat) = E[theta_hat] - theta.\n- Consistency is an asymptotic property: as sample size n approaches infinity, does the distribution of theta_hat collapse to a single point mass on the exact true value? plim_{n -> inf} theta_hat = theta.\n- An estimator can be biased in finite samples but completely consistent. A famous example is the maximum likelihood estimator for sample variance: S_n^2 = (1/n) sum (x_i - x_bar)^2. It is biased by a factor of (n-1)/n, but as n -> inf, (n-1)/n -> 1, making it fully consistent.",
+      "Efficiency and the Cramér–Rao Bound: If two candidate estimators are both unbiased, which one should you choose? The one with smaller variance. But can variance be made arbitrarily small? No! The Cramér–Rao Lower Bound (CRLB) proves that for any unbiased estimator, Var(theta_hat) >= 1 / I_n(theta), where I_n(theta) is Fisher Information. An estimator that achieves this theoretical minimum variance is called an efficient estimator or Minimum Variance Unbiased Estimator (MVUE).",
+      "The Bias-Variance Trade-off in Estimation: An unbiased estimator is not always the best choice. In many practical settings, introducing a small amount of bias (e.g. Ridge shrinkage, empirical Bayes shrinkage) reduces variance so dramatically that the total Mean Squared Error (MSE = Bias^2 + Variance) is substantially smaller than any unbiased estimator."
+    ],
+    analogy: "Think of an archer shooting arrows at a target. Bias is how far the centre of the arrow cluster is from the bullseye. Variance is the scatter or spread of the arrows. Consistency means as the archer takes more and more shots, the cluster tightens infinitesimally toward the exact centre. The Cramér–Rao bound is the atmospheric wind limit: physics dictates that even a perfect robotic archer cannot cluster tighter than the fundamental aerodynamic turbulence of the arrows.",
+    steps: [
+      {
+        "title": "Define the estimator as a function of random samples",
+        "desc": "Express theta_hat = g(X_1, ..., X_n) as a formal random variable.",
+        "detail": "Determine the functional mapping from sample observations to parameter space. Characterise its sampling distribution under repeated draws."
+      },
+      {
+        "title": "Evaluate expectation and calculate bias",
+        "desc": "Compute E[theta_hat] and check if it equals the true parameter theta.",
+        "detail": "Calculate Bias(theta_hat) = E[theta_hat] - theta. If bias is identically zero for all sample sizes n, the estimator is strictly unbiased."
+      },
+      {
+        "title": "Verify consistency as sample size approaches infinity",
+        "desc": "Demonstrate convergence in probability to the true parameter theta.",
+        "detail": "Check whether lim_{n -> inf} Bias(theta_hat_n) = 0 and lim_{n -> inf} Var(theta_hat_n) = 0. If Mean Squared Error vanishes asymptotically, consistency is guaranteed by Chebyshev's inequality."
+      },
+      {
+        "title": "Compute Fisher Information matrix",
+        "desc": "Evaluate the expected curvature of the log-likelihood function.",
+        "detail": "Calculate I_n(theta) = -n * E[d^2/d theta^2 log f(X; theta)]. Fisher Information quantifies the amount of statistical information sample data carries about the unknown parameter."
+      },
+      {
+        "title": "Evaluate efficiency against the Cramér–Rao Lower Bound",
+        "desc": "Compare the variance of theta_hat against the theoretical bound 1 / I_n(theta).",
+        "detail": "Compute efficiency ratio e(theta_hat) = [1 / I_n(theta)] / Var(theta_hat). If the ratio equals 1.0, the estimator is efficient and achieves the CRLB."
+      }
+    ],
+    math: [
+      {
+        "h": "Bias, Variance, and Mean Squared Error Decomposition",
+        "tex": "\\text{Bias}(\\hat{\\theta}) = \\mathbb{E}[\\hat{\\theta}] - \\theta, \\qquad \\text{MSE}(\\hat{\\theta}) = \\mathbb{E}\\left[(\\hat{\\theta} - \\theta)^2\\right] = \\text{Var}(\\hat{\\theta}) + \\left[\\text{Bias}(\\hat{\\theta})\\right]^2",
+        "p": "Mean Squared Error decomposes cleanly into variance (precision of the estimator across repeated samples) plus squared bias (systematic error). An estimator that sacrifices unbiasedness can achieve lower total MSE if the variance reduction outweighs the squared bias penalty."
+      },
+      {
+        "h": "Fisher Information Formulation",
+        "tex": "\\mathcal{I}_n(\\theta) = n \\, \\mathbb{E}\\left[ \\left(\\frac{\\partial \\log f(X; \\theta)}{\\partial \\theta}\\right)^2 \\right] = -n \\, \\mathbb{E}\\left[ \\frac{\\partial^2 \\log f(X; \\theta)}{\\partial \\theta^2} \\right]",
+        "p": "Fisher Information measures the expected curvature (Hessian) of the log-likelihood function. If the log-likelihood is sharply curved around the true parameter, small deviations in parameter space cause steep drops in likelihood, meaning observations carry high information about \\theta."
+      },
+      {
+        "h": "The Cramér–Rao Lower Bound (CRLB)",
+        "tex": "\\text{Var}(\\hat{\\theta}) \\ge \\frac{\\left(1 + b'(\\theta)\\right)^2}{\\mathcal{I}_n(\\theta)}, \\qquad \\text{For unbiased estimators } (b(\\theta) = 0): \\; \\text{Var}(\\hat{\\theta}) \\ge \\frac{1}{\\mathcal{I}_n(\\theta)}",
+        "p": "The Cramér–Rao inequality sets a fundamental lower bound on the variance of any estimator. For unbiased estimators, no valid statistical procedure can produce a variance smaller than the reciprocal of Fisher Information. Maximum likelihood estimators achieve the CRLB asymptotically as n \\to \\infty."
+      }
+    ],
+    code: "\"\"\"\nEstimator Properties Simulation\nDemonstrating finite-sample bias of sample variance, asymptotic consistency,\nand Fisher Information vs Cramér-Rao Lower Bound for Poisson data.\n\"\"\"\n\nimport numpy as np\n\n# 1. Finite-Sample Bias of Variance Estimator (Bessel's Correction)\n# Compare S_biased (1/n) vs S_unbiased (1/(n-1)) across 20,000 Monte Carlo trials\ntrue_sigma2 = 25.0  # True variance\ntrue_mu = 100.0\nsample_size = 5     # Small sample size where bias is pronounced\nnum_simulations = 20000\n\nnp.random.seed(42)\nsamples = np.random.normal(loc=true_mu, scale=np.sqrt(true_sigma2), size=(num_simulations, sample_size))\n\n# Sample variance with denominator n (MLE formula)\ns2_mle = np.var(samples, axis=1, ddof=0)\n# Sample variance with denominator n - 1 (Unbiased formula)\ns2_unbiased = np.var(samples, axis=1, ddof=1)\n\nmean_s2_mle = np.mean(s2_mle)\nmean_s2_unbiased = np.mean(s2_unbiased)\n\ntheoretical_mle_bias = -true_sigma2 / sample_size\nempirical_mle_bias = mean_s2_mle - true_sigma2\n\nprint(f\"=== 1. Sample Variance Bias (n = {sample_size}, True Variance = {true_sigma2}) ===\")\nprint(f\"Mean MLE Estimator (ddof=0):     {mean_s2_mle:.3f} (Biased: underestimates variance)\")\nprint(f\"Empirical MLE Bias:              {empirical_mle_bias:.3f} | Theoretical Bias: {theoretical_mle_bias:.3f}\")\nprint(f\"Mean Unbiased Estimator (ddof=1):{mean_s2_unbiased:.3f} (Unbiased!)\")\n\n# 2. Asymptotic Consistency Demonstration\n# Show that as n increases, the bias and variance of the MLE estimator vanish toward 0\nsample_sizes = [5, 20, 100, 1000]\nprint(\"\\n=== 2. Consistency: Asymptotic Behaviour as n -> Infinity ===\")\nfor n in sample_sizes:\n    s = np.random.normal(loc=true_mu, scale=np.sqrt(true_sigma2), size=(5000, n))\n    v = np.var(s, axis=1, ddof=0)\n    bias = np.mean(v) - true_sigma2\n    mse = np.mean((v - true_sigma2)**2)\n    print(f\"  n = {n:4d} | Bias: {bias:7.3f} | Variance: {np.var(v):7.3f} | MSE: {mse:7.3f}\")\n\n# 3. Fisher Information and Cramér-Rao Lower Bound for Poisson(lambda)\n# For Poisson(lambda), f(x) = exp(-lambda) * lambda^x / x!\n# Log-likelihood: -lambda + x*log(lambda) - log(x!)\n# d/d_lambda = -1 + x/lambda, d^2/d_lambda^2 = -x / lambda^2\n# I_n(lambda) = -n * E[-X / lambda^2] = n * lambda / lambda^2 = n / lambda\n# CRLB = 1 / I_n(lambda) = lambda / n\ntrue_lambda = 4.0\nn_poisson = 15\ncrlb = true_lambda / n_poisson\n\n# The sample mean X_bar is an unbiased estimator for lambda:\npoisson_samples = np.random.poisson(lam=true_lambda, size=(50000, n_poisson))\nsample_means = np.mean(poisson_samples, axis=1)\n\nempirical_var_mean = np.var(sample_means)\nefficiency = crlb / empirical_var_mean\n\nprint(f\"\\n=== 3. Fisher Information & Cramér-Rao Lower Bound (Poisson lambda={true_lambda}, n={n_poisson}) ===\")\nprint(f\"Fisher Information I_n(lambda): {n_poisson / true_lambda:.3f}\")\nprint(f\"Theoretical CRLB Lower Bound:   {crlb:.5f}\")\nprint(f\"Empirical Var(X_bar):           {empirical_var_mean:.5f}\")\nprint(f\"Estimator Efficiency:           {efficiency:.3f} (1.0 = reaches CRLB speed limit exactly!)\")\n",
+    keyPoints: [
+      "Bias measures systematic error in finite samples: E[theta_hat] - theta.",
+      "Consistency measures asymptotic convergence in probability to the truth: as sample size grows, the estimator converges to the true parameter.",
+      "Fisher Information measures the log-likelihood curvature; higher curvature means samples carry greater parameter precision.",
+      "The Cramér–Rao Lower Bound defines the mathematical minimum achievable variance for any unbiased estimator: Var(theta_hat) >= 1 / I_n(theta)."
+    ],
+    pitfalls: [
+      "Assuming an unbiased estimator is always superior to a biased one: Biased estimators (like Ridge regression) often achieve lower total Mean Squared Error by dramatically reducing variance.",
+      "Confusing unbiasedness with consistency: An estimator can be unbiased yet inconsistent (e.g. taking only the very first sample X_1 regardless of total sample size n).",
+      "Applying the standard CRLB to biased estimators without adjustment: If an estimator has non-zero bias b(theta), the lower bound is scaled by [1 + b'(theta)]^2."
+    ],
+    quiz: [
+      {
+        "q": "Why does Bessel's correction divide by n-1 instead of n in sample variance calculation?",
+        "o": [
+          "Because deviations are measured from the sample mean rather than the true population mean, which absorbs one degree of freedom and causes division by n to systematically underestimate population variance by a factor of (n-1)/n",
+          "Because sample variance is an exponential distribution",
+          "Because computers cannot divide by even numbers",
+          "To make the variance equal to the standard deviation"
+        ],
+        "a": 0,
+        "why": "Using the sample mean x_bar instead of true mean mu minimises the sum of squared deviations around x_bar, underestimating true variance by sigma^2 / n. Dividing by n-1 restores exact unbiasedness."
+      },
+      {
+        "q": "What does the Cramér–Rao Lower Bound (CRLB) establish for an unbiased estimator?",
+        "o": [
+          "The theoretical minimum variance that any unbiased estimator can possibly achieve, equal to the reciprocal of the Fisher Information 1 / I_n(theta)",
+          "The maximum number of features allowed in a regression model",
+          "The probability that a hypothesis test makes a Type I error",
+          "The maximum execution time of a gradient descent algorithm"
+        ],
+        "a": 0,
+        "why": "The CRLB sets a strict mathematical lower limit on variance. An unbiased estimator that attains this bound cannot be improved in terms of variance and is termed efficient."
+      },
+      {
+        "q": "Can an estimator be biased yet consistent?",
+        "o": [
+          "Yes: an estimator can have non-zero bias for small sample sizes n, provided that its bias and variance both shrink to zero as n approaches infinity",
+          "No: any estimator with bias is permanently barred from being consistent",
+          "Only when the data follows a uniform distribution",
+          "Only if the Fisher Information is negative"
+        ],
+        "a": 0,
+        "why": "Consistency requires plim theta_hat = theta as n -> inf. Many maximum likelihood estimators (such as MLE sample variance) have finite-sample bias of order O(1/n), which vanishes asymptotically."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "sampling-and-standard-error",
+      "maximum-likelihood-estimation"
+    ],
+    related: [
+      "sampling-and-standard-error",
+      "bias-variance-tradeoff",
+      "maximum-likelihood-estimation",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    keywords: "estimator properties bias consistency efficiency cramer rao lower bound crlb fisher information mvue asymptotic variance"
+  },
+
+  {
+    id: "permutation-tests",
+    short: "Permutation Tests",
+    title: "Permutation tests",
+    task: "concepts",
+    module: "Hypothesis testing",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Permutation tests (also called randomisation or exact re-randomisation tests) are non-parametric hypothesis tests that calculate exact, distribution-free p-values by exhaustively or randomly shuffling group labels under the null hypothesis. Unlike classical t-tests and ANOVA that rely on asymptotic central limit theorems and strict normality assumptions, permutation tests require only that observations are exchangeable under the null hypothesis H_0. They can evaluate arbitrary test statistics—including medians, trimmed means, ratios, and custom business metrics—with exact finite-sample Type I error guarantees.",
+    lead: "What should you do when evaluating an A/B test with 25 users per variant, where the metric is heavily skewed with extreme outliers and violates every assumption of the Student's t-test? Classical parametric formulas fall apart on small, non-normal samples. Permutation tests provide the gold standard solution: by shuffling the \"Variant A\" and \"Variant B\" labels thousands of times, they construct an exact empirical null distribution directly from the observed data without making any parametric distributional assumptions.",
+    intuition: [
+      "The Core Logic of Exchangeability: Under the null hypothesis H_0, the treatment has no effect on the outcome. Therefore, the group labels (\"Control\" vs \"Treatment\") assigned to each participant are completely arbitrary! If treatment had no impact, an observed revenue of £150 in group A was equally likely to have occurred in group B.",
+      "Building the Empirical Null by Shuffling: Pool all observations from groups A and B together. Randomly shuffle the labels and recompute your test statistic (e.g. difference in means x_bar_A - x_bar_B). Repeat this shuffling process 10,000 times. This builds an exact empirical reference distribution showing what differences arise purely from random chance.",
+      "Calculating the Exact p-Value: The two-sided p-value is simply the proportion of shuffled permutations where the test statistic is at least as extreme as the observed test statistic from the real experiment. No z-tables, t-tables, or degrees of freedom required!",
+      "Total Metric Flexibility: In classical tests, you are restricted to statistics with known analytical sampling distributions (like the mean). In a permutation test, you can test differences in medians, 90th percentiles, variance ratios, or custom profit formulas with identical mathematical validity."
+    ],
+    analogy: "Imagine dealing a deck of cards into two piles, Red and Blue, and noticing the Red pile has a higher total face value. Did the dealer cheat, or was it pure chance? To test this, you don't need a mathematical theorem about Gaussian curves. You simply gather the cards, shuffle them thoroughly, deal them into two piles again, and check the difference. If you repeat this shuffle 10,000 times and an advantage as large as the original deal appears only 12 times, the p-value is 12 / 10,000 = 0.0012, proving the original deal was extraordinarily unlikely to occur by random chance.",
+    steps: [
+      {
+        "title": "State the null hypothesis and exchangeability assumption",
+        "desc": "Formalise H_0: the probability distribution of outcomes is identical across groups.",
+        "detail": "Verify that observations are exchangeable under H_0 (e.g. independent samples assigned via randomisation)."
+      },
+      {
+        "title": "Choose an appropriate test statistic",
+        "desc": "Select a statistic T(D) that quantifies the difference between treatment and control.",
+        "detail": "Pick the difference in means, difference in medians, trimmed mean difference, or ratio of variances based on the metric most relevant to the business decision."
+      },
+      {
+        "title": "Compute the observed test statistic",
+        "desc": "Calculate T_obs on the original, unmodified experimental dataset.",
+        "detail": "Evaluate T_obs = T(group_A, group_B) and store it as the benchmark for significance."
+      },
+      {
+        "title": "Reshuffle group labels under the null hypothesis",
+        "desc": "Pool observations, permute assignments B times, and recalculate the statistic.",
+        "detail": "Draw B random permutations (typically B = 10,000). For each permutation b, reassign pooled observations to groups of size n_A and n_B, and record T^(b)."
+      },
+      {
+        "title": "Compute exact empirical p-value",
+        "desc": "Determine the fraction of permutations as extreme as T_obs, including the continuity correction.",
+        "detail": "Calculate p = (1 + sum I(|T^(b)| >= |T_obs|)) / (B + 1). The addition of 1 to numerator and denominator accounts for the observed data, ensuring strict Type I error control."
+      }
+    ],
+    math: [
+      {
+        "h": "Exact Permutation p-Value Formulation",
+        "tex": "p_{\\text{exact}} = \\frac{1}{\\binom{N}{n_A}} \\sum_{\\pi \\in \\Pi} \\mathbb{I}\\Big( \\big|T(\\pi(\\mathcal{D}))\\big| \\ge |T_{\\text{obs}}| \\Big)",
+        "p": "For sample sizes n_A and n_B with total N = n_A + n_B, there are \\binom{N}{n_A} possible ways to partition the observations into two groups. When N is small, all permutations \\Pi can be evaluated exhaustively to yield an exact finite-sample p-value."
+      },
+      {
+        "h": "Monte Carlo Permutation p-Value with Continuity Correction",
+        "tex": "\\hat{p} = \\frac{1 + \\sum_{b=1}^B \\mathbb{I}\\Big( |T^{(b)}| \\ge |T_{\\text{obs}}| \\Big)}{B + 1}",
+        "p": "When the total number of permutations is astronomically large, B random permutations are sampled uniformly with replacement. Including the original observed dataset as the (B+1)-th permutation ensures \\hat{p} is strictly conservative and guarantees exact Type I error control at level \\alpha."
+      },
+      {
+        "h": "Exchangeability Condition under Null Hypothesis",
+        "tex": "P(X_1 = x_1, \\dots, X_N = x_N) = P(X_{\\pi(1)} = x_1, \\dots, X_{\\pi(N)} = x_N) \\quad \\forall \\pi \\in \\mathcal{S}_N",
+        "p": "The fundamental assumption underpinning permutation testing is exchangeability: under H_0, the joint probability distribution of the pooled sample is invariant under all permutations \\pi in the symmetric group \\mathcal{S}_N. Independent and identically distributed (i.i.d.) observations satisfy this condition automatically."
+      }
+    ],
+    code: "\"\"\"\nTwo-Sample Permutation Test vs Student's t-test\nDemonstrating exact distribution-free hypothesis testing on skewed,\nheavy-tailed A/B test data with extreme outliers.\n\"\"\"\n\nimport numpy as np\n\n# Simulate skewed A/B test data (e.g. e-commerce purchase amounts in GBP)\n# Control: Log-normal(mu=2.5, sigma=1.0)\n# Treatment: Log-normal(mu=2.9, sigma=1.2) with extreme outliers\nnp.random.seed(42)\nn_control = 25\nn_treatment = 25\n\ncontrol_data = np.random.lognormal(mean=2.5, sigma=1.0, size=n_control)\ntreatment_data = np.random.lognormal(mean=2.9, sigma=1.2, size=n_treatment)\n# Introduce two extreme high-value spender outliers in treatment\ntreatment_data[0] *= 4.0\ntreatment_data[1] *= 5.0\n\nprint(f\"=== Sample Summary (n_control={n_control}, n_treatment={n_treatment}) ===\")\nprint(f\"Control:   Mean = £{np.mean(control_data):.2f} | Median = £{np.median(control_data):.2f}\")\nprint(f\"Treatment: Mean = £{np.mean(treatment_data):.2f} | Median = £{np.median(treatment_data):.2f}\")\n\ndef run_permutation_test(group_a: np.ndarray, group_b: np.ndarray, num_permutations: int = 10000, statistic_type: str = \"mean\"):\n    \"\"\"\n    Execute two-sided Monte Carlo permutation test for mean or median difference.\n    \"\"\"\n    n_a = len(group_a)\n    n_b = len(group_b)\n    pooled = np.concatenate([group_a, group_b])\n    total_n = len(pooled)\n\n    # 1. Observed test statistic\n    if statistic_type == \"mean\":\n        t_obs = np.mean(group_b) - np.mean(group_a)\n    elif statistic_type == \"median\":\n        t_obs = np.median(group_b) - np.median(group_a)\n    else:\n        raise ValueError(\"Unsupported statistic type\")\n\n    # 2. Monte Carlo shuffling under H0\n    permuted_diffs = np.empty(num_permutations)\n    for b in range(num_permutations):\n        shuffled = np.random.permutation(pooled)\n        new_a = shuffled[:n_a]\n        new_b = shuffled[n_a:]\n        if statistic_type == \"mean\":\n            permuted_diffs[b] = np.mean(new_b) - np.mean(new_a)\n        else:\n            permuted_diffs[b] = np.median(new_b) - np.median(new_a)\n\n    # 3. Two-sided p-value with continuity correction\n    count_extreme = np.sum(np.abs(permuted_diffs) >= np.abs(t_obs))\n    p_value = (1 + count_extreme) / (num_permutations + 1)\n\n    return t_obs, p_value, permuted_diffs\n\n# 1. Permutation Test on Difference in Means\nt_obs_mean, p_perm_mean, _ = run_permutation_test(control_data, treatment_data, num_permutations=10000, statistic_type=\"mean\")\n\n# 2. Permutation Test on Difference in Medians (Robust to outliers!)\nt_obs_med, p_perm_med, _ = run_permutation_test(control_data, treatment_data, num_permutations=10000, statistic_type=\"median\")\n\n# 3. Classical Student's t-test for comparison\nfrom scipy import stats\nt_stat, p_ttest = stats.ttest_ind(treatment_data, control_data, equal_var=False)\n\nprint(\"\\n=== Hypothesis Testing Results ===\")\nprint(f\"Student's Welch t-test:           Difference = £{np.mean(treatment_data) - np.mean(control_data):.2f} | p-value = {p_ttest:.4f}\")\nprint(f\"Permutation Test (Means):         Obs Diff   = £{t_obs_mean:.2f} | p-value = {p_perm_mean:.4f}\")\nprint(f\"Permutation Test (Medians):       Obs Diff   = £{t_obs_med:.2f} | p-value = {p_perm_med:.4f}\")\n\nalpha = 0.05\nprint(\"\\nConclusion at alpha = 0.05:\")\nprint(f\"  Permutation (Means):   {'Statistically Significant' if p_perm_mean < alpha else 'Fail to Reject H0'}\")\nprint(f\"  Permutation (Medians): {'Statistically Significant' if p_perm_med < alpha else 'Fail to Reject H0'}\")\n",
+    keyPoints: [
+      "Permutation tests generate exact, distribution-free p-values by shuffling group labels under the null hypothesis of exchangeability.",
+      "Unlike parametric t-tests or ANOVA, permutation tests require no assumptions of normality, homoscedasticity, or large sample sizes.",
+      "They allow testing arbitrary test statistics—including medians, percentiles, trimmed means, and custom revenue ratios.",
+      "The Monte Carlo formulation with continuity correction (1 + extreme) / (B + 1) guarantees strict finite-sample Type I error control."
+    ],
+    pitfalls: [
+      "Assuming permutation tests allow heteroscedasticity under general hypotheses: Under H_0, the entire outcome distribution must be invariant across groups, not just the mean.",
+      "Forgetting the +1 continuity correction: Omitting the +1 can produce a p-value of exactly 0.0 when no permuted sample exceeds T_obs, which is theoretically invalid under finite B.",
+      "High computational cost on large datasets: Reshuffling millions of rows 10,000 times is computationally prohibitive; in large samples, asymptotic tests or fast approximations should be used."
+    ],
+    quiz: [
+      {
+        "q": "What is the primary mathematical assumption required for a two-sample permutation test to be valid?",
+        "o": [
+          "Observations are exchangeable across groups under the null hypothesis H_0",
+          "Data must follow a Gaussian bell curve",
+          "Sample size must be greater than 1,000",
+          "Variances of both groups must be known exactly in advance"
+        ],
+        "a": 0,
+        "why": "The permutation test requires exchangeability: under H_0, swapping labels between observations does not alter their joint probability distribution."
+      },
+      {
+        "q": "Why is the continuity correction (1 + extreme) / (B + 1) used when calculating Monte Carlo permutation p-values?",
+        "o": [
+          "Because treating the observed experimental dataset as an additional valid permutation guarantees strict Type I error control and prevents p-values from erroneously equaling zero",
+          "Because Python arrays are zero-indexed",
+          "To convert the test statistic from a float to an integer",
+          "To correct for missing data in the control group"
+        ],
+        "a": 0,
+        "why": "The observed test statistic is itself one valid permutation of the pooled data under H_0. Counting it (+1 in numerator and denominator) guarantees that E[p-value] under H_0 is uniform and non-zero."
+      },
+      {
+        "q": "What major advantage do permutation tests offer over classical Student's t-tests in A/B testing?",
+        "o": [
+          "They do not assume normal distributions and can be computed on arbitrary non-linear statistics such as medians, percentiles, or ratios without deriving custom sampling distributions",
+          "They guarantee that every test reaches statistical significance",
+          "They eliminate the need for an A/B test control group",
+          "They run in zero CPU cycles"
+        ],
+        "a": 0,
+        "why": "Permutation tests construct the empirical null distribution by direct simulation, freeing analysts to test robust statistics (like medians or 95th percentiles) that have no closed-form analytical distribution."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "hypothesis-testing-and-p-values",
+      "non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis"
+    ],
+    related: [
+      "hypothesis-testing-and-p-values",
+      "bootstrap-and-jackknife",
+      "a-b-testing-end-to-end",
+      "z-test-and-t-tests"
+    ],
+    keywords: "permutation tests randomisation tests exact test exchangeability non-parametric resampling monte carlo a b testing"
+  },
+
+  {
+    id: "likelihood-ratio-wald-and-score-tests",
+    short: "LR, Wald & Score Tests",
+    title: "Likelihood-ratio, Wald and score tests",
+    task: "concepts",
+    module: "Hypothesis testing",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "The \"Holy Trinity\" of classical parametric hypothesis testing consists of the Likelihood-Ratio (LR) test, the Wald test, and the Score (Lagrange Multiplier / Rao) test. Derived from the geometry of the log-likelihood function \\ell(\\theta), all three tests evaluate null hypotheses of the form H_0: \\theta = \\theta_0 (or nested model restrictions) and share identical asymptotic chi-squared (\\chi^2) distributions under the null. However, they differ radically in computational cost: the Wald test requires fitting only the unconstrained model; the Score test requires fitting only the constrained model under H_0; and the Likelihood-Ratio test requires fitting both models, achieving optimal finite-sample invariance.",
+    lead: "Suppose you want to test whether adding 5 interaction terms to a logistic regression model significantly improves its predictive power. Should you compare the drop in log-likelihood (Likelihood-Ratio test), check how many standard errors the estimated parameters sit from zero (Wald test), or evaluate the gradient slope at the restricted baseline without fitting the full model at all (Score test)? Understanding the geometric relationship and computational trade-offs among the \"Holy Trinity\" is essential for modern statistical inference and econometric modelling.",
+    intuition: [
+      "The Three Views of the Likelihood Surface: Imagine the log-likelihood curve \\ell(\\theta) plotted against parameter \\theta, with the unconstrained maximum likelihood estimate at the peak \\hat{\\theta}, and the restricted null value at \\theta_0:\n- Likelihood-Ratio (LR) Test: Looks at vertical height: how much lower is the log-likelihood at the null compared to the peak? 2 * [\\ell(\\hat{\\theta}) - \\ell(\\theta_0)].\n- Wald Test: Looks at horizontal distance: how far is \\hat{\\theta} from \\theta_0, weighted by the estimated curvature (Fisher Information) at the peak? (\\hat{\\theta} - \\theta_0)^2 * I(\\hat{\\theta}).\n- Score (Rao) Test: Looks at slope (gradient): how steep is the slope of the log-likelihood evaluated at the null point \\theta_0? If \\theta_0 were truly the maximum, the slope would be zero.",
+      "Computational Asymmetry in Large Models:\n- When fitting the unconstrained model is trivial, the Wald test is fast and convenient (this is why software packages print Wald z-statistics next to every regression coefficient).\n- When the unconstrained model is massive, complex, or expensive to train (e.g. adding 10,000 genomic features), the Score test is brilliant because you never fit the full model! You only evaluate the gradient at the simple restricted baseline.\n- The Likelihood-Ratio test requires fitting both models, but achieves transformation invariance: reparameterising \\theta as log \\theta or e^\\theta leaves the LR test statistic identical, whereas the Wald test changes.",
+      "Asymptotic Equivalence under the Null: Under H_0 as sample size n approaches infinity, Taylor expansions show that all three test statistics converge to the exact same value and follow a chi-squared distribution with degrees of freedom equal to the number of parameter restrictions: LR ~ W ~ S ~ \\chi^2(r)."
+    ],
+    analogy: "Imagine trying to verify whether the summit of a mountain \\hat{\\theta} is significantly higher than a base camp \\theta_0. The LR test measures the vertical elevation drop between the summit and the camp. The Wald test measures the horizontal walking distance from the summit to the camp and multiplies by the summit's terrain curvature. The Score test stands at the base camp and measures the steepness of the upward slope pointing toward the summit without ever hiking up to the top.",
+    steps: [
+      {
+        "title": "Define unrestricted model and null hypothesis restrictions",
+        "desc": "Formalise the unrestricted parameter vector \\theta and r linear or non-linear constraints H_0: h(\\theta) = 0.",
+        "detail": "Determine the degrees of freedom r representing the dimensionality difference between unrestricted space \\Theta and restricted subspace \\Theta_0."
+      },
+      {
+        "title": "Fit unconstrained and constrained models",
+        "desc": "Obtain unrestricted MLE \\hat{\\theta} and restricted MLE \\tilde{\\theta}.",
+        "detail": "Maximise log-likelihood \\ell(\\theta) freely to get \\hat{\\theta}. Maximise under the constraint H_0 to get \\tilde{\\theta}."
+      },
+      {
+        "title": "Compute Likelihood-Ratio test statistic",
+        "desc": "Calculate twice the difference in log-likelihood values: \\Lambda = 2[\\ell(\\hat{\\theta}) - \\ell(\\tilde{\\theta})].",
+        "detail": "Evaluate log-likelihood at both optima. \\Lambda is strictly non-negative and invariant to continuous monotonic parameter transformations."
+      },
+      {
+        "title": "Compute Wald and Score test statistics",
+        "desc": "Calculate horizontal curvature distance (Wald) and gradient slope norm (Score).",
+        "detail": "Wald: W = (\\hat{\\theta} - \\theta_0)^\\top [Var(\\hat{\\theta})]^{-1} (\\hat{\\theta} - \\theta_0). Score: S = U(\\tilde{\\theta})^\\top [I(\\tilde{\\theta})]^{-1} U(\\tilde{\\theta}), where U is the score vector \\nabla_\\theta \\ell."
+      },
+      {
+        "title": "Evaluate p-values against Chi-Squared reference",
+        "desc": "Compare test statistics against \\chi^2(r) distribution with r degrees of freedom.",
+        "detail": "Compute p-value = P(\\chi^2(r) >= T). If p < \\alpha, reject the null hypothesis in favour of the unconstrained alternative."
+      }
+    ],
+    math: [
+      {
+        "h": "Likelihood-Ratio (LR) Test Statistic",
+        "tex": "\\text{LR} = 2 \\left[ \\ell(\\hat{\\theta}) - \\ell(\\tilde{\\theta}) \\right] \\xrightarrow{d} \\chi^2(r)",
+        "p": "The Wilks theorem proves that twice the difference in log-likelihood between the unrestricted maximum \\hat{\\theta} and restricted maximum \\tilde{\\theta} converges asymptotically to a chi-squared distribution with degrees of freedom r equal to the number of restrictions."
+      },
+      {
+        "h": "Wald Test Statistic",
+        "tex": "W = (\\hat{\\theta} - \\theta_0)^\\top \\left[ \\widehat{\\text{Var}}(\\hat{\\theta}) \\right]^{-1} (\\hat{\\theta} - \\theta_0) = (\\hat{\\theta} - \\theta_0)^\\top \\mathcal{I}_n(\\hat{\\theta}) (\\hat{\\theta} - \\theta_0) \\xrightarrow{d} \\chi^2(r)",
+        "p": "The Wald test evaluates the quadratic distance of the unconstrained estimate \\hat{\\theta} from the null hypothesis value \\theta_0, weighted by the observed Fisher Information matrix \\mathcal{I}_n(\\hat{\\theta}). It requires fitting only the unconstrained model."
+      },
+      {
+        "h": "Score (Lagrange Multiplier / Rao) Test Statistic",
+        "tex": "S = \\mathbf{U}(\\tilde{\\theta})^\\top \\left[ \\mathcal{I}_n(\\tilde{\\theta}) \\right]^{-1} \\mathbf{U}(\\tilde{\\theta}) \\xrightarrow{d} \\chi^2(r), \\qquad \\mathbf{U}(\\theta) = \\nabla_\\theta \\ell(\\theta)",
+        "p": "The Score test evaluates the score vector (gradient) \\mathbf{U} evaluated at the restricted estimate \\tilde{\\theta}. If the null hypothesis is true, \\tilde{\\theta} is close to the true maximum, so the gradient \\mathbf{U}(\\tilde{\\theta}) should be statistically indistinguishable from zero."
+      }
+    ],
+    code: "\"\"\"\nThe Holy Trinity of Hypothesis Testing: Likelihood-Ratio, Wald, and Score Tests\nDemonstrated on a Poisson Rate Parameter H0: lambda = lambda_0.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\n# Generate synthetic Poisson count data\nnp.random.seed(42)\ntrue_lambda = 4.8\nn_obs = 60\ndata = np.random.poisson(lam=true_lambda, size=n_obs)\nsum_x = np.sum(data)\n\n# Null hypothesis: lambda = lambda_0\nlambda_0 = 4.0\n\n# 1. Unconstrained Maximum Likelihood Estimate\n# For Poisson: log L(lambda) = -n*lambda + sum_x * log(lambda) - sum(log(x!))\n# MLE lambda_hat = sum_x / n\nlambda_hat = sum_x / n_obs\n\n# Fisher Information: I_n(lambda) = n / lambda\n# Log-likelihood function (dropping constant factorial terms)\ndef log_lik(lam):\n    return -n_obs * lam + sum_x * np.log(lam)\n\n# 2. Likelihood-Ratio Test\n# LR = 2 * [log L(lambda_hat) - log L(lambda_0)]\nlr_stat = 2 * (log_lik(lambda_hat) - log_lik(lambda_0))\np_lr = 1 - stats.chi2.cdf(lr_stat, df=1)\n\n# 3. Wald Test\n# W = (lambda_hat - lambda_0)^2 * I_n(lambda_hat) = (lambda_hat - lambda_0)^2 * (n / lambda_hat)\ni_wald = n_obs / lambda_hat\nwald_stat = ((lambda_hat - lambda_0) ** 2) * i_wald\np_wald = 1 - stats.chi2.cdf(wald_stat, df=1)\n\n# 4. Score (Rao / LM) Test\n# Score U(lambda) = d log L / d lambda = -n + sum_x / lambda\n# Evaluated at lambda_0: U(lambda_0) = -n + sum_x / lambda_0\n# Score Stat = [U(lambda_0)]^2 / I_n(lambda_0) = (-n + sum_x / lambda_0)^2 / (n / lambda_0)\nscore_u0 = -n_obs + (sum_x / lambda_0)\ni_score0 = n_obs / lambda_0\nscore_stat = (score_u0 ** 2) / i_score0\np_score = 1 - stats.chi2.cdf(score_stat, df=1)\n\nprint(f\"=== Hypothesis Test: H0: lambda = {lambda_0:.1f} vs H1: lambda != {lambda_0:.1f} ===\")\nprint(f\"Sample Size n = {n_obs} | Sample Mean (MLE) = {lambda_hat:.3f} | Sample Sum = {sum_x}\")\nprint(f\"\\n1. Likelihood-Ratio (LR) Test: Stat = {lr_stat:.4f} | p-value = {p_lr:.4f}\")\nprint(f\"2. Wald Test:                  Stat = {wald_stat:.4f} | p-value = {p_wald:.4f}\")\nprint(f\"3. Score (Rao) Test:           Stat = {score_stat:.4f} | p-value = {p_score:.4f}\")\n\nprint(\"\\n--- Practical Invariance Check ---\")\nprint(\"All three test statistics are asymptotically equivalent under H0.\")\nprint(f\"Difference |LR - Wald|:  {abs(lr_stat - wald_stat):.4f}\")\nprint(f\"Difference |LR - Score|: {abs(lr_stat - score_stat):.4f}\")\nprint(\"At alpha = 0.05, conclusion across all three tests:\", \"REJECT H0\" if p_lr < 0.05 else \"FAIL TO REJECT H0\")\n",
+    keyPoints: [
+      "The Likelihood-Ratio, Wald, and Score tests form the 'Holy Trinity' of classical parametric testing, all asymptotically chi-squared under H_0.",
+      "The LR test evaluates vertical log-likelihood difference, the Wald test evaluates horizontal parameter distance, and the Score test evaluates gradient slope at the null.",
+      "Computational trade-offs: Wald requires fitting only the unconstrained model; Score requires fitting only the constrained model; LR requires fitting both.",
+      "The Likelihood-Ratio test is invariant to parameter reparameterisation, whereas the Wald test can vary depending on parameter scaling."
+    ],
+    pitfalls: [
+      "The Hauck-Donner effect in Wald tests: When parameters are very large or separation occurs, estimated standard errors explode faster than coefficients, causing Wald statistics to erroneously shrink toward zero.",
+      "Assuming tests give identical finite-sample p-values: While asymptotically equivalent, their finite-sample numerical values often differ: typically Wald >= LR >= Score in linear regression.",
+      "Ignoring boundary constraints: If the null hypothesis lies on the boundary of the parameter space (e.g. variance sigma^2 = 0), the asymptotic distribution is a mixture of chi-squared distributions, not a standard chi-squared."
+    ],
+    quiz: [
+      {
+        "q": "Which of the three classical tests requires estimating ONLY the constrained model under the null hypothesis H_0?",
+        "o": [
+          "The Score (Rao / Lagrange Multiplier) test",
+          "The Wald test",
+          "The Likelihood-Ratio test",
+          "The Student's t-test"
+        ],
+        "a": 0,
+        "why": "The Score test evaluates the slope (gradient) of the log-likelihood at the restricted parameter estimate \\tilde{\\theta}. It requires no estimation of the unconstrained model."
+      },
+      {
+        "q": "What is the primary advantage of the Likelihood-Ratio test over the Wald test in non-linear models?",
+        "o": [
+          "The Likelihood-Ratio test is invariant to continuous monotonic reparameterisations of the model, whereas the Wald test statistic changes under non-linear transformations",
+          "The Likelihood-Ratio test runs in O(1) time",
+          "The Likelihood-Ratio test does not require the null hypothesis to be specified",
+          "The Likelihood-Ratio test never rejects the null hypothesis"
+        ],
+        "a": 0,
+        "why": "The height difference between the peak and restricted point on the likelihood surface is completely invariant to how parameters are scaled (e.g. \\theta vs \\log \\theta), whereas the curvature-weighted distance in Wald tests is sensitive to parameterisation."
+      },
+      {
+        "q": "Under the null hypothesis H_0 with r independent parameter restrictions, what is the asymptotic distribution of the Likelihood-Ratio test statistic?",
+        "o": [
+          "A Chi-Squared distribution with r degrees of freedom, \\chi^2(r)",
+          "A standard normal distribution \\mathcal{N}(0, 1)",
+          "A Student's t-distribution with n-1 degrees of freedom",
+          "A uniform distribution on [0, 1]"
+        ],
+        "a": 0,
+        "why": "Wilks' theorem guarantees that 2[\\ell(\\hat{\\theta}) - \\ell(\\tilde{\\theta})] converges asymptotically to \\chi^2(r), where r is the number of parameter restrictions."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "hypothesis-testing-and-p-values",
+      "maximum-likelihood-estimation"
+    ],
+    related: [
+      "hypothesis-testing-and-p-values",
+      "maximum-likelihood-estimation",
+      "generalised-linear-models",
+      "chi-square-tests"
+    ],
+    keywords: "likelihood ratio test wald test score test lagrange multiplier rao test wilks theorem holy trinity hypothesis testing"
+  },
+
+  {
+    id: "wasserstein-earth-movers-distance",
+    short: "Wasserstein Distance",
+    title: "Wasserstein (earth mover's) distance",
+    task: "concepts",
+    module: "Information theory",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "The Wasserstein distance (also known as the Earth Mover's Distance) measures the minimum work required to transform one probability distribution into another, defined as mass multiplied by physical ground distance. Unlike Kullback-Leibler (KL) divergence and Jensen-Shannon (JS) divergence, which collapse to infinite or constant values when probability distributions have non-overlapping supports, the Wasserstein distance provides a continuous, meaningful, and differentiable metric that reflects geometry in the underlying metric space. This geometric property makes the Wasserstein-1 metric fundamental to Optimal Transport, generative adversarial networks (WGAN), and domain adaptation.",
+    lead: "Suppose you have two discrete point mass distributions: P has all its probability mass at position x=0, and Q_1 has all its mass at x=1, while Q_2 has all its mass at x=100. Standard information-theoretic metrics like KL divergence or Total Variation see no difference between these two scenarios: in both cases, the distributions do not overlap, yielding maximal divergence. But clearly Q_1 is vastly closer to P than Q_2 is! The Wasserstein distance fixes this fatal flaw by factoring in the physical metric distance that probability mass must travel.",
+    intuition: [
+      "The Dirt Pile Analogy (Earth Mover's Distance): Imagine distribution P is a pile of dirt spread across the ground, and distribution Q is an excavation hole of identical volume. The Wasserstein-1 distance W_1(P, Q) is the minimum mechanical work (mass multiplied by transport distance) required to shovel and transport the dirt from pile P until it fills hole Q.",
+      "The Overlap Failure of KL and JS Divergences: In high-dimensional spaces (e.g. natural images), real data concentrates on low-dimensional manifolds. Two different manifolds in 1000-dimensional space almost never intersect. When supports do not overlap, KL divergence is infinite and JS divergence is constant log 2. Their gradients vanish everywhere, making neural network training impossible. The Wasserstein distance remains smooth, linear, and continuous regardless of overlap!",
+      "Kantorovich-Rubinstein Duality: Computing optimal transport directly requires solving a linear programming problem over all joint couplings \\gamma(x, y). The Kantorovich-Rubinstein duality reveals a magical alternative: W_1(P, Q) equals the maximum expectation difference sup_{||f||_L <= 1} [E_P[f(x)] - E_Q[f(y)]] over all 1-Lipschitz functions! This is the exact objective optimised by the WGAN critic."
+    ],
+    analogy: "Imagine moving furniture between two apartments. KL divergence is like a strict landlord who only checks whether a sofa is sitting in the exact same centimetre in both apartments: if it is moved by even one inch, they declare the apartments 100% completely different. The Wasserstein distance is the moving company invoice: it charges you based on the physical weight of the sofa multiplied by how many miles the lorry had to drive to deliver it.",
+    steps: [
+      {
+        "title": "Define ground metric space",
+        "desc": "Establish physical distance metric d(x, y) (e.g. Euclidean distance |x - y|) over support space X.",
+        "detail": "The ground metric defines the cost of transporting a unit of mass from location x to location y."
+      },
+      {
+        "title": "Formulate primal optimal transport coupling",
+        "desc": "Define set of joint probability distributions \\Pi(P, Q) whose marginals equal P and Q.",
+        "detail": "Each coupling \\gamma(x, y) represents a transport plan specifying how much mass moves from x to y. Marginal constraints ensure no dirt is created or destroyed."
+      },
+      {
+        "title": "Compute Wasserstein-1 distance in 1D via CDFs",
+        "desc": "For one-dimensional distributions, evaluate the integrated absolute difference between cumulative distribution functions.",
+        "detail": "Use the closed-form theorem: W_1(P, Q) = int |F_P(t) - F_Q(t)| dt. This avoids linear programming and calculates the exact optimal transport cost in O(N log N) time."
+      },
+      {
+        "title": "Apply Kantorovich-Rubinstein dual formulation for high dimensions",
+        "desc": "Frame transport cost as supremum over 1-Lipschitz continuous critic functions.",
+        "detail": "Maximise E_{x ~ P}[f(x)] - E_{y ~ Q}[f(y)] subject to |f(x) - f(y)| <= d(x, y). Enforce the Lipschitz constraint via gradient penalty or weight clipping."
+      },
+      {
+        "title": "Evaluate gradients for distribution alignment",
+        "desc": "Compute continuous non-vanishing gradients to guide generative model parameters.",
+        "detail": "Because W_1(P_\\theta, Q) provides meaningful linear gradients even when supports are completely disjoint, use its derivative to shift generated distributions toward target data."
+      }
+    ],
+    math: [
+      {
+        "h": "Primal Wasserstein-p Distance Formulation",
+        "tex": "W_p(P, Q) = \\left( \\inf_{\\gamma \\in \\Pi(P, Q)} \\mathbb{E}_{(x, y) \\sim \\gamma}\\left[ d(x, y)^p \\right] \\right)^{1/p}",
+        "p": "Here \\Pi(P, Q) denotes the collection of all joint probability distributions (couplings) \\gamma(x, y) having marginals P and Q respectively. For p=1, W_1 is the standard Earth Mover's Distance."
+      },
+      {
+        "h": "One-Dimensional Closed-Form via Cumulative Distribution Functions",
+        "tex": "W_1(P, Q) = \\int_{-\\infty}^\\infty \\big| F_P(t) - F_Q(t) \\big| \\, dt = \\int_0^1 \\big| F_P^{-1}(u) - F_Q^{-1}(u) \\big| \\, du",
+        "p": "In one dimension, optimal transport has a closed-form identity: the minimum cost equals the L_1 distance between the cumulative distribution functions F_P and F_Q, or equivalently, the integral of quantile function differences."
+      },
+      {
+        "h": "Kantorovich-Rubinstein Duality",
+        "tex": "W_1(P, Q) = \\sup_{\\|f\\|_L \\le 1} \\left( \\mathbb{E}_{x \\sim P}[f(x)] - \\mathbb{E}_{y \\sim Q}[f(y)] \\right)",
+        "p": "The dual theorem reformulates the infimum over joint couplings into a supremum over 1-Lipschitz continuous functions \\|f\\|_L \\le 1. This enables deep neural networks (such as WGAN critics) to approximate the Wasserstein distance without combinatorial optimisation."
+      }
+    ],
+    code: "\"\"\"\nWasserstein (Earth Mover's) Distance vs Kullback-Leibler (KL) Divergence\nDemonstrates 1D optimal transport, CDF integration, and linear gradient\nproperties under non-overlapping support translation.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\ndef wasserstein_1d(samples_p: np.ndarray, samples_q: np.ndarray) -> float:\n    \"\"\"\n    Compute 1D Wasserstein-1 distance via sorted quantile differences.\n    O(N log N) closed-form optimal transport.\n    \"\"\"\n    p_sorted = np.sort(samples_p)\n    q_sorted = np.sort(samples_q)\n    # If sample sizes match, W_1 is simply mean absolute difference between sorted arrays\n    return float(np.mean(np.abs(p_sorted - q_sorted)))\n\n# Generate two 1D Gaussian distributions\n# P: N(0, 1), Q: N(delta, 1) as delta moves from 0 to 10\nnp.random.seed(42)\nn_samples = 5000\np_samples = np.random.normal(loc=0.0, scale=1.0, size=n_samples)\n\nprint(\"=== Demonstration: Wasserstein Distance vs Translation Delta ===\")\nprint(\"True analytical W_1 between N(0, 1) and N(delta, 1) is exactly |delta|.\\n\")\n\ndeltas = [0.0, 1.0, 2.5, 5.0, 10.0]\n\nfor delta in deltas:\n    q_samples = np.random.normal(loc=delta, scale=1.0, size=n_samples)\n    w1_dist = wasserstein_1d(p_samples, q_samples)\n    \n    # Analytical KL divergence between N(0, 1) and N(delta, 1): KL = delta^2 / 2\n    kl_div = 0.5 * (delta ** 2)\n    \n    print(f\"Shift delta = {delta:4.1f} | Empirical W_1 = {w1_dist:6.3f} (True: {delta:4.1f}) | KL Divergence = {kl_div:6.2f}\")\n\n# Discrete Optimal Transport via Linear Programming Demonstration\nprint(\"\\n=== Discrete Earth Mover's Distance on a Grid ===\")\n# Pile P at positions [0, 1, 2] with masses [0.5, 0.5, 0.0]\n# Hole Q at positions [0, 1, 2] with masses [0.0, 0.5, 0.5]\np_mass = np.array([0.5, 0.5, 0.0])\nq_mass = np.array([0.0, 0.5, 0.5])\n# Distance matrix between bins: |i - j|\ncost_matrix = np.array([\n    [0.0, 1.0, 2.0],\n    [1.0, 0.0, 1.0],\n    [2.0, 1.0, 0.0]\n])\n\n# Optimal plan: keep 0.5 at pos 1, move 0.5 from pos 0 to pos 2 (cost = 0.5 * 2 = 1.0)\n# Closed-form 1D discrete CDF:\ncdf_p = np.cumsum(p_mass)\ncdf_q = np.cumsum(q_mass)\ndiscrete_w1 = np.sum(np.abs(cdf_p - cdf_q))\n\nprint(f\"Distribution P masses: {p_mass}\")\nprint(f\"Distribution Q masses: {q_mass}\")\nprint(f\"Discrete 1D Wasserstein Cost: {discrete_w1:.3f} units of work\")\n",
+    keyPoints: [
+      "The Wasserstein distance measures the minimal work (mass * distance) required to morph one probability distribution into another.",
+      "Unlike KL and JS divergences, the Wasserstein metric reflects the underlying geometry of metric space and remains continuous even when supports are completely disjoint.",
+      "In one dimension, W_1 has an exact closed-form solution equal to the integrated absolute difference between cumulative distribution functions.",
+      "The Kantorovich-Rubinstein duality converts the primal coupling problem into a supremum over 1-Lipschitz continuous critic functions, powering WGAN architectures."
+    ],
+    pitfalls: [
+      "High computational complexity in multiple dimensions: Solving multi-dimensional discrete optimal transport scales cubically O(N^3) without Sinkhorn entropy regularisation.",
+      "Violating the Lipschitz constraint in dual estimation: If the critic network in WGAN fails to maintain ||f||_L <= 1, the objective ceases to approximate the true Wasserstein distance.",
+      "Assuming Wasserstein distance is dimensionless: W_1 inherits the physical units of the underlying sample space (e.g. metres, seconds, pixels), unlike unitless KL divergence."
+    ],
+    quiz: [
+      {
+        "q": "Why does the Wasserstein distance provide superior optimisation gradients compared to Jensen-Shannon divergence when training generative models?",
+        "o": [
+          "Because Wasserstein distance remains continuous, smooth, and informative even when generated and real data distributions reside on non-overlapping manifolds, avoiding vanishing gradients",
+          "Because Wasserstein distance is always equal to zero",
+          "Because Jensen-Shannon divergence cannot be computed on GPUs",
+          "Because Wasserstein distance ignores data outliers completely"
+        ],
+        "a": 0,
+        "why": "When distributions have disjoint supports, JS divergence saturates at log(2) with zero gradient. The Wasserstein distance grows linearly with physical separation distance, providing clean, non-vanishing gradients everywhere."
+      },
+      {
+        "q": "In one dimension, what is the closed-form formulation for the Wasserstein-1 distance between two distributions P and Q?",
+        "o": [
+          "The integral of the absolute difference between their cumulative distribution functions: int |F_P(t) - F_Q(t)| dt",
+          "The difference between their maximum values",
+          "The ratio of their standard deviations",
+          "The dot product of their probability density functions"
+        ],
+        "a": 0,
+        "why": "For 1D distributions, optimal transport preserves monotonic quantile order, meaning W_1 is exactly equal to the area between the two cumulative distribution curves."
+      },
+      {
+        "q": "What condition must the critic function f(x) satisfy in the Kantorovich-Rubinstein dual formulation of the Wasserstein-1 distance?",
+        "o": [
+          "It must be 1-Lipschitz continuous: |f(x) - f(y)| <= d(x, y) for all x and y",
+          "It must integrate to zero across all space",
+          "It must be strictly convex and positive everywhere",
+          "It must have an inverse function"
+        ],
+        "a": 0,
+        "why": "The Kantorovich-Rubinstein theorem proves that W_1(P, Q) is the supremum of E_P[f(x)] - E_Q[f(x)] over the family of 1-Lipschitz continuous functions."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kl-divergence",
+      "jensen-shannon-divergence"
+    ],
+    related: [
+      "kl-divergence",
+      "jensen-shannon-divergence",
+      "total-variation-hellinger-and-bhattacharyya-distances",
+      "entropy-and-cross-entropy"
+    ],
+    keywords: "wasserstein distance earth movers distance optimal transport kantorovich rubinstein duality wgan lipschitz continuity cdf coupling"
+  },
+
+  {
+    id: "total-variation-hellinger-and-bhattacharyya-distances",
+    short: "TV, Hellinger & Bhattacharyya",
+    title: "Total variation, Hellinger and Bhattacharyya distances",
+    task: "concepts",
+    module: "Information theory",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Total Variation distance, Hellinger distance, and Bhattacharyya distance form the foundational geometric family of probability metrics grounded in statistical distinguishability and f-divergences. While Total Variation quantifies the maximum possible difference in probability assigned to any measurable event, Hellinger distance provides a true metric on the unit Hilbert sphere via square-root density mappings, obeying the triangle inequality and establishing tight bounds on minimax estimation error via Le Cam's inequalities. The Bhattacharyya distance connects these metrics to optimal Bayes classification error bounds.",
+    lead: "How different are two probability distributions, and what is the absolute worst-case error you could make if you used model Q instead of true distribution P? While KL divergence is asymmetric, unbounded, and violates the triangle inequality, Total Variation distance is bounded in [0, 1] and directly measures the maximum discrepancy across all possible events. Hellinger distance turns probability densities into Euclidean vectors on a sphere. Mastering these classical metrics provides the theoretical foundation for differential privacy, Markov chain convergence, and statistical minimax theory.",
+    intuition: [
+      "Total Variation as Maximum Disagreement: Suppose an auditor inspects two probability models P and Q. The auditor is allowed to pick any conceivable event A (e.g. \"tomorrow's temperature exceeds 30C\"). The Total Variation distance D_TV(P, Q) is the maximum possible difference |P(A) - Q(A)| the auditor could ever find. If D_TV = 0.05, the two models will never differ by more than 5 percentage points on any forecast.",
+      "Hellinger Distance as Sphere Geometry: Probability densities integrate to 1: int p(x) dx = 1. If we take the square root sqrt(p(x)), then int (sqrt(p(x)))^2 dx = 1. This means sqrt(p(x)) is a unit vector on an infinite-dimensional hypersphere! The Hellinger distance is simply the standard Euclidean distance between these two square-root unit vectors, scaled by 1/sqrt(2). Because it is an actual metric space distance, it satisfies symmetry and the triangle inequality!",
+      "The Bhattacharyya Affinity: The inner product between the two square-root vectors is the Bhattacharyya coefficient rho(P, Q) = int sqrt(p(x) q(x)) dx in [0, 1]. If the distributions are identical, rho = 1; if they have disjoint supports, rho = 0. The Bhattacharyya distance -log rho provides an upper bound on Bayes classification error.",
+      "Le Cam's Inequalities and Minimax Rates: In statistical decision theory, Le Cam's lemmas prove that the ability of any algorithm to distinguish between two hypothetical data distributions is fundamentally bounded by their Total Variation and Hellinger distances: H^2(P, Q) <= D_TV(P, Q) <= sqrt(2) * H(P, Q)."
+    ],
+    analogy: "Think of two light beams shining through stained glass. Total Variation is the maximum difference in brightness you could see through any filter. Hellinger distance treats each light beam as an arrow pointing to the surface of a globe, measuring the straight-line physical distance between the two arrow tips through 3D space.",
+    steps: [
+      {
+        "title": "Evaluate point-wise absolute density difference",
+        "desc": "Compute |p(x) - q(x)| across the support space.",
+        "detail": "Total Variation evaluates L_1 norm discrepancy: D_TV(P, Q) = 0.5 * int |p(x) - q(x)| dx. It is bounded in [0, 1]."
+      },
+      {
+        "title": "Compute the Bhattacharyya affinity coefficient",
+        "desc": "Calculate the overlap integral of square-root densities \\rho(P, Q) = int \\sqrt{p(x) q(x)} dx.",
+        "detail": "The affinity \\rho \\in [0, 1] acts as a cosine similarity between square-root density vectors on the unit sphere."
+      },
+      {
+        "title": "Derive the Hellinger distance",
+        "desc": "Compute H^2(P, Q) = 1 - \\rho(P, Q).",
+        "detail": "Verify metric properties: non-negativity, symmetry H(P, Q) = H(Q, P), identity of indiscernibles, and triangle inequality H(P, R) <= H(P, Q) + H(Q, R)."
+      },
+      {
+        "title": "Calculate the Bhattacharyya distance and Bayes error bound",
+        "desc": "Compute D_B(P, Q) = -\\ln \\rho(P, Q) and assess classification separability.",
+        "detail": "Establish upper bound on minimum Bayes misclassification error: P_error <= 0.5 * exp(-D_B)."
+      },
+      {
+        "title": "Verify Le Cam's sandwich inequalities",
+        "desc": "Confirm H^2 <= D_TV <= \\sqrt{2 H^2 (1 - H^2/2)}.",
+        "detail": "These inequalities guarantee that bounding Hellinger distance automatically controls Total Variation distance."
+      }
+    ],
+    math: [
+      {
+        "h": "Total Variation Distance Formulation",
+        "tex": "D_{\\text{TV}}(P, Q) = \\sup_{A \\in \\mathcal{F}} \\big| P(A) - Q(A) \\big| = \\frac{1}{2} \\int_{\\mathcal{X}} \\big| p(x) - q(x) \\big| \\, dx = \\frac{1}{2} \\|p - q\\|_1",
+        "p": "Total Variation is the supremum difference over all measurable events A. It equals half the L_1 distance between the densities, bounded in [0, 1], where 0 indicates identical distributions and 1 indicates mutually singular distributions with disjoint supports."
+      },
+      {
+        "h": "Squared Hellinger Distance and Bhattacharyya Coefficient",
+        "tex": "H^2(P, Q) = \\frac{1}{2} \\int_{\\mathcal{X}} \\left( \\sqrt{p(x)} - \\sqrt{q(x)} \\right)^2 dx = 1 - \\int_{\\mathcal{X}} \\sqrt{p(x) q(x)} \\, dx = 1 - \\rho(P, Q)",
+        "p": "The Hellinger distance is a true metric satisfying the triangle inequality. The quantity \\rho(P, Q) = \\int \\sqrt{p(x) q(x)} \\, dx is the Bhattacharyya affinity coefficient. For product distributions P = \\prod P_i and Q = \\prod Q_i, the affinity factorises multiplicatively: \\rho(P, Q) = \\prod \\rho(P_i, Q_i)."
+      },
+      {
+        "h": "Le Cam's Sandwich Inequalities",
+        "tex": "H^2(P, Q) \\le D_{\\text{TV}}(P, Q) \\le H(P, Q) \\sqrt{2 - H^2(P, Q)} \\le \\sqrt{2} H(P, Q)",
+        "p": "Le Cam's inequalities connect Total Variation and Hellinger distance. Because Hellinger distance factorises cleanly across independent observations, it is widely used to prove minimax lower bounds in statistical estimation."
+      }
+    ],
+    code: "\"\"\"\nTotal Variation, Hellinger, and Bhattacharyya Distances\nCalculates exact distances for Gaussian distributions and verifies\nLe Cam's bounding inequalities.\n\"\"\"\n\nimport numpy as np\n\ndef compute_distances_gaussian(mu1: float, sig1: float, mu2: float, sig2: float):\n    \"\"\"\n    Compute analytical Bhattacharyya, Hellinger, and numerical Total Variation\n    between two univariate Gaussians N(mu1, sig1^2) and N(mu2, sig2^2).\n    \"\"\"\n    v1, v2 = sig1**2, sig2**2\n    \n    # 1. Bhattacharyya Distance for 1D Gaussians\n    # D_B = (1/4) * ln( (1/4)*(v1/v2 + v2/v1 + 2) ) + (1/4) * ( (mu1 - mu2)^2 / (v1 + v2) )\n    term1 = 0.25 * np.log(0.25 * (v1/v2 + v2/v1 + 2.0))\n    term2 = 0.25 * ((mu1 - mu2)**2 / (v1 + v2))\n    d_bhattacharyya = term1 + term2\n    \n    # Bhattacharyya affinity rho = exp(-D_B)\n    rho = np.exp(-d_bhattacharyya)\n    \n    # 2. Hellinger Distance: H^2 = 1 - rho\n    h_squared = 1.0 - rho\n    h_distance = np.sqrt(h_squared)\n    \n    # 3. Total Variation Distance via numerical integration\n    x_grid = np.linspace(min(mu1 - 4*sig1, mu2 - 4*sig2), max(mu1 + 4*sig1, mu2 + 4*sig2), 20000)\n    dx = x_grid[1] - x_grid[0]\n    p_dens = (1.0 / (np.sqrt(2 * np.pi) * sig1)) * np.exp(-0.5 * ((x_grid - mu1) / sig1)**2)\n    q_dens = (1.0 / (np.sqrt(2 * np.pi) * sig2)) * np.exp(-0.5 * ((x_grid - mu2) / sig2)**2)\n    tv_distance = 0.5 * np.sum(np.abs(p_dens - q_dens)) * dx\n    \n    return {\n        \"bhattacharyya_dist\": round(d_bhattacharyya, 4),\n        \"affinity_rho\": round(rho, 4),\n        \"hellinger_squared\": round(h_squared, 4),\n        \"hellinger_dist\": round(h_distance, 4),\n        \"total_variation\": round(tv_distance, 4),\n    }\n\n# Experiment: P ~ N(0, 1), Q ~ N(mu, 1) as mu shifts\nprint(\"=== Metric Comparison for N(0, 1) vs N(mu, 1) ===\")\nfor mu in [0.0, 0.5, 1.0, 2.0, 3.5]:\n    m = compute_distances_gaussian(0.0, 1.0, mu, 1.0)\n    h2 = m[\"hellinger_squared\"]\n    tv = m[\"total_variation\"]\n    upper_bound = np.sqrt(2 * h2)\n    print(f\"Shift mu = {mu:3.1f} | TV: {tv:6.4f} | H^2: {h2:6.4f} | Bhattacharyya: {m['bhattacharyya_dist']:6.4f}\")\n    print(f\"    Le Cam Bounds Check: H^2 ({h2:.4f}) <= TV ({tv:.4f}) <= sqrt(2)*H ({upper_bound:.4f}) -> {h2 <= tv <= upper_bound + 1e-4}\")\n",
+    keyPoints: [
+      "Total Variation distance quantifies the maximum possible difference in probability assigned to any measurable event, bounded in [0, 1].",
+      "Hellinger distance is a true metric obeying the triangle inequality, measuring Euclidean distance between square-root density vectors on the unit Hilbert sphere.",
+      "The Bhattacharyya distance directly establishes an upper bound on the minimum Bayes classification error rate.",
+      "Le Cam's inequalities tightly sandwich Total Variation between H^2 and sqrt(2)*H, enabling minimax sample complexity proofs."
+    ],
+    pitfalls: [
+      "Confusing Total Variation with total variance: Total Variation is a bounded probability divergence, whereas variance measures second-order dispersion around the mean.",
+      "Assuming Bhattacharyya distance satisfies the triangle inequality: The Bhattacharyya distance -ln(\\rho) is not a true metric (it violates the triangle inequality); only Hellinger distance is a true metric.",
+      "Overlooking product factorisation: For multi-dimensional independent variables, the Bhattacharyya affinity \\rho factorises as a simple product, making Hellinger distance vastly easier to compute than Total Variation."
+    ],
+    quiz: [
+      {
+        "q": "What is the maximum possible value of the Total Variation distance between two probability distributions?",
+        "o": [
+          "1.0 (indicating that the distributions have completely disjoint supports and disagree with certainty on some event)",
+          "Positive infinity",
+          "0.5",
+          "2.0"
+        ],
+        "a": 0,
+        "why": "Total Variation is defined as the supremum difference in event probabilities |P(A) - Q(A)|. Since probabilities are bounded in [0, 1], D_TV is strictly bounded in [0, 1]."
+      },
+      {
+        "q": "Why is Hellinger distance preferred over KL divergence in statistical minimax lower bound proofs?",
+        "o": [
+          "Because Hellinger distance is a true metric that satisfies the triangle inequality and factorises cleanly over independent product distributions",
+          "Because Hellinger distance is always equal to 1",
+          "Because KL divergence cannot be computed for Gaussian distributions",
+          "Because Hellinger distance does not require integration"
+        ],
+        "a": 0,
+        "why": "KL divergence is asymmetric and violates the triangle inequality. Hellinger distance is a genuine metric on the unit sphere whose affinity factorises multiplicatively across independent dimensions, facilitating Le Cam's minimax bounds."
+      },
+      {
+        "q": "How does the Bhattacharyya distance D_B relate to the minimum achievable Bayes classification error rate?",
+        "o": [
+          "It provides an analytical upper bound on the Bayes error: P_error <= 0.5 * exp(-D_B)",
+          "It is equal to the training set accuracy",
+          "It guarantees zero false positives",
+          "It has no relation to classification error"
+        ],
+        "a": 0,
+        "why": "The Bhattacharyya bound is a celebrated result in statistical pattern recognition: the probability of misclassification under the optimal Bayes classifier is bounded above by (1/2) * exp(-D_B)."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "entropy-and-cross-entropy",
+      "kl-divergence"
+    ],
+    related: [
+      "wasserstein-earth-movers-distance",
+      "kl-divergence",
+      "jensen-shannon-divergence",
+      "hypothesis-testing-and-p-values"
+    ],
+    keywords: "total variation hellinger distance bhattacharyya distance le cam inequalities f-divergence probability metrics bayes error"
+  },
+
+  {
+    id: "logistic-regression-inference-odds-ratios-wald-tests",
+    short: "Logistic Regression Inference",
+    title: "Logistic regression inference: odds ratios, Wald tests",
+    task: "concepts",
+    module: "Regression inference",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Statistical inference in logistic regression moves beyond binary classification accuracy to evaluate parameter uncertainty, hypothesis testing, and quantitative risk interpretation. Because logistic regression models the log-odds (logit) of an outcome as a linear combination of predictors \\ln(\\frac{p}{1-p}) = \\mathbf{x}^\\top \\boldsymbol{\\beta}, exponentiating coefficients yields Odds Ratios (\\text{OR} = \\exp(\\beta_j)). Hypothesis tests rely on the asymptotic normality of maximum likelihood estimators via Wald z-tests, profile likelihood confidence intervals, and likelihood-ratio deviance tests.",
+    lead: "In medical trials or credit scoring, predicting whether a patient recovers or a borrower defaults is only half the battle. Regulatory compliance and clinical decision-making demand rigorous statistical inference: Does a new drug reduce the odds of relapse by a statistically significant margin, and what is the exact 95% confidence interval on that effect size? Unlike linear regression where coefficients represent direct additive changes, logistic regression operates on the multiplicative scale of odds ratios. Understanding Wald inference, odds ratios, and deviance is essential for rigorous applied data science.",
+    intuition: [
+      "From Probabilities to Odds to Log-Odds:\n- Probability p in (0, 1) is bounded and non-linear.\n- Odds p / (1 - p) in (0, inf) measures the ratio of success probability to failure probability. An odds of 3.0 means success is 3 times more likely than failure.\n- Log-odds ln(p / (1 - p)) in (-inf, inf) maps odds onto the unbounded real line, allowing linear modelling: logit(p) = \\beta_0 + \\beta_1 x_1 + ...",
+      "Interpreting the Odds Ratio exp(\\beta_j): If feature x_j increases by 1 unit, the log-odds increases by \\beta_j. Therefore, the odds are multiplied by exp(\\beta_j)!\n- If \\beta_j = 0, exp(\\beta_j) = 1.0: feature has zero association with the outcome.\n- If \\beta_j = 0.693, exp(\\beta_j) = 2.0: each 1-unit increase doubles the odds of the outcome (100% increase in odds).\n- If \\beta_j = -0.693, exp(\\beta_j) = 0.5: each 1-unit increase cuts the odds of the outcome in half (50% reduction in odds).",
+      "Wald Inference and the Hauck-Donner Effect: The Wald test statistic z = \\hat{\\beta}_j / SE(\\hat{\\beta}_j) tests H_0: \\beta_j = 0. However, in extreme cases (e.g. near-perfect separation), the estimated standard error explodes faster than the coefficient, causing the Wald statistic to paradoxically drop toward zero! In critical applications, profile likelihood intervals and likelihood-ratio deviance tests should always be inspected."
+    ],
+    analogy: "Think of betting at a horse racing track. The track does not quote probabilities like 0.75; it quotes betting odds like 3 to 1. If a horse's jockey changes and the trainer says the new jockey improves performance with an odds ratio of 2.0, your 3-to-1 odds become 6-to-1 odds. Exponentiating logistic regression coefficients is literally finding the multiplier that scales betting odds.",
+    steps: [
+      {
+        "title": "Fit logistic regression via maximum likelihood estimation",
+        "desc": "Estimate coefficients \\hat{\\boldsymbol{\\beta}} using Iteratively Reweighted Least Squares (IRLS).",
+        "detail": "Maximise log-likelihood \\ell(\\boldsymbol{\\beta}) = \\sum [y_i \\ln p_i + (1 - y_i) \\ln(1 - p_i)]. Store final fitted probabilities \\hat{p}_i."
+      },
+      {
+        "title": "Extract covariance matrix from inverse Fisher Information",
+        "desc": "Calculate \\widehat{\\text{Cov}}(\\hat{\\boldsymbol{\\beta}}) = (\\mathbf{X}^\\top \\mathbf{W} \\mathbf{X})^{-1}, where \\mathbf{W} is the diagonal weight matrix.",
+        "detail": "Diagonal weights are w_i = \\hat{p}_i(1 - \\hat{p}_i). Standard errors are the square roots of the diagonal elements of the inverse information matrix."
+      },
+      {
+        "title": "Calculate Wald statistics and p-values",
+        "desc": "Evaluate z_j = \\hat{\\beta}_j / \\text{SE}(\\hat{\\beta}_j) against standard normal distribution.",
+        "detail": "Compute two-tailed p-values p_j = 2 * (1 - \\Phi(|z_j|)) to determine if predictors have statistically significant associations."
+      },
+      {
+        "title": "Compute Odds Ratios and exponentiated confidence intervals",
+        "desc": "Transform linear log-odds coefficients into multiplicative odds multipliers.",
+        "detail": "Evaluate \\text{OR}_j = \\exp(\\hat{\\beta}_j). Calculate 95% confidence intervals by exponentiating the linear bounds: [\\exp(\\hat{\\beta}_j - 1.96 \\cdot \\text{SE}), \\exp(\\hat{\\beta}_j + 1.96 \\cdot \\text{SE})]."
+      },
+      {
+        "title": "Assess goodness-of-fit via residual deviance",
+        "desc": "Compare model deviance against null deviance using a likelihood-ratio test.",
+        "detail": "Compute deviance D = -2 \\ell(\\hat{\\boldsymbol{\\beta}}). Calculate overall model significance \\Delta D = D_{\\text{null}} - D_{\\text{model}} \\sim \\chi^2(p) to verify joint predictive power."
+      }
+    ],
+    math: [
+      {
+        "h": "Logit Transformation and Odds Ratio Formulation",
+        "tex": "\\text{logit}(p) = \\ln\\left(\\frac{p}{1 - p}\\right) = \\beta_0 + \\sum_{j=1}^k \\beta_j x_j \\implies \\text{OR}_j = \\frac{\\text{Odds}(x_j + 1)}{\\text{Odds}(x_j)} = \\exp(\\beta_j)",
+        "p": "The logit function linearises binary probabilities. Because the link function is logarithmic in the odds ratio, adding 1 unit to predictor x_j multiplies the outcome odds by \\exp(\\beta_j), holding all other covariates constant."
+      },
+      {
+        "h": "Asymptotic Covariance and Wald z-Statistic",
+        "tex": "\\text{Cov}(\\hat{\\boldsymbol{\\beta}}) \\approx \\left( \\mathbf{X}^\\top \\mathbf{W} \\mathbf{X} \\right)^{-1}, \\quad \\mathbf{W} = \\text{diag}\\big( \\hat{p}_i (1 - \\hat{p}_i) \\big), \\qquad z_j = \\frac{\\hat{\\beta}_j}{\\text{SE}(\\hat{\\beta}_j)} \\xrightarrow{d} \\mathcal{N}(0, 1)",
+        "p": "The inverse of the negative Hessian (observed Fisher Information) yields the asymptotic covariance matrix of parameter estimates. The Wald z-statistic evaluates individual coefficient significance against standard normal critical thresholds."
+      },
+      {
+        "h": "Model Deviance and Likelihood-Ratio Goodness-of-Fit",
+        "tex": "D = -2 \\sum_{i=1}^n \\left[ y_i \\ln \\hat{p}_i + (1 - y_i) \\ln(1 - \\hat{p}_i) \\right], \\qquad G = D_{\\text{null}} - D_{\\text{model}} \\sim \\chi^2(k)",
+        "p": "Deviance measures unexplained variation analogous to residual sum of squares in OLS. The drop in deviance G between the null model (intercept only) and fitted model follows a \\chi^2 distribution with k degrees of freedom, testing overall model utility."
+      }
+    ],
+    code: "\"\"\"\nLogistic Regression Statistical Inference Engine\nDemonstrating IRLS maximum likelihood estimation, Fisher Information,\nWald z-tests, Odds Ratios, and Deviance goodness-of-fit.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\nclass LogisticRegressionInference:\n    def __init__(self, add_intercept: bool = True):\n        self.add_intercept = add_intercept\n        self.beta = None\n        self.cov_matrix = None\n        self.se = None\n\n    def fit(self, X: np.ndarray, y: np.ndarray, max_iter: int = 50, tol: float = 1e-7):\n        if self.add_intercept:\n            X = np.column_stack([np.ones(len(X)), X])\n        \n        n_samples, n_features = X.shape\n        beta = np.zeros(n_features)\n\n        # Iteratively Reweighted Least Squares (Newton-Raphson)\n        for iteration in range(max_iter):\n            p = 1.0 / (1.0 + np.exp(-np.clip(X @ beta, -30, 30)))\n            # Weight matrix W = diag(p * (1 - p))\n            w = p * (1.0 - p)\n            # Prevent zero division\n            w = np.maximum(w, 1e-12)\n            \n            # Gradient: X^T (y - p)\n            gradient = X.T @ (y - p)\n            # Hessian: -X^T W X\n            hessian = -X.T @ (w[:, np.newaxis] * X)\n            \n            # Newton-Raphson update: beta_new = beta - H^-1 * g\n            delta = np.linalg.solve(-hessian, gradient)\n            beta += delta\n            \n            if np.max(np.abs(delta)) < tol:\n                break\n\n        self.beta = beta\n        # Asymptotic covariance is inverse Fisher Information = (-H)^-1\n        self.cov_matrix = np.linalg.inv(-hessian)\n        self.se = np.sqrt(np.diagonal(self.cov_matrix))\n        self.p_fitted = 1.0 / (1.0 + np.exp(-np.clip(X @ beta, -30, 30)))\n        self.X_design = X\n        self.y = y\n\n    def summary(self, feature_names=None):\n        if feature_names is None:\n            feature_names = [f\"x{i}\" for i in range(len(self.beta))]\n            if self.add_intercept:\n                feature_names[0] = \"Intercept\"\n\n        z_scores = self.beta / self.se\n        p_values = 2.0 * (1.0 - stats.norm.cdf(np.abs(z_scores)))\n        odds_ratios = np.exp(self.beta)\n        or_ci_lower = np.exp(self.beta - 1.96 * self.se)\n        or_ci_upper = np.exp(self.beta + 1.96 * self.se)\n\n        # Deviance\n        eps = 1e-12\n        p_safe = np.clip(self.p_fitted, eps, 1 - eps)\n        model_deviance = -2.0 * np.sum(self.y * np.log(p_safe) + (1.0 - self.y) * np.log(1.0 - p_safe))\n        \n        y_mean = np.mean(self.y)\n        null_deviance = -2.0 * np.sum(self.y * np.log(y_mean) + (1.0 - self.y) * np.log(1.0 - y_mean))\n        g_stat = null_deviance - model_deviance\n        df = len(self.beta) - 1\n        p_model = 1.0 - stats.chi2.cdf(g_stat, df=df)\n\n        print(\"=== Logistic Regression Statistical Summary ===\")\n        header = f\"{'Variable':14s} | {'Coef':8s} | {'StdErr':8s} | {'z-value':8s} | {'p-value':8s} | {'OddsRatio':10s} | {'95% CI on OR':16s}\"\n        print(header)\n        print(\"-\" * len(header))\n        for j, name in enumerate(feature_names):\n            ci_str = f\"[{or_ci_lower[j]:.3f}, {or_ci_upper[j]:.3f}]\"\n            row = f\"{name:14s} | {self.beta[j]:8.4f} | {self.se[j]:8.4f} | {z_scores[j]:8.3f} | {p_values[j]:8.4f} | {odds_ratios[j]:10.4f} | {ci_str:16s}\"\n            print(row)\n\n        print(\"-\" * len(header))\n        print(f\"Null Deviance:     {null_deviance:.2f}\")\n        print(f\"Residual Deviance: {model_deviance:.2f}\")\n        print(f\"Model Chi-Square:  {g_stat:.2f} (df={df}, p-value = {p_model:.4e})\")\n\n# Demonstration on synthetic clinical trial data\n# Outcome: Disease recovery (1 = yes, 0 = no)\n# Predictor 1: Treatment dosage in mg\n# Predictor 2: Patient baseline age in years\nnp.random.seed(42)\nN = 250\ndosage = np.random.uniform(1.0, 5.0, N)\nage = np.random.normal(50.0, 10.0, N)\n\n# True model: logit = -2.0 + 0.8 * dosage - 0.04 * age\ntrue_logits = -2.0 + 0.8 * dosage - 0.04 * age\ntrue_probs = 1.0 / (1.0 + np.exp(-true_logits))\nrecovery = np.random.binomial(1, true_probs)\n\nX_data = np.column_stack([dosage, age])\nmodel = LogisticRegressionInference(add_intercept=True)\nmodel.fit(X_data, recovery)\nmodel.summary(feature_names=[\"Intercept\", \"Dosage (mg)\", \"Age (years)\"])\n",
+    keyPoints: [
+      "Logistic regression models log-odds; exponentiating coefficients yields multiplicative Odds Ratios: OR = exp(\\beta_j).",
+      "An Odds Ratio > 1 indicates increased probability of outcome per unit predictor increase; OR < 1 indicates decreased odds.",
+      "Wald z-tests test individual parameter significance using the inverse Fisher Information covariance matrix.",
+      "Deviance measures goodness-of-fit; the drop in deviance from the null model tests overall model predictive validity."
+    ],
+    pitfalls: [
+      "Interpreting Odds Ratios as relative risks: Odds Ratios only approximate Relative Risk when the baseline outcome is rare (< 5%); for common outcomes, Odds Ratios substantially exaggerate effect sizes.",
+      "The Hauck-Donner failure in Wald tests: With quasi-complete or perfect data separation, coefficients grow large while standard errors explode, causing Wald statistics to fall paradoxically to zero.",
+      "Adding Odds Ratios instead of multiplying: Odds Ratios operate on a multiplicative scale; two 1-unit increases multiply odds by OR^2, not 2*OR."
+    ],
+    quiz: [
+      {
+        "q": "In a logistic regression model, what does an estimated coefficient of beta_1 = 0.693 for a binary treatment variable imply?",
+        "o": [
+          "Treatment doubles the odds of the outcome (Odds Ratio = exp(0.693) approx 2.0)",
+          "Treatment increases the probability of the outcome by 69.3 percentage points",
+          "Treatment has zero effect on the outcome",
+          "Treatment decreases the odds by half"
+        ],
+        "a": 0,
+        "why": "Because the link function is the log-odds, exponentiating the coefficient yields the odds multiplier: exp(0.693) = 2.0, meaning the odds of the outcome double under treatment."
+      },
+      {
+        "q": "What paradoxical behaviour can occur in Wald tests when data exhibits near-perfect separation (the Hauck-Donner effect)?",
+        "o": [
+          "The estimated standard error explodes to infinity faster than the coefficient estimate, causing the Wald z-statistic to erroneously approach zero and fail to detect significance",
+          "The p-value becomes negative",
+          "The model deviance becomes infinite",
+          "The odds ratio becomes negative"
+        ],
+        "a": 0,
+        "why": "In separated data, the likelihood becomes flat asymptotically. The curvature (information) vanishes, driving standard errors to extreme values and causing Wald tests to fail. Profile likelihood or LR tests must be used instead."
+      },
+      {
+        "q": "How is overall model significance evaluated in logistic regression?",
+        "o": [
+          "By comparing the difference between Null Deviance and Residual Deviance against a Chi-Squared distribution with degrees of freedom equal to the number of predictors",
+          "By computing the R-squared value like in OLS",
+          "By calculating the mean squared error",
+          "By checking if all coefficients are positive"
+        ],
+        "a": 0,
+        "why": "The difference G = D_null - D_model is a likelihood-ratio test statistic that follows a \\chi^2 distribution with degrees of freedom equal to the number of non-intercept predictors."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "generalised-linear-models",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "logistic_regression",
+      "generalised-linear-models",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "likelihood-ratio-wald-and-score-tests"
+    ],
+    keywords: "logistic regression inference odds ratios wald test deviance fisher information irls logit link hauck donner effect"
+  },
+
+  {
+    id: "mixed-effects-models",
+    short: "Mixed-Effects Models",
+    title: "Mixed-effects models",
+    task: "concepts",
+    module: "Regression inference",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Linear Mixed-Effects Models (LMMs / hierarchical linear models) extend classical regression to handle clustered, grouped, longitudinal, and repeated-measures data by simultaneously estimating fixed effects (population-level averages) and random effects (cluster-specific deviations drawn from a probability distribution). By pooling information across groups through empirical Bayes shrinkage (\"partial pooling\"), mixed models avoid the dual pitfalls of complete pooling (ignoring cluster structure) and no pooling (overfitting isolated groups), providing unbiased variance components and robust inference under non-independent errors.",
+    lead: "Suppose you measure patient blood pressure across 50 different hospitals. If you fit a single regression line ignoring hospitals (complete pooling), you violate the independence assumption and produce falsely confident standard errors. If you fit 50 separate regression models for each hospital (no pooling), small clinics with only 3 patients produce wild, noisy estimates. How do you share statistical strength across groups while respecting individual cluster idiosyncrasies? Mixed-effects models provide the mathematically principled answer through partial pooling and variance components.",
+    intuition: [
+      "The Three Regimes of Grouped Data:\n- Complete Pooling: Fit one global model y = X\\beta + \\epsilon. Treats all observations as independent. Violates independence, masks Simpson's paradox, and underestimates standard errors.\n- No Pooling: Fit separate isolated models or dummy indicators for every group. Small groups with few observations overfit wildly. Fails to capitalise on population commonalities.\n- Partial Pooling (Mixed Effects): Treat group differences as random draws from a latent distribution u_j ~ N(0, \\sigma_u^2). Groups with abundant data rely on their own observations; groups with sparse data shrink automatically toward the global mean!",
+      "Fixed Effects vs Random Effects:\n- Fixed Effects (\\beta): Non-random parameters representing constant population-wide relationships (e.g. the average effect of a drug dosage across all humans).\n- Random Effects (u): Random variables representing idiosyncratic cluster deviations (e.g. hospital baseline offsets or clinic-specific dosage sensitivities), governed by covariance matrix G.",
+      "Shrinkage and Empirical Bayes: The estimated random effect u_hat_j for group j shrinks toward 0 by shrinkage factor \\sigma_u^2 / (\\sigma_u^2 + \\sigma_\\epsilon^2 / n_j). When group sample size n_j is large, shrinkage is negligible; when n_j is small, shrinkage pulls the group toward the population grand mean, protecting against extreme outliers."
+    ],
+    analogy: "Imagine a school district evaluating teachers based on student test scores. Complete pooling compares raw student scores across all schools, ignoring that some schools are in wealthy suburbs and others in underfunded areas. No pooling ranks teachers strictly within their own school, making a new teacher with only 4 students either the best or worst in the district due to small-sample noise. Mixed-effects models use partial pooling: a teacher with 4 students is gently pulled toward the district average until more student scores are collected, balancing local performance with district-wide context.",
+    steps: [
+      {
+        "title": "Identify hierarchical grouping structure",
+        "desc": "Detect clustered, longitudinal, or repeated-measures dependencies in experimental observations.",
+        "detail": "Determine grouping variables (e.g. patient ID, classroom, clinic, geographical region). Confirm that errors within clusters are correlated."
+      },
+      {
+        "title": "Specify fixed and random effects design matrices",
+        "desc": "Formulate model y = X\\beta + Z u + \\epsilon with fixed matrix X and random matrix Z.",
+        "detail": "Choose random intercepts (cluster-specific baseline shifts) or random slopes (cluster-specific covariate sensitivities). Define covariance structure G = Cov(u) and R = Cov(\\epsilon)."
+      },
+      {
+        "title": "Estimate variance components via REML",
+        "desc": "Apply Restricted Maximum Likelihood to eliminate degrees-of-freedom bias in variance estimation.",
+        "detail": "Standard MLE underestimates variance components because it fails to account for degrees of freedom consumed by fixed effects. REML projects data onto the error contrast subspace to obtain unbiased variance estimates."
+      },
+      {
+        "title": "Solve Henderson's Mixed Model Equations",
+        "desc": "Simultaneously estimate fixed coefficients \\hat{\\beta} and Best Linear Unbiased Predictions (BLUPs) \\hat{u}.",
+        "detail": "Compute empirical Bayes shrinkage estimates for each group. Extract standard errors for fixed effects that properly account for clustered variance."
+      },
+      {
+        "title": "Compute Intraclass Correlation Coefficient (ICC)",
+        "desc": "Measure the proportion of total variance explained by grouping structure: ICC = \\sigma_u^2 / (\\sigma_u^2 + \\sigma_\\epsilon^2).",
+        "detail": "An ICC near 0 indicates clusters are negligible (OLS is sufficient); an ICC > 0.10 confirms strong grouping requiring mixed modelling."
+      }
+    ],
+    math: [
+      {
+        "h": "Linear Mixed Model Formulation",
+        "tex": "\\mathbf{y} = \\mathbf{X}\\boldsymbol{\\beta} + \\mathbf{Z}\\mathbf{u} + \\boldsymbol{\\epsilon}, \\quad \\mathbf{u} \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{G}), \\quad \\boldsymbol{\\epsilon} \\sim \\mathcal{N}(\\mathbf{0}, \\sigma^2 \\mathbf{I}), \\quad \\mathbf{y} \\sim \\mathcal{N}(\\mathbf{X}\\boldsymbol{\\beta}, \\; \\mathbf{V})",
+        "p": "Here \\mathbf{X}\\boldsymbol{\\beta} represents fixed effects across the population, and \\mathbf{Z}\\mathbf{u} represents group-specific random effects. The total marginal covariance matrix is \\mathbf{V} = \\mathbf{Z}\\mathbf{G}\\mathbf{Z}^\\top + \\sigma^2 \\mathbf{I}, inducing non-zero correlations among observations from the same cluster."
+      },
+      {
+        "h": "Empirical Bayes Shrinkage Factor (Random Intercept)",
+        "tex": "\\hat{u}_j = \\frac{n_j \\sigma_u^2}{\\sigma^2 + n_j \\sigma_u^2} \\left( \\bar{y}_j - \\bar{\\mathbf{x}}_j^\\top \\hat{\\boldsymbol{\\beta}} \\right) = \\lambda_j \\left( \\bar{y}_j - \\bar{\\mathbf{x}}_j^\\top \\hat{\\boldsymbol{\\beta}} \\right), \\quad \\lambda_j \\in [0, 1)",
+        "p": "The random effect prediction for group j shrinks the observed group residual toward zero by shrinkage multiplier \\lambda_j. For large sample sizes n_j, \\lambda_j \\approx 1 (no pooling); for small sample sizes n_j \\to 0, \\lambda_j \\to 0, borrowing strength from the population grand mean (complete pooling)."
+      },
+      {
+        "h": "Intraclass Correlation Coefficient (ICC)",
+        "tex": "\\text{ICC} = \\frac{\\sigma_u^2}{\\sigma_u^2 + \\sigma^2} = \\text{Corr}(y_{ij}, y_{ik}) \\quad \\text{for } j \\neq k",
+        "p": "The ICC quantifies the proportion of total variance attributable to differences between clusters. It represents the expected correlation between two randomly drawn observations from the same cluster."
+      }
+    ],
+    code: "\"\"\"\nLinear Mixed-Effects Model Simulation\nDemonstrates complete pooling vs no pooling vs partial pooling (LMM)\nand empirical Bayes shrinkage across groups of varying sample sizes.\n\"\"\"\n\nimport numpy as np\n\n# Simulate hierarchical multi-centre clinical trial\n# 8 clinics with vastly different patient counts (from 3 to 100 patients)\nnp.random.seed(42)\nnum_clinics = 8\nclinic_sizes = [3, 4, 6, 10, 20, 35, 60, 100]\n\ntrue_beta_0 = 10.0   # Population baseline score\ntrue_beta_1 = 2.5    # Population treatment effect\ntrue_sigma_u = 3.0   # Between-clinic standard deviation\ntrue_sigma_e = 2.0   # Within-clinic residual noise\n\n# Sample clinic random baseline offsets u_j ~ N(0, sigma_u^2)\nclinic_offsets = np.random.normal(0, true_sigma_u, num_clinics)\n\nrecords = []\nfor j in range(num_clinics):\n    n_j = clinic_sizes[j]\n    x_dosage = np.random.uniform(0.5, 4.0, n_j)\n    noise = np.random.normal(0, true_sigma_e, n_j)\n    y_response = (true_beta_0 + clinic_offsets[j]) + true_beta_1 * x_dosage + noise\n    for i in range(n_j):\n        records.append({\n            \"clinic\": j,\n            \"x\": x_dosage[i],\n            \"y\": y_response[i]\n        })\n\nprint(f\"=== Hierarchical Dataset: {len(records)} patients across {num_clinics} clinics ===\")\nprint(\"Clinic sizes:\", clinic_sizes)\nprint(f\"True Population Intercept: {true_beta_0:.2f} | True Between-Clinic Std: {true_sigma_u:.2f}\\n\")\n\n# Calculate group sample means and residuals\nclinic_means = []\nfor j in range(num_clinics):\n    y_j = [r[\"y\"] for r in records if r[\"clinic\"] == j]\n    clinic_means.append(np.mean(y_j))\n\ngrand_mean = np.mean([r[\"y\"] for r in records])\n\n# Partial Pooling (Empirical Bayes Shrinkage calculation)\n# Shrinkage weight lambda_j = n_j * sigma_u^2 / (sigma_e^2 + n_j * sigma_u^2)\nvar_u = true_sigma_u ** 2\nvar_e = true_sigma_e ** 2\n\nprint(\"=== Comparison: No Pooling vs Partial Pooling (Shrinkage) ===\")\nprint(f\"{'Clinic':7s} | {'Size':5s} | {'Raw Mean':10s} | {'Shrinkage lambda':18s} | {'Partial Pooled':15s} | {'Offset from Grand':18s}\")\nprint(\"-\" * 82)\n\nfor j in range(num_clinics):\n    n_j = clinic_sizes[j]\n    raw_mean = clinic_means[j]\n    lambda_j = (n_j * var_u) / (var_e + n_j * var_u)\n    # Shrunk estimate: grand_mean + lambda_j * (raw_mean - grand_mean)\n    partial_pooled = grand_mean + lambda_j * (raw_mean - grand_mean)\n    \n    print(f\"Clinic {j:1d} | {n_j:5d} | {raw_mean:10.2f} | {lambda_j:18.3f} | {partial_pooled:15.2f} | {(partial_pooled - grand_mean):18.2f}\")\n\nicc = var_u / (var_u + var_e)\nprint(\"-\" * 82)\nprint(f\"Grand Mean: {grand_mean:.2f}\")\nprint(f\"True Intraclass Correlation Coefficient (ICC): {icc:.3f}\")\nprint(\"Notice: Small clinics (n=3, 4) experience heavy shrinkage toward the grand mean (lambda ~ 0.85),\")\nprint(\"while large clinics (n=100) retain their observed data with virtually zero shrinkage (lambda ~ 0.99).\")\n",
+    keyPoints: [
+      "Linear Mixed-Effects Models combine fixed effects (population averages) and random effects (cluster deviations).",
+      "Partial pooling via empirical Bayes shrinkage borrows statistical strength across groups, protecting small clusters from noisy overfitting.",
+      "Restricted Maximum Likelihood (REML) provides unbiased variance component estimation by accounting for fixed effect degrees of freedom.",
+      "The Intraclass Correlation Coefficient (ICC) measures the proportion of variance attributable to grouping structure."
+    ],
+    pitfalls: [
+      "Treating cluster variables as fixed effect dummies when predicting on new clusters: Fixed effect models cannot generalise to unseen clusters; random effects models quantify the population distribution of cluster effects.",
+      "Using standard Maximum Likelihood instead of REML for small sample sizes: ML variance estimates have downward bias of order O(p/n).",
+      "Ignoring random slopes: If treatment effects vary systematically across clusters, fitting only random intercepts yields overconfident standard errors for treatment."
+    ],
+    quiz: [
+      {
+        "q": "Why does partial pooling in mixed-effects models outperform 'no pooling' (separate models per group) on small clusters?",
+        "o": [
+          "Because empirical Bayes shrinkage pulls noisy small-sample estimates toward the population grand mean, borrowing statistical strength from the rest of the dataset",
+          "Because partial pooling deletes small groups entirely",
+          "Because mixed models do not allow regression slopes",
+          "Because no pooling requires GPU supercomputers"
+        ],
+        "a": 0,
+        "why": "No pooling overfits small groups due to high sampling variance. Partial pooling shrinks small groups toward the population mean while allowing large groups to remain close to their sample means."
+      },
+      {
+        "q": "What does the Intraclass Correlation Coefficient (ICC) represent?",
+        "o": [
+          "The proportion of total variance explained by grouping structure, or the expected correlation between two observations from the same cluster",
+          "The Pearson correlation between x and y",
+          "The p-value of the fixed effect slopes",
+          "The R-squared value of the residuals"
+        ],
+        "a": 0,
+        "why": "ICC = \\sigma_u^2 / (\\sigma_u^2 + \\sigma^2). It measures how much variance is between clusters versus within clusters, defining intra-cluster correlation."
+      },
+      {
+        "q": "Why is Restricted Maximum Likelihood (REML) preferred over standard Maximum Likelihood (ML) for estimating variance components?",
+        "o": [
+          "Because REML accounts for the degrees of freedom consumed by fixed effect parameters, eliminating the downward bias inherent in standard ML variance estimates",
+          "Because REML runs faster than standard matrix multiplication",
+          "Because REML forces random effects to equal zero",
+          "Because ML cannot invert positive-definite matrices"
+        ],
+        "a": 0,
+        "why": "Just as Bessel's correction divides by n-1 instead of n in sample variance, REML adjusts for estimated fixed effects \\hat{\\boldsymbol{\\beta}}, yielding strictly unbiased variance component estimates."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "generalised-linear-models"
+    ],
+    related: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "residual-diagnostics-and-heteroscedasticity",
+      "anova-and-post-hoc-tests",
+      "bayesian_linear_regression"
+    ],
+    keywords: "mixed effects models hierarchical linear models lmm reml partial pooling empirical bayes shrinkage blup random intercepts icc"
+  },
+
+  {
+    id: "sequential-testing-and-the-peeking-problem",
+    short: "Sequential Testing & Peeking",
+    title: "Sequential testing and the peeking problem",
+    task: "concepts",
+    module: "Experiments and causality`",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Continuous monitoring (\"peeking\") at incoming experimental data in classical fixed-horizon A/B testing inflates False Positive Rates (Type I error) from a nominal 5% to over 30–40%. Because the test statistic performs a random walk across time, repeatedly evaluating whether p < 0.05 creates multiple testing across time, virtually guaranteeing that chance fluctuations will trigger a false rejection. Sequential testing frameworks—including Group Sequential Designs (O'Brien-Fleming alpha spending), Wald's Sequential Probability Ratio Test (SPRT), and Always-Valid p-values via martingales (mSPRT)—allow continuous experiment evaluation and early stopping while strictly controlling overall Type I error.",
+    lead: "In digital product experimentation, product managers cannot resist checking experiment dashboards every morning. If the dashboard flashes \"Statistically Significant (p < 0.05)\" on Day 3, the temptation to declare victory and stop the experiment immediately is overwhelming. What happens if you stop an A/B test early the moment p < 0.05? You have committed the \"peeking problem\", drastically corrupting your statistical guarantees. How can data teams safely monitor live experiments and stop early for massive wins without destroying statistical validity?",
+    intuition: [
+      "The Random Walk of the p-Value: Under the null hypothesis (two identical variants), the difference in sample means is a stochastic Wiener process (Brownian motion). Even though the true effect is zero, random noise causes the difference to occasionally spike into the \"rejection zone\" before reverting to zero. If you only look once at sample size N, the chance of being in the rejection zone is 5%. But if you look every single day, you are giving random noise 30 chances to breach the threshold! Over a 30-day experiment, the true false alarm rate exceeds 35%.",
+      "Alpha Spending Functions: You have a total budget of \\alpha = 0.05 to spend across the lifetime of the experiment. If you want to peek at multiple interim milestones, you must \"spend\" a tiny fraction of alpha early on and reserve the bulk for the end. The O'Brien-Fleming boundary sets extremely conservative early thresholds (e.g. requiring z > 4.5, p < 0.0001 on Day 1), ensuring that only colossal effects stop the test prematurely.",
+      "Always-Valid p-Values and Martingales (mSPRT): Developed by Robbins and modernised by tech platforms (Netflix, experimentation platforms), mixture Sequential Probability Ratio Tests (mSPRT) construct test statistics that are mathematical martingales. By applying Ville's inequality, an always-valid p-value can be checked continuously after every single user with an ironclad mathematical guarantee: P(exists t : p_t <= \\alpha) <= \\alpha."
+    ],
+    analogy: "Imagine flipping a fair coin 10,000 times. By the law of large numbers, the percentage of heads will be close to 50% at the end. However, early on (e.g. at flip 5), you might see 4 heads and 1 tail (80% heads). If you allow yourself to stop the game whenever heads leads by 3 flips and declare \"the coin is biased toward heads!\", you will always find a moment to stop and \"prove\" the coin is biased. Fixed-horizon testing requires waiting until all 10,000 flips conclude. Sequential testing allows stopping early only if the coin produces a run of heads so astronomical that no fair coin could ever produce it.",
+    steps: [
+      {
+        "title": "Define monitoring cadence and sample budget",
+        "desc": "Specify maximum sample size N_max and planned interim inspection milestones.",
+        "detail": "Determine whether evaluation occurs at discrete batches (Group Sequential) or continuously after every observation (mSPRT)."
+      },
+      {
+        "title": "Select sequential stopping boundary",
+        "desc": "Choose an alpha spending function (e.g. O'Brien-Fleming or Pocock).",
+        "detail": "O'Brien-Fleming boundaries start extremely strict and converge to nominal alpha at 100% information, preserving end-of-test power. Pocock boundaries distribute alpha evenly across all looks."
+      },
+      {
+        "title": "Calculate dynamic critical thresholds",
+        "desc": "Compute adjusted critical values c(t) as a function of information fraction t = n / N_max.",
+        "detail": "At look k with fraction t_k, evaluate threshold c(t_k). In O'Brien-Fleming, c(t) = z_{\\alpha/2} / \\sqrt{t}."
+      },
+      {
+        "title": "Evaluate test statistic at interim milestones",
+        "desc": "Check whether current test statistic exceeds the adjusted critical threshold.",
+        "detail": "If |z_k| >= c(t_k), terminate early for efficacy (variant wins). If futility boundary is crossed, terminate early for lack of effect. If within continuation region, collect next batch."
+      },
+      {
+        "title": "Compute always-valid p-values for continuous streaming",
+        "desc": "Apply martingale-based mSPRT to enable anytime evaluation without look schedules.",
+        "detail": "Track likelihood ratio martingale \\Lambda_n. Reject null whenever \\Lambda_n >= 1/\\alpha."
+      }
+    ],
+    math: [
+      {
+        "h": "Type I Error Rate Inflation Under Repeated Peeking",
+        "tex": "\\alpha_{\\text{inflated}} = P_{H_0}\\left( \\bigcup_{k=1}^K \\big\\{ |Z_k| \\ge z_{\\alpha/2} \\big\\} \\right) \\approx 1 - (1 - \\alpha)^K \\quad \\text{(upper bound)}, \\qquad \\lim_{K \\to \\infty} \\alpha_{\\text{inflated}} = 1.0",
+        "p": "Because the sequence of test statistics Z_1, Z_2, \\dots, Z_K forms a correlated stochastic process, repeated evaluations against an unadjusted threshold cause Type I error to inflate rapidly with the number of looks K."
+      },
+      {
+        "h": "O'Brien-Fleming Alpha Spending Boundary",
+        "tex": "c(t) = \\frac{z_{\\alpha/2}}{\\sqrt{t}}, \\qquad \\alpha^*(t) = 2 \\left( 1 - \\Phi\\left(\\frac{z_{\\alpha/2}}{\\sqrt{t}}\\right) \\right), \\quad t = \\frac{n}{N_{\\max}} \\in (0, 1]",
+        "p": "The O'Brien-Fleming boundary scales inversely with the square root of the information fraction t. Early in the experiment (small t), the required critical z-score is very high, guarding against premature false rejections while spending minimal alpha."
+      },
+      {
+        "h": "Mixture Sequential Probability Ratio Test (mSPRT)",
+        "tex": "\\Lambda_n = \\int_{-\\infty}^\\infty \\prod_{i=1}^n \\frac{f(x_i; \\theta)}{f(x_i; 0)} \\, dH(\\theta), \\qquad P_{H_0}\\left( \\exists n \\ge 1 : \\Lambda_n \\ge \\frac{1}{\\alpha} \\right) \\le \\alpha",
+        "p": "By mixing likelihood ratios over a prior distribution H(\\theta) (typically Gaussian), \\Lambda_n is a non-negative martingale under H_0 with expectation 1. Ville's inequality guarantees that the probability of ever exceeding 1/\\alpha at ANY stopping time is bounded by \\alpha."
+      }
+    ],
+    code: "\"\"\"\nThe Peeking Problem in A/B Testing vs O'Brien-Fleming Sequential Testing\nDemonstrates false positive rate inflation under naive monitoring\nand how sequential boundaries restore nominal alpha = 0.05.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\nnp.random.seed(42)\nnum_simulations = 2000\nsample_size_max = 500\nnum_looks = 10  # Peek every 50 observations\nlook_points = np.linspace(50, sample_size_max, num_looks, dtype=int)\n\n# Simulate A/A tests (True effect = 0.0, both groups N(0, 1))\nnaive_false_positives = 0\nfixed_horizon_false_positives = 0\nobrien_fleming_false_positives = 0\n\nz_alpha_fixed = stats.norm.ppf(0.975)  # 1.96\n\nfor _ in range(num_simulations):\n    # Generate A and B observations\n    a = np.random.normal(0, 1, sample_size_max)\n    b = np.random.normal(0, 1, sample_size_max)\n    \n    # 1. Fixed Horizon Test (Only evaluate at the very end n = sample_size_max)\n    z_final = (np.mean(b) - np.mean(a)) / np.sqrt(2.0 / sample_size_max)\n    if abs(z_final) >= z_alpha_fixed:\n        fixed_horizon_false_positives += 1\n        \n    # 2. Naive Peeking (Check at every look using unadjusted z >= 1.96)\n    naive_stopped = False\n    of_stopped = False\n    \n    for look_idx, n in enumerate(look_points):\n        # Current z-statistic\n        sub_a = a[:n]\n        sub_b = b[:n]\n        z_k = (np.mean(sub_b) - np.mean(sub_a)) / np.sqrt(2.0 / n)\n        \n        # Check Naive Threshold\n        if not naive_stopped and abs(z_k) >= z_alpha_fixed:\n            naive_false_positives += 1\n            naive_stopped = True\n            \n        # Check O'Brien-Fleming Threshold\n        # t = information fraction n / N_max\n        t_frac = n / sample_size_max\n        c_t = z_alpha_fixed / np.sqrt(t_frac)\n        \n        if not of_stopped and abs(z_k) >= c_t:\n            obrien_fleming_false_positives += 1\n            of_stopped = True\n\nrate_fixed = (fixed_horizon_false_positives / num_simulations) * 100\nrate_naive = (naive_false_positives / num_simulations) * 100\nrate_of = (obrien_fleming_false_positives / num_simulations) * 100\n\nprint(f\"=== A/A Simulation Results ({num_simulations} simulated experiments, Nominal Alpha = 5.0%) ===\")\nprint(f\"1. Fixed Horizon (Check once at end):      {rate_fixed:5.2f}% False Positives (Controlled!)\")\nprint(f\"2. Naive Daily Peeking (Check every look): {rate_naive:5.2f}% False Positives (Dramatically Inflated!)\")\nprint(f\"3. O'Brien-Fleming Sequential Boundary:    {rate_of:5.2f}% False Positives (Controlled at ~5%!)\")\nprint(\"\\nO'Brien-Fleming Critical Z-Score Trajectory:\")\nfor n in look_points:\n    t = n / sample_size_max\n    c = z_alpha_fixed / np.sqrt(t)\n    p_thresh = 2 * (1 - stats.norm.cdf(c))\n    print(f\"  n = {n:3d} (t={t:.2f}) -> Required z >= {c:.2f} (p < {p_thresh:.5f})\")\n",
+    keyPoints: [
+      "Repeatedly checking p-values on accumulating data inflates Type I error rates from 5% to 30% or more.",
+      "The peeking problem occurs because the difference in sample means executes a random walk that frequently touches significance thresholds by chance.",
+      "Group Sequential Designs (O'Brien-Fleming) adjust critical boundaries across looks, requiring extreme evidence early on to preserve overall alpha.",
+      "Martingale-based tests (mSPRT) provide always-valid p-values, allowing continuous real-time monitoring and stopping with strict mathematical guarantees."
+    ],
+    pitfalls: [
+      "Stopping an experiment early for significance while using fixed-horizon p-values: This guarantees an elevated false positive rate and inflates estimated effect sizes (the winner's curse).",
+      "Extending an experiment because it was 'almost significant': Post-hoc sample extension is peeking in reverse; it also severely inflates false positive rates.",
+      "Failing to define N_max upfront in sequential testing: Group sequential boundaries depend on the maximum planned sample size N_max; without it, information fractions cannot be calculated."
+    ],
+    quiz: [
+      {
+        "q": "Why does checking an A/B test daily and stopping as soon as p < 0.05 inflate the False Positive Rate?",
+        "o": [
+          "Because test statistics fluctuate like a random walk over time, giving random chance multiple opportunities to breach the significance threshold",
+          "Because sample variance decreases over time",
+          "Because users become tired of seeing variant B",
+          "Because computers round floating-point numbers differently each day"
+        ],
+        "a": 0,
+        "why": "Continuous peeking creates multiple testing across time. Even when the null hypothesis is true, random Brownian fluctuations will cross the unadjusted z=1.96 boundary at some point with high probability."
+      },
+      {
+        "q": "How does the O'Brien-Fleming boundary prevent false positive inflation during early looks?",
+        "o": [
+          "By requiring extremely conservative significance thresholds early in the test (e.g. z > 4.0, p < 0.0001) and gradually relaxing the threshold toward 1.96 as sample size approaches N_max",
+          "By multiplying all p-values by 100",
+          "By discarding all data collected during the first week",
+          "By forcing the sample sizes of A and B to be odd numbers"
+        ],
+        "a": 0,
+        "why": "O'Brien-Fleming sets critical threshold c(t) = z_{\\alpha/2} / \\sqrt{t}, spending negligible alpha during early looks and preserving the majority of the alpha budget for the final evaluation."
+      },
+      {
+        "q": "What mathematical tool allows mSPRT to compute 'always-valid' p-values for continuous monitoring?",
+        "o": [
+          "Non-negative martingales and Ville's maximal inequality",
+          "Fourier transforms",
+          "Polynomial regression",
+          "K-means clustering"
+        ],
+        "a": 0,
+        "why": "The likelihood ratio in mSPRT is a non-negative martingale under H_0. Ville's inequality bounds the probability of the supremum over all time steps, guaranteeing strict Type I error control regardless of when peeking occurs."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "hypothesis-testing-and-p-values"
+    ],
+    related: [
+      "a-b-testing-end-to-end",
+      "bayesian-a-b-testing",
+      "multiple-testing-bonferroni-holm-benjamini-hochberg",
+      "type-i-ii-errors-power-and-sample-size"
+    ],
+    keywords: "sequential testing peeking problem a b testing obrien fleming alpha spending msprt martingales optional stopping"
+  },
+
+  {
+    id: "bayesian-a-b-testing",
+    short: "Bayesian A/B Testing",
+    title: "Bayesian A/B testing",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Bayesian A/B testing reformulates online experimentation from binary null-hypothesis significance testing (p-values) into direct posterior probability assessment. Instead of asking \"Is there a statistically significant difference under the assumption that the variants are identical?\", Bayesian testing answers the intuitive questions business stakeholders actually care about: \"What is the probability that Variant B is better than Variant A?\" (P(B > A)) and \"What is the expected financial loss if I choose Variant B and I am wrong?\" (Expected Loss / Bayes Risk). This framework naturally integrates historical priors and supports continuous decision-making without multiple testing penalties.",
+    lead: "Ask an executive what a p-value of 0.03 means, and they will almost certainly say: \"There is a 97% chance Variant B is better than Variant A.\" In classical frequentist statistics, this interpretation is completely false: a p-value only measures how improbable the observed data would be if the two variants were identical. Why use a framework whose core output is routinely misunderstood? Bayesian A/B testing computes the exact quantity decision-makers desire: the direct probability of superiority and the monetary risk of making the wrong decision.",
+    intuition: [
+      "Probability of Superiority (P(B > A)): By placing prior distributions on conversion rates \\theta_A ~ Beta(\\alpha_A, \\beta_A) and \\theta_B ~ Beta(\\alpha_B, \\beta_B), observed customer conversions update these into posterior distributions. We can directly compute the probability that variant B has a higher conversion rate than variant A by integrating over the joint posterior: P(\\theta_B > \\theta_A | D).",
+      "Expected Loss (Bayes Risk) as the Decision Threshold: Knowing P(B > A) = 90% is not enough. If B is better, it might beat A by only 0.01%; but if A is better, B might destroy conversion rates by 50%! Expected Loss computes the expected financial cost of choosing variant B when A is actually better: E[Loss | Choose B] = \\int_{\\theta_A > \\theta_B} (\\theta_A - \\theta_B) p(\\theta_A, \\theta_B | D) d\\theta_A d\\theta_B. When Expected Loss drops below a business threshold \\epsilon (e.g. 0.001 lift), you can safely ship Variant B with guaranteed bounded risk.",
+      "Natural Peeking and Continuous Stopping: In Bayesian inference, the posterior distribution at step n is an exact reflection of all evidence accumulated up to step n. Updating posteriors as data streams in does not corrupt the posterior. You can evaluate Expected Loss continuously and stop whenever uncertainty is sufficiently small."
+    ],
+    analogy: "Imagine deciding between two routes to the airport. A frequentist test assumes both routes take identical time, collects 50 test drives, and computes whether the observed difference is rare enough to reject equality. A Bayesian driver combines traffic reports (priors) with live GPS data (observations) to output: \"Route B has an 88% chance of being faster, and if you choose Route B and it turns out to be slower, you will lose on average only 45 seconds.\" That expected loss lets the driver make a rational, risk-calibrated choice instantly.",
+    steps: [
+      {
+        "title": "Specify prior distributions for conversion rates",
+        "desc": "Select informative or uninformative conjugate Beta priors \\theta ~ Beta(\\alpha, \\beta).",
+        "detail": "Use historical baseline data to calibrate prior parameters (e.g. Beta(100, 900) for a 10% historical conversion rate), or use uninformative Beta(1, 1)."
+      },
+      {
+        "title": "Update posterior distributions with experiment data",
+        "desc": "Apply analytical Beta-Binomial updating rule: \\theta | (y, n) ~ Beta(\\alpha + y, \\beta + n - y).",
+        "detail": "Add observed successes y and failures n - y directly to the prior shape parameters for both Variant A and Variant B."
+      },
+      {
+        "title": "Compute Probability of Superiority",
+        "desc": "Calculate P(\\theta_B > \\theta_A | D) via numerical integration or Monte Carlo draws.",
+        "detail": "Sample 100,000 draws from both posterior Beta distributions and calculate the proportion of samples where \\theta_B > \\theta_A."
+      },
+      {
+        "title": "Evaluate Expected Loss (Bayes Risk) for each decision",
+        "desc": "Quantify the expected downside: E[max(0, \\theta_A - \\theta_B)] if B is chosen, and vice versa.",
+        "detail": "Calculate the average magnitude of error when the decision is wrong. If choosing B and \\theta_A > \\theta_B, you lose \\theta_A - \\theta_B."
+      },
+      {
+        "title": "Execute stopping rule against risk threshold",
+        "desc": "Conclude experiment and ship the winning variant when Expected Loss <= \\epsilon.",
+        "detail": "Define business tolerance threshold \\epsilon (e.g. 0.1% absolute conversion rate). Once Expected Loss drops below \\epsilon, deploy the winner."
+      }
+    ],
+    math: [
+      {
+        "h": "Beta-Binomial Conjugate Posterior Updating",
+        "tex": "\\theta_A \\mid (y_A, n_A) \\sim \\text{Beta}(\\alpha_0 + y_A, \\; \\beta_0 + n_A - y_A), \\qquad \\theta_B \\mid (y_B, n_B) \\sim \\text{Beta}(\\alpha_0 + y_B, \\; \\beta_0 + n_B - y_B)",
+        "p": "The Beta distribution is conjugate to the Binomial likelihood. The posterior parameters represent effective pseudo-counts of successes and failures combining prior beliefs with observed experimental results."
+      },
+      {
+        "h": "Probability of Superiority Formulation",
+        "tex": "P(\\theta_B > \\theta_A \\mid \\mathcal{D}) = \\int_0^1 f(\\theta_B \\mid \\mathcal{D}_B) \\left[ \\int_0^{\\theta_B} f(\\theta_A \\mid \\mathcal{D}_A) \\, d\\theta_A \\right] d\\theta_B",
+        "p": "Because Variant A and Variant B are sampled independently, their joint posterior distribution factorises as p(\\theta_A, \\theta_B \\mid \\mathcal{D}) = p(\\theta_A \\mid \\mathcal{D}_A) \\, p(\\theta_B \\mid \\mathcal{D}_B). The probability that B beats A is the volume of the joint distribution above the diagonal \\theta_B > \\theta_A."
+      },
+      {
+        "h": "Expected Loss (Bayes Risk)",
+        "tex": "\\mathcal{L}_B = \\mathbb{E}\\Big[\\max(0, \\, \\theta_A - \\theta_B) \\;\\Big|\\; \\mathcal{D}\\Big], \\qquad \\mathcal{L}_A = \\mathbb{E}\\Big[\\max(0, \\, \\theta_B - \\theta_A) \\;\\Big|\\; \\mathcal{D}\\Big]",
+        "p": "Expected Loss calculates the expected penalty incurred if you choose a given variant and that variant is suboptimal. Unlike p-values which only measure evidence against equality, Expected Loss directly measures economic risk."
+      }
+    ],
+    code: "\"\"\"\nBayesian A/B Testing Framework\nDemonstrating Beta-Binomial posterior updating, Probability of Superiority,\nExpected Loss (Bayes Risk), and threshold stopping rules.\n\"\"\"\n\nimport numpy as np\n\n# Experiment Setup:\n# Variant A (Control): 1,000 visitors, 120 conversions (12.0%)\n# Variant B (Treatment): 1,000 visitors, 145 conversions (14.5%)\nvisitors_a, conv_a = 1000, 120\nvisitors_b, conv_b = 1000, 145\n\n# Prior: Weakly informative Beta(alpha=10, beta=90) -> Prior Mean = 10%\nalpha_prior = 10.0\nbeta_prior = 90.0\n\n# Posterior Beta parameters\nalpha_post_a = alpha_prior + conv_a\nbeta_post_a = beta_prior + (visitors_a - conv_a)\n\nalpha_post_b = alpha_prior + conv_b\nbeta_post_b = beta_prior + (visitors_b - conv_b)\n\n# Monte Carlo Sampling from Posteriors\nnum_draws = 100000\ndraws_a = np.random.beta(alpha_post_a, beta_post_a, size=num_draws)\ndraws_b = np.random.beta(alpha_post_b, beta_post_b, size=num_draws)\n\n# 1. Probability of Superiority P(B > A)\nprob_b_better = np.mean(draws_b > draws_a)\n\n# 2. Relative Lift Distribution: (B - A) / A\nrelative_lift = (draws_b - draws_a) / draws_a\nexpected_lift = np.mean(relative_lift)\nlift_ci_lower = np.percentile(relative_lift, 2.5)\nlift_ci_upper = np.percentile(relative_lift, 97.5)\n\n# 3. Expected Loss (Bayes Risk)\n# Loss if we choose B: max(0, A - B)\nloss_choose_b = np.mean(np.maximum(0, draws_a - draws_b))\n# Loss if we choose A: max(0, B - A)\nloss_choose_a = np.mean(np.maximum(0, draws_b - draws_a))\n\n# Business Decision Rule: Stop and ship B if Expected Loss <= 0.001 (0.1% conversion rate)\nrisk_threshold = 0.0010\nship_b = loss_choose_b <= risk_threshold\n\nprint(f\"=== Bayesian A/B Test Analysis ===\")\nprint(f\"Variant A: {conv_a}/{visitors_a} ({conv_a/visitors_a:.1%}) -> Posterior Mean: {np.mean(draws_a):.3f}\")\nprint(f\"Variant B: {conv_b}/{visitors_b} ({conv_b/visitors_b:.1%}) -> Posterior Mean: {np.mean(draws_b):.3f}\")\n\nprint(f\"\\nProbability Variant B is Superior: P(B > A) = {prob_b_better:.1%}\")\nprint(f\"Expected Relative Lift: {expected_lift:.1%} [95% Credible Interval: {lift_ci_lower:.1%}, {lift_ci_upper:.1%}]\")\n\nprint(f\"\\nExpected Loss if choosing B: {loss_choose_b:.5f} ({loss_choose_b * 100:.3f}% conversion rate)\")\nprint(f\"Expected Loss if choosing A: {loss_choose_a:.5f} ({loss_choose_a * 100:.3f}% conversion rate)\")\n\nprint(f\"\\nDecision against Risk Threshold (epsilon = {risk_threshold}):\")\nif ship_b:\n    print(f\"  SHIP VARIANT B: Expected risk ({loss_choose_b:.5f}) is within acceptable threshold ({risk_threshold})!\")\nelse:\n    print(f\"  CONTINUE EXPERIMENT: Expected risk ({loss_choose_b:.5f}) exceeds threshold.\")\n",
+    keyPoints: [
+      "Bayesian A/B testing computes direct posterior probabilities of superiority: P(\\theta_B > \\theta_A | \\mathcal{D}).",
+      "Expected Loss (Bayes Risk) measures the economic cost of making the wrong decision, providing an actionable stopping criterion.",
+      "Historical priors easily incorporate baseline domain knowledge, anchoring small-sample experiments against extreme flukes.",
+      "Because posteriors represent cumulative updated evidence, Bayesian testing allows continuous monitoring without multiple testing inflation."
+    ],
+    pitfalls: [
+      "Relying solely on Probability of Superiority without checking Expected Loss: A variant might have P(B > A) = 95% but possess a heavy left tail that risks catastrophic financial losses if wrong.",
+      "Using overly strong subjective priors without validation: An aggressive prior requires substantial experimental evidence to overturn, potentially masking real treatment gains.",
+      "Confusing credible intervals with confidence intervals: A 95% Bayesian credible interval means there is a 95% probability the true parameter lies within the bounds; a frequentist confidence interval does not carry this interpretation."
+    ],
+    quiz: [
+      {
+        "q": "In Bayesian A/B testing, what does 'Expected Loss' measure?",
+        "o": [
+          "The expected reduction in conversion rate or financial metric if you deploy a variant that turns out to be inferior to the alternative",
+          "The cost of cloud server hosting for the experiment",
+          "The percentage of users who bounce from the landing page",
+          "The p-value multiplied by the sample size"
+        ],
+        "a": 0,
+        "why": "Expected Loss calculates E[max(0, \\theta_A - \\theta_B)]. It quantifies the expected margin of regret if you choose variant B and variant A was actually better."
+      },
+      {
+        "q": "Why is continuous monitoring permissible in Bayesian A/B testing without the classical 'peeking problem'?",
+        "o": [
+          "Because the posterior distribution at any point in time is a mathematically valid representation of total accumulated evidence, independent of how many times it was inspected",
+          "Because Bayesian statistics does not allow early stopping",
+          "Because Bayesian tests only use 10 samples",
+          "Because prior distributions eliminate all variance"
+        ],
+        "a": 0,
+        "why": "In Bayesian inference, probability is a measure of belief given data. The posterior distribution after n observations is identical whether you inspected it 100 times or zero times prior to step n."
+      },
+      {
+        "q": "What conjugate prior family is used to model conversion rates in binary A/B testing?",
+        "o": [
+          "Beta distribution (Beta-Binomial conjugate pair)",
+          "Gaussian distribution",
+          "Poisson distribution",
+          "Weibull distribution"
+        ],
+        "a": 0,
+        "why": "The Beta distribution is conjugate to the Binomial likelihood: updating Beta(\\alpha, \\beta) with y successes and n-y failures produces Beta(\\alpha + y, \\beta + n - y)."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "a-b-testing-end-to-end",
+      "sequential-testing-and-the-peeking-problem",
+      "map-and-bayesian-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    keywords: "bayesian a b testing expected loss bayes risk probability of superiority beta binomial conjugate prior conversion rate"
+  },
+
+  {
+    id: "causal-graphs-dags-and-adjustment",
+    short: "Causal Graphs & Adjustment",
+    title: "Causal graphs (DAGs) and adjustment",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Causal Directed Acyclic Graphs (DAGs) and Pearl's structural causal framework provide the mathematical language to differentiate mere statistical correlation from genuine causal effect. By formalising causal assumptions as directional graphical models (X -> Y), causal DAGs systematically identify confounding, mediation, and collider structures. The Backdoor Criterion and d-separation establish exactly which set of covariates Z must be controlled for—and crucially, which variables must NOT be conditioned on (to avoid collider stratification bias)—to eliminate spurious confounding and identify causal effects from observational data.",
+    lead: "\"Correlation does not imply causation\"—every data scientist knows this axiom, yet when building predictive models, how do you decide which variables to include as regression controls? Adding more control variables is not always safe: controlling for the wrong variable can create massive spurious correlations that did not exist in the raw data! Pearl's causal DAGs provide the mathematical calculus to identify true causal pathways, avoid collider bias, and determine whether observational data can answer causal questions.",
+    intuition: [
+      "The Three Fundamental Causal Junctions: Any causal graph is built from three 3-node patterns:\n- Chain (Mediation): X -> M -> Y. X causes M, which causes Y. Conditioning on mediator M blocks the causal path between X and Y.\n- Fork (Confounder): X <- Z -> Y. Confounder Z causes both X and Y, creating a spurious non-causal association. Conditioning on Z blocks the spurious correlation.\n- Collider: X -> C <- Y. Both X and Y independently cause collider C. In the unconditioned data, X and Y are independent! But if you condition on collider C (or a descendant of C), you open a spurious path and induce artificial correlation between X and Y!",
+      "The Danger of Bad Controls (Collider Stratification Bias): Suppose being a brilliant actor (X) and having movie star looks (Y) are completely independent in the general population. But to be cast in Hollywood films (C), you need either talent or looks (X -> C <- Y). If you only analyse Hollywood actors (conditioning on C), you will find a strong negative correlation: talented actors seem less attractive, and attractive actors seem less talented! This is Berkson's fallacy / collider bias.",
+      "The Backdoor Criterion: To find the true causal effect of treatment X on outcome Y, you must block all \"backdoor paths\" (paths that start with an arrow pointing into X: X <- ... -> Y) by conditioning on a valid adjustment set Z, without conditioning on any collider or descendant of X."
+    ],
+    analogy: "Imagine water flowing through a plumbing pipe network from tap X to drain Y. A backdoor path is an accidental cross-connection through an upstream water tower Z that leaks into both pipes. Conditioning on a confounder is closing a valve on the leak so only water from tap X reaches drain Y. A collider is a shared flood sensor that is normally dry; if you tamper with it (condition on it), you inadvertently create an electrical short that connects two previously isolated pipe valves together.",
+    steps: [
+      {
+        "title": "Construct causal DAG encoding domain knowledge",
+        "desc": "Draw directed arrows representing causal mechanisms between variables.",
+        "detail": "Ensure the graph is acyclic (no feedback loops). Include unobserved latent confounders where unmeasured shared causes exist."
+      },
+      {
+        "title": "Identify all paths between treatment and outcome",
+        "desc": "Catalogue both directed causal paths (X -> ... -> Y) and backdoor paths (X <- ... -> Y).",
+        "detail": "A backdoor path is any undirected path connecting X and Y that starts with an arrow pointing into treatment X."
+      },
+      {
+        "title": "Classify all path junctions using d-separation",
+        "desc": "Identify forks (A <- B -> C), chains (A -> B -> C), and colliders (A -> B <- C).",
+        "detail": "Remember the golden d-separation rules: unconditioned colliders are naturally blocked; conditioning on a non-collider blocks a path; conditioning on a collider opens a path."
+      },
+      {
+        "title": "Select valid adjustment set via Backdoor Criterion",
+        "desc": "Find a set of covariates Z that blocks all backdoor paths without including descendants of X.",
+        "detail": "Conditioning on Z neutralises confounding without introducing collider stratification bias or blocking causal mediators."
+      },
+      {
+        "title": "Estimate causal effect using backdoor adjustment",
+        "desc": "Estimate P(Y | do(X=x)) = sum_z P(Y | X=x, Z=z) P(Z=z) via multivariable regression or matching.",
+        "detail": "Fit regression model including treatment X and adjustment set Z. The coefficient on X represents the true causal effect."
+      }
+    ],
+    math: [
+      {
+        "h": "The do-Operator and Causal Effect Identification",
+        "tex": "P(Y = y \\mid \\text{do}(X = x)) \\neq P(Y = y \\mid X = x), \\qquad P(Y = y \\mid \\text{do}(X = x)) = \\sum_{\\mathbf{z}} P(Y = y \\mid X = x, \\mathbf{Z} = \\mathbf{z}) \\, P(\\mathbf{Z} = \\mathbf{z})",
+        "p": "The do-operator \\text{do}(X=x) represents a physical intervention that severs all incoming arrows into X, setting X to value x. When the set of covariates \\mathbf{Z} satisfies the Backdoor Criterion, the causal effect is identified from purely observational data using the adjustment formula."
+      },
+      {
+        "h": "The Backdoor Criterion (Pearl)",
+        "tex": "\\mathbf{Z} \\text{ satisfies Backdoor Criterion for } (X, Y) \\iff \\begin{cases} (1) \\; \\text{No node in } \\mathbf{Z} \\text{ is a descendant of } X \\\\ (2) \\; \\mathbf{Z} \\text{ d-separates (blocks) every path } X \\leftarrow \\dots \\to Y \\end{cases}",
+        "p": "Condition (1) ensures that causal mechanisms mediated by X are not accidentally blocked. Condition (2) ensures that all spurious non-causal confounding associations are completely blocked."
+      },
+      {
+        "h": "Collider Conditioning Bias (Berkson's Paradox)",
+        "tex": "X \\perp Y \\quad \\text{but} \\quad X \\not\\perp Y \\mid C \\quad \\text{for collider junction } X \\to C \\leftarrow Y",
+        "p": "Two independent causes X and Y become conditionally dependent when conditioning on their common effect C (or any descendant of C). Conditioning on a collider induces spurious negative or positive correlation where none exists in the population."
+      }
+    ],
+    code: "\"\"\"\nCausal DAG Simulation: Confounding vs Collider Bias\nDemonstrating that adding control variables can eliminate confounding\nOR artificially introduce collider bias (Berkson's fallacy).\n\"\"\"\n\nimport numpy as np\n\n# Ground Truth Causal Data Generating Process:\n# Z (Confounder: Socioeconomic status) -> X (Education) and Y (Health)\n# True Causal Effect of Education on Health = 2.0\n# C (Collider: Hospital admission) <- X (Education) and Y (Health)\nnp.random.seed(42)\nN = 10000\n\n# 1. Confounder Z\nz_socioeconomic = np.random.normal(loc=0.0, scale=1.0, size=N)\n\n# 2. Treatment X (caused by Z + independent noise)\nx_education = 1.5 * z_socioeconomic + np.random.normal(0, 1, size=N)\n\n# 3. Outcome Y (caused by X with true effect beta=2.0 + Z + noise)\ntrue_causal_beta = 2.0\ny_health = true_causal_beta * x_education + 2.5 * z_socioeconomic + np.random.normal(0, 1, size=N)\n\n# 4. Collider C (caused by BOTH X and Y)\n# e.g. Admission to a specialised clinic: C = 1 if 0.8*X + 0.8*Y + noise > 2.0\ncollider_score = 0.8 * x_education + 0.8 * y_health + np.random.normal(0, 1, size=N)\nc_admitted = (collider_score > 1.5).astype(int)\n\ndef fit_ols(y_vec, *x_vecs):\n    \"\"\"Simple OLS solver returning slope coefficients.\"\"\"\n    X_mat = np.column_stack([np.ones(len(y_vec))] + list(x_vecs))\n    beta = np.linalg.inv(X_mat.T @ X_mat) @ (X_mat.T @ y_vec)\n    return beta\n\nprint(\"=== Causal Inference Demonstration: True Causal Effect beta = 2.00 ===\")\n\n# Model 1: Naive Regression (No controls: Y ~ X)\n# Confounded by Z!\nbeta_naive = fit_ols(y_health, x_education)\nprint(f\"1. Naive Regression (Y ~ X):                   Estimated beta = {beta_naive[1]:.3f} (Severely Confounded!)\")\n\n# Model 2: Valid Backdoor Adjustment (Y ~ X + Z)\n# Blocks the backdoor path X <- Z -> Y\nbeta_adjusted = fit_ols(y_health, x_education, z_socioeconomic)\nprint(f\"2. Valid Backdoor Adjustment (Y ~ X + Z):      Estimated beta = {beta_adjusted[1]:.3f} (Recovers True Effect!)\")\n\n# Model 3: Bad Control - Conditioning on Collider C (Y ~ X + Z + C)\n# Inadvertently opens the collider path X -> C <- Y!\nbeta_collider = fit_ols(y_health, x_education, z_socioeconomic, collider_score)\nprint(f\"3. Bad Control / Collider Bias (Y ~ X + Z + C):Estimated beta = {beta_collider[1]:.3f} (Biased by Collider!)\")\n\n# Model 4: Berkson's Fallacy (Analysing only the admitted subpopulation C == 1)\nmask = (c_admitted == 1)\nbeta_subpop = fit_ols(y_health[mask], x_education[mask], z_socioeconomic[mask])\nprint(f\"4. Stratified on Collider (Subset where C=1):   Estimated beta = {beta_subpop[1]:.3f} (Berkson's Bias!)\")\n",
+    keyPoints: [
+      "Causal DAGs represent causal mechanisms via directed acyclic graphs, distinguishing correlation from causation.",
+      "The three fundamental junctions are Chains (mediation), Forks (confounding), and Colliders (common effects).",
+      "Confounders must be controlled for to block spurious backdoor paths; colliders must NOT be conditioned on, as conditioning opens spurious association.",
+      "The Backdoor Criterion provides the graphical rules for identifying valid adjustment sets from observational data."
+    ],
+    pitfalls: [
+      "The 'kitchen sink' regression trap: Adding all available features as control variables often controls for colliders or mediators, destroying causal validity.",
+      "Controlling for post-treatment variables: Conditioning on an outcome of treatment (mediator) blocks the very causal mechanism being measured.",
+      "Assuming causal DAGs can be discovered purely from data without assumptions: Observational data can identify Markov equivalence classes, but orienting arrows requires domain knowledge or physical interventions."
+    ],
+    quiz: [
+      {
+        "q": "In a causal DAG, what happens when you condition on a collider node (X -> C <- Y)?",
+        "o": [
+          "You inadvertently open a spurious non-causal path between X and Y, inducing artificial correlation (collider stratification bias / Berkson's fallacy)",
+          "You completely eliminate all confounding in the dataset",
+          "You reverse the direction of time in the graph",
+          "The causal effect becomes impossible to calculate on a computer"
+        ],
+        "a": 0,
+        "why": "An unconditioned collider naturally blocks association between X and Y. Conditioning on the collider opens the path, creating an artificial statistical association between its independent causes."
+      },
+      {
+        "q": "What two conditions must a set of covariates Z satisfy to meet the Backdoor Criterion for (X, Y)?",
+        "o": [
+          "No variable in Z can be a descendant of treatment X, and Z must block (d-separate) every backdoor path from X to Y",
+          "Z must include every variable in the dataset",
+          "Z must be perfectly correlated with X",
+          "Z must be measured after outcome Y"
+        ],
+        "a": 0,
+        "why": "Pearl's Backdoor Criterion requires that Z blocks all confounding paths (X <- ... -> Y) without conditioning on any downstream consequence of treatment X (descendant)."
+      },
+      {
+        "q": "What is the difference between P(Y | X=x) and P(Y | do(X=x))?",
+        "o": [
+          "P(Y | X=x) represents passive observation which can be confounded, whereas P(Y | do(X=x)) represents physical intervention where incoming causes to X are severed",
+          "They are identical in all statistical models",
+          "P(Y | do(X=x)) can only be evaluated in laboratory chemistry experiments",
+          "P(Y | X=x) is always equal to 1.0"
+        ],
+        "a": 0,
+        "why": "Observational conditioning P(Y | X=x) filters existing data (and includes confounding associations). The do-operator P(Y | do(X=x)) simulates an intervention that fixes X, establishing genuine causal impact."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding"
+    ],
+    related: [
+      "simpsons-paradox-and-confounding",
+      "a-b-testing-end-to-end",
+      "bayesian-a-b-testing",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    keywords: "causal graphs dags backdoor criterion d-separation colliders confounding berksons fallacy do-operator structural causal models"
+  },
+
+  {
+    id: "propensity-scores-and-matching",
+    short: "Propensity Scores & Matching",
+    title: "Propensity scores and matching",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Propensity score methods estimate causal treatment effects from observational data by addressing non-random treatment assignment and covariate imbalance. The propensity score e(\\mathbf{x}) = P(D = 1 | \\mathbf{X} = \\mathbf{x}) acts as a balancing score: conditional on e(\\mathbf{x}), the distribution of measured baseline covariates \\mathbf{X} is statistically independent of treatment assignment D. By pairing, stratifying, or weighting units via Inverse Probability Weighting (IPW), propensity methods emulate randomised controlled trials, isolating the Average Treatment Effect (ATE) and Average Treatment Effect on the Treated (ATT) under the assumption of unconfoundedness.",
+    lead: "Suppose you want to know whether a premium customer subscription increases annual spending. In observational logs, customers who purchase the subscription already spend vastly more than non-subscribers before ever buying the membership. Comparing raw averages is wildly confounded by selection bias. Randomised controlled trials are often impossible, unethical, or prohibitively expensive. How can we synthesise a fair \"apples-to-apples\" comparison from observational data? Propensity score matching creates balanced synthetic cohorts, pairing each subscriber with an identical non-subscriber who had the exact same propensity to subscribe.",
+    intuition: [
+      "The Balancing Score Property (Rosenbaum & Rubin, 1983): If you have 50 baseline covariates (age, income, browsing frequency, geography), matching on all 50 dimensions simultaneously suffers from the curse of dimensionality—no two humans are identical across 50 features. Rosenbaum and Rubin proved a remarkable theorem: you do not need to match on all 50 covariates. You only need to match on a single 1D scalar: the propensity score e(x) = P(D=1 | X=x)! Conditional on having the same probability of receiving treatment, the distribution of all 50 covariates is balanced between treated and control units.",
+      "Common Support and Positivity: For a valid causal comparison, there must be \"common support\" (positivity: 0 < e(x) < 1). If certain customers have a 100% probability of subscribing (e.g. enterprise accounts), no comparable control unit exists. Units outside the common support overlap region must be trimmed.",
+      "Matching vs Weighting (IPW):\n- Propensity Score Matching (PSM): For each treated unit, find the nearest control unit with the closest propensity score (e.g. within a caliper of 0.05).\n- Inverse Probability Weighting (IPW): Keep all data, but weight each unit by the inverse probability of receiving their actual treatment: w_i = D_i / e(x_i) + (1 - D_i) / (1 - e(x_i)). This upweights under-represented units to create a balanced pseudo-population."
+    ],
+    analogy: "Imagine comparing the driving performance of sports car owners versus minivan drivers. Sports car owners might speed more, but is it the car or the fact that sports car owners are younger and more aggressive? A propensity score model calculates each driver's probability of buying a sports car based on age, income, and lifestyle. Matching then pairs a 28-year-old sports car owner with a 28-year-old minivan driver who had the exact same 70% probability of buying a sports car but happened to buy a minivan instead. Comparing these matched twins isolates the true causal effect of the vehicle.",
+    steps: [
+      {
+        "title": "Estimate propensity scores from baseline covariates",
+        "desc": "Fit logistic regression or gradient-boosted trees to predict treatment probability e(x) = P(D=1 | X).",
+        "detail": "Include all pre-treatment covariates that affect both treatment selection and outcome. Check that model outputs well-calibrated probabilities."
+      },
+      {
+        "title": "Evaluate common support and trim non-overlapping regions",
+        "desc": "Plot propensity score distributions for treated and control cohorts.",
+        "detail": "Discard treated units with propensity scores higher than any control unit, and control units with scores lower than any treated unit to prevent extrapolation."
+      },
+      {
+        "title": "Perform cohort matching or calculate IPW weights",
+        "desc": "Execute nearest-neighbour caliper matching or calculate inverse probability weights.",
+        "detail": "Pair treated units with control units whose propensity scores fall within a defined caliper distance (e.g. 0.2 standard deviations of logit propensity)."
+      },
+      {
+        "title": "Assess post-matching covariate balance",
+        "desc": "Calculate Standardised Mean Differences (SMD) across all baseline covariates.",
+        "detail": "Confirm that SMD < 0.10 for all covariates. If imbalances persist, refine the propensity specification with polynomial or interaction terms."
+      },
+      {
+        "title": "Estimate treatment effect on balanced sample",
+        "desc": "Compute difference in outcomes between matched cohorts to obtain ATT or ATE.",
+        "detail": "Evaluate the treatment effect using paired t-tests or weighted regression with cluster-robust standard errors."
+      }
+    ],
+    math: [
+      {
+        "h": "The Propensity Score Balancing Property",
+        "tex": "e(\\mathbf{x}) \\equiv P(D = 1 \\mid \\mathbf{X} = \\mathbf{x}), \\qquad \\mathbf{X} \\perp D \\mid e(\\mathbf{x})",
+        "p": "The propensity score is the coarsest balancing score. Conditioning on e(\\mathbf{x}) renders the multi-dimensional covariate vector \\mathbf{X} statistically independent of treatment assignment D, removing all observable confounding."
+      },
+      {
+        "h": "Unconfoundedness (Conditional Independence Assumption)",
+        "tex": "\\big(Y(1), Y(0)\\big) \\perp D \\mid \\mathbf{X} \\implies \\big(Y(1), Y(0)\\big) \\perp D \\mid e(\\mathbf{x})",
+        "p": "If potential outcomes (Y(1), Y(0)) are independent of treatment conditional on \\mathbf{X} (no unmeasured confounders), then conditional independence holds given the one-dimensional propensity score e(\\mathbf{x})."
+      },
+      {
+        "h": "Inverse Probability Weighting (IPW) Estimator for ATE",
+        "tex": "\\hat{\\tau}_{\\text{ATE}} = \\frac{1}{N} \\sum_{i=1}^N \\left( \\frac{D_i Y_i}{\\hat{e}(\\mathbf{x}_i)} - \\frac{(1 - D_i) Y_i}{1 - \\hat{e}(\\mathbf{x}_i)} \\right)",
+        "p": "IPW reweights the sample so that both treated and control groups reflect the covariate distribution of the combined population. Treated units with low propensity and control units with high propensity receive higher weights."
+      }
+    ],
+    code: "\"\"\"\nPropensity Score Matching (PSM) vs Naive Comparison\nDemonstrating confounding correction, covariate balance diagnostics,\nand nearest-neighbour caliper matching on observational data.\n\"\"\"\n\nimport numpy as np\n\n# Simulate observational customer study\n# True Causal Effect of Premium Membership on Annual Spend = £50.00\nnp.random.seed(42)\nN = 1000\n\n# Confounders: Age and Prior Year Spending (in £)\nage = np.random.normal(38.0, 8.0, N)\nprior_spend = np.random.normal(300.0, 80.0, N)\n\n# Treatment assignment D (Premium Membership): Older and higher-spending users are far more likely to buy\n# Logit propensity = -6.0 + 0.08 * age + 0.012 * prior_spend\nlogit_prop = -6.0 + 0.08 * age + 0.012 * prior_spend\ntrue_propensity = 1.0 / (1.0 + np.exp(-logit_prop))\nmembership = np.random.binomial(1, true_propensity)\n\n# Observed Outcome Y (Annual Spend in £):\n# True effect is +£50, but prior spend and age strongly drive spending\ntrue_effect = 50.0\nannual_spend = 100.0 + true_effect * membership + 1.2 * prior_spend + 2.0 * age + np.random.normal(0, 25, N)\n\n# 1. Naive Comparison (Raw Difference in Means)\nnaive_treated_mean = np.mean(annual_spend[membership == 1])\nnaive_control_mean = np.mean(annual_spend[membership == 0])\nnaive_diff = naive_treated_mean - naive_control_mean\n\nprint(\"=== Observational Data Summary ===\")\nprint(f\"Total Customers: {N} | Treated (Members): {np.sum(membership)} | Control: {N - np.sum(membership)}\")\nprint(f\"Naive Observed Difference: £{naive_diff:.2f} (True Causal Effect is £{true_effect:.2f} -> Massively Overestimated!)\")\n\n# 2. Estimate Propensity Scores via Logistic Regression\n# Design matrix\nX_cov = np.column_stack([np.ones(N), age, prior_spend])\n# Quick Newton-Raphson logistic fit\nbeta_prop = np.zeros(3)\nfor _ in range(15):\n    p_hat = 1.0 / (1.0 + np.exp(-np.clip(X_cov @ beta_prop, -30, 30)))\n    w = np.maximum(p_hat * (1 - p_hat), 1e-10)\n    grad = X_cov.T @ (membership - p_hat)\n    hess = -X_cov.T @ (w[:, np.newaxis] * X_cov)\n    beta_prop += np.linalg.solve(-hess, grad)\n\nest_propensity = 1.0 / (1.0 + np.exp(-np.clip(X_cov @ beta_prop, -30, 30)))\n\n# 3. Nearest-Neighbour Caliper Matching (1:1 with replacement)\ntreated_indices = np.where(membership == 1)[0]\ncontrol_indices = np.where(membership == 0)[0]\ncaliper = 0.05\n\nmatched_pairs = []\nfor t_idx in treated_indices:\n    p_t = est_propensity[t_idx]\n    diffs = np.abs(est_propensity[control_indices] - p_t)\n    best_c_idx = control_indices[np.argmin(diffs)]\n    if diffs[np.argmin(diffs)] <= caliper:\n        matched_pairs.append((t_idx, best_c_idx))\n\nmatched_t = [pair[0] for pair in matched_pairs]\nmatched_c = [pair[1] for pair in matched_pairs]\n\n# 4. Covariate Balance Check: Standardised Mean Difference (SMD)\ndef calc_smd(feat, treat_mask):\n    m1, m0 = np.mean(feat[treat_mask]), np.mean(feat[~treat_mask])\n    v1, v0 = np.var(feat[treat_mask]), np.var(feat[~treat_mask])\n    return (m1 - m0) / np.sqrt((v1 + v0) / 2.0)\n\nsmd_age_before = calc_smd(age, membership == 1)\nsmd_spend_before = calc_smd(prior_spend, membership == 1)\n\nsmd_age_after = (np.mean(age[matched_t]) - np.mean(age[matched_c])) / np.std(age)\nsmd_spend_after = (np.mean(prior_spend[matched_t]) - np.mean(prior_spend[matched_c])) / np.std(prior_spend)\n\nprint(\"\\n=== Covariate Balance Diagnostics ===\")\nprint(f\"Age SMD:         Before Matching = {smd_age_before:+.3f} | After Matching = {smd_age_after:+.3f} (Balanced!)\")\nprint(f\"Prior Spend SMD: Before Matching = {smd_spend_before:+.3f} | After Matching = {smd_spend_after:+.3f} (Balanced!)\")\n\n# 5. Treatment Effect on Matched Sample (ATT)\nmatched_diff = np.mean(annual_spend[matched_t]) - np.mean(annual_spend[matched_c])\nprint(f\"\\nMatched Cohort Size: {len(matched_pairs)} pairs\")\nprint(f\"Propensity Matched ATT Estimate: £{matched_diff:.2f} (True: £{true_effect:.2f} -> Causal Effect Recovered!)\")\n",
+    keyPoints: [
+      "The propensity score e(x) collapses high-dimensional baseline covariates into a 1D scalar balancing score.",
+      "Conditional on the propensity score, treatment assignment is independent of measured baseline covariates: X \\perp D | e(x).",
+      "Propensity score matching creates balanced synthetic cohorts, isolating true causal effects from observational selection bias.",
+      "Standardised Mean Difference (SMD) < 0.10 confirms that matched treatment and control groups achieve satisfactory covariate balance."
+    ],
+    pitfalls: [
+      "Unmeasured confounding: Propensity scores only balance measured covariates; if an unobserved variable influences both treatment and outcome, estimates remain confounded.",
+      "Violating common support: Including treated units with extreme propensity scores that have zero counterpart controls forces dangerous extrapolation.",
+      "Extreme weights in IPW: When propensity scores approach 0 or 1, inverse probability weights explode, causing extreme variance; weight trimming or stabilised weights are required."
+    ],
+    quiz: [
+      {
+        "q": "What is the primary theorem proved by Rosenbaum and Rubin regarding propensity scores?",
+        "o": [
+          "Conditional on the propensity score e(x) = P(D=1 | X=x), baseline covariates X are statistically independent of treatment assignment D",
+          "Propensity scores are always equal to 0.5",
+          "Propensity score matching works even when confounders are unmeasured",
+          "Propensity scores eliminate the need for training data"
+        ],
+        "a": 0,
+        "why": "Rosenbaum & Rubin (1983) proved the balancing score property: adjusting for the 1D propensity score balances all underlying covariates simultaneously, overcoming the curse of dimensionality."
+      },
+      {
+        "q": "What threshold of Standardised Mean Difference (SMD) is widely accepted as indicating satisfactory covariate balance after matching?",
+        "o": [
+          "SMD < 0.10 (less than 10% of a standard deviation)",
+          "SMD = 1.0",
+          "SMD > 2.0",
+          "SMD = 0.50"
+        ],
+        "a": 0,
+        "why": "An SMD below 0.10 indicates that the difference in covariate means between treated and control cohorts is negligible, mirroring a randomised trial."
+      },
+      {
+        "q": "Why must units outside the common support overlap region be trimmed in propensity score analysis?",
+        "o": [
+          "Because treatment effects cannot be causally identified for individuals who have zero probability of receiving the alternative treatment",
+          "Because logistic regression cannot process negative numbers",
+          "To make the sample size an even number",
+          "Because p-values cannot be computed on unbalanced datasets"
+        ],
+        "a": 0,
+        "why": "The positivity assumption requires 0 < P(D=1 | X) < 1. If a unit has a propensity of 1.0, there are no comparable controls, making counterfactual comparison impossible without speculative extrapolation."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding",
+      "logistic_regression"
+    ],
+    related: [
+      "causal-graphs-dags-and-adjustment",
+      "difference-in-differences",
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding"
+    ],
+    keywords: "propensity scores matching psm ipw inverse probability weighting causal inference balancing score common support smd"
+  },
+
+  {
+    id: "difference-in-differences",
+    short: "Difference-in-Differences",
+    title: "Difference-in-differences",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Difference-in-Differences (DiD) is a quasi-experimental econometric methodology that estimates causal effects by comparing the pre- and post-treatment changes in outcomes between a treatment group and an untreated control group. By subtracting the control group's temporal trend from the treatment group's observed change, DiD eliminates both time-invariant unobserved confounders (e.g. fixed regional culture or baseline ability) and shared macro-temporal shocks (e.g. economic recessions or nationwide seasonal trends). The foundational cornerstone of DiD validity is the Parallel Trends Assumption.",
+    lead: "In 1992, New Jersey raised its state minimum wage while neighbouring Pennsylvania kept its minimum wage constant. Economists Card and Krueger famously evaluated this natural experiment: did employment fall as classical economic theory predicted? Simply comparing New Jersey to Pennsylvania after the law change ignores baseline state differences; comparing New Jersey before and after ignores national economic trends. By calculating the difference of the differences, Card and Krueger revolutionised empirical economics. How does DiD isolate causal effects across time, and what happens when the parallel trends assumption fails?",
+    intuition: [
+      "The 2x2 Grid:\n- Difference 1 (Within Treatment Group over Time): \\Delta_Treat = Y_Treat,Post - Y_Treat,Pre. This captures both the true treatment effect AND any broader macro-temporal trend (inflation, seasons).\n- Difference 2 (Within Control Group over Time): \\Delta_Control = Y_Control,Post - Y_Control,Pre. This captures the pure macro-temporal trend (since the control group never received treatment).\n- The Difference-in-Differences: \\tau_DiD = \\Delta_Treat - \\Delta_Control. Subtracting the control trend cancels out the secular time trend, leaving only the genuine causal treatment effect!",
+      "The Parallel Trends Assumption: DiD does NOT require the treatment and control groups to have the same baseline outcome level! It only requires that, in the absence of treatment, both groups would have followed parallel trajectories over time. If New Jersey normally grew by 2% per year and Pennsylvania normally grew by 2% per year, any deviation from that parallel path after the policy change is attributed to the policy.",
+      "Event Study Designs and Placebo Tests: How can we test whether parallel trends holds? We inspect pre-treatment periods! An event study plots regression coefficients for periods t-3, t-2, t-1 before treatment. If pre-treatment coefficients are statistically indistinguishable from zero, the parallel trends assumption is credible."
+    ],
+    analogy: "Imagine two fitness trainees, Alice and Bob. Alice is naturally fitter and can run 10 km/h, while Bob can run only 6 km/h. Alice starts taking a new nutrition supplement, and one month later she runs 13 km/h (+3 km/h). Bob does not take the supplement, but because both were training in the same warm summer weather, Bob improves to 7 km/h (+1 km/h). The DiD effect of the supplement is not 13 - 7 = 6 (naive cross-sectional), nor is it 13 - 10 = 3 (naive before-after). It is (13 - 10) - (7 - 6) = 3 - 1 = +2 km/h.",
+    steps: [
+      {
+        "title": "Define treatment cohort, control cohort, and intervention timing",
+        "desc": "Establish panel structure identifying treated units and the exact intervention date t_event.",
+        "detail": "Ensure that control units never received treatment and were not indirectly affected by spillover effects."
+      },
+      {
+        "title": "Verify pre-treatment parallel trends",
+        "desc": "Examine historical data across multiple pre-intervention periods.",
+        "detail": "Plot average outcome trajectories. Confirm that treatment and control groups tracked each other with parallel slopes prior to the intervention."
+      },
+      {
+        "title": "Formulate two-way fixed effects (TWFE) regression",
+        "desc": "Specify regression model: y_{it} = \\beta_0 + \\gamma Treat_i + \\lambda Post_t + \\tau (Treat_i * Post_t) + \\epsilon_{it}.",
+        "detail": "The coefficient \\tau on the interaction term represents the Difference-in-Differences treatment effect."
+      },
+      {
+        "title": "Execute event study lead-and-lag specification",
+        "desc": "Fit dynamic model estimating separate coefficients for each time period relative to treatment.",
+        "detail": "Verify that pre-treatment interaction leads are statistically zero (falsification test), while post-treatment lags reveal dynamic adoption curves."
+      },
+      {
+        "title": "Compute cluster-robust standard errors",
+        "desc": "Cluster standard errors at the group/regional level to correct for serial autocorrelation.",
+        "detail": "Bertrand, Duflo, and Mullainathan (2004) proved that unclustered OLS standard errors in DiD produce massive false positives due to serially correlated errors."
+      }
+    ],
+    math: [
+      {
+        "h": "The 2x2 Difference-in-Differences Estimator",
+        "tex": "\\hat{\\tau}_{\\text{DiD}} = \\left( \\bar{Y}_{\\text{Treat, Post}} - \\bar{Y}_{\\text{Treat, Pre}} \\right) - \\left( \\bar{Y}_{\\text{Control, Post}} - \\bar{Y}_{\\text{Control, Pre}} \\right)",
+        "p": "The sample estimator computes the difference in average growth rates between treatment and control cohorts across pre- and post-intervention epochs."
+      },
+      {
+        "h": "Two-Way Interaction Regression Model",
+        "tex": "y_{it} = \\beta_0 + \\gamma \\, \\text{Treat}_i + \\lambda \\, \\text{Post}_t + \\tau_{\\text{DiD}} \\left( \\text{Treat}_i \\times \\text{Post}_t \\right) + \\epsilon_{it}",
+        "p": "Here \\gamma captures time-invariant baseline differences between groups, \\lambda captures time trends common to all units, and \\tau_{\\text{DiD}} captures the interaction identifying the true causal treatment effect."
+      },
+      {
+        "h": "Counterfactual Parallel Trends Condition",
+        "tex": "\\mathbb{E}\\big[Y_{it}(0) - Y_{is}(0) \\mid \\text{Treat}\\big] = \\mathbb{E}\\big[Y_{it}(0) - Y_{is}(0) \\mid \\text{Control}\\big] \\quad \\forall t > t_{\\text{event}}, \\; s < t_{\\text{event}}",
+        "p": "The counterfactual expectation states that in the absence of treatment (potential outcome Y(0)), the expected change in outcome for the treated group would have exactly mirrored the observed change in the control group."
+      }
+    ],
+    code: "\"\"\"\nDifference-in-Differences (DiD) Econometric Simulation\nDemonstrates 2x2 DiD calculation, interaction regression,\nand pre-trend parallel trajectory verification.\n\"\"\"\n\nimport numpy as np\n\n# Simulate a policy intervention across two regions (Region A = Treated, Region B = Control)\n# Over 8 quarters: Quarters 1-4 are Pre-intervention, Quarters 5-8 are Post-intervention\n# True Causal Effect of Policy = +15.0 units\nnp.random.seed(42)\nn_per_group_per_qtr = 100\nquarters = np.arange(1, 9)\n\n# Baseline regional difference: Region A starts 20 units higher than Region B\nbase_a = 50.0\nbase_b = 30.0\ntrend_per_quarter = 2.5  # Common upward economic trend affecting both regions\ntrue_policy_shock = 15.0 # Introduced at Quarter >= 5 for Region A only\n\ndata_records = []\nfor q in quarters:\n    is_post = 1 if q >= 5 else 0\n    # Region A (Treated)\n    shock = true_policy_shock if is_post else 0.0\n    y_a = base_a + (trend_per_quarter * q) + shock + np.random.normal(0, 5, n_per_group_per_qtr)\n    for y in y_a:\n        data_records.append({\"y\": y, \"treat\": 1, \"post\": is_post, \"quarter\": q})\n        \n    # Region B (Control: Never treated)\n    y_b = base_b + (trend_per_quarter * q) + np.random.normal(0, 5, n_per_group_per_qtr)\n    for y in y_b:\n        data_records.append({\"y\": y, \"treat\": 0, \"post\": is_post, \"quarter\": q})\n\n# Convert to arrays\ny_all = np.array([r[\"y\"] for r in data_records])\ntreat_all = np.array([r[\"treat\"] for r in data_records])\npost_all = np.array([r[\"post\"] for r in data_records])\ninter_all = treat_all * post_all\n\n# 1. Classical 2x2 Cell Means\ny_treat_post = np.mean(y_all[(treat_all == 1) & (post_all == 1)])\ny_treat_pre  = np.mean(y_all[(treat_all == 1) & (post_all == 0)])\ny_ctrl_post  = np.mean(y_all[(treat_all == 0) & (post_all == 1)])\ny_ctrl_pre   = np.mean(y_all[(treat_all == 0) & (post_all == 0)])\n\ndiff_treat = y_treat_post - y_treat_pre\ndiff_ctrl  = y_ctrl_post - y_ctrl_pre\ndid_estimate_cell = diff_treat - diff_ctrl\n\nprint(\"=== 1. Classical 2x2 Cell Means Calculation ===\")\nprint(f\"Treatment Group: Pre = {y_treat_pre:5.2f} -> Post = {y_treat_post:5.2f} | Delta = {diff_treat:+5.2f}\")\nprint(f\"Control Group:   Pre = {y_ctrl_pre:5.2f} -> Post = {y_ctrl_post:5.2f} | Delta = {diff_ctrl:+5.2f}\")\nprint(f\"Difference-in-Differences Estimate: Delta_Treat - Delta_Ctrl = {did_estimate_cell:+.2f}\")\nprint(f\"True Causal Policy Effect:        +{true_policy_shock:.2f}\\n\")\n\n# 2. Regression Interaction Model: Y = beta0 + gamma*Treat + lambda*Post + tau*(Treat * Post)\nX_did = np.column_stack([np.ones(len(y_all)), treat_all, post_all, inter_all])\nbeta_did = np.linalg.inv(X_did.T @ X_did) @ (X_did.T @ y_all)\nresids = y_all - X_did @ beta_did\ns2 = np.sum(resids**2) / (len(y_all) - 4)\nse_did = np.sqrt(np.diagonal(s2 * np.linalg.inv(X_did.T @ X_did)))\n\nprint(\"=== 2. OLS Interaction Regression Model ===\")\nprint(f\"Intercept (beta0):              {beta_did[0]:6.2f} (SE: {se_did[0]:.3f})\")\nprint(f\"Region A Baseline (gamma):      {beta_did[1]:6.2f} (SE: {se_did[1]:.3f}) [Baseline Level Gap]\")\nprint(f\"Post-Period Time Trend (lambda):{beta_did[2]:6.2f} (SE: {se_did[2]:.3f}) [Macro Secular Trend]\")\nprint(f\"DiD Treatment Effect (tau):     {beta_did[3]:6.2f} (SE: {se_did[3]:.3f}) [CAUSAL SHOCK]\")\nprint(f\"\\n95% Confidence Interval on Causal Effect: [{beta_did[3] - 1.96*se_did[3]:.2f}, {beta_did[3] + 1.96*se_did[3]:.2f}]\")\n",
+    keyPoints: [
+      "Difference-in-Differences compares the change over time in a treated group to the change over time in a control group.",
+      "DiD eliminates time-invariant unobserved confounders and shared macro-temporal trends.",
+      "The validity of DiD depends on the Parallel Trends Assumption: in the absence of treatment, both groups would have evolved in parallel.",
+      "The interaction coefficient in a two-way regression model estimates the DiD causal effect directly."
+    ],
+    pitfalls: [
+      "Failing to test parallel pre-trends: If treatment and control groups had different growth trajectories prior to treatment, DiD conflates pre-existing divergent trends with the treatment effect.",
+      "Serial autocorrelation in standard errors: Ignoring autocorrelation across repeated time periods in panel data leads to severe underestimation of standard errors; cluster-robust standard errors are essential.",
+      "Staggered rollout bias in Two-Way Fixed Effects: When units adopt treatment at different times, traditional TWFE can assign negative weights to earlier-treated units, requiring modern staggered DiD estimators (Callaway & Sant'Anna)."
+    ],
+    quiz: [
+      {
+        "q": "What is the crucial assumption required for Difference-in-Differences to identify a valid causal effect?",
+        "o": [
+          "The Parallel Trends Assumption: in the absence of treatment, the treatment and control groups would have experienced identical temporal changes",
+          "Treatment and control groups must have identical baseline outcome levels prior to treatment",
+          "Sample sizes in both groups must be equal",
+          "Outcomes must follow a standard normal distribution"
+        ],
+        "a": 0,
+        "why": "DiD allows baseline levels to differ arbitrarily (\\gamma). Its validity relies solely on parallel trajectories: that the unobserved counterfactual trend in the treated group equals the observed trend in the control group."
+      },
+      {
+        "q": "How does Difference-in-Differences remove time-invariant omitted variable bias?",
+        "o": [
+          "By differencing each group's post-period outcome from its pre-period outcome, subtracting out all fixed regional or subject-specific baseline characteristics",
+          "By deleting unobserved variables from the dataset",
+          "By performing principal component analysis on the covariates",
+          "By transforming all data into logarithms"
+        ],
+        "a": 0,
+        "why": "Any factor that is constant over time (such as geographic geography or historical culture) is identical in pre- and post-periods; taking the first difference (Y_post - Y_pre) cancels it out completely."
+      },
+      {
+        "q": "In the regression model Y = beta0 + beta1*Treat + beta2*Post + beta3*(Treat * Post), which coefficient estimates the DiD causal effect?",
+        "o": [
+          "beta3 (the interaction term coefficient)",
+          "beta1 (the treatment group indicator)",
+          "beta2 (the post-period indicator)",
+          "beta0 (the intercept)"
+        ],
+        "a": 0,
+        "why": "The interaction term Treat * Post is 1 only for treated units in the post-treatment period; its coefficient beta3 measures the differential lift above the baseline group gap and macro time trend."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "a-b-testing-end-to-end"
+    ],
+    related: [
+      "causal-graphs-dags-and-adjustment",
+      "propensity-scores-and-matching",
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding"
+    ],
+    keywords: "difference in differences did parallel trends natural experiment quasi experiment panel data event study card krueger"
+  },
+
+  {
+    id: "mcmc-metropolis-hastings-and-gibbs",
+    short: "MCMC: Metropolis & Gibbs",
+    title: "MCMC: Metropolis–Hastings and Gibbs",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Markov Chain Monte Carlo (MCMC) algorithms enable numerical sampling from complex, high-dimensional posterior probability distributions whose normalising constants (evidence integrals) are analytically intractable. The Metropolis-Hastings (MH) algorithm constructs an ergodic Markov chain whose stationary distribution equals the target posterior by proposing candidate states from an arbitrary proposal distribution and accepting them with a calculated acceptance probability that satisfies detailed balance. Gibbs sampling specialises Metropolis-Hastings by iteratively sampling each variable conditioned on all remaining parameters, achieving a guaranteed 100% acceptance rate.",
+    lead: "Bayes' rule is simple in concept: posterior equals likelihood times prior divided by marginal likelihood. But that denominator—the marginal likelihood \\int p(\\mathcal{D} \\mid \\theta) p(\\theta) \\, d\\theta—is an integral over hundreds or thousands of parameters. In high dimensions, standard numerical grid integration is impossible (requiring more grid points than atoms in the universe). How can we draw samples from a posterior distribution when we can only evaluate its unnormalised numerator? MCMC algorithms solve this profound computational bottleneck.",
+    intuition: [
+      "The Intractable Denominator: We know p(\\theta | D) = p(D | \\theta) p(\\theta) / Z, but normalising constant Z is unknown. Notice that if we take the ratio of posterior densities between two proposed states \\theta^* and \\theta, the unknown constant Z cancels out completely: p(\\theta^* | D) / p(\\theta | D) = [p(D | \\theta^*) p(\\theta^*)] / [p(D | \\theta) p(\\theta)]. We can compute relative probabilities anywhere in parameter space!",
+      "Detailed Balance and the Metropolis-Hastings Acceptance Rule: The algorithm walks through parameter space. At state \\theta, it proposes a new state \\theta^* ~ q(\\theta^* | \\theta). If \\theta^* has a higher posterior density, we always move there. If \\theta^* has a lower posterior density, we do not reject it outright—we accept it with probability equal to the density ratio! This ensures the chain explores the entire distribution without getting stuck at the mode, with the frequency of visits exactly proportional to the true posterior probability.",
+      "Gibbs Sampling: Full Conditionals: When parameter vector \\boldsymbol{\\theta} = (\\theta_1, \\dots, \\theta_D) has high dimension, proposing random vectors often results in high rejection rates. Gibbs sampling updates parameters one coordinate at a time by sampling from the full conditional distribution p(\\theta_j | \\boldsymbol{\\theta}_{-j}, D). Because the proposal matches the conditional target exactly, the Metropolis-Hastings acceptance ratio is identically 1.0!"
+    ],
+    analogy: "Imagine a blind cartographer mapping the topography of a mountainous island chain at night. The cartographer cannot see the whole island, but at any spot they stand, a handheld altimeter tells them their current elevation. To map the terrain, the cartographer picks a random direction and takes a step. If the new spot is higher, they step up. If the new spot is lower, they roll a die: if the elevation drop is small, they usually accept the step down; if it is a steep cliff, they reject it and stay put. Over months of walking, the fraction of hours spent at any altitude precisely matches the true surface area of the mountains.",
+    steps: [
+      {
+        "title": "Define unnormalised target posterior density",
+        "desc": "Specify joint model f(\\theta) = p(D | \\theta) p(\\theta) without normalising constant.",
+        "detail": "Work in log-space: \\ln f(\\theta) = \\ln p(D | \\theta) + \\ln p(\\theta) to prevent numerical underflow."
+      },
+      {
+        "title": "Select proposal distribution q(\\theta^* | \\theta)",
+        "desc": "Choose a random walk proposal (e.g. Gaussian \\theta^* ~ N(\\theta, \\sigma^2)).",
+        "detail": "Tune proposal variance \\sigma^2 to achieve optimal acceptance rate (~23.4% for high-dimensional Random Walk Metropolis, ~44% in 1D)."
+      },
+      {
+        "title": "Evaluate Metropolis-Hastings acceptance probability",
+        "desc": "Calculate \\alpha = \\min(1, [p(\\theta^*) q(\\theta | \\theta^*)] / [p(\\theta) q(\\theta^* | \\theta)]).",
+        "detail": "For symmetric proposals, proposal densities cancel out: \\alpha = \\min(1, f(\\theta^*) / f(\\theta))."
+      },
+      {
+        "title": "Execute accept/reject step and update chain",
+        "desc": "Draw u ~ Uniform(0, 1). If u <= \\alpha, accept \\theta^{(t)} = \\theta^*; else retain \\theta^{(t)} = \\theta^{(t-1)}.",
+        "detail": "Append current state to chain history. The chain forms an ergodic Markov chain converging to the true posterior."
+      },
+      {
+        "title": "Discard burn-in and verify convergence",
+        "desc": "Drop initial warmup iterations and calculate Gelman-Rubin R_hat diagnostic.",
+        "detail": "Confirm R_hat < 1.05 across multiple independent chains and evaluate Effective Sample Size (ESS) to ensure chain mixing."
+      }
+    ],
+    math: [
+      {
+        "h": "Detailed Balance Condition",
+        "tex": "p(\\theta) \\, T(\\theta \\to \\theta^*) = p(\\theta^*) \\, T(\\theta^* \\to \\theta), \\qquad T(\\theta \\to \\theta^*) = q(\\theta^* \\mid \\theta) \\, \\alpha(\\theta, \\theta^*)",
+        "p": "Detailed balance is a sufficient condition ensuring that the target posterior distribution p(\\theta) is the unique stationary invariant distribution of the Markov chain. In equilibrium, probability flux from \\theta to \\theta^* exactly matches reverse flux."
+      },
+      {
+        "h": "Metropolis-Hastings Acceptance Probability",
+        "tex": "\\alpha(\\theta, \\theta^*) = \\min\\left( 1, \\; \\frac{p(\\theta^* \\mid \\mathcal{D}) \\, q(\\theta \\mid \\theta^*)}{p(\\theta \\mid \\mathcal{D}) \\, q(\\theta^* \\mid \\theta)} \\right) = \\min\\left( 1, \\; \\frac{p(\\mathcal{D} \\mid \\theta^*) p(\\theta^*) \\, q(\\theta \\mid \\theta^*)}{p(\\mathcal{D} \\mid \\theta) p(\\theta) \\, q(\\theta^* \\mid \\theta)} \\right)",
+        "p": "Because the normalising constant Z appears in both numerator and denominator, it cancels out completely. This allows sampling from arbitrary unnormalised distributions."
+      },
+      {
+        "h": "Gibbs Sampling as a Special Case of Metropolis-Hastings",
+        "tex": "q(\\theta_j^* \\mid \\boldsymbol{\\theta}) = p(\\theta_j^* \\mid \\boldsymbol{\\theta}_{-j}, \\mathcal{D}) \\implies \\alpha(\\boldsymbol{\\theta}, \\boldsymbol{\\theta}^*) = \\min\\left(1, \\; \\frac{p(\\boldsymbol{\\theta}^*) \\, p(\\theta_j \\mid \\boldsymbol{\\theta}_{-j}^*)}{p(\\boldsymbol{\\theta}) \\, p(\\theta_j^* \\mid \\boldsymbol{\\theta}_{-j})} \\right) \\equiv 1.0",
+        "p": "When proposing each coordinate directly from its full conditional distribution, the Metropolis-Hastings acceptance ratio simplifies algebraically to exactly 1.0. Every proposed Gibbs step is accepted."
+      }
+    ],
+    code: "\"\"\"\nMetropolis-Hastings and Gibbs Sampling Implementations\nSampling from an unnormalised bivariate Gaussian posterior\nand evaluating chain mixing and burn-in.\n\"\"\"\n\nimport numpy as np\n\n# Target Distribution: Bivariate Normal with correlation rho = 0.8\n# Unnormalised log density: -0.5 * (1 / (1 - rho^2)) * (x1^2 - 2*rho*x1*x2 + x2^2)\nrho = 0.8\nvar_scale = 1.0 - rho**2\n\ndef target_log_prob(theta):\n    x1, x2 = theta[0], theta[1]\n    return -0.5 * (x1**2 - 2.0 * rho * x1 * x2 + x2**2) / var_scale\n\n# 1. Random Walk Metropolis-Hastings Sampler\ndef run_metropolis_hastings(num_samples=10000, proposal_std=0.6):\n    chain = np.empty((num_samples, 2))\n    curr_theta = np.array([5.0, -5.0])  # Start far from mode (testing convergence)\n    curr_log_p = target_log_prob(curr_theta)\n    accepted_count = 0\n\n    for i in range(num_samples):\n        # Propose candidate theta* ~ N(curr_theta, proposal_std^2)\n        candidate = curr_theta + np.random.normal(0, proposal_std, size=2)\n        candidate_log_p = target_log_prob(candidate)\n        \n        # Log acceptance ratio: log_alpha = candidate_log_p - curr_log_p\n        log_alpha = candidate_log_p - curr_log_p\n        \n        if np.log(np.random.uniform(0, 1)) <= log_alpha:\n            curr_theta = candidate\n            curr_log_p = candidate_log_p\n            accepted_count += 1\n            \n        chain[i] = curr_theta\n\n    acc_rate = accepted_count / num_samples\n    return chain, acc_rate\n\n# 2. Gibbs Sampler\n# Full Conditionals for Bivariate Normal:\n# x1 | x2 ~ N(rho * x2, 1 - rho^2)\n# x2 | x1 ~ N(rho * x1, 1 - rho^2)\ndef run_gibbs_sampler(num_samples=10000):\n    chain = np.empty((num_samples, 2))\n    x1, x2 = 5.0, -5.0\n    cond_std = np.sqrt(1.0 - rho**2)\n\n    for i in range(num_samples):\n        # Sample x1 | x2\n        x1 = np.random.normal(loc=rho * x2, scale=cond_std)\n        # Sample x2 | x1\n        x2 = np.random.normal(loc=rho * x1, scale=cond_std)\n        chain[i] = [x1, x2]\n\n    return chain\n\n# Run simulations\nnp.random.seed(42)\nnum_steps = 10000\nburn_in = 2000\n\nmh_chain, mh_acc_rate = run_metropolis_hastings(num_steps, proposal_std=0.7)\ngibbs_chain = run_gibbs_sampler(num_steps)\n\n# Discard burn-in\nmh_samples = mh_chain[burn_in:]\ngibbs_samples = gibbs_chain[burn_in:]\n\nprint(\"=== 1. Metropolis-Hastings Results ===\")\nprint(f\"Total Steps: {num_steps} | Discarded Burn-in: {burn_in}\")\nprint(f\"Empirical Acceptance Rate: {mh_acc_rate:.1%} (Target optimal ~23-44%)\")\nprint(f\"Estimated Mean:   [{np.mean(mh_samples[:, 0]):.3f}, {np.mean(mh_samples[:, 1]):.3f}] (True: [0.00, 0.00])\")\nprint(f\"Estimated Corr:   {np.corrcoef(mh_samples[:, 0], mh_samples[:, 1])[0, 1]:.3f} (True: {rho:.3f})\")\n\nprint(\"\\n=== 2. Gibbs Sampler Results ===\")\nprint(\"Acceptance Rate: 100.0% (by mathematical construction)\")\nprint(f\"Estimated Mean:   [{np.mean(gibbs_samples[:, 0]):.3f}, {np.mean(gibbs_samples[:, 1]):.3f}] (True: [0.00, 0.00])\")\nprint(f\"Estimated Corr:   {np.corrcoef(gibbs_samples[:, 0], gibbs_samples[:, 1])[0, 1]:.3f} (True: {rho:.3f})\")\n",
+    keyPoints: [
+      "MCMC draws representative samples from unnormalised posterior distributions where integration of the denominator is intractable.",
+      "Metropolis-Hastings accepts moves according to the posterior ratio, satisfying detailed balance to ensure convergence to the target distribution.",
+      "Gibbs sampling updates one variable at a time from its full conditional distribution, achieving a 100% acceptance rate.",
+      "Burn-in samples from early iterations before the chain reaches stationarity must be discarded prior to posterior inference."
+    ],
+    pitfalls: [
+      "High autocorrelation and slow mixing: When proposal step size is too small, the chain explores slowly via Brownian diffusion; when too large, proposals are rejected repeatedly.",
+      "Premature stopping before convergence: A chain starting far from the true mode requires sufficient burn-in to find the typical set; Gelman-Rubin diagnostics across multiple chains are essential.",
+      "Gibbs sampling in highly correlated dimensions: When variables exhibit extreme correlation, coordinate-wise Gibbs sampling becomes trapped taking tiny zig-zag steps; reparameterisation or HMC is needed."
+    ],
+    quiz: [
+      {
+        "q": "Why does the normalising constant Z cancel out in the Metropolis-Hastings acceptance ratio?",
+        "o": [
+          "Because the acceptance ratio divides the posterior density of the proposed state by the posterior density of the current state, causing constant denominators to cancel algebraically",
+          "Because the normalising constant is always equal to 1.0",
+          "Because MCMC algorithms only work on uniform distributions",
+          "Because logarithms eliminate all division"
+        ],
+        "a": 0,
+        "why": "The ratio p(\\theta^* | \\mathcal{D}) / p(\\theta | \\mathcal{D}) = [p(\\mathcal{D}|\\theta^*)p(\\theta^*)/Z] / [p(\\mathcal{D}|\\theta)p(\\theta)/Z] = [p(\\mathcal{D}|\\theta^*)p(\\theta^*)] / [p(\\mathcal{D}|\\theta)p(\\theta)], bypassing the intractable integral Z."
+      },
+      {
+        "q": "What condition guarantees that a Markov chain converges to the desired target distribution?",
+        "o": [
+          "Detailed balance (reversibility) combined with ergodicity (irreducibility and aperiodicity)",
+          "The chain must visit every point on a continuous grid",
+          "The acceptance rate must be 0%",
+          "All parameters must be statistically independent"
+        ],
+        "a": 0,
+        "why": "Detailed balance ensures the target distribution is stationary. Ergodicity guarantees the chain can reach any state and will not get trapped in periodic cycles."
+      },
+      {
+        "q": "Why does Gibbs sampling achieve a 100% acceptance rate?",
+        "o": [
+          "Because candidates are proposed directly from full conditional distributions, causing the Metropolis-Hastings acceptance ratio to simplify identically to 1.0",
+          "Because Gibbs sampling does not use random numbers",
+          "Because it rejects all proposals before evaluating them",
+          "Because Gibbs sampling only runs on Gaussian data"
+        ],
+        "a": 0,
+        "why": "Substituting the full conditional proposal q(\\theta_j^* | \\boldsymbol{\\theta}) = p(\\theta_j^* | \\boldsymbol{\\theta}_{-j}) into the MH formula cancels the numerator and denominator completely, yielding \\alpha = 1.0."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "map-and-bayesian-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "hamiltonian-monte-carlo",
+      "variational-inference",
+      "markov-chains-and-stationary-distributions",
+      "bayesian_linear_regression"
+    ],
+    keywords: "mcmc metropolis hastings gibbs sampling markov chain monte carlo detailed balance burn in stationary distribution acceptance rate"
+  },
+
+  {
+    id: "hamiltonian-monte-carlo",
+    short: "Hamiltonian Monte Carlo",
+    title: "Hamiltonian Monte Carlo",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Hamiltonian Monte Carlo (HMC) and the No-U-Turn Sampler (NUTS) overcome the random-walk diffusion limits of classical Metropolis-Hastings by transforming Bayesian parameter sampling into physical Hamiltonian dynamics. By augmenting target parameters (position) with auxiliary momentum vectors, HMC simulates frictionless motion across the negative log-posterior potential energy surface using symplectic numerical integrators (leapfrog algorithm). This physical trajectory simulation enables large, distant state transitions with acceptance rates approaching 100%, scaling Bayesian inference to models with thousands of correlated parameters.",
+    lead: "Random Walk Metropolis-Hastings is like taking drunken random steps in the dark: in a 100-dimensional space, almost every random direction steps into low-probability regions, causing acceptance rates to plummet unless step sizes are reduced to microscopic increments. In high dimensions, random walks take millions of iterations to explore the posterior. Hamiltonian Monte Carlo replaces random diffusion with physical mechanics: imagine rolling a frictionless hockey puck down the gravitational contours of your posterior landscape. Why does simulating classical mechanics solve high-dimensional Bayesian inference, and how does the leapfrog algorithm preserve energy?",
+    intuition: [
+      "The Curse of Dimensionality in Random Walks: In high dimensions, probability mass does not concentrate at the mode (where volume is zero) nor in the tails (where density is zero). It concentrates in a narrow hyperspherical shell called the \"typical set\". A random walk step almost always steps off this narrow ridge, getting rejected. To make distant jumps that stay within the typical set, we need vectors that guide proposals along the contours of the probability landscape.",
+      "The Hamiltonian Physics Analogy:\n- Position (\\mathbf{q}): The model parameters we want to sample (\\boldsymbol{\\theta}).\n- Potential Energy (U(\\mathbf{q})): The negative log-posterior density -\\ln p(\\mathbf{q} \\mid \\mathcal{D}). High probability corresponds to deep valleys.\n- Momentum (\\mathbf{p}): Auxiliary random velocities sampled from a Gaussian distribution \\mathbf{p} \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{M}).\n- Kinetic Energy (K(\\mathbf{p})): \\frac{1}{2} \\mathbf{p}^\\top \\mathbf{M}^{-1} \\mathbf{p}.\n- Total Hamiltonian Energy: H(\\mathbf{q}, \\mathbf{p}) = U(\\mathbf{q}) + K(\\mathbf{p}).",
+      "Frictionless Gliding: By Hamiltonian conservation of energy, as the particle rolls downhill into high probability valleys, potential energy converts into kinetic energy (it speeds up). As it climbs uphill into low probability tails, kinetic energy converts into potential energy (it slows down). The total energy H remains strictly constant! Because total energy is conserved, the Metropolis-Hastings acceptance probability \\exp(-\\Delta H) is identically 1.0!",
+      "The Leapfrog Integrator: Computers cannot simulate continuous differential equations perfectly. Standard Euler integration accumulates energy drift, causing the puck to fly into space. The leapfrog algorithm is \"symplectic\"—it alternates half-step momentum updates with full-step position updates, preserving phase space volume (Liouville's theorem) and maintaining near-perfect energy conservation over long trajectories."
+    ],
+    analogy: "Imagine a skateboarder in a giant U-shaped concrete skate bowl. The bottom of the bowl is the highest posterior probability region. If the skateboarder were a random-walk Metropolis sampler, they would stagger in random directions, falling flat on their face 95% of the time. HMC pushes the skateboarder with a random burst of speed (momentum): the skateboarder effortlessly carves high-speed arcs along the walls of the bowl, gliding across the entire geometry without ever losing total energy, landing at a completely different, distant spot on the bowl with 100% stability.",
+    steps: [
+      {
+        "title": "Define potential energy and analytical gradient",
+        "desc": "Establish U(q) = -ln p(q | D) and gradient \\nabla_q U(q).",
+        "detail": "Compute log-posterior derivatives with respect to parameters using autodiff or manual calculus."
+      },
+      {
+        "title": "Sample auxiliary momentum vector",
+        "desc": "Draw initial momentum p ~ N(0, M) independently at each step.",
+        "detail": "The mass matrix M is typically chosen as identity I or tuned to match parameter scales."
+      },
+      {
+        "title": "Simulate trajectory via symplectic leapfrog integration",
+        "desc": "Execute L leapfrog steps of size \\epsilon to update position and momentum.",
+        "detail": "Perform half-step momentum update, full-step position update, and half-step momentum update. Preserve volume in phase space."
+      },
+      {
+        "title": "Negate momentum and evaluate energy conservation",
+        "desc": "Calculate Hamiltonian energy difference \\Delta H = H(q^*, p^*) - H(q_old, p_0).",
+        "detail": "Negate momentum p* = -p to ensure time-reversibility of the transition kernel."
+      },
+      {
+        "title": "Accept or reject via Metropolis criterion",
+        "desc": "Accept candidate state q* with probability min(1, exp(-\\Delta H)).",
+        "detail": "Due to symplectic energy conservation, \\Delta H \\approx 0, achieving acceptance rates of 80% to 95% across distant jumps."
+      }
+    ],
+    math: [
+      {
+        "h": "Hamiltonian System Differential Equations",
+        "tex": "\\frac{d\\mathbf{q}}{dt} = \\frac{\\partial H}{\\partial \\mathbf{p}} = \\mathbf{M}^{-1}\\mathbf{p}, \\qquad \\frac{d\\mathbf{p}}{dt} = -\\frac{\\partial H}{\\partial \\mathbf{q}} = -\\nabla_\\mathbf{q} U(\\mathbf{q}) = \\nabla_\\mathbf{q} \\ln p(\\mathbf{q} \\mid \\mathcal{D})",
+        "p": "Hamilton's equations describe the time evolution of position \\mathbf{q} and momentum \\mathbf{p}. The total energy H(\\mathbf{q}, \\mathbf{p}) = U(\\mathbf{q}) + K(\\mathbf{p}) is conserved along continuous trajectories: dH/dt = 0."
+      },
+      {
+        "h": "Symplectic Leapfrog Integrator",
+        "tex": "\\mathbf{p}\\left(t + \\frac{\\epsilon}{2}\\right) = \\mathbf{p}(t) - \\frac{\\epsilon}{2} \\nabla U(\\mathbf{q}(t)), \\quad \\mathbf{q}(t + \\epsilon) = \\mathbf{q}(t) + \\epsilon \\mathbf{M}^{-1} \\mathbf{p}\\left(t + \\frac{\\epsilon}{2}\\right), \\quad \\mathbf{p}(t + \\epsilon) = \\mathbf{p}\\left(t + \\frac{\\epsilon}{2}\\right) - \\frac{\\epsilon}{2} \\nabla U(\\mathbf{q}(t + \\epsilon))",
+        "p": "The leapfrog algorithm updates momentum at half-integer time steps and position at integer time steps. It is time-reversible and volume-preserving (symplectic), ensuring that energy errors do not drift secularly over time."
+      },
+      {
+        "h": "Metropolis Acceptance Probability under Numerical Discretisation",
+        "tex": "\\alpha = \\min\\left(1, \\; \\exp\\big( -H(\\mathbf{q}^*, \\mathbf{p}^*) + H(\\mathbf{q}^{(t-1)}, \\mathbf{p}^{(0)}) \\big) \\right) = \\min\\left(1, \\; \\exp\\left( -\\Delta H \\right)\\right)",
+        "p": "Even though continuous dynamics preserve energy exactly (\\Delta H = 0), finite step size \\epsilon introduces minor discretisation error. The final Metropolis filter guarantees exact convergence to the stationary distribution."
+      }
+    ],
+    code: "\"\"\"\nHamiltonian Monte Carlo (HMC) Sampler Implementation\nDemonstrating leapfrog symplectic integration, energy conservation,\nand high acceptance sampling on a correlated 2D Gaussian.\n\"\"\"\n\nimport numpy as np\n\n# Target Potential Energy U(q) = -log p(q)\n# Correlated Gaussian: q ~ N(0, Sigma), Sigma = [[1.0, 0.8], [0.8, 1.0]]\ncov = np.array([[1.0, 0.8], [0.8, 1.0]])\ncov_inv = np.linalg.inv(cov)\n\ndef potential_energy(q):\n    \"\"\"U(q) = 0.5 * q^T Sigma^-1 q\"\"\"\n    return 0.5 * (q @ cov_inv @ q)\n\ndef grad_potential_energy(q):\n    \"\"\"nabla U(q) = Sigma^-1 q\"\"\"\n    return cov_inv @ q\n\ndef kinetic_energy(p):\n    \"\"\"K(p) = 0.5 * p^T p (assuming identity mass matrix M = I)\"\"\"\n    return 0.5 * np.sum(p ** 2)\n\ndef leapfrog(q, p, epsilon, num_steps):\n    \"\"\"Symplectic Leapfrog Integrator.\"\"\"\n    q_curr = np.copy(q)\n    p_curr = np.copy(p)\n    \n    # Initial half-step for momentum\n    p_curr -= 0.5 * epsilon * grad_potential_energy(q_curr)\n    \n    # Alternate full position and momentum steps\n    for step in range(num_steps):\n        q_curr += epsilon * p_curr\n        if step < num_steps - 1:\n            p_curr -= epsilon * grad_potential_energy(q_curr)\n            \n    # Final half-step for momentum\n    p_curr -= 0.5 * epsilon * grad_potential_energy(q_curr)\n    \n    # Negate momentum to make transition reversible\n    return q_curr, -p_curr\n\ndef run_hmc(num_samples=3000, epsilon=0.15, leapfrog_steps=20):\n    samples = np.empty((num_samples, 2))\n    curr_q = np.array([4.0, -4.0]) # Starting point\n    accepted = 0\n    delta_h_list = []\n\n    for i in range(num_samples):\n        # 1. Sample auxiliary momentum p ~ N(0, I)\n        curr_p = np.random.normal(0, 1, size=2)\n        \n        # 2. Compute initial Hamiltonian H = U(q) + K(p)\n        h_init = potential_energy(curr_q) + kinetic_energy(curr_p)\n        \n        # 3. Simulate Leapfrog Trajectory\n        prop_q, prop_p = leapfrog(curr_q, curr_p, epsilon, leapfrog_steps)\n        \n        # 4. Compute proposed Hamiltonian\n        h_prop = potential_energy(prop_q) + kinetic_energy(prop_p)\n        delta_h = h_prop - h_init\n        delta_h_list.append(delta_h)\n        \n        # 5. Metropolis Acceptance\n        if np.log(np.random.uniform(0, 1)) < -delta_h:\n            curr_q = prop_q\n            accepted += 1\n            \n        samples[i] = curr_q\n\n    acc_rate = accepted / num_samples\n    return samples, acc_rate, delta_h_list\n\n# Run HMC simulation\nnp.random.seed(42)\nsamples, acc_rate, delta_h_list = run_hmc(num_samples=4000, epsilon=0.18, leapfrog_steps=15)\nburn_in = 500\nclean_samples = samples[burn_in:]\n\nprint(\"=== Hamiltonian Monte Carlo Simulation ===\")\nprint(f\"Total Steps: 4000 | Burn-in: {burn_in} | Clean Samples: {len(clean_samples)}\")\nprint(f\"HMC Acceptance Rate: {acc_rate:.1%} (High acceptance despite large leapfrog jumps!)\")\nprint(f\"Mean Energy Error |Delta H|: {np.mean(np.abs(delta_h_list)):.4f} (Energy is near-conserved!)\")\n\nprint(f\"\\nEstimated Posterior Mean: [{np.mean(clean_samples[:, 0]):.3f}, {np.mean(clean_samples[:, 1]):.3f}] (True: [0.00, 0.00])\")\nprint(f\"Estimated Correlation:    {np.corrcoef(clean_samples[:, 0], clean_samples[:, 1])[0, 1]:.3f} (True: 0.800)\")\n",
+    keyPoints: [
+      "Hamiltonian Monte Carlo simulates classical Hamiltonian physical dynamics to propose distant, high-probability state transitions.",
+      "Auxiliary momentum variables allow the sampler to glide along the contours of the typical set, avoiding random-walk diffusion.",
+      "The leapfrog numerical integrator is symplectic and time-reversible, preserving phase-space volume and conserving total energy.",
+      "Because energy is approximately conserved (\\Delta H \\approx 0), HMC achieves high acceptance rates (> 80%) even in high-dimensional spaces."
+    ],
+    pitfalls: [
+      "Tuning leapfrog step size epsilon and trajectory length L: Too large an epsilon causes catastrophic numerical divergence; too small causes slow exploration (solved by the NUTS algorithm).",
+      "Pathological geometry and funnels: In hierarchical models with varying curvature (Neal's funnel), HMC encounters divergent transitions; non-centred parameterisations are necessary.",
+      "Requiring differentiable posteriors: HMC requires the gradient of the log-posterior \\nabla_\\mathbf{q} \\ln p(\\mathbf{q} \\mid \\mathcal{D}); it cannot be applied directly to discrete parameters without marginalisation."
+    ],
+    quiz: [
+      {
+        "q": "Why does Hamiltonian Monte Carlo scale vastly better to high dimensions than Random Walk Metropolis?",
+        "o": [
+          "Because physical momentum trajectories guide proposals along the contours of the high-probability typical set, enabling large distant jumps without falling into low-probability rejection regions",
+          "Because HMC avoids computing the likelihood function",
+          "Because HMC only samples 1 parameter at a time",
+          "Because HMC does not use the Metropolis acceptance step"
+        ],
+        "a": 0,
+        "why": "Random walks diffuse slowly as O(N^2) and suffer catastrophic rejection rates in high dimensions. HMC translates gradient vector information into momentum, traversing the typical set efficiently."
+      },
+      {
+        "q": "What property of the leapfrog integrator makes it essential for HMC?",
+        "o": [
+          "It is symplectic (volume-preserving) and time-reversible, preventing numerical energy drift from accumulating over long trajectory simulations",
+          "It computes integrals in O(1) time without gradients",
+          "It eliminates the need for potential energy",
+          "It guarantees that momentum is always zero"
+        ],
+        "a": 0,
+        "why": "Non-symplectic integrators (like Euler) accumulate energy drift, causing the Hamiltonian to explode. Symplectic integrators oscillate around the true energy surface, preserving phase space volume."
+      },
+      {
+        "q": "What algorithm automatically tunes the trajectory length L in modern Bayesian probabilistic programming languages (such as Stan and PyMC)?",
+        "o": [
+          "The No-U-Turn Sampler (NUTS)",
+          "K-means clustering",
+          "Stochastic Gradient Descent",
+          "The Expectation-Maximisation algorithm"
+        ],
+        "a": 0,
+        "why": "NUTS builds recursive binary trees of leapfrog steps, automatically terminating the trajectory as soon as the particle begins to turn back on itself (No-U-Turn), eliminating the need for manual tuning of L."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "map-and-bayesian-estimation"
+    ],
+    related: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "variational-inference",
+      "markov-chains-and-stationary-distributions",
+      "bayesian_linear_regression"
+    ],
+    keywords: "hamiltonian monte carlo hmc nuts no u turn sampler leapfrog integrator symplectic momentum typical set stan"
+  },
+
+  {
+    id: "variational-inference",
+    short: "Variational inference",
+    title: "Variational Inference",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 3,
+    minutes: 18,
+    noLab: true,
+    summary: "Turn intractable posterior integration into continuous optimisation: fit a simpler tractable distribution q(z) to the true posterior p(z|x) by maximising the Evidence Lower Bound (ELBO).",
+    lead: "Exact Bayesian posterior calculation requires computing a marginal likelihood integral over latent variables that is intractable for all but conjugate models. Variational inference circumvents numerical integration by recasting inference as an optimisation problem.",
+    intuition: [
+      "In Bayesian modelling, we observe data $x$ generated via unobserved latent variables $z$ according to a joint distribution $p(x, z) = p(x \\mid z) p(z)$. The central goal is evaluating the posterior distribution $p(z \\mid x) = p(x, z) / p(x)$. However, the marginal likelihood (evidence) $p(x) = \\int p(x, z) dz$ is frequently an intractable high-dimensional integral when priors and likelihoods are non-conjugate, as in deep latent variable models or complex hierarchical Bayesian networks.",
+      "Markov chain Monte Carlo (MCMC) tackles this intractability by constructing a Markov chain whose stationary distribution matches the exact posterior. While asymptotically exact, MCMC explores state spaces slowly and scales poorly to millions of observations or real-time latent inferences. Variational inference (VI) offers an alternative paradigm: instead of sampling, approximate the posterior using continuous optimisation.",
+      "VI posits a tractable family of distributions over latent variables $\\mathcal{Q} = \\{q_\\theta(z)\\}$ parameterised by variational parameters $\\theta$. It then searches within $\\mathcal{Q}$ for the distribution $q^*(z)$ that minimises the Kullback–Leibler divergence $D_{\\mathrm{KL}}(q_\\theta(z) \\parallel p(z \\mid x))$ to the true posterior. Because the true posterior $p(z \\mid x)$ is unknown, we cannot minimise this divergence directly. Fortunately, decomposing the log marginal evidence reveals that maximising the Evidence Lower Bound (ELBO) is mathematically identical to minimising this divergence.",
+      "The choice of family $\\mathcal{Q}$ determines both fidelity and computational tractability. The classic mean-field approximation assumes latent variables factorise completely: $q(z) = \\prod_{j=1}^M q_j(z_j)$. Under this structure, Coordinate Ascent Variational Inference (CAVI) iteratively updates each variational factor in closed form. In modern deep learning, variational autoencoders (VAEs) employ stochastic gradient variational inference, using amortised neural networks and the reparameterisation trick to optimise the ELBO via standard backpropagation."
+    ],
+    analogy: "Imagine sculpting a statue out of a block of marble to match a phantom figure standing behind a frosted glass screen. You cannot touch or measure the phantom directly (the intractable posterior), but every step closer your chisel sculpts the marble against a shadow projection (the joint likelihood and prior) raises the total illumination in the studio (the evidence lower bound). When illumination reaches its peak, your marble sculpture is the closest possible physical approximation within your sculpting toolset.",
+    steps: [
+      {
+        "title": "1. Specify generative model and variational family",
+        "body": "Define the joint distribution $p(x, z) = p(x \\mid z) p(z)$ with observed $x$ and latents $z$. Choose a tractable variational family $\\mathcal{Q} = \\{q(z \\mid \\theta)\\}$, such as a factorised mean-field Gaussian distribution."
+      },
+      {
+        "title": "2. Formulate the Evidence Lower Bound (ELBO)",
+        "body": "Decompose $\\log p(x) = \\mathrm{ELBO}(q) + D_{\\mathrm{KL}}(q(z) \\parallel p(z \\mid x))$. Because KL divergence is non-negative, $\\mathrm{ELBO}(q) = \\mathbb{E}_q[\\log p(x, z)] - \\mathbb{E}_q[\\log q(z)] \\le \\log p(x)$. Maximising the ELBO directly minimises divergence to the true posterior."
+      },
+      {
+        "title": "3. Coordinate ascent updates (CAVI)",
+        "body": "Under the mean-field assumption $q(z) = \\prod_j q_j(z_j)$, derive closed-form updates for each factor: $\\log q_j^*(z_j) = \\mathbb{E}_{q_{-j}}[\\log p(x, z)] + \\mathrm{const}$. Iterate across factors until the ELBO converges."
+      },
+      {
+        "title": "4. Stochastic gradient and reparameterisation",
+        "body": "For non-conjugate or deep neural models where expectations lack closed forms, approximate gradients using Monte Carlo samples. For continuous latents, apply the reparameterisation trick $z = g_\\theta(\\epsilon)$ with $\\epsilon \\sim \\mathcal{N}(0, I)$ to propagate low-variance gradients directly into variational parameters."
+      }
+    ],
+    math: [
+      {
+        "h": "Evidence and KL Decomposition",
+        "tex": "\\log p(x) = \\mathbb{E}_{q(z)}\\left[\\log \\frac{p(x, z)}{q(z)}\\right] + D_{\\mathrm{KL}}(q(z) \\parallel p(z \\mid x)) = \\mathrm{ELBO}(q) + D_{\\mathrm{KL}}(q \\parallel p)",
+        "p": "Because the KL divergence is non-negative and equals zero if and only if q(z) = p(z|x), the ELBO serves as a strict mathematical lower bound on the log evidence log p(x). Maximising the ELBO with respect to q directly minimises KL divergence to the exact posterior."
+      },
+      {
+        "h": "ELBO Components: Reconstruction vs Regularisation",
+        "tex": "\\mathrm{ELBO}(q) = \\mathbb{E}_{q(z)}[\\log p(x \\mid z)] - D_{\\mathrm{KL}}(q(z) \\parallel p(z))",
+        "p": "Rewriting the ELBO decomposes the objective into an expected log-likelihood term (rewarding variational states that reconstruct observed data well) and a prior KL penalty (regularising q(z) toward prior p(z))."
+      },
+      {
+        "h": "Mean-Field Coordinate Ascent (CAVI)",
+        "tex": "\\log q_j^*(z_j) = \\mathbb{E}_{-j}[\\log p(x, z_j, z_{-j})] + \\text{const}",
+        "p": "For each latent variable j, the optimal mean-field factor q_j*(z_j) is proportional to the exponential of the expected complete-data log-likelihood conditioned on all remaining factors -j."
+      }
+    ],
+    code: "import numpy as np\n\n# Coordinate Ascent Variational Inference (CAVI) for 1D Gaussian Mixture\n# Model: x_i ~ N(mu_{c_i}, 1), prior mu_k ~ N(0, sigma_0^2), equal cluster weights\nnp.random.seed(42)\n\n# Generate synthetic two-component mixture\nn_samples = 300\ntrue_mus = np.array([-2.5, 3.0])\nassignments = np.random.binomial(1, 0.5, size=n_samples)\nx = np.where(assignments == 0, np.random.normal(true_mus[0], 1.0, n_samples),\n                               np.random.normal(true_mus[1], 1.0, n_samples))\n\nK = 2\nsigma0_sq = 10.0  # Prior variance on cluster means\n\n# Initialise variational parameters:\n# q(mu_k) = N(m_k, s2_k), q(c_i) = Categorical(phi_i)\nm = np.random.normal(0, 1, size=K)\ns2 = np.ones(K)\nphi = np.ones((n_samples, K)) / K\n\ndef compute_elbo(x, m, s2, phi, sigma0_sq):\n    elbo = 0.0\n    for k in range(K):\n        # Prior on mu_k\n        elbo += -0.5 * np.log(2 * np.pi * sigma0_sq) - (m[k]**2 + s2[k]) / (2 * sigma0_sq)\n        # Entropy of q(mu_k)\n        elbo += 0.5 * np.log(2 * np.pi * np.e * s2[k])\n    \n    # Expected likelihood and cluster entropy\n    for i in range(n_samples):\n        for k in range(K):\n            if phi[i, k] > 1e-12:\n                exp_log_lik = -0.5 * np.log(2 * np.pi) - 0.5 * ((x[i] - m[k])**2 + s2[k])\n                elbo += phi[i, k] * (exp_log_lik - np.log(phi[i, k]) - np.log(K))\n    return elbo\n\n# Coordinate Ascent iterations\nn_iters = 25\nelbo_history = []\n\nfor it in range(n_iters):\n    # 1. Update cluster responsibilities phi_ik\n    for i in range(n_samples):\n        log_rho = np.zeros(K)\n        for k in range(K):\n            log_rho[k] = -0.5 * ((x[i] - m[k])**2 + s2[k]) - np.log(K)\n        # Softmax normalisation for stability\n        rho = np.exp(log_rho - np.max(log_rho))\n        phi[i] = rho / np.sum(rho)\n        \n    # 2. Update variational parameters for cluster means m_k and s2_k\n    for k in range(K):\n        sum_phi = np.sum(phi[:, k])\n        s2[k] = 1.0 / (1.0 / sigma0_sq + sum_phi)\n        m[k] = s2[k] * np.sum(phi[:, k] * x)\n        \n    elbo = compute_elbo(x, m, s2, phi, sigma0_sq)\n    elbo_history.append(elbo)\n\nprint(f\"True cluster means: {true_mus}\")\nprint(f\"Variational posterior means: {np.sort(m).round(3)}\")\nprint(f\"Variational posterior variances: {s2[np.argsort(m)].round(4)}\")\nprint(f\"Initial ELBO: {elbo_history[0]:.2f} -> Final ELBO: {elbo_history[-1]:.2f}\")\nprint(f\"ELBO strictly non-decreasing: {np.all(np.diff(elbo_history) >= -1e-7)}\")",
+    keyPoints: [
+      "Transforms Bayesian inference from intractable numerical integration into continuous optimisation over distribution parameters.",
+      "The Evidence Lower Bound (ELBO) satisfies ELBO(q) = log p(x) - D_KL(q || p) <= log p(x); maximising it minimises divergence to the true posterior.",
+      "Mean-field variational inference factorises latent variables independently, enabling coordinate ascent (CAVI) in conditionally conjugate models.",
+      "Underestimates posterior variance: because reverse KL heavily penalises places where q > 0 but p approx 0, VI fits tightly into the dominant mode rather than covering the whole spread.",
+      "Stochastic VI and the reparameterisation trick allow VI to scale to massive datasets and power variational autoencoders (VAEs)."
+    ],
+    pitfalls: [
+      "Zero-forcing variance underestimation: Reverse KL forces q(z) to remain strictly within high-density regions of p(z|x), underestimating true parameter uncertainty and ignoring secondary modes.",
+      "Mean-field correlation blindness: Assuming complete factorisation q(z) = \\prod q_j(z_j) forces all covariance between latent variables to zero, potentially corrupting inference when latents are strongly coupled.",
+      "Local optima: Unlike MCMC which theoretically visits the whole support asymptotically, gradient ascent on the ELBO can get trapped in local optima or bad saddle points."
+    ],
+    quiz: [
+      {
+        "q": "Why does maximising the Evidence Lower Bound (ELBO) minimise the KL divergence D_KL(q(z) || p(z|x))?",
+        "o": [
+          "Because the log evidence log p(x) is constant with respect to q(z), and log p(x) = ELBO(q) + D_KL(q || p)",
+          "Because the KL divergence is always negative, so increasing ELBO reduces its absolute magnitude",
+          "Because ELBO equals the exact likelihood multiplied by the prior",
+          "Because variational inference forces the posterior to equal 1 everywhere"
+        ],
+        "a": 0,
+        "why": "The fundamental decomposition is log p(x) = ELBO(q) + D_KL(q || p(z|x)). Since log p(x) does not depend on variational distribution q, increasing ELBO directly forces D_KL down."
+      },
+      {
+        "q": "What is a major qualitative difference between the posterior approximation from mean-field VI compared to MCMC?",
+        "o": [
+          "Mean-field VI tends to underestimate posterior variance and ignores correlations between latent variables",
+          "Mean-field VI is guaranteed to be asymptotically exact while MCMC always diverges",
+          "Mean-field VI overestimates posterior variance across all peripheral modes",
+          "Mean-field VI cannot be applied to models with continuous latent variables"
+        ],
+        "a": 0,
+        "why": "Because reverse KL D_KL(q || p) is zero-forcing and the mean-field assumption forces factorisation q(z) = \\prod q_j(z_j), VI fits tightly inside the primary mode and zeroes out off-diagonal posterior covariances."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kl-divergence",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "hamiltonian-monte-carlo",
+      "map-and-bayesian-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    keywords: "variational inference, elbo, mean field, cavi, coordinate ascent, kl divergence, latent variables, reparameterisation trick"
+  },
+
+  {
+    id: "markov-chains-and-stationary-distributions",
+    short: "Markov chains",
+    title: "Markov Chains and Stationary Distributions",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Model stochastic state transitions where the future depends only on the present: understand transition matrices, Chapman–Kolmogorov equations, ergodicity, and the stationary distribution \\pi = \\pi P.",
+    lead: "From Google PageRank and queueing systems to MCMC sampling and reinforcement learning, stochastic processes with memoryless state transitions provide the foundational framework for long-run equilibrium analysis.",
+    intuition: [
+      "A Markov chain is a discrete-time stochastic process {X_0, X_1, X_2, ...} taking values in a discrete state space S. Its defining property—the Markov property—states that conditional on current state X_t, the probability of transitioning to any future state X_{t+1} is independent of the sequence of past states: P(X_{t+1} = j | X_t = i, X_{t-1}, ..., X_0) = P(X_{t+1} = j | X_t = i) = P_{ij}.",
+      "These one-step transition probabilities form a row-stochastic matrix P where every entry P_{ij} >= 0 and each row sums to 1. To predict the distribution over states n steps into the future, we apply the Chapman–Kolmogorov equations: P(X_{t+n} = j | X_t = i) = (P^n)_{ij}. If the initial state distribution across all states is a row vector \\pi_0, the state distribution at step n is simply \\pi_n = \\pi_0 P^n.",
+      "A fundamental question is: what happens as n -> \\infty? Does the distribution settle into a steady state, independent of the initial starting condition \\pi_0? A probability distribution \\pi is called a stationary (or invariant) distribution if \\pi = \\pi P. Once the process attains this distribution, running it further forward in time never alters the probability of finding the system in any given state.",
+      "The Fundamental Convergence Theorem of Markov Chains guarantees that a unique stationary distribution \\pi exists and \\lim_{n \\to \\infty} \\pi_0 P^n = \\pi$ for any initial distribution \\pi_0, provided the chain is ergodic—meaning it is irreducible (any state can be reached from any other state in finite steps) and aperiodic (transitions do not cycle deterministically on fixed periods). Furthermore, if a distribution satisfies detailed balance (reversibility), \\pi_i P_{ij} = \\pi_j P_{ji}, it is guaranteed to be a stationary distribution—a property exploited by MCMC algorithms."
+    ],
+    analogy: "Imagine a group of commuters moving between three subway stations every morning according to fixed transition odds: 70% stay at their workplace station, 20% move to the downtown station, and 10% move to the outer ring. Regardless of where commuters began on Monday morning, within two or three weeks the percentage of commuters found at each station stabilises into an invariant daily distribution—the stationary distribution of the transit chain.",
+    steps: [
+      {
+        "title": "1. Specify states and transition matrix",
+        "body": "Define the state space S = {1, ..., K} and populate the transition matrix P where P_{ij} = P(X_{t+1}=j | X_t=i), ensuring each row sums strictly to 1."
+      },
+      {
+        "title": "2. Verify ergodicity (irreducibility and aperiodicity)",
+        "body": "Ensure the transition graph is strongly connected (every state communicates with every other state) and has no periodic loops (gcd of return path lengths equals 1)."
+      },
+      {
+        "title": "3. Solve the stationary distribution balance equation",
+        "body": "Solve the linear system \\pi = \\pi P subject to \\sum_i \\pi_i = 1 and \\pi_i >= 0. Algebraically, this corresponds to finding the normalised left eigenvector of P associated with eigenvalue \\lambda = 1."
+      },
+      {
+        "title": "4. Monitor convergence and mixing time",
+        "body": "Track ||\\pi_0 P^n - \\pi||_{TV} as step count n grows. The rate of geometric convergence is governed by the second largest eigenvalue magnitude |\\lambda_2| < 1, with spectral gap \\gamma = 1 - |\\lambda_2| determining mixing time."
+      }
+    ],
+    math: [
+      {
+        "h": "The Markov Property and Chapman–Kolmogorov",
+        "tex": "P(X_{t+n} = j \\mid X_t = i) = (P^n)_{ij}, \\quad \\pi_n = \\pi_0 P^n",
+        "p": "The memoryless property implies multi-step transition probabilities are obtained directly by matrix powering. Given initial row probability vector pi_0, the marginal state distribution at step n is pi_0 P^n."
+      },
+      {
+        "h": "Stationary Distribution Equation",
+        "tex": "\\pi P = \\pi \\quad \\iff \\quad \\pi (I - P) = 0 \\quad \\text{subject to} \\quad \\sum_{i=1}^K \\pi_i = 1, \\; \\pi_i \\ge 0",
+        "p": "The stationary distribution pi is the normalised left eigenvector of transition matrix P corresponding to eigenvalue lambda = 1."
+      },
+      {
+        "h": "Detailed Balance (Reversibility)",
+        "tex": "\\pi_i P_{ij} = \\pi_j P_{ji} \\quad \\forall i, j \\in \\mathcal{S}",
+        "p": "Detailed balance states the probability flux from state i to state j equals the reverse flux from j to i. Summing both sides over i shows detailed balance is a sufficient condition for stationarity."
+      }
+    ],
+    code: "import numpy as np\n\n# 4-state ergodic Markov chain\nstates = ['Sunny', 'Cloudy', 'Rainy', 'Stormy']\nK = len(states)\n\n# Row-stochastic transition matrix P: P[i, j] = P(X_{t+1} = j | X_t = i)\nP = np.array([\n    [0.70, 0.20, 0.08, 0.02],  # Sunny\n    [0.30, 0.40, 0.25, 0.05],  # Cloudy\n    [0.15, 0.35, 0.40, 0.10],  # Rainy\n    [0.10, 0.20, 0.50, 0.20],  # Stormy\n])\n\n# Method 1: Solve via Left Eigenvector of P\neigenvalues, left_eigenvectors = np.linalg.eig(P.T)\n# Find eigenvalue closest to 1.0\nidx = np.argmin(np.abs(eigenvalues - 1.0))\nstationary_eigen = np.real(left_eigenvectors[:, idx])\nstationary_eigen /= np.sum(stationary_eigen)\n\n# Method 2: Solve linear system (P.T - I) pi = 0 with constraint sum(pi) = 1\nA = np.vstack([P.T - np.eye(K), np.ones((1, K))])\nb = np.append(np.zeros(K), 1.0)\nstationary_lstsq, _, _, _ = np.linalg.lstsq(A, b, rcond=None)\n\n# Method 3: Simulate long-run discrete Markov trajectory\nnp.random.seed(42)\nn_steps = 100_000\ncurrent_state = 0  # Start at Sunny\nvisits = np.zeros(K)\n\nfor _ in range(n_steps):\n    visits[current_state] += 1\n    current_state = np.random.choice(K, p=P[current_state])\n\nempirical_dist = visits / n_steps\n\nprint(\"Stationary distribution (Analytic left-eigen):\")\nfor s, p in zip(states, stationary_eigen):\n    print(f\"  {s:8s}: {p:.4f}\")\n\nprint(\"\\nEmpirical long-run frequency (100k steps):\")\nfor s, p in zip(states, empirical_dist):\n    print(f\"  {s:8s}: {p:.4f}\")\n\n# Spectral gap and mixing rate\nsorted_eigenvals = np.sort(np.abs(eigenvalues))[::-1]\nspectral_gap = 1.0 - sorted_eigenvals[1]\nprint(f\"\\nSecond eigenvalue magnitude: {sorted_eigenvals[1]:.4f}\")\nprint(f\"Spectral gap: {spectral_gap:.4f} (governs mixing rate)\")",
+    keyPoints: [
+      "The Markov property dictates that the future state depends only on current state, not on the sequence of preceding states.",
+      "A stochastic matrix P has non-negative entries with row sums equal to 1, guaranteeing that 1 is its largest eigenvalue.",
+      "Ergodic chains (irreducible and aperiodic) possess a unique stationary distribution \\pi such that \\lim_{n \\to \\infty} \\pi_0 P^n = \\pi regardless of initial distribution \\pi_0.",
+      "Detailed balance \\pi_i P_{ij} = \\pi_j P_{ji} provides a sufficient condition for stationarity, forming the foundation of MCMC sampling algorithms.",
+      "The spectral gap 1 - |\\lambda_2| controls the mixing time: larger spectral gaps yield rapid convergence to the stationary distribution."
+    ],
+    pitfalls: [
+      "Periodic chains failing to converge: An alternating two-state chain oscillating between state A and B has stationary distribution (0.5, 0.5), but \\pi_0 P^n alternates (1, 0) and (0, 1) without converging.",
+      "Reducible chains with multiple equilibria: If the chain has disconnected absorbing sets, the stationary distribution is non-unique and depends directly on where the chain began.",
+      "Confusing row vectors and column vectors: Because P is row-stochastic (\\sum_j P_{ij} = 1), the stationary distribution satisfies the left-multiplication \\pi P = \\pi, not P \\pi = \\pi."
+    ],
+    quiz: [
+      {
+        "q": "Which condition is strictly required for a finite Markov chain to possess a unique stationary distribution independent of initial conditions?",
+        "o": [
+          "The chain must be ergodic (irreducible and aperiodic)",
+          "The transition matrix must be symmetric",
+          "All diagonal transition probabilities must be zero",
+          "The state space must contain at least one absorbing state"
+        ],
+        "a": 0,
+        "why": "Ergodicity guarantees irreducibility (every state is reachable from every other state) and aperiodicity (no deterministic cyclical loops), ensuring unique convergence regardless of initial distribution."
+      },
+      {
+        "q": "What is the relationship between detailed balance \\pi_i P_{ij} = \\pi_j P_{ji} and the stationary distribution?",
+        "o": [
+          "Detailed balance is a sufficient condition for stationarity, meaning any distribution satisfying it is guaranteed to be stationary",
+          "Detailed balance is necessary for stationarity; non-reversible chains never have stationary distributions",
+          "Detailed balance implies that the transition matrix P must be identity",
+          "Detailed balance guarantees that the chain will terminate within a finite number of steps"
+        ],
+        "a": 0,
+        "why": "Summing both sides of detailed balance over i yields \\sum_i \\pi_i P_{ij} = \\pi_j \\sum_i P_{ji} = \\pi_j(1) = \\pi_j, which is exactly the stationarity condition \\pi P = \\pi."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "probability-rules-and-bayes-theorem"
+    ],
+    related: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "hamiltonian-monte-carlo",
+      "variational-inference",
+      "state-space-models-and-the-kalman-filter"
+    ],
+    keywords: "markov chain, stationary distribution, transition matrix, ergodicity, detailed balance, chapman kolmogorov, mixing time, spectral gap"
+  },
+
+  {
+    id: "state-space-models-and-the-kalman-filter",
+    short: "Kalman filter",
+    title: "State-Space Models and the Kalman Filter",
+    task: "concepts",
+    module: "Time series and survival",
+    level: 3,
+    minutes: 18,
+    noLab: true,
+    summary: "Track hidden dynamical states from noisy sequential observations: understand linear Gaussian state-space systems, the two-phase Predict–Update recursion, and optimal Kalman gain.",
+    lead: "Whether tracking satellite orbits, estimating vehicle velocity from GPS, or forecasting latent macroeconomic trends, real-world signals are obscured by measurement noise. The Kalman filter recursively computes the exact minimum mean squared error Bayesian estimate of hidden states.",
+    intuition: [
+      "A state-space model represents a dynamical system across time using two core components: a hidden state vector $x_t$ that evolves dynamically according to physical laws or autoregressive processes, and an observed measurement vector $y_t$ that reflects noisy, incomplete linear projections of that hidden state. The transition equation $x_t = F_t x_{t-1} + B_t u_t + w_t$ governs state progression with process noise $w_t \\sim \\mathcal{N}(0, Q_t)$, while the measurement equation $y_t = H_t x_t + v_t$ captures observations subject to sensor noise $v_t \\sim \\mathcal{N}(0, R_t)$.",
+      "The challenge is that neither process dynamics nor sensor readings are immaculate. If you rely solely on forward physics (process model), errors accumulate unbounded over time. If you rely solely on instantaneous sensor measurements, high-frequency measurement noise corrupts estimates. The Kalman filter provides the mathematically optimal fusion: it combines the dynamical prediction with the incoming sensor measurement, weighting each strictly in proportion to their relative inverse uncertainties.",
+      "The filter operates as a two-phase recursive algorithm: Predict and Update. In the Predict phase, the state estimate and error covariance are projected forward one step in time using system dynamics $F_t$ and process noise $Q_t$. In the Update phase, an incoming measurement $y_t$ is compared against predicted observation $H_t \\hat{x}_{t \\mid t-1}$ to form the innovation (or measurement residual) $\\tilde{y}_t$. The Kalman gain $K_t$ balances prior uncertainty $P_{t \\mid t-1}$ against measurement noise $R_t$, steering the posterior state estimate toward whichever source is cleaner.",
+      "Under linear dynamics and Gaussian noise distributions, the Kalman filter is the exact optimal Bayesian posterior estimator, producing the exact conditional mean and covariance at every time step. Even when noise distributions are non-Gaussian, the Kalman filter remains the Best Linear Unbiased Estimator (BLUE)."
+    ],
+    analogy: "Imagine steering a yacht through thick coastal fog at midnight. Your nautical dead-reckoning equations predict your position based on compass heading and engine throttle (the dynamic state prediction), but sea currents steadily drift your vessel off course (process noise). Every five minutes, a lighthouse flash briefly illuminates a shoreline buoy (noisy sensor measurement). The Kalman filter is the seasoned navigator who compares the dead-reckoning position against the momentary glimpse of the buoy, shifting the helm by an optimal correction that yields the most accurate position on the chart.",
+    steps: [
+      {
+        "title": "1. Model state dynamics and sensor geometry",
+        "body": "Formulate state vector $x_t$ (e.g. $[position, velocity]^T$), state transition matrix $F$, process noise covariance $Q$, measurement matrix $H$, and measurement noise covariance $R$."
+      },
+      {
+        "title": "2. Time update: predict state and covariance",
+        "body": "Project state ahead: $\\hat{x}_{t \\mid t-1} = F_t \\hat{x}_{t-1 \\mid t-1} + B_t u_t$. Project error covariance ahead: $P_{t \\mid t-1} = F_t P_{t-1 \\mid t-1} F_t^T + Q_t$."
+      },
+      {
+        "title": "3. Measurement update: compute innovation and Kalman gain",
+        "body": "Compute measurement innovation $\\tilde{y}_t = y_t - H_t \\hat{x}_{t \\mid t-1}$ and innovation covariance $S_t = H_t P_{t \\mid t-1} H_t^T + R_t$. Calculate optimal Kalman gain: $K_t = P_{t \\mid t-1} H_t^T S_t^{-1}$."
+      },
+      {
+        "title": "4. Correct state estimate and refine covariance",
+        "body": "Update posterior state: $\\hat{x}_{t \\mid t} = \\hat{x}_{t \\mid t-1} + K_t \\tilde{y}_t$. Refine posterior error covariance: $P_{t \\mid t} = (I - K_t H_t) P_{t \\mid t-1}$. Repeat for every incoming observation."
+      }
+    ],
+    math: [
+      {
+        "h": "State-Space Formulation",
+        "tex": "x_t = F_t x_{t-1} + B_t u_t + w_t, \\quad y_t = H_t x_t + v_t, \\quad w_t \\sim \\mathcal{N}(0, Q_t), \\; v_t \\sim \\mathcal{N}(0, R_t)",
+        "p": "Linear Gaussian state-space model relating unobserved hidden state x_t to observable measurements y_t via transition matrix F_t and observation matrix H_t."
+      },
+      {
+        "h": "Predict Step (Prior Distribution)",
+        "tex": "\\hat{x}_{t \\mid t-1} = F_t \\hat{x}_{t-1 \\mid t-1}, \\quad P_{t \\mid t-1} = F_t P_{t-1 \\mid t-1} F_t^T + Q_t",
+        "p": "Extrapolates state mean and covariance forward in time prior to incorporating measurement at step t, compounding existing uncertainty with process noise Q_t."
+      },
+      {
+        "h": "Update Step (Kalman Gain and Posterior)",
+        "tex": "K_t = P_{t \\mid t-1} H_t^T (H_t P_{t \\mid t-1} H_t^T + R_t)^{-1}, \\quad \\hat{x}_{t \\mid t} = \\hat{x}_{t \\mid t-1} + K_t (y_t - H_t \\hat{x}_{t \\mid t-1})",
+        "p": "Kalman gain K_t minimises the trace of posterior covariance matrix P_{t|t}. When sensor noise R_t is small, K_t approaches H^{-1} trusting measurement; when R_t is massive, K_t approaches 0 trusting prediction."
+      }
+    ],
+    code: "import numpy as np\n\n# 1D Kinematic Tracking: Position and Velocity\n# True physics: constant velocity with random acceleration shocks\nnp.random.seed(42)\ndt = 0.1\nn_steps = 100\n\n# State transition matrix F: [position, velocity]^T\nF = np.array([[1.0, dt],\n              [0.0, 1.0]])\n\n# Measurement matrix H: observe position only\nH = np.array([[1.0, 0.0]])\n\n# Noise covariances\nq_var = 0.1   # Process noise acceleration variance\nQ = np.array([[0.25 * dt**4, 0.5 * dt**3],\n              [0.5 * dt**3, dt**2]]) * q_var\nr_var = 4.0   # Measurement noise variance (noisy sensor)\nR = np.array([[r_var]])\n\n# Simulate true trajectory and noisy measurements\ntrue_state = np.array([0.0, 5.0])  # Initial: pos=0m, vel=5m/s\ntrue_positions = []\nnoisy_measurements = []\n\nfor _ in range(n_steps):\n    process_shock = np.random.multivariate_normal([0, 0], Q)\n    true_state = F @ true_state + process_shock\n    sensor_noise = np.random.normal(0, np.sqrt(r_var))\n    measurement = H @ true_state + sensor_noise\n    \n    true_positions.append(true_state[0])\n    noisy_measurements.append(measurement[0])\n\n# Kalman Filter Estimation\nx_hat = np.array([0.0, 0.0])       # Initial estimate\nP = np.array([[10.0, 0.0],\n              [0.0, 10.0]])        # High initial uncertainty\n\nestimated_positions = []\nestimated_velocities = []\n\nfor y_t in noisy_measurements:\n    # --- Predict Step ---\n    x_pred = F @ x_hat\n    P_pred = F @ P @ F.T + Q\n    \n    # --- Update Step ---\n    y_meas = np.array([y_t])\n    innovation = y_meas - H @ x_pred\n    S = H @ P_pred @ H.T + R\n    K = P_pred @ H.T @ np.linalg.inv(S)\n    \n    x_hat = x_pred + K @ innovation\n    P = (np.eye(2) - K @ H) @ P_pred\n    \n    estimated_positions.append(x_hat[0])\n    estimated_velocities.append(x_hat[1])\n\n# Calculate Root Mean Squared Errors\nrmse_noisy = np.sqrt(np.mean((np.array(noisy_measurements) - np.array(true_positions))**2))\nrmse_kalman = np.sqrt(np.mean((np.array(estimated_positions) - np.array(true_positions))**2))\n\nprint(f\"Raw measurement position RMSE: {rmse_noisy:.3f} m\")\nprint(f\"Kalman filtered position RMSE: {rmse_kalman:.3f} m\")\nprint(f\"Noise reduction: {(1 - rmse_kalman / rmse_noisy) * 100:.1f}%\")\nprint(f\"Final velocity estimate: {estimated_velocities[-1]:.3f} m/s (true: {true_state[1]:.3f} m/s)\")",
+    keyPoints: [
+      "Recursive online Bayesian estimator: processes observations sequentially without needing to store past history.",
+      "Optimal under Gaussian noise: minimises Mean Squared Error (MMSE) across all estimators for linear Gaussian models.",
+      "BLUE under non-Gaussian noise: Best Linear Unbiased Estimator even when noise distributions deviate from Gaussianity.",
+      "The Kalman gain K_t dynamically balances model prediction against sensor noise based on their relative covariances.",
+      "Forms the foundation for non-linear state estimation: Extended Kalman Filter (EKF via Jacobians) and Unscented Kalman Filter (UKF via sigma points)."
+    ],
+    pitfalls: [
+      "Filter divergence from mis-specified process noise Q: Setting Q unrealistically small causes the filter to overconfidently disregard new measurements, diverging from the true trajectory when accelerations or shocks occur.",
+      "Numerical instability in covariance update: Repeated subtractions in P_{t|t} = (I - K_t H_t) P_{t|t-1} can lose positive semi-definiteness due to floating-point rounding; Joseph form (I - KH)P(I - KH)^T + KRK^T or square-root Cholesky filtering ensures numerical stability.",
+      "Non-linear dynamics breakdown: Standard Kalman filtering requires strictly linear F and H; applying it directly to non-linear systems leads to catastrophic divergence."
+    ],
+    quiz: [
+      {
+        "q": "What occurs to the Kalman gain K_t as the measurement noise covariance R_t approaches infinity?",
+        "o": [
+          "K_t approaches 0, and the filter relies entirely on its dynamic state prediction",
+          "K_t approaches 1, and the filter trusts only the sensor measurement",
+          "The filter covariance P_t diverges to infinity immediately",
+          "The state estimate oscillates sinusoidally"
+        ],
+        "a": 0,
+        "why": "From K_t = P H^T (H P H^T + R)^{-1}, as R -> infinity the inverse matrix vanishes toward zero, driving K_t -> 0. Consequently x_hat = x_pred + 0 = x_pred, ignoring useless sensor data."
+      },
+      {
+        "q": "Why is the Kalman filter preferred over full batch historical smoothing for real-time robotic navigation?",
+        "o": [
+          "The Kalman filter is recursive and requires only the latest estimate and covariance, using O(1) memory per step",
+          "The Kalman filter requires inversion of an N x N matrix spanning all time steps",
+          "The Kalman filter does not require knowledge of measurement noise",
+          "The Kalman filter works only when offline batch data is fully available"
+        ],
+        "a": 0,
+        "why": "Because it is Markovian and recursive, the Kalman filter updates state estimates in constant O(1) time and memory per observation, making it ideal for online real-time embedded systems."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "stationarity-acf-and-pacf",
+      "arima-and-sarima",
+      "exponential-smoothing-ets",
+      "markov-chains-and-stationary-distributions"
+    ],
+    keywords: "kalman filter, state space model, hidden state, process noise, measurement noise, kalman gain, innovation, blue estimator"
+  },
+
+  {
+    id: "survival-analysis-kaplan-meier-and-cox",
+    short: "Survival analysis",
+    title: "Survival Analysis: Kaplan–Meier and Cox Proportional Hazards",
+    task: "concepts",
+    module: "Time series and survival",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Analyse time-to-event outcomes subject to right-censoring: master survival functions, the Kaplan–Meier non-parametric estimator, the log-rank test, and semi-parametric Cox proportional hazards modelling.",
+    lead: "Standard regression fails when predicting time-to-event outcomes because unfinished durations are right-censored: customers have not yet churned, machines have not yet failed, and patients remain alive at study conclusion. Survival analysis properly accounts for censored observation windows.",
+    intuition: [
+      "In many data science problems, the target variable of interest is the time $T \\ge 0$ until an event occurs: customer subscription cancellation (churn), machine component failure, loan default, or clinical relapse. Ordinary regression models encounter a fundamental roadblock: right-censoring. When a customer is still subscribed at the end of a six-month analysis period, their true time-to-churn is unknown—all we know is $T > 6$. Excluding censored cases creates severe survival bias, while treating censored duration as the true event time severely underestimates survival times.",
+      "Survival analysis resolves this by modelling two linked mathematical functions: the survival function $S(t) = P(T > t)$, which specifies the probability an individual survives past time $t$, and the hazard function $h(t)$, which quantifies the instantaneous rate of event occurrence at time $t$ conditional on having survived up to time $t$.",
+      "The Kaplan–Meier estimator provides the gold-standard non-parametric estimate of the survival curve. At each unique event time $t_i$, it computes the conditional probability of surviving step $t_i$ given the risk set $n_i$ (individuals still alive and uncensored immediately prior to $t_i$): $1 - d_i / n_i$, where $d_i$ is the number of events. The cumulative survival function is the product of these conditional survival probabilities. Greenwood's formula supplies asymptotic standard errors and confidence intervals.",
+      "When evaluating the impact of covariates (such as customer tier, contract type, or medical treatment), the Cox Proportional Hazards model provides an elegant semi-parametric regression framework: $h(t \\mid x) = h_0(t) \\exp(\\beta^T x)$. Here, $h_0(t)$ is an arbitrary baseline hazard function that requires no parametric assumptions, while the hazard ratio $\\exp(\\beta_j)$ quantifies the multiplicative increase in instantaneous risk associated with a unit increase in covariate $x_j$. The coefficients $\\beta$ are estimated via Cox's partial likelihood without needing to specify $h_0(t)$."
+    ],
+    analogy: "Imagine tracking the lifespan of lightbulbs in an office tower over a 12-month study. Some bulbs burn out after 3 months (uncensored events). But at month 12, hundreds of bulbs are still burning bright (right-censored). If you average only the burned-out bulbs, you calculate an artificially dismal lifespan. The Kaplan–Meier estimator treats each burnout as an event against the pool of currently glowing bulbs, accurately charting survival probabilities out to 12 months without discarding surviving bulbs.",
+    steps: [
+      {
+        "title": "1. Structure time and censoring indicators",
+        "body": "Represent each individual by duration $T_i$ and event indicator $\\delta_i \\in \\{0, 1\\}$, where $\\delta_i = 1$ denotes observed event and $\\delta_i = 0$ denotes right-censoring."
+      },
+      {
+        "title": "2. Compute Kaplan–Meier non-parametric survival curve",
+        "body": "Sort unique event times $t_1 < t_2 < \\dots < t_k$. At each $t_i$, calculate risk set size $n_i$ and event count $d_i$. Evaluate $\\hat{S}(t) = \\prod_{t_i \\le t} (1 - d_i/n_i)$."
+      },
+      {
+        "title": "3. Compare cohorts using the log-rank test",
+        "body": "Test the null hypothesis that survival curves across groups are identical: compare observed vs expected events at each event time using a chi-square test statistic."
+      },
+      {
+        "title": "4. Fit Cox proportional hazards model via partial likelihood",
+        "body": "Fit $h(t \\mid x) = h_0(t) \\exp(\\beta^T x)$ by maximising Cox's partial likelihood $L(\\beta) = \\prod_{i: \\delta_i=1} \\frac{\\exp(\\beta^T x_i)}{\\sum_{j \\in R(t_i)} \\exp(\\beta^T x_j)}$. Interpret exponentiated coefficients $\\exp(\\beta_j)$ as hazard ratios."
+      }
+    ],
+    math: [
+      {
+        "h": "Survival and Hazard Relationships",
+        "tex": "S(t) = P(T > t) = \\exp\\left(-\\int_0^t h(u) du\\right) = \\exp(-H(t)), \\quad h(t) = \\lim_{\\Delta t \\to 0} \\frac{P(t \\le T < t + \\Delta t \\mid T \\ge t)}{\\Delta t} = -\\frac{S'(t)}{S(t)}",
+        "p": "The survival function S(t) and hazard function h(t) are mathematically dual: hazard is the negative derivative of log survival, and cumulative hazard H(t) integrates hazard over time."
+      },
+      {
+        "h": "Kaplan–Meier Estimator and Greenwood Formula",
+        "tex": "\\hat{S}(t) = \\prod_{t_i \\le t} \\left(1 - \\frac{d_i}{n_i}\\right), \\quad \\widehat{\\operatorname{Var}}(\\hat{S}(t)) = \\hat{S}(t)^2 \\sum_{t_i \\le t} \\frac{d_i}{n_i (n_i - d_i)}",
+        "p": "Product-limit estimator accumulating survival rates over observed failure times. Greenwood formula yields standard error used to construct pointwise confidence intervals."
+      },
+      {
+        "h": "Cox Proportional Hazards and Partial Likelihood",
+        "tex": "h(t \\mid x) = h_0(t) \\exp(\\beta^T x), \\quad L(\\beta) = \\prod_{i=1}^k \\frac{\\exp(\\beta^T x_{(i)})}{\\sum_{j \\in R(t_{(i)})} \\exp(\\beta^T x_j)}",
+        "p": "Baseline hazard h_0(t) cancels completely out of the partial likelihood, allowing estimation of covariate effect coefficients beta without making parametric distributional assumptions about event times."
+      }
+    ],
+    code: "import numpy as np\n\n# Kaplan-Meier Estimator and Cox Partial Likelihood from Scratch\nnp.random.seed(42)\nn_samples = 200\n\n# Synthetic customer churn data\n# Covariate x: premium subscription tier (1 = premium, 0 = standard)\ntier = np.random.binomial(1, 0.4, size=n_samples)\n# True baseline hazard: exponential survival, premium reduces hazard by half (beta = -0.693)\ntrue_beta = -0.7\nhazard = 0.05 * np.exp(true_beta * tier)\ntrue_survival_time = np.random.exponential(1.0 / hazard)\n\n# Study ends at month 24: right-censoring\nstudy_duration = 24.0\nobserved_time = np.minimum(true_survival_time, study_duration)\nevent_occurred = (true_survival_time <= study_duration).astype(int)\n\n# --- Kaplan-Meier Estimation Function ---\ndef kaplan_meier(durations, events):\n    unique_times = np.sort(np.unique(durations[events == 1]))\n    s_t = 1.0\n    km_table = []\n    \n    for t in unique_times:\n        n_at_risk = np.sum(durations >= t)\n        d_events = np.sum((durations == t) & (events == 1))\n        s_t *= (1.0 - d_events / n_at_risk)\n        km_table.append((t, n_at_risk, d_events, s_t))\n    return km_table\n\nkm_standard = kaplan_meier(observed_time[tier == 0], event_occurred[tier == 0])\nkm_premium = kaplan_meier(observed_time[tier == 1], event_occurred[tier == 1])\n\n# --- Cox Proportional Hazards Partial Likelihood ---\ndef cox_log_partial_likelihood(beta, x, time, event):\n    # Sort events in descending order\n    order = np.argsort(time)[::-1]\n    sorted_time = time[order]\n    sorted_event = event[order]\n    sorted_x = x[order]\n    \n    log_lik = 0.0\n    risk_sum = 0.0\n    for i in range(len(sorted_time)):\n        risk_sum += np.exp(beta * sorted_x[i])\n        if sorted_event[i] == 1:\n            log_lik += beta * sorted_x[i] - np.log(risk_sum)\n    return log_lik\n\n# Grid search for maximum partial likelihood estimate beta\nbetas = np.linspace(-1.5, 0.5, 201)\nlog_liks = [cox_log_partial_likelihood(b, tier, observed_time, event_occurred) for b in betas]\nopt_beta = betas[np.argmax(log_liks)]\nhazard_ratio = np.exp(opt_beta)\n\nprint(f\"Censored observations: {np.sum(event_occurred == 0)} / {n_samples} ({np.mean(event_occurred == 0)*100:.1f}%)\")\nprint(f\"Estimated Cox beta: {opt_beta:.3f} (true beta: {true_beta:.3f})\")\nprint(f\"Estimated Hazard Ratio: {hazard_ratio:.3f} (premium customers have {(1 - hazard_ratio)*100:.1f}% lower churn hazard)\")\nprint(f\"Standard tier 12-month survival: {[s for t, n, d, s in km_standard if t <= 12][-1]:.3f}\")\nprint(f\"Premium tier 12-month survival:  {[s for t, n, d, s in km_premium if t <= 12][-1]:.3f}\")",
+    keyPoints: [
+      "Right-censoring occurs when an observation window ends before an event takes place; standard regression creates severe survival bias if censoring is neglected.",
+      "Survival function S(t) = P(T > t) gives the probability of surviving past t; hazard function h(t) gives the instantaneous event rate conditional on prior survival.",
+      "The Kaplan–Meier product-limit estimator provides an exact non-parametric step function estimate of S(t) with Greenwood confidence bands.",
+      "The log-rank test evaluates whether two or more survival curves differ significantly under a non-parametric null hypothesis.",
+      "Cox proportional hazards model is semi-parametric: it estimates hazard ratios exp(beta) via partial likelihood without specifying the baseline hazard h_0(t)."
+    ],
+    pitfalls: [
+      "Treating censored observations as event occurrences or dropping them entirely: Dropping censored data removes the longest-lived subjects, skewing average duration downwards.",
+      "Violation of proportional hazards assumption: Cox models assume hazard ratios exp(beta) remain constant across all time; if a treatment effect decays or inverts over time, the model is mis-specified and needs time-varying covariates or stratification.",
+      "Informative censoring: Survival analysis assumes censoring is non-informative (unrelated to the event probability); if high-risk subjects selectively drop out of a study, estimates become biased."
+    ],
+    quiz: [
+      {
+        "q": "Why does calculating mean time-to-event via standard linear regression produce biased estimates in right-censored studies?",
+        "o": [
+          "Because censored subjects have unknown future event times, and ignoring them removes long survivors while treating duration as event time underestimates survival",
+          "Because linear regression cannot handle continuous dependent variables",
+          "Because the survival function is always strictly greater than 1",
+          "Because censored data implies that the variance of the error terms is exactly zero"
+        ],
+        "a": 0,
+        "why": "Right-censoring means event time is strictly greater than study duration. Dropping censored subjects induces survival bias (discards long lifespans), while treating censored time as event time truncates true lifespan downwards."
+      },
+      {
+        "q": "In a Cox proportional hazards model, what does an estimated hazard ratio exp(beta_j) = 0.65 for a drug treatment indicate?",
+        "o": [
+          "Treated patients experience an instantaneous event risk that is 35% lower than untreated patients at any point in time",
+          "Treated patients live exactly 65% longer in total days",
+          "65% of patients in the treatment group were cured completely",
+          "The hazard increases by 65% per unit increase in drug dosage"
+        ],
+        "a": 0,
+        "why": "A hazard ratio of 0.65 represents a multiplicative scaling of the baseline hazard h(t|x) = h_0(t) * 0.65, meaning event hazard is reduced by 1 - 0.65 = 35% relative to the reference group."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "hypothesis-testing-and-p-values",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "stationarity-acf-and-pacf",
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "state-space-models-and-the-kalman-filter"
+    ],
+    keywords: "survival analysis, kaplan meier, cox proportional hazards, right censoring, hazard ratio, log rank test, greenwood formula, time to event"
+  }
 ];
