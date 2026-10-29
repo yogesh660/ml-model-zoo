@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvseob2j">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvseob2j">
+<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -141,6 +141,56 @@ plt.<span class="f">show</span>()</code></pre></div>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>They use kernels</span></button><button class="opt" type="button"><b>B</b><span>Every split is a threshold on a single feature</span></button><button class="opt" type="button"><b>C</b><span>They are trained with gradient descent</span></button><button class="opt" type="button"><b>D</b><span>They use a sigmoid</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each split is perpendicular to one feature axis.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>What is the minimum possible Gini impurity of a leaf node in a decision tree, and what does it indicate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.0$, indicating that all samples in the leaf belong to a single class (pure node)</span></button><button class="opt" type="button"><b>B</b><span>$0.5$, indicating a 50/50 balance between two classes</span></button><button class="opt" type="button"><b>C</b><span>$1.0$, indicating complete purity</span></button><button class="opt" type="button"><b>D</b><span>$-1.0$, indicating that the leaf should be pruned</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For a pure node where $p_1 = 1.0$ and all other $p_c = 0$, $\text{Gini} = 1 - 1.0^2 = 0.0$. Gini impurity is always non-negative and equals zero if and only if the node is completely pure.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>Which algorithm is standard in scikit-learn for building classification decision trees?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>ID3 using multi-way categorical branching</span></button><button class="opt" type="button"><b>B</b><span>C4.5 with rule sets</span></button><button class="opt" type="button"><b>C</b><span>CART (Classification and Regression Trees)</span></button><button class="opt" type="button"><b>D</b><span>Backpropagation with momentum</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Scikit-learn implements an optimised version of the CART algorithm, which constructs binary trees using feature threshold splits ($x_j \le t$ versus $x_j &gt; t$).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>How do strictly monotonic transformations of a feature (such as taking $\log(x)$ or multiplying by a positive constant) affect the split selection in a decision tree?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>They have zero effect on split quality or tree structure, because decision tree splits depend only on the rank order of feature values</span></button><button class="opt" type="button"><b>B</b><span>They completely change all tree splits because thresholds are fixed</span></button><button class="opt" type="button"><b>C</b><span>They convert the tree into a neural network</span></button><button class="opt" type="button"><b>D</b><span>They cause the tree to fail to converge</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Tree splitting evaluates order thresholds $x_j \le t$. Any strictly monotonic transformation preserves the relative ordering of data points, leaving the optimal split point and impurity reduction completely unchanged.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>Which hyperparameter directly prevents a decision tree from growing arbitrarily deep leaves that memorise individual noisy training rows?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>min_samples_leaf or max_depth</span></button><button class="opt" type="button"><b>B</b><span>learning_rate</span></button><button class="opt" type="button"><b>C</b><span>random_state</span></button><button class="opt" type="button"><b>D</b><span>n_estimators</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Setting max_depth caps tree height, while min_samples_leaf ensures no leaf can be created unless it contains at least a threshold number of training samples, preventing leaves from isolating single outlier points.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>How does Shannon entropy $H(t) = -\sum p_c \log_2 p_c$ compare with Gini impurity $1 - \sum p_c^2$ as a split criterion?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both peak at $0.5$ for a binary 50/50 node</span></button><button class="opt" type="button"><b>B</b><span>Both measure impurity and produce nearly identical splits in practice, but entropy requires computing logarithms, making it slightly more computationally intensive</span></button><button class="opt" type="button"><b>C</b><span>Entropy can only handle binary targets, while Gini handles multiclass</span></button><button class="opt" type="button"><b>D</b><span>Gini impurity is non-convex, whereas entropy is strictly linear</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Gini impurity and entropy are mathematically very similar curves (Gini approximates entropy via a Taylor series expansion of $\log$). Both favour pure nodes; entropy takes slightly longer to compute due to logarithmic evaluations.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q8</span>In scikit-learn's DecisionTreeClassifier, how is feature_importances_ (mean decrease in impurity) computed?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By computing the correlation between each feature and the target</span></button><button class="opt" type="button"><b>B</b><span>By summing the total impurity reduction ($\Delta I$) brought by all splits on that feature, normalised by the total impurity reduction across all features</span></button><button class="opt" type="button"><b>C</b><span>By dropping each feature and measuring the drop in test set accuracy</span></button><button class="opt" type="button"><b>D</b><span>By counting the number of characters in the feature name</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Mean Decrease in Impurity tallies the weighted impurity improvement $\frac{n_t}{n}\Delta I(t)$ for every internal node where that feature was chosen to split, then normalises so the importances sum to 1.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>Why do decision trees often struggle to fit a simple diagonal decision boundary such as $x_1 + x_2 &gt; 2$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because decision trees only split perpendicular to a single coordinate axis at a time, requiring many staircase-like splits to approximate a smooth diagonal boundary</span></button><button class="opt" type="button"><b>B</b><span>Because diagonal lines violate the Gini impurity formula</span></button><button class="opt" type="button"><b>C</b><span>Because decision trees cannot compare two features</span></button><button class="opt" type="button"><b>D</b><span>Because diagonal boundaries require negative learning rates</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Standard CART trees use univariate, axis-aligned splits ($x_j \le t$). Approximating a diagonal line requires a complex staircase of horizontal and vertical cuts, requiring high depth and many training samples.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>A parent node has 40 samples (20 Class A, 20 Class B). A candidate split divides it into: Left child (20 Class A, 0 Class B), Right child (0 Class A, 20 Class B). Using Gini impurity, what is the Gini information gain $\Delta \text{Gini} = \text{Gini}(\text{parent}) - \frac{n_L}{n}\text{Gini}(L) - \frac{n_R}{n}\text{Gini}(R)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.25$</span></button><button class="opt" type="button"><b>B</b><span>$0.50$</span></button><button class="opt" type="button"><b>C</b><span>$1.00$</span></button><button class="opt" type="button"><b>D</b><span>$0.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Parent has $p_A = 0.5, p_B = 0.5 \implies \text{Gini} = 1 - (0.5^2 + 0.5^2) = 0.50$. Both children are pure ($\text{Gini} = 0.0$). Weighted child impurity is $0.0$. Information gain is $0.50 - 0.0 = 0.50$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>What is the Shannon entropy in bits ($H = -\sum p_c \log_2 p_c$) of a node containing 50% Class A, 25% Class B, and 25% Class C?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1.00$ bit</span></button><button class="opt" type="button"><b>B</b><span>$1.50$ bits</span></button><button class="opt" type="button"><b>C</b><span>$1.75$ bits</span></button><button class="opt" type="button"><b>D</b><span>$2.00$ bits</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $H = -[0.5 \log_2(0.5) + 0.25 \log_2(0.25) + 0.25 \log_2(0.25)] = -[0.5(-1.0) + 0.25(-2.0) + 0.25(-2.0)] = -[-0.5 - 0.5 - 0.5] = 1.50$ bits.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>A parent node of 10 samples has 6 positive and 4 negative instances ($\text{Gini} = 1 - (0.6^2 + 0.4^2) = 0.48$). A split sends 4 samples to the Left (all 4 positive) and 6 samples to the Right (2 positive, 4 negative). What is the weighted child Gini impurity $\frac{n_L}{n}\text{Gini}(L) + \frac{n_R}{n}\text{Gini}(R)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.267$</span></button><button class="opt" type="button"><b>B</b><span>$0.444$</span></button><button class="opt" type="button"><b>C</b><span>$0.480$</span></button><button class="opt" type="button"><b>D</b><span>$0.120$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Left child is pure ($\text{Gini} = 0.0$). Right child has $p = (1/3, 2/3) \implies \text{Gini} = 1 - (1/9 + 4/9) = 4/9 \approx 0.444$. Weighted child impurity is $\frac{4}{10}(0) + \frac{6}{10}(4/9) = 24/90 = 4/15 \approx 0.267$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -176,11 +226,11 @@ plt.<span class="f">show</span>()</code></pre></div>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/core.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/algos.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/models.js?v=mvseob2j" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvseob2j" defer></script>
-<script src="../../assets/learn.js?v=mvseob2j" defer></script>
+<script src="../../assets/site.js?v=mvsiqfct" defer></script>
+<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
+<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
+<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvsiqfct" defer></script>
+<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
 </body>
 </html>
