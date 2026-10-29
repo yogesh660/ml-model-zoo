@@ -57,7 +57,7 @@ module.exports = [
       r`Interpreting quantile coefficients as mean effects: $\beta_\tau$ reflects the marginal change in the $\tau$-th percentile, not in the population average.`,
     ],
     code: r`import numpy as np
-from scipy.optimize import linprog
+from scipy.optimise import linprog
 
 np.random.seed(42)
 n = 120
@@ -486,8 +486,8 @@ print("Theoretical OOB fraction 1/e:", round(float(1 / np.e), 3))`,
 
 np.random.seed(42)
 n_per_class, K = 60, 3
-centers = [[-1.5, -1.0], [1.5, -1.0], [0.0, 1.8]]
-X = np.vstack([np.random.normal(c, 0.6, (n_per_class, 2)) for c in centers])
+centres = [[-1.5, -1.0], [1.5, -1.0], [0.0, 1.8]]
+X = np.vstack([np.random.normal(c, 0.6, (n_per_class, 2)) for c in centres])
 y = np.repeat([0, 1, 2], n_per_class)
 N, p = X.shape
 X_b = np.column_stack([np.ones(N), X])
@@ -3401,4 +3401,2070 @@ print(f"MAP@5:   {map_score:.4f}")`,
     related: ['collaborative-filtering', 'matrix-factorisation-and-als', 'confusion-matrix'],
     keywords: 'ranking metrics ndcg map learning to rank dcg lambdamart recommender systems average precision search ranking',
   },
+
+  {
+    id: "poisson-and-tweedie-regression",
+    short: "Poisson & Tweedie reg.",
+    title: "Poisson and Tweedie Regression",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Model count data and zero-inflated continuous payouts: understand GLMs for non-negative responses, log link functions, overdispersion, and compound Poisson-gamma Tweedie distributions.",
+    lead: "Ordinary least squares assumes constant Gaussian error variance and produces negative predictions for counts and costs. Poisson and Tweedie regression model positive, skewed, and zero-inflated targets using tailored exponential dispersion families.",
+    intuition: [
+      "Standard linear regression encounters serious failures when the target variable is a non-negative count (such as daily website sign-ups, hospital admissions, or insurance claims) or a continuous monetary payout with an exact point mass at zero (such as warranty repair payouts or customer credit defaults). OLS can produce negative predicted values, predicts fractional values for discrete events, and violates homoscedasticity because variance typically grows with the expected value.",
+      "Poisson regression addresses discrete count data by placing the response within the generalised Linear Model (GLM) framework. Using a log link function $\\log(\\mu_i) = x_i^T \\beta$, the conditional mean $\\mu_i = \\exp(x_i^T \\beta)$ is guaranteed to remain strictly positive. The model assumes an equi-dispersion property: the conditional variance equals the conditional mean, $\\operatorname{Var}(Y_i \\mid x_i) = \\mu_i$. When empirical data violates this assumption—frequently due to unobserved heterogeneity causing overdispersion (variance exceeding the mean)—analysts upgrade to Quasi-Poisson or Negative Binomial regression.",
+      "In insurance pricing and marketing spend modelling, target variables often exhibit a compound nature: many observations are exactly zero (no insurance claim filed), but when non-zero, the cost is a continuous, heavily right-skewed positive monetary sum. Modelling this requires a compound Poisson-gamma distribution, formalised as a Tweedie distribution with power parameter $p \\in (1, 2)$.",
+      "Under the Tweedie family, variance scales as $\\operatorname{Var}(Y) = \\phi \\mu^p$. When $p = 0$, the family recovers the Gaussian distribution; $p = 1$ is the Poisson; $p = 2$ is the Gamma; and $p = 3$ is the Inverse Gaussian. For $1 < p < 2$, the Tweedie distribution seamlessly models zero-inflated continuous responses without requiring cumbersome two-stage hurdle models."
+    ],
+    analogy: "Imagine predicting insurance claims for a fleet of haulage trucks. Most trucks go an entire year without an incident (generating zero payouts). But when a crash occurs, repairs cost thousands of pounds with a long right-skewed tail. A Gaussian model predicts negative £500 payouts for safe drivers, while a pure Gamma model cannot tolerate exact zero payouts. A compound Poisson-gamma Tweedie model matches the reality: a Poisson draw determines how many accidents occur, and an independent Gamma draw sets the severity of each claim.",
+    steps: [
+      {
+        "title": "1. Select response family and verify distribution",
+        "body": "Inspect target variable: if integers $y \\in \\{0, 1, 2, \\dots\\}$, evaluate Poisson or Negative Binomial. If zero-inflated continuous sums $y \\ge 0$, specify a Tweedie GLM with $1 < p < 2$ (typically $p \\approx 1.5$)."
+      },
+      {
+        "title": "2. Specify log link function and linear predictor",
+        "body": "Relate features to expected response via log link: $\\eta_i = x_i^T \\beta$ and $\\mu_i = g^{-1}(\\eta_i) = \\exp(\\eta_i)$. For rate models over differing exposure periods $t_i$, include an offset term $\\log(t_i)$."
+      },
+      {
+        "title": "3. Fit coefficients via Iteratively Reweighted Least Squares (IRLS)",
+        "body": "Maximise the log-likelihood or quasi-likelihood using Fisher scoring / Newton–Raphson, iteratively updating working weights $W = \\operatorname{diag}(\\mu_i)$ and working responses $z_i = \\eta_i + (y_i - \\mu_i)/\\mu_i$."
+      },
+      {
+        "title": "4. Check dispersion and evaluate deviance",
+        "body": "Compute Pearson dispersion statistic $\\chi^2 / (n - p)$. If significantly greater than 1 in Poisson regression, fit a Negative Binomial or adjust standard errors with a quasi-likelihood dispersion parameter $\\hat{\\phi}$."
+      }
+    ],
+    math: [
+      {
+        "h": "Poisson Log-Likelihood and Score Equation",
+        "tex": "\\ell(\\beta) = \\sum_{i=1}^n \\left( y_i x_i^T \\beta - \\exp(x_i^T \\beta) - \\log(y_i!) \\right), \\quad \\nabla_\\beta \\ell(\\beta) = \\sum_{i=1}^n (y_i - \\mu_i) x_i = 0",
+        "p": "The score equation shows that maximum likelihood estimates match the weighted sum of residuals to zero. The Hessian is strictly negative definite, guaranteeing a unique global optimum."
+      },
+      {
+        "h": "Tweedie Variance Function and Power Parameter",
+        "tex": "\\operatorname{Var}(Y) = \\phi \\cdot V(\\mu) = \\phi \\cdot \\mu^p, \\quad p = \\frac{q - 2}{q - 1} \\in (1, 2)",
+        "p": "For p in (1, 2), Y is represented as the sum of N independent Gamma random variables where N is Poisson-distributed, creating a valid probability density with a positive point mass at Y = 0."
+      },
+      {
+        "h": "Tweedie Deviance Function",
+        "tex": "d(y, \\mu) = 2 \\left( \\frac{y^{2-p}}{(1-p)(2-p)} - \\frac{y \\mu^{1-p}}{1-p} + \\frac{\\mu^{2-p}}{2-p} \\right)",
+        "p": "The unit deviance measures distance between observed response y and fitted expectation mu, replacing residual sum of squares during loss optimisation and cross-validation."
+      }
+    ],
+    code: "import numpy as np\n\n# Poisson GLM via Iteratively Reweighted Least Squares (IRLS) from scratch\nnp.random.seed(42)\nn_samples = 500\n\n# Synthetic features and true rate parameters\nx1 = np.random.normal(0, 1, n_samples)\nx2 = np.random.uniform(-1, 1, n_samples)\nX = np.column_stack([np.ones(n_samples), x1, x2])\n\ntrue_beta = np.array([1.2, 0.6, -0.4])\nmu_true = np.exp(X @ true_beta)\n# Sample Poisson counts\ny = np.random.poisson(mu_true)\n\n# IRLS Algorithm for Poisson GLM with Log Link\nbeta = np.zeros(X.shape[1])\nmax_iters = 20\ntol = 1e-8\n\nfor it in range(max_iters):\n    eta = X @ beta\n    mu = np.exp(eta)\n    \n    # Weight matrix W and working response z\n    # For Poisson log link: W_ii = mu_i, z_i = eta_i + (y_i - mu_i) / mu_i\n    W = mu\n    z = eta + (y - mu) / mu\n    \n    # Weighted least squares update: (X^T W X) beta_new = X^T W z\n    XTW = X.T * W\n    beta_new = np.linalg.solve(XTW @ X, XTW @ z)\n    \n    diff = np.max(np.abs(beta_new - beta))\n    beta = beta_new\n    if diff < tol:\n        break\n\n# Compute standard errors from Fisher information matrix\ncov_matrix = np.linalg.inv(X.T @ (X * mu[:, None]))\nse_beta = np.sqrt(np.diag(cov_matrix))\n\n# Compute Pearson dispersion statistic to check for overdispersion\npearson_chi2 = np.sum((y - mu)**2 / mu)\ndispersion = pearson_chi2 / (n_samples - len(beta))\n\nprint(f\"True coefficients:     {true_beta}\")\nprint(f\"Estimated Poisson beta: {beta.round(4)}\")\nprint(f\"Standard errors:        {se_beta.round(4)}\")\nprint(f\"Pearson dispersion:     {dispersion:.3f} (approx 1 indicates no overdispersion)\")\n\n# Tweedie 1.5 Compound Poisson-Gamma Simulation\n# When y has point mass at zero and positive continuous payout\np = 1.5\nn_claims = np.random.poisson(lam=0.3, size=200)\nseverity = np.where(n_claims > 0, np.random.gamma(shape=2.0, scale=500.0, size=200), 0.0)\nprint(f\"Tweedie data zero fraction: {np.mean(severity == 0)*100:.1f}%\")\nprint(f\"Mean non-zero claim: £{np.mean(severity[severity > 0]):.2f}\")",
+    keyPoints: [
+      "Poisson regression models discrete non-negative counts $y \\in \\{0, 1, 2, \\dots\\}$ using a log link function that guarantees positive predicted means.",
+      "Equi-dispersion assumption: Poisson assumes $\\operatorname{Var}(Y) = \\mathbb{E}[Y]$. Overdispersion (variance > mean) requires Quasi-Poisson or Negative Binomial models.",
+      "Tweedie distributions parameterised by power parameter $p \\in (1, 2)$ represent a compound Poisson-gamma process with an exact point mass at zero and continuous positive tail.",
+      "Eliminates the need for awkward log(y + 1) heuristics or separate two-stage classification/regression pipelines in insurance and marketing pricing.",
+      "Estimated via Iteratively Reweighted Least Squares (IRLS), which converges rapidly due to global convexity of exponential dispersion deviance."
+    ],
+    pitfalls: [
+      "Applying standard OLS to log(y + 1): Adding arbitrary pseudo-counts introduces arbitrary bias depending on measurement units, distorting slope estimates.",
+      "Ignoring overdispersion in Poisson regression: When data has variance greater than the mean, Poisson point estimates remain consistent but standard errors are severely underestimated, producing false-positive p-values.",
+      "Overlooking exposure periods: When observations span differing intervals (e.g. 1 month vs 12 months), failing to include $\\log(exposure)$ as an offset estimates average counts rather than true rates."
+    ],
+    quiz: [
+      {
+        "q": "Why is Tweedie regression with power parameter p = 1.5 particularly suited for insurance claim payouts?",
+        "o": [
+          "It naturally accommodates a point mass at zero (no claims) and a positive right-skewed continuous payout for claims in a single model",
+          "It transforms count data into a standard uniform distribution",
+          "It assumes errors are normally distributed with zero mean",
+          "It requires no iterations or numerical optimisation to fit"
+        ],
+        "a": 0,
+        "why": "Tweedie distributions with 1 < p < 2 represent compound Poisson-gamma distributions, giving a discrete probability at zero combined with continuous Gamma payouts for non-zero events."
+      },
+      {
+        "q": "What should a modeller do if the Pearson dispersion statistic chi^2 / (n - p) for a fitted Poisson GLM equals 4.8?",
+        "o": [
+          "Switch to a Negative Binomial GLM or apply quasi-Poisson standard error adjustments to account for overdispersion",
+          "Use ordinary linear regression with mean squared error loss instead",
+          "Add 1 to all count observations and refit",
+          "Assume the Poisson model is valid because 4.8 is greater than zero"
+        ],
+        "a": 0,
+        "why": "A dispersion statistic of 4.8 indicates severe overdispersion (variance is almost 5 times the mean). Standard Poisson SEs are heavily underestimated; Negative Binomial or Quasi-Poisson correction is required."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "generalised-linear-models",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "generalised-linear-models",
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "residual-diagnostics-and-heteroscedasticity"
+    ],
+    keywords: "poisson regression, tweedie regression, generalised linear models, overdispersion, negative binomial, compound poisson gamma, count data"
+  },
+
+  {
+    id: "isotonic-regression",
+    short: "Isotonic regression",
+    title: "Isotonic Regression",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 14,
+    noLab: true,
+    summary: "Fit a non-parametric, monotonic increasing step function to 1D data: master the Pool Adjacent Violators Algorithm (PAVA) and probability calibration.",
+    lead: "When physical domain knowledge dictates that response y must increase monotonically with predictor x, linear models enforce too much rigidity while splines can wiggle. Isotonic regression finds the exact least-squares monotonic fit using piecewise constant steps.",
+    intuition: [
+      "In many scientific and business applications, the relationship between a predictor $x$ and target $y$ is strictly monotonic: dose-response curves in clinical pharmacology (higher drug concentration never decreases toxicity), customer pricing sensitivity, credit score default risk, and probability calibration. However, the exact parametric mathematical form (whether linear, exponential, or sigmoidal) is completely unknown.",
+      "Linear regression imposes a rigid straight line, which can fail catastrophically if the true relationship is non-linear. High-degree polynomials or unconstrained smoothing splines can capture curvature, but frequently oscillate or violate monotonicity on unobserved gaps, generating nonsense predictions.",
+      "Isotonic regression solves this dilemma through non-parametric shape-constrained estimation. It finds a sequence of fitted values $\\hat{y}_i$ that minimises the sum of squared errors $\\sum_{i=1}^n w_i (y_i - \\hat{y}_i)^2$ subject strictly to the monotonicity ordering constraint: $x_i \\le x_j \\implies \\hat{y}_i \\le \\hat{y}_j$. The resulting model is a non-decreasing piecewise constant step function that conforms flexibly to arbitrary monotonic shapes without assuming any predefined mathematical curve.",
+      "A premier modern application of isotonic regression is classifier calibration. Machine learning models such as Random Forests, Naive Bayes, or boosted trees output raw scores that rank samples effectively but do not represent well-calibrated probabilities. Isotonic regression maps raw classifier scores into calibrated posterior probabilities non-parametrically, outperforming Platt scaling when the distortion is non-sigmoidal."
+    ],
+    analogy: "Imagine constructing a wheelchair access ramp across a hillside terrain of jagged mounds and dips. You must grade the dirt such that every point on the path is at least as high as all preceding points (monotonic ascent). Whenever you encounter a downward dip, you must shovel soil from the peak into the valley until both settle into a single flat terrace. The Pool Adjacent Violators Algorithm performs exactly this earth-moving process: pooling violating dips into flat monotonic steps.",
+    steps: [
+      {
+        "title": "1. Sort observations by predictor x",
+        "body": "Order the dataset such that $x_1 \\le x_2 \\le \\dots \\le x_n$. Associate each point with observation $y_i$ and non-negative weight $w_i$ (default $w_i = 1$)."
+      },
+      {
+        "title": "2. Initialise fitted values to raw responses",
+        "body": "Set initial candidates $\\hat{y}_i = y_i$ for all $i = 1, \\dots, n$."
+      },
+      {
+        "title": "3. Execute Pool Adjacent Violators Algorithm (PAVA)",
+        "body": "Scan from left to right. Whenever a monotonicity violation $\\hat{y}_i > \\hat{y}_{i+1}$ occurs, merge the two adjacent groups into a pooled block, setting the joint value to their weighted average: $\\bar{y} = (w_i \\hat{y}_i + w_{i+1} \\hat{y}_{i+1}) / (w_i + w_{i+1})$."
+      },
+      {
+        "title": "4. Back-track and propagate merges",
+        "body": "After merging, check if the newly pooled value violates monotonicity with preceding blocks. Back-track and merge leftwards until the entire sequence up to the current point satisfies monotonicity. Continue to the end of the sequence."
+      }
+    ],
+    math: [
+      {
+        "h": "Constrained Least-Squares Formulation",
+        "tex": "\\min_{\\hat{y}_1, \\dots, \\hat{y}_n} \\sum_{i=1}^n w_i (y_i - \\hat{y}_i)^2 \\quad \\text{subject to} \\quad \\hat{y}_1 \\le \\hat{y}_2 \\le \\dots \\le \\hat{y}_n",
+        "p": "The quadratic objective is strictly convex, and the constraint set is a closed convex cone (the isotonic cone). This guarantees the existence of a unique global minimiser."
+      },
+      {
+        "h": "PAVA Pooling Condition",
+        "tex": "\\bar{y}_{A \\cup B} = \\frac{\\sum_{i \\in A} w_i y_i + \\sum_{j \\in B} w_j y_j}{\\sum_{i \\in A} w_i + \\sum_{j \\in B} w_j}",
+        "p": "When group A violates monotonicity with successor B (y_A > y_B), the constrained minimiser across their union is exactly the weighted sample mean of both groups combined."
+      },
+      {
+        "h": "Probability Calibration Error (ECE)",
+        "tex": "\\mathrm{ECE} = \\sum_{m=1}^M \\frac{|B_m|}{n} \\left| \\operatorname{acc}(B_m) - \\operatorname{conf}(B_m) \\right|",
+        "p": "Expected Calibration Error measures calibration discrepancy across probability bins B_m. Isotonic calibration fits a non-decreasing mapping from raw model confidence to empirical accuracy."
+      }
+    ],
+    code: "import numpy as np\n\n# Pool Adjacent Violators Algorithm (PAVA) from scratch\ndef isotonic_regression_pava(y, w=None):\n    n = len(y)\n    if w is None:\n        w = np.ones(n, dtype=float)\n    else:\n        w = np.array(w, dtype=float)\n        \n    # Stack stores: [weight, sum_wy, y_mean, start_idx, end_idx]\n    stack = []\n    \n    for i in range(n):\n        curr_w = w[i]\n        curr_sum = w[i] * y[i]\n        curr_mean = y[i]\n        start_idx = i\n        end_idx = i\n        \n        # Check for monotonicity violation with top of stack\n        while stack and stack[-1][2] >= curr_mean:\n            prev_w, prev_sum, _, prev_start, _ = stack.pop()\n            curr_w += prev_w\n            curr_sum += prev_sum\n            curr_mean = curr_sum / curr_w\n            start_idx = prev_start\n            \n        stack.append((curr_w, curr_sum, curr_mean, start_idx, end_idx))\n        \n    # Unpack fitted values\n    y_hat = np.zeros(n, dtype=float)\n    for block_w, block_sum, block_mean, s, e in stack:\n        y_hat[s:e+1] = block_mean\n        \n    return y_hat\n\n# Synthetic noisy monotonic dose-response curve\nnp.random.seed(42)\nn_samples = 40\nx = np.linspace(0, 10, n_samples)\ntrue_response = 1.0 / (1.0 + np.exp(-(x - 5)))  # Sigmoidal response\nnoise = np.random.normal(0, 0.15, n_samples)\ny_noisy = true_response + noise\n\n# Fit isotonic regression\ny_iso = isotonic_regression_pava(y_noisy)\n\n# Verify strict monotonicity\nis_monotonic = np.all(np.diff(y_iso) >= 0)\nmse_raw = np.mean((y_noisy - true_response)**2)\nmse_iso = np.mean((y_iso - true_response)**2)\n\nprint(f\"Number of samples:          {n_samples}\")\nprint(f\"Isotonic fit is monotonic:  {is_monotonic}\")\nprint(f\"Number of unique flat steps: {len(np.unique(y_iso))}\")\nprint(f\"Raw noisy MSE to truth:     {mse_raw:.4f}\")\nprint(f\"Isotonic MSE to truth:      {mse_iso:.4f} (noise filtered)\")\nprint(f\"First 5 fitted step values: {np.unique(y_iso)[:5].round(3)}\")",
+    keyPoints: [
+      "Non-parametric shape-constrained regression: enforces strict monotonicity ($x_i \\le x_j \\implies \\hat{y}_i \\le \\hat{y}_j$) without assuming any specific mathematical curve.",
+      "Solved exactly in $O(n)$ time using the Pool Adjacent Violators Algorithm (PAVA).",
+      "Yields a piecewise constant step function with horizontal plateaus wherever adjacent points were pooled.",
+      "Widely utilised for classifier probability calibration, non-parametrically mapping raw classifier scores into true posterior probabilities.",
+      "Highly prone to severe overfitting on small datasets ($n < 1000$) where steps capture noisy spikes; Platt scaling is safer when sample sizes are small."
+    ],
+    pitfalls: [
+      "Overfitting on small sample sizes: In small datasets, isotonic calibration creates step-like over-fitting where probabilities are squashed onto zero or one plateaus.",
+      "Out-of-sample extrapolation failure: Isotonic regression cannot extrapolate outside observed ranges of $x$; points below $\\min(x)$ or above $\\max(x)$ are clamped to boundary step values.",
+      "Multivariate curse of dimensionality: True multi-dimensional isotonic regression is an NP-hard partial order problem; PAVA applies strictly to 1D ordered arrays."
+    ],
+    quiz: [
+      {
+        "q": "How does the Pool Adjacent Violators Algorithm (PAVA) resolve a monotonicity violation where y_i > y_{i+1}?",
+        "o": [
+          "It pools the adjacent violating observations and replaces both with their weighted average",
+          "It deletes the offending observation from the dataset",
+          "It sets the violating point to zero",
+          "It rotates the coordinate axis until the slope becomes positive"
+        ],
+        "a": 0,
+        "why": "When y_i > y_{i+1}, least-squares under ordering constraints forces hat{y}_i = hat{y}_{i+1}; the least-squares optimum for a pooled group is its weighted sample average."
+      },
+      {
+        "q": "When should a practitioner choose Platt scaling over Isotonic regression for probability calibration?",
+        "o": [
+          "When the dataset is small (e.g. fewer than 1000 samples) to prevent isotonic step-fitting from overfitting",
+          "When the true calibration curve is non-monotonic",
+          "When the calibration dataset has over 1,000,000 samples",
+          "When the target variable is continuous regression rather than binary classification"
+        ],
+        "a": 0,
+        "why": "Platt scaling is parametric (fitting a 2-parameter logistic sigmoid), making it resistant to overfitting on small validation sets, whereas non-parametric isotonic regression overfits small samples."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "poisson-and-tweedie-regression",
+      "pls-and-principal-component-regression"
+    ],
+    keywords: "isotonic regression, pava, pool adjacent violators, monotonicity, calibration, probability calibration, shape constrained regression"
+  },
+
+  {
+    id: "pls-and-principal-component-regression",
+    short: "PLS & PCR",
+    title: "Partial Least Squares and Principal Component Regression",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Solve severe multicollinearity and high dimensions by projecting features onto low-dimensional latent subspaces: compare unsupervised PCR with covariance-maximising supervised PLS.",
+    lead: "When predictors outnumber samples (p >> n) or exhibit collinearity, OLS is rank-deficient or unstable. PCR projects onto top variance directions without looking at the target; PLS finds latent components that simultaneously maximise covariance between predictors and the target.",
+    intuition: [
+      "In modern high-dimensional settings—such as spectroscopy in chemometrics, genomics, or financial factor models—we frequently encounter hundreds or thousands of features with high inter-correlation, often exceeding sample size ($p \\gg n$). Under these conditions, the ordinary least squares covariance matrix $X^T X$ is singular or ill-conditioned, blowing up coefficient variances and destroying generalisation.",
+      "Principal Component Regression (PCR) addresses this problem via a two-stage pipeline: first, perform Principal Component Analysis (PCA) on feature matrix $X$ to extract the top $k$ orthogonal principal components; second, fit an ordinary least squares regression using these $k$ components as predictors. Because components are orthogonal, multicollinearity vanishes completely, and dimension is reduced from $p$ to $k$.",
+      "However, PCR has a fundamental structural vulnerability: PCA is entirely unsupervised. It constructs components that maximise variance within $X$, paying zero attention to the response $y$. If the variance in $X$ is dominated by background sensor drift or irrelevant noise, PCR selects high-variance noise directions while discarding low-variance directions that actually contain the predictive signal.",
+      "Partial Least Squares (PLS) regression resolves this flaw by making the latent component extraction supervised. Instead of maximising variance $\\operatorname{Var}(X w)$, PLS finds weight vectors $w$ that maximise squared sample covariance $\\operatorname{Cov}(X w, y)^2$. By balancing feature variance with target correlation, PLS achieves equal or superior predictive performance to PCR using significantly fewer latent components."
+    ],
+    analogy: "Imagine scouting a football team. PCR watches players practice alone in an empty field, selecting the players who run the greatest distance and move the fastest (unsupervised feature variance). But some of those players might be running aimlessly without passing or shooting at goal. PLS scouts players during an active match against an opponent, selecting the players whose runs directly result in goals and assists (covariance between player movement and match score).",
+    steps: [
+      {
+        "title": "1. Standardise predictors and centre response",
+        "body": "Standardise feature matrix $X$ to zero mean and unit variance ($Z$-scores); centre response vector $y$ to zero mean."
+      },
+      {
+        "title": "2. PCR: compute principal components of X",
+        "body": "Perform SVD on $X = U \\Sigma V^T$. Project $X$ onto top $k$ eigenvectors: $T = X V_k$. Fit OLS: $\\hat{\\gamma} = (T^T T)^{-1} T^T y$. Back-transform coefficients to original feature space: $\\hat{\\beta}_{\\mathrm{PCR}} = V_k \\hat{\\gamma}$."
+      },
+      {
+        "title": "3. PLS: extract covariance-maximising components (NIPALS)",
+        "body": "Compute cross-product $w_1 = X^T y / \\|X^T y\\|$. Construct score vector $t_1 = X w_1$. Regress $X$ and $y$ onto $t_1$ to compute loadings $p_1 = X^T t_1 / (t_1^T t_1)$ and $q_1 = y^T t_1 / (t_1^T t_1)$."
+      },
+      {
+        "title": "4. Deflate matrices and iterate",
+        "body": "Deflate feature matrix $X_{m+1} = X_m - t_m p_m^T$ and response $y_{m+1} = y_m - t_m q_m$. Repeat for $m = 1, \\dots, k$. Select optimal component count $k$ via cross-validation."
+      }
+    ],
+    math: [
+      {
+        "h": "PCR Estimator",
+        "tex": "T_k = X V_k, \\quad \\hat{\\gamma} = (T_k^T T_k)^{-1} T_k^T y, \\quad \\hat{\\beta}_{\\mathrm{PCR}} = V_k (T_k^T T_k)^{-1} T_k^T y",
+        "p": "PCR projects predictors onto the first k eigenvectors of sample covariance X^T X, effectively performing OLS on orthogonal latent scores."
+      },
+      {
+        "h": "PLS Objective Function",
+        "tex": "\\max_{\\|w\\| = 1} \\operatorname{Cov}(X w, y)^2 = \\max_{\\|w\\| = 1} \\operatorname{Var}(X w) \\operatorname{Corr}(X w, y)^2",
+        "p": "PLS simultaneously balances feature variance with response correlation, ensuring latent directions carry both strong descriptive spread and predictive power."
+      },
+      {
+        "h": "NIPALS Deflation Equations",
+        "tex": "t_m = X_m w_m, \\quad p_m = \\frac{X_m^T t_m}{t_m^T t_m}, \\quad X_{m+1} = X_m - t_m p_m^T, \\quad y_{m+1} = y_m - t_m \\frac{y_m^T t_m}{t_m^T t_m}",
+        "p": "Subtracting the outer product of score t_m and loading p_m orthogonalises remaining feature space, preventing duplicate information in subsequent components."
+      }
+    ],
+    code: "import numpy as np\n\n# Principal Component Regression (PCR) vs Partial Least Squares (PLS) from scratch\nnp.random.seed(42)\nn_samples = 80\nn_features = 20\n\n# Create collinear high-dimensional features\nlatent = np.random.normal(0, 1, (n_samples, 3))\n# Features: 10 correlate with latent 0, 5 with latent 1, 5 are high-variance noise\nX_signal = latent @ np.random.normal(0, 1, (3, 15))\nX_noise = np.random.normal(0, 3.0, (n_samples, 5))  # High variance noise!\nX = np.hstack([X_signal, X_noise])\n# True response depends ONLY on latent[0] (low total variance compared to noise)\ny = 3.0 * latent[:, 0] - 2.0 * latent[:, 1] + np.random.normal(0, 0.5, n_samples)\n\n# Standardise X and centre y\nX_std = (X - np.mean(X, axis=0)) / np.std(X, axis=0)\ny_std = y - np.mean(y)\n\n# 1. PCR Implementation (Unsupervised SVD)\ndef fit_pcr(X, y, k):\n    U, S, Vt = np.linalg.svd(X, full_matrices=False)\n    V_k = Vt[:k, :].T\n    T_k = X @ V_k\n    gamma = np.linalg.lstsq(T_k, y, rcond=None)[0]\n    beta_pcr = V_k @ gamma\n    return beta_pcr\n\n# 2. PLS Implementation (Supervised NIPALS)\ndef fit_pls(X, y, k):\n    n, p = X.shape\n    X_m = X.copy()\n    y_m = y.copy()\n    \n    W = np.zeros((p, k))\n    P = np.zeros((p, k))\n    q = np.zeros(k)\n    \n    for m in range(k):\n        # Weight vector: covariance with target\n        w_m = X_m.T @ y_m\n        w_m /= np.linalg.norm(w_m)\n        t_m = X_m @ w_m\n        t_norm_sq = t_m @ t_m\n        \n        p_m = (X_m.T @ t_m) / t_norm_sq\n        q_m = (y_m @ t_m) / t_norm_sq\n        \n        # Deflate\n        X_m -= np.outer(t_m, p_m)\n        y_m -= t_m * q_m\n        \n        W[:, m] = w_m\n        P[:, m] = p_m\n        q[m] = q_m\n        \n    # Compute regression coefficients beta_pls\n    # beta = W (P^T W)^{-1} q\n    beta_pls = W @ np.linalg.inv(P.T @ W) @ q\n    return beta_pls\n\n# Compare PCR and PLS with k=3 components\nk = 3\nbeta_pcr = fit_pcr(X_std, y_std, k)\nbeta_pls = fit_pls(X_std, y_std, k)\n\npred_pcr = X_std @ beta_pcr\npred_pls = X_std @ beta_pls\n\nr2_pcr = 1.0 - np.sum((y_std - pred_pcr)**2) / np.sum(y_std**2)\nr2_pls = 1.0 - np.sum((y_std - pred_pls)**2) / np.sum(y_std**2)\n\nprint(f\"Dataset shape: {X.shape} (high multicollinearity + high-variance noise)\")\nprint(f\"PCR (k={k}) R^2: {r2_pcr:.4f} (dragged down by high-variance noise features)\")\nprint(f\"PLS (k={k}) R^2: {r2_pls:.4f} (targets predictive covariance)\")",
+    keyPoints: [
+      "PCR performs unsupervised PCA on features followed by OLS on the top $k$ principal components, eliminating multicollinearity.",
+      "Vulnerability of PCR: PCA maximises feature variance without regard to $y$; if predictors with high variance carry no signal, PCR fails.",
+      "PLS performs supervised latent component extraction, finding directions that maximise squared covariance $\\operatorname{Cov}(X w, y)^2$.",
+      "PLS typically matches or beats PCR using substantially fewer components because every extracted component is steered toward the response.",
+      "Both methods require careful standardisation of features prior to decomposition and selection of component count $k$ via cross-validation."
+    ],
+    pitfalls: [
+      "Failing to standardise features: PCA and PLS are scale-sensitive; features with large arbitrary numerical ranges dominate components regardless of predictive power.",
+      "Assuming PCR components are predictive: The first principal component has maximal variance, but may have zero correlation with the response target.",
+      "Information leakage in cross-validation: Decompositions (both PCA and PLS) must be computed strictly inside each training fold, not on the entire dataset."
+    ],
+    quiz: [
+      {
+        "q": "What is the fundamental difference in the objective function between PCR and PLS?",
+        "o": [
+          "PCR maximises variance Var(Xw) in an unsupervised manner, while PLS maximises squared covariance Cov(Xw, y)^2 with the target",
+          "PCR is a non-linear method while PLS is strictly linear",
+          "PCR can only be used for classification while PLS is only for regression",
+          "PLS requires inverting the full p x p matrix while PCR never inverts matrices"
+        ],
+        "a": 0,
+        "why": "PCR extracts components via PCA to maximise feature variance alone; PLS extracts components that simultaneously maximise feature variance and correlation with target y."
+      },
+      {
+        "q": "Why might PCR perform poorly when high-variance sensor noise is added to a dataset?",
+        "o": [
+          "PCA prioritises the noise features due to their large variance, putting them into the top components rather than the true signal",
+          "SVD fails to converge when noise is present",
+          "The OLS stage will produce imaginary numbers",
+          "The number of principal components cannot exceed the sample size"
+        ],
+        "a": 0,
+        "why": "Because PCA is unsupervised, it orders components strictly by variance. High-variance noise dominates the first principal components, pushing the predictive signal into discarded lower components."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "multicollinearity-and-vif"
+    ],
+    related: [
+      "ols_linear_regression",
+      "ridge_regression",
+      "multicollinearity-and-vif",
+      "poisson-and-tweedie-regression"
+    ],
+    keywords: "pls, partial least squares, pcr, principal component regression, nipals, dimensionality reduction, multicollinearity, high dimensional regression"
+  },
+
+  {
+    id: "mars",
+    short: "MARS",
+    title: "Multivariate Adaptive Regression Splines",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Construct non-linear, non-parametric regression models using piecewise linear hinge functions: master forward basis selection and backward pruning via generalised cross-validation (GCV).",
+    lead: "MARS automatically uncovers non-linear relationships and high-order feature interactions without requiring manual feature engineering, building an interpretable piecewise linear spline model.",
+    intuition: [
+      "Traditional linear models are constrained by rigid linearity. To capture non-linear patterns, data scientists frequently hand-engineer polynomial features ($x^2, x^3$) or interaction products ($x_1 x_2$). However, polynomial terms have notorious runaway behaviour at boundaries, and searching through all possible interactions among dozens of features creates combinatorial explosion.",
+      "Jerome Friedman developed Multivariate Adaptive Regression Splines (MARS) in 1991 to automate non-linear regression and feature interaction discovery. MARS uses mirrored pairs of piecewise linear hinge functions (also known as truncated power functions or hockey-stick functions): $\\max(0, x - c)$ and $\\max(0, c - x)$, where $c$ is a candidate knot location placed at observed values of predictor $x$.",
+      "The algorithm proceeds in two distinct stages. In the Forward Pass, MARS starts with an intercept and iteratively searches across all features and knot locations, greedily adding the pair of hinge functions (or interaction products of existing hinges with new hinges) that yields the greatest reduction in sum of squared errors. This forward greedy expansion intentionally overfits the training data.",
+      "In the Backward Pruning Pass, MARS systematically removes basis functions one by one, using Generalised Cross-Validation (GCV) to penalise model complexity. The model that minimises GCV is selected. The resulting model is non-linear, continuous, easily interpretable as localized slopes and interaction terms, and computationally fast."
+    ],
+    analogy: "Imagine sculpting an irregular wooden contour using a set of wooden wedges and hinges. Rather than bending a stiff steel beam across the whole length (a linear model) or trying to carve an infinitely curved mathematical spiral (a high-degree polynomial), you place joint hinges at key stress points. Each hinge bends linearly in one direction and remains flat in the other. Once you have placed hinges everywhere, you remove the redundant joints until you are left with the cleanest structural framework.",
+    steps: [
+      {
+        "title": "1. Initialise model with intercept",
+        "body": "Set model $B_0(x) = 1$. The initial candidate basis set contains $\\mathcal{M} = \\{B_0\\}$."
+      },
+      {
+        "title": "2. Forward pass: greedily add hinge pairs",
+        "body": "At each step, search over all existing basis functions $B_m \\in \\mathcal{M}$, all features $x_j$, and all observed knots $c$. Find the pair $B_m(x) \\cdot \\max(0, x_j - c)$ and $B_m(x) \\cdot \\max(0, c - x_j)$ that minimises residual sum of squares. Add both to $\\mathcal{M}$ until reaching maximum basis count $M_{\\max}$."
+      },
+      {
+        "title": "3. Backward pass: prune basis functions",
+        "body": "Systematically remove basis functions one by one, choosing at each step the term whose deletion causes the smallest increase in RSS. Evaluate the GCV score for each sub-model."
+      },
+      {
+        "title": "4. Select optimal sub-model via GCV",
+        "body": "Select the model size $M^*$ that minimises the Generalised Cross-Validation criterion: $\\mathrm{GCV}(M) = \\frac{\\frac{1}{n} \\sum_{i=1}^n (y_i - \\hat{f}_M(x_i))^2}{(1 - \\tilde{C}(M)/n)^2}$, where $\\tilde{C}(M)$ penalises knot placement."
+      }
+    ],
+    math: [
+      {
+        "h": "Reflected Hinge Functions",
+        "tex": "(x - c)_+ = \\max(0, x - c), \\quad (c - x)_+ = \\max(0, c - x)",
+        "p": "A pair of reflected hinge functions at knot c. For any x, one function is zero while the other is a linear ramp with slope +1 or -1, ensuring continuous piecewise linear approximations."
+      },
+      {
+        "h": "MARS Model Formulation",
+        "tex": "\\hat{f}(x) = \\beta_0 + \\sum_{m=1}^M \\beta_m B_m(x), \\quad B_m(x) = \\prod_{k=1}^{K_m} [s_{km} (x_{v(k, m)} - c_{km})]_+",
+        "p": "The fitted function is a linear combination of basis functions, each consisting of an individual hinge or a product of multiple hinges representing multi-way feature interactions."
+      },
+      {
+        "h": "Generalised Cross-Validation (GCV) Criterion",
+        "tex": "\\mathrm{GCV}(M) = \\frac{\\frac{1}{n} \\sum_{i=1}^n (y_i - \\hat{f}_M(x_i))^2}{\\left(1 - \\frac{M + d \\cdot (M - 1) / 2}{n}\\right)^2}",
+        "p": "GCV penalises model degrees of freedom, where d is an effective cost parameter per knot (typically d = 2 or 3) accounting for the forward search over knot locations."
+      }
+    ],
+    code: "import numpy as np\n\n# Multivariate Adaptive Regression Splines (MARS) Forward Step from scratch\nnp.random.seed(42)\nn_samples = 150\n\n# True function: non-linear piecewise with a sharp bend and an interaction\nx1 = np.random.uniform(0, 10, n_samples)\nx2 = np.random.uniform(0, 10, n_samples)\n# Sharp bend at x1=5, interaction between (x1-5)+ and (x2-4)+\ny_clean = 2.0 + 1.5 * np.maximum(0, 5.0 - x1) + 3.0 * np.maximum(0, x1 - 5.0) + 1.2 * np.maximum(0, x1 - 5.0) * np.maximum(0, x2 - 4.0)\ny = y_clean + np.random.normal(0, 0.5, n_samples)\n\n# Simplified Forward MARS Search\nclass SimpleMARS:\n    def __init__(self, max_terms=7):\n        self.max_terms = max_terms\n        self.bases = [lambda X: np.ones(len(X))]\n        self.basis_names = [\"Intercept\"]\n        self.coef_ = None\n        \n    def fit(self, X, y):\n        n, p = X.shape\n        while len(self.bases) < self.max_terms:\n            best_rss = float(\"inf\")\n            best_pair = None\n            best_name = None\n            \n            # Current design matrix\n            B_curr = np.column_stack([b(X) for b in self.bases])\n            \n            # Search over parent bases, features, and candidate knots\n            for b_idx in range(len(self.bases)):\n                parent_b = self.bases[b_idx]\n                parent_vals = parent_b(X)\n                \n                for f_idx in range(p):\n                    col = X[:, f_idx]\n                    knots = np.percentile(col, [25, 50, 75])\n                    \n                    for c in knots:\n                        h_right = parent_vals * np.maximum(0, col - c)\n                        h_left = parent_vals * np.maximum(0, c - col)\n                        \n                        B_cand = np.column_stack([B_curr, h_right, h_left])\n                        coefs, residuals, _, _ = np.linalg.lstsq(B_cand, y, rcond=None)\n                        rss = np.sum((y - B_cand @ coefs)**2)\n                        \n                        if rss < best_rss:\n                            best_rss = rss\n                            best_pair = (\n                                lambda X, f=f_idx, c=c, pb=parent_b: pb(X) * np.maximum(0, X[:, f] - c),\n                                lambda X, f=f_idx, c=c, pb=parent_b: pb(X) * np.maximum(0, c - X[:, f])\n                            )\n                            best_name = (f\"h(x{f_idx+1}-{c:.1f})\", f\"h({c:.1f}-x{f_idx+1})\")\n                            \n            if best_pair is not None:\n                self.bases.extend(best_pair)\n                self.basis_names.extend(best_name)\n            else:\n                break\n                \n        # Final OLS fit\n        B_final = np.column_stack([b(X) for b in self.bases])\n        self.coef_, _, _, _ = np.linalg.lstsq(B_final, y, rcond=None)\n        \n    def predict(self, X):\n        B = np.column_stack([b(X) for b in self.bases])\n        return B @ self.coef_\n\nX_data = np.column_stack([x1, x2])\nmars = SimpleMARS(max_terms=7)\nmars.fit(X_data, y)\npreds = mars.predict(X_data)\nr2 = 1.0 - np.sum((y - preds)**2) / np.sum((y - np.mean(y))**2)\n\nprint(f\"MARS Model R^2: {r2:.4f}\")\nprint(\"Discovered Basis Functions and Coefficients:\")\nfor name, c in zip(mars.basis_names, mars.coef_):\n    print(f\"  {name:25s}: beta = {c:+.3f}\")",
+    keyPoints: [
+      "Automates non-linear modelling and interaction detection using reflected piecewise linear hinge functions $\\max(0, x - c)$ and $\\max(0, c - x)$.",
+      "Two-stage architecture: greedy forward expansion to capture non-linear patterns followed by backward pruning via GCV to prevent overfitting.",
+      "Continuous piecewise linearity ensures models do not exhibit wild polynomial runaway oscillations at outer boundaries.",
+      "Provides inherent interpretability: variable importance can be measured by GCV drop upon removing all basis functions involving that feature.",
+      "Serves as an effective, interpretable bridge between rigid linear models and black-box gradient-boosted trees."
+    ],
+    pitfalls: [
+      "Computational scaling with sample size: Testing all candidate knot locations across every feature scales as $O(n \\cdot p \\cdot M)$, necessitating knot subsampling for large datasets.",
+      "Collinearity among basis functions: Reflected hinge pairs and multi-way interaction terms can be highly correlated; backward pruning and SVD-based solvers are essential.",
+      "Higher-order interaction degradation: Allowing interactions beyond degree 2 or 3 rapidly degrades statistical power and creates uninterpretable models."
+    ],
+    quiz: [
+      {
+        "q": "Why are reflected hinge functions max(0, x - c) and max(0, c - x) preferred over high-degree polynomials for non-linear regression?",
+        "o": [
+          "Hinge functions produce piecewise linear splines that are locally adaptive and do not oscillate wildly at data boundaries",
+          "Hinge functions guarantee that the model is differentiable everywhere",
+          "Polynomial features cannot represent linear relationships",
+          "Hinge functions eliminate the need for training data"
+        ],
+        "a": 0,
+        "why": "High-degree polynomials suffer from Runge phenomenon and extreme runaway oscillations at data boundaries. Reflected hinge functions are localized and bounded linearly."
+      },
+      {
+        "q": "What role does Generalised Cross-Validation (GCV) play in the MARS algorithm?",
+        "o": [
+          "It penalises model degrees of freedom during backward pruning to find the optimal model size without requiring full k-fold CV",
+          "It selects the learning rate for gradient descent",
+          "It scales input features to zero mean and unit variance",
+          "It generates synthetic training examples"
+        ],
+        "a": 0,
+        "why": "GCV provides a fast analytical approximation to leave-one-out cross-validation, penalising the number of knots and basis functions to identify the optimal pruned sub-model."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "ols_linear_regression",
+      "polynomial_regression",
+      "residual-diagnostics-and-heteroscedasticity"
+    ],
+    keywords: "mars, multivariate adaptive regression splines, hinge functions, splines, gcv, non linear regression, piecewise linear, interaction terms"
+  },
+
+  {
+    id: "ordinal-classification",
+    short: "Ordinal classification",
+    title: "Ordinal Classification",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Classify targets with natural ordering: master cumulative link proportional odds models, ordered probit, and ordinal threshold learning.",
+    lead: "Rating scales (1 to 5 stars), disease staging (mild, moderate, severe), and credit ratings (AAA to D) have meaningful order but unequal interval spacing. Ordinal models preserve ranking without falsely assuming equal distances.",
+    intuition: [
+      "In supervised learning, target variables frequently possess an inherent ordering without possessing a strict metric scale: survey responses (strongly disagree, neutral, agree), customer satisfaction ratings (1 to 5 stars), disease severity stages, or credit bond ratings. Treating these targets with nominal multi-class classification (such as standard multinomial logistic regression) completely discards order information, penalising a 1-star predicted as 2-star identically to a 1-star predicted as 5-star.",
+      "Conversely, treating ordinal categories as continuous numbers and applying standard regression falsely assumes that intervals between adjacent categories are identical: that the perceptual difference between 1 and 2 stars is identical to the difference between 4 and 5 stars. Ordinal classification provides the rigorous intermediate framework, respecting relative ranking without imposing arbitrary metric distances.",
+      "The standard statistical workhorse is the Proportional Odds model (cumulative logit model). It posits an unobserved continuous latent variable $y^* = x^T \\beta + \\epsilon$. The observed ordinal category $k \\in \\{1, 2, \\dots, K\\}$ is determined by where this latent score falls across a sequence of strictly increasing cut-point thresholds: $\\theta_1 < \\theta_2 < \\dots < \\theta_{K-1}$.",
+      "The proportional odds property states that feature coefficients $\\beta$ are invariant across all cut-points: an increase in feature $x$ shifts the latent distribution uniformly, changing the odds of exceeding threshold $k$ by the same multiplicative factor $\\exp(\\beta_j)$ regardless of which threshold $k$ is considered. This parsimonious parameterisation requires estimating only $p$ feature weights plus $K-1$ thresholds, avoiding parameter proliferation."
+    ],
+    analogy: "Imagine categorising runners in a marathon into three medal tiers: Bronze, Silver, and Gold. The underlying running time is a continuous latent variable. Rather than retraining three unrelated models, the race judges place two cut-off clocks along the course: finish before 3 hours for Gold, finish before 4 hours for Silver, otherwise Bronze. An athlete running faster shifts their latent position across all threshold clocks simultaneously.",
+    steps: [
+      {
+        "title": "1. Verify target ordering and establish categories",
+        "body": "Define the ordered categories $\\mathcal{Y} = \\{1, 2, \\dots, K\\}$. Confirm that relative ranking is strictly monotonic while category step sizes are non-metric."
+      },
+      {
+        "title": "2. Formulate cumulative probabilities and cut-points",
+        "body": "Model cumulative distribution $P(Y \\le k \\mid x) = \\sigma(\\theta_k - x^T \\beta)$, where $\\theta_1 \\le \\theta_2 \\le \\dots \\le \\theta_{K-1}$ are threshold cut-points and $\\sigma$ is the logistic or Gaussian CDF."
+      },
+      {
+        "title": "3. Maximise cumulative log-likelihood",
+        "body": "Express individual category probability as the difference between adjacent cumulative probabilities: $P(Y = k \\mid x) = P(Y \\le k \\mid x) - P(Y \\le k-1 \\mid x)$. Maximise log-likelihood jointly over $\\beta$ and ordered thresholds $\\theta$."
+      },
+      {
+        "title": "4. Evaluate predictions with rank-sensitive metrics",
+        "body": "Evaluate performance using Mean Absolute Error on ranks (MAE), quadratic weighted Kappa (QWK), or ordinal cross-entropy rather than raw 0-1 accuracy."
+      }
+    ],
+    math: [
+      {
+        "h": "Cumulative Link / Proportional Odds Formulation",
+        "tex": "P(Y \\le k \\mid x) = \\sigma(\\theta_k - x^T \\beta) = \\frac{1}{1 + \\exp(-(\\theta_k - x^T \\beta))}, \\quad k = 1, \\dots, K-1",
+        "p": "The probability of falling into category k or below is governed by distance between threshold theta_k and linear predictor x^T beta. A positive beta shifts probability toward higher categories."
+      },
+      {
+        "h": "Category Probabilities",
+        "tex": "P(Y = k \\mid x) = P(Y \\le k \\mid x) - P(Y \\le k - 1 \\mid x), \\quad P(Y \\le 0) = 0, \\; P(Y \\le K) = 1",
+        "p": "Each discrete category probability corresponds to the area under the latent logistic curve bounded between adjacent thresholds theta_{k-1} and theta_k."
+      },
+      {
+        "h": "Quadratic Weighted Kappa (QWK)",
+        "tex": "\\kappa = 1 - \\frac{\\sum_{i, j} w_{ij} O_{ij}}{\\sum_{i, j} w_{ij} E_{ij}}, \\quad w_{ij} = \\frac{(i - j)^2}{(K - 1)^2}",
+        "p": "Measures agreement between predicted and true ranks penalising large category discrepancies quadratically, serving as standard evaluation metric in automated grading and disease staging."
+      }
+    ],
+    code: "import numpy as np\nfrom scipy.optimise import minimise\n\n# Proportional Odds Ordinal Logistic Regression from scratch\nnp.random.seed(42)\nn_samples = 300\n\n# 1. Generate synthetic ordinal data (3 categories: Low, Medium, High)\nx1 = np.random.normal(0, 1, n_samples)\nx2 = np.random.uniform(-1, 1, n_samples)\nX = np.column_stack([x1, x2])\n\n# Latent variable y* = beta1*x1 + beta2*x2 + noise\ntrue_beta = np.array([1.5, -0.8])\nlatent_y = X @ true_beta + np.random.logistic(0, 1, n_samples)\n\n# True cut-points: theta_1 = -0.5, theta_2 = 1.2\ntrue_thetas = np.array([-0.5, 1.2])\ny = np.zeros(n_samples, dtype=int)\ny[latent_y > true_thetas[0]] = 1\ny[latent_y > true_thetas[1]] = 2\n\n# 2. Cumulative Logit Model Fitting via Maximum Likelihood\nK = 3  # Number of classes\ndef sigmoid(z):\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))\n\ndef negative_log_likelihood(params, X, y):\n    beta = params[:2]\n    # Parameterise thresholds with increments to enforce theta_1 < theta_2\n    theta = np.array([params[2], params[2] + np.exp(params[3])])\n    \n    linear_pred = X @ beta\n    n = len(y)\n    nll = 0.0\n    \n    for i in range(n):\n        k = y[i]\n        # P(Y <= k)\n        prob_k = sigmoid(theta[k] - linear_pred[i]) if k < K - 1 else 1.0\n        prob_prev = sigmoid(theta[k-1] - linear_pred[i]) if k > 0 else 0.0\n        prob = max(prob_k - prob_prev, 1e-12)\n        nll -= np.log(prob)\n        \n    return nll\n\n# Initial guess: beta=[0, 0], theta_1=0, increment=0\ninit_params = np.array([0.0, 0.0, 0.0, 0.0])\nres = minimise(negative_log_likelihood, init_params, args=(X, y), method='BFGS')\n\nest_beta = res.x[:2]\nest_thetas = np.array([res.x[2], res.x[2] + np.exp(res.x[3])])\n\n# Compute predictions\nlin_preds = X @ est_beta\npred_probs = np.zeros((n_samples, K))\nfor k in range(K):\n    p_k = sigmoid(est_thetas[k] - lin_preds) if k < K - 1 else 1.0\n    p_prev = sigmoid(est_thetas[k-1] - lin_preds) if k > 0 else 0.0\n    pred_probs[:, k] = p_k - p_prev\npred_classes = np.argmax(pred_probs, axis=1)\n\nmae = np.mean(np.abs(y - pred_classes))\nacc = np.mean(y == pred_classes)\n\nprint(f\"True beta:             {true_beta}\")\nprint(f\"Estimated beta:        {est_beta.round(3)}\")\nprint(f\"True cut-points:       {true_thetas}\")\nprint(f\"Estimated cut-points:  {est_thetas.round(3)}\")\nprint(f\"Classification accuracy: {acc * 100:.1f}%\")\nprint(f\"Mean Absolute Error (ranks): {mae:.3f} (captures distance on ordered scale)\")",
+    keyPoints: [
+      "Preserves inherent rank ordering of discrete targets without assuming arbitrary metric Euclidean distance.",
+      "Cumulative logit proportional odds model relates features to cumulative probability $P(Y \\le k \\mid x) = \\sigma(\\theta_k - x^T \\beta)$.",
+      "Feature weights $\\beta$ are shared across all thresholds, requiring only $p + (K - 1)$ parameters compared to $(K - 1) \\cdot p$ in multinomial regression.",
+      "Latent threshold formulation $\\theta_1 < \\theta_2 < \\dots < \\theta_{K-1}$ partitions continuous latent response into ordered discrete bins.",
+      "Performance is best evaluated via distance-aware metrics like Mean Absolute Error (MAE) on ranks or Quadratic Weighted Kappa (QWK)."
+    ],
+    pitfalls: [
+      "Violation of proportional odds assumption: If a feature affects the transition between Mild and Moderate differently than between Moderate and Severe, the assumption fails and partial proportional odds is needed.",
+      "Threshold ordering collapse: Unconstrained numerical optimisation can allow thresholds to cross ($\\theta_{k+1} < \\theta_k$), resulting in negative probabilities; reparameterising with positive increments is vital.",
+      "Evaluating with accuracy: A model predicting class 1 when truth is class 5 receives the exact same penalty as predicting class 2 under 0-1 loss, masking severe directional blunders."
+    ],
+    quiz: [
+      {
+        "q": "Why is standard multinomial logistic regression sub-optimal for customer satisfaction ratings (1 to 5 stars)?",
+        "o": [
+          "It treats classes as unordered categories, penalising a 1-star predicted as 2-star identically to a 1-star predicted as 5-star",
+          "It cannot handle more than 2 classes",
+          "It assumes the response variable is normally distributed",
+          "It requires inverting a matrix of dimension n x n"
+        ],
+        "a": 0,
+        "why": "Multinomial logistic regression is nominal; it ignores the ordering of ratings and assigns equal loss to near-misses and extreme ranking blunders."
+      },
+      {
+        "q": "What is the key geometric interpretation of the cut-points theta_1 < theta_2 < ... < theta_{K-1} in an ordinal model?",
+        "o": [
+          "They represent threshold boundaries partitioning a continuous latent space into ordered discrete categories",
+          "They are the weights of the input features",
+          "They represent the eigenvalues of the Hessian matrix",
+          "They define the learning rate schedule for stochastic gradient descent"
+        ],
+        "a": 0,
+        "why": "In ordinal threshold models, an underlying continuous latent variable y* is partitioned into discrete bins by the ordered boundary thresholds theta_k."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "generalised-linear-models"
+    ],
+    related: [
+      "logistic_regression",
+      "multi-label-classification",
+      "cost-sensitive-learning",
+      "generalised-linear-models"
+    ],
+    keywords: "ordinal classification, proportional odds, cumulative logit, ordered probit, thresholds, cut points, rank prediction, quadratic weighted kappa"
+  },
+
+  {
+    id: "multi-label-classification",
+    short: "Multi-label classification",
+    title: "Multi-Label Classification",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Predict multiple non-mutually exclusive binary labels simultaneously: compare Binary Relevance, Classifier Chains, and label power-sets with Hamming loss.",
+    lead: "A document can belong to Politics, Economics, and Tech simultaneously; an image can contain a dog, a frisbee, and a tree. Multi-label learning addresses non-exclusive target vectors while accounting for label correlations.",
+    intuition: [
+      "In conventional classification, classes are strictly mutually exclusive: an email is either spam or not spam (binary), or an image is either a cat, dog, or bird (multi-class). In contrast, real-world objects frequently possess multiple simultaneous attributes: a film can belong to Comedy, Drama, and Romance; a biomedical article can discuss Genetics, Oncology, and Immunology; a customer can be tagged as Churn-Risk, High-Spender, and Mobile-User.",
+      "Multi-label learning maps feature vector $x$ to a binary target vector $y = [y_1, y_2, \\dots, y_L]^T \\in \\{0, 1\\}^L$. The fundamental algorithmic choice revolves around how to handle correlations among labels.",
+      "The simplest strategy is Binary Relevance: decompose the problem into $L$ completely independent binary classification tasks, one per label. While embarrassingly parallel and scalable, Binary Relevance is blind to label dependencies: knowing an image contains a \"beach\" vastly increases the probability of \"ocean\" and \"sand\", but Binary Relevance cannot exploit this co-occurrence.",
+      "Classifier Chains overcome this blind spot by ordering labels into a sequence and training each classifier with both original features $x$ and the ground-truth/predicted binary labels of all preceding classifiers in the chain. Label Powerset transforms the task into multi-class classification by treating every unique observed label combination as a distinct class, which models correlations perfectly but suffers from severe class explosion on rare combinations. Modern neural architectures employ independent sigmoid heads trained with binary cross-entropy loss."
+    ],
+    analogy: "Imagine assigning tags to songs in a music streaming library (e.g. Acoustic, Rock, Ballad, 90s, Instrumental). Binary Relevance hires five separate interns who sit in isolated soundproof booths and evaluate one tag each without speaking to each other. Classifier Chains seats the interns in a line: each intern listens to the song and glances at the tag decisions made by previous interns before making their own call.",
+    steps: [
+      {
+        "title": "1. Formulate binary target indicator matrix",
+        "body": "Structure targets as a binary matrix $Y \\in \\{0, 1\\}^{n \\times L}$, where $Y_{ij} = 1$ denotes presence of label $j$ on sample $i$."
+      },
+      {
+        "title": "2. Select decomposition or neural architecture",
+        "body": "Choose between Binary Relevance (fast, baseline), Classifier Chains (captures sequential correlations), or a shared deep neural backbone with $L$ independent sigmoid outputs."
+      },
+      {
+        "title": "3. Train with Binary Cross-Entropy loss",
+        "body": "Compute binary cross-entropy loss independently for each label head: $\\mathcal{L} = -\\frac{1}{L} \\sum_{j=1}^L [y_j \\log \\hat{p}_j + (1 - y_j) \\log (1 - \\hat{p}_j)]$. Average across all labels."
+      },
+      {
+        "title": "4. Evaluate with label-specific and subset metrics",
+        "body": "Evaluate predictions using Hamming Loss (fraction of incorrect individual label predictions), Subset Accuracy (fraction of instances where entire label set is 100% correct), and Macro/Micro F1 scores."
+      }
+    ],
+    math: [
+      {
+        "h": "Hamming Loss",
+        "tex": "\\operatorname{HL}(Y, \\hat{Y}) = \\frac{1}{n \\cdot L} \\sum_{i=1}^n \\sum_{j=1}^L \\mathbb{I}(Y_{ij} \\neq \\hat{Y}_{ij}) = \\frac{1}{n \\cdot L} \\|Y \\oplus \\hat{Y}\\|_1",
+        "p": "Measures the fraction of individual label mistakes across all instances and labels. A lower Hamming loss indicates higher per-label accuracy."
+      },
+      {
+        "h": "Subset Accuracy (Exact Match Ratio)",
+        "tex": "\\operatorname{Acc}_{\\mathrm{subset}} = \\frac{1}{n} \\sum_{i=1}^n \\mathbb{I}(Y_i = \\hat{Y}_i)",
+        "p": "The strictest metric: requires the entire predicted binary label vector to match ground truth exactly. Can be low even when individual label accuracy is above 95%."
+      },
+      {
+        "h": "Classifier Chain Conditional Factorisation",
+        "tex": "P(y_1, \\dots, y_L \\mid x) = \\prod_{j=1}^L P(y_j \\mid x, y_1, \\dots, y_{j-1})",
+        "p": "By the probability chain rule, joint label probability factorises into a product of conditional probabilities, implemented by conditioning each classifier on previous predictions."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Multi-label classification: Binary Relevance vs Classifier Chains from scratch\nnp.random.seed(42)\nn_samples = 300\nn_features = 8\nn_labels = 4\n\n# Generate synthetic correlated multi-label dataset\nX = np.random.normal(0, 1, (n_samples, n_features))\n# Latent signals generating co-occurring tags\nlatent_topic = X[:, 0] + X[:, 1]\n\n# Labels with strong dependencies (e.g. Label 2 often co-occurs with Label 0)\ny = np.zeros((n_samples, n_labels), dtype=int)\ny[:, 0] = (latent_topic + np.random.normal(0, 0.5, n_samples) > 0).astype(int)\ny[:, 1] = (X[:, 2] - X[:, 3] + np.random.normal(0, 0.5, n_samples) > 0).astype(int)\ny[:, 2] = (y[:, 0] * 0.7 + X[:, 4] + np.random.normal(0, 0.5, n_samples) > 0.3).astype(int)\ny[:, 3] = (y[:, 1] * 0.8 + X[:, 5] + np.random.normal(0, 0.5, n_samples) > 0.4).astype(int)\n\n# Train/Test Split\nn_train = 200\nX_train, X_test = X[:n_train], X[n_train:]\ny_train, y_test = y[:n_train], y[n_train:]\n\n# 1. Binary Relevance (L independent models)\nbr_models = [LogisticRegression(solver='liblinear') for _ in range(n_labels)]\nfor j in range(n_labels):\n    br_models[j].fit(X_train, y_train[:, j])\n\ny_pred_br = np.column_stack([m.predict(X_test) for m in br_models])\n\n# 2. Classifier Chains (Sequential conditioning)\nchain_order = [0, 1, 2, 3]\nchain_models = []\nX_train_augmented = X_train.copy()\n\nfor j in chain_order:\n    clf = LogisticRegression(solver='liblinear')\n    clf.fit(X_train_augmented, y_train[:, j])\n    chain_models.append(clf)\n    # Augment feature matrix with true labels during training\n    X_train_augmented = np.column_stack([X_train_augmented, y_train[:, j]])\n\n# Predict with Classifier Chain sequentially\nX_test_augmented = X_test.copy()\ny_pred_chain = np.zeros_like(y_test)\n\nfor idx, j in enumerate(chain_order):\n    preds_j = chain_models[idx].predict(X_test_augmented)\n    y_pred_chain[:, j] = preds_j\n    # Augment test features with PREDICTED labels\n    X_test_augmented = np.column_stack([X_test_augmented, preds_j])\n\n# Evaluation\ndef eval_multilabel(y_true, y_pred):\n    hamming_loss = np.mean(y_true != y_pred)\n    subset_acc = np.mean(np.all(y_true == y_pred, axis=1))\n    return hamming_loss, subset_acc\n\nhl_br, sa_br = eval_multilabel(y_test, y_pred_br)\nhl_chain, sa_chain = eval_multilabel(y_test, y_pred_chain)\n\nprint(f\"Binary Relevance  - Hamming Loss: {hl_br:.4f}, Subset Accuracy: {sa_br*100:.1f}%\")\nprint(f\"Classifier Chains - Hamming Loss: {hl_chain:.4f}, Subset Accuracy: {sa_chain*100:.1f}%\")\nprint(f\"Subset Accuracy Improvement: +{(sa_chain - sa_br)*100:.1f}% by capturing label correlations\")",
+    keyPoints: [
+      "Multi-label classification assigns instances multiple non-mutually exclusive binary labels $y \\in \\{0, 1\\}^L$.",
+      "Binary Relevance trains $L$ independent binary models; fast and scalable but ignores label co-occurrence dependencies.",
+      "Classifier Chains condition each label on predictions of preceding labels, capturing dependencies via the probability chain rule.",
+      "Standard multi-class Softmax activation is replaced with independent Sigmoids $\\sigma(z_j)$ trained via binary cross-entropy loss.",
+      "Evaluated via Hamming Loss (per-label error rate) and Subset Accuracy (fraction of instances where all labels match exactly)."
+    ],
+    pitfalls: [
+      "Using Softmax instead of Sigmoid: Softmax enforces a sum-to-one constraint across classes, forcing classes to compete and failing on multi-label targets.",
+      "Error propagation in Classifier Chains: If early classifiers in a chain make erroneous predictions, downstream classifiers receive corrupted features during inference.",
+      "Evaluating multi-label models with multi-class accuracy: Multi-class accuracy assumes a single scalar output; multi-label problems require Hamming loss or Macro/Micro F1."
+    ],
+    quiz: [
+      {
+        "q": "Why is independent Sigmoid activation used instead of Softmax in multi-label neural network heads?",
+        "o": [
+          "Sigmoid outputs independent probabilities for each label in [0, 1], whereas Softmax forces all class probabilities to sum to 1",
+          "Sigmoid is faster to compute than addition",
+          "Softmax cannot be differentiated during backpropagation",
+          "Sigmoids eliminate the need for hidden layers"
+        ],
+        "a": 0,
+        "why": "Softmax forces probabilities across all classes to sum to 1, assuming mutual exclusivity. Multi-label problems require each label to possess an independent probability in [0, 1] via Sigmoid."
+      },
+      {
+        "q": "What is the primary trade-off of Classifier Chains compared to Binary Relevance?",
+        "o": [
+          "Classifier Chains capture label correlations but are sensitive to chain ordering and test-time error propagation",
+          "Classifier Chains have O(1) computational complexity",
+          "Classifier Chains can only be used with decision trees",
+          "Classifier Chains cannot predict zero labels for an instance"
+        ],
+        "a": 0,
+        "why": "By feeding preceding predictions as features, Classifier Chains capture label correlations. However, early classification mistakes propagate down the chain, and training cannot be fully parallelised."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "logistic-regression-inference-odds-ratios-wald-tests"
+    ],
+    related: [
+      "logistic_regression",
+      "ordinal-classification",
+      "cost-sensitive-learning",
+      "confusion-matrix"
+    ],
+    keywords: "multi label classification, binary relevance, classifier chains, label powerset, hamming loss, subset accuracy, binary cross entropy, label correlation"
+  },
+
+  {
+    id: "cost-sensitive-learning",
+    short: "Cost-sensitive learning",
+    title: "Cost-Sensitive Learning",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Minimise expected financial loss rather than error count: master cost matrices, Bayes decision theory threshold shifting, and cost-weighted loss functions.",
+    lead: "In fraud detection, loan default, and cancer diagnosis, a false negative is vastly more catastrophic than a false positive. Cost-sensitive learning embeds domain cost asymmetry directly into model training and decision thresholds.",
+    intuition: [
+      "Standard machine learning algorithms treat all errors as equally harmful: misclassifying a legitimate £10 transaction as fraud (false positive) is assigned the identical loss as letting a £5,000 fraudulent wire transfer slip through undetected (false negative). In real-world enterprise environments—including fraud prevention, loan risk underwriting, medical pathology, and industrial turbine maintenance—costs are wildly asymmetric.",
+      "Cost-Sensitive Learning replaces generic accuracy maximisation with expected cost minimisation. This asymmetry is formally captured in a Cost Matrix $C$, where $C(i, j)$ specifies the financial, clinical, or operational cost of predicting class $i$ when the ground truth is class $j$.",
+      "Practitioners can incorporate cost asymmetry at three distinct levels of the machine learning pipeline: data-level, algorithm-level, and decision-level.",
+      "Data-level methods apply cost-proportionate sampling, over-sampling high-cost instances. Algorithm-level methods modify objective functions, weighting loss terms by their relative cost during gradient updates (cost-weighted empirical risk minimisation). Decision-level methods train standard probabilistic models and apply Bayes decision theory post-processing: shifting the classification decision threshold $p^*$ from 0.5 to the exact theoretical Bayes optimal cut-off dictated by the cost matrix ratio."
+    ],
+    analogy: "Imagine a smoke detector in a chemical refinery. A false positive triggers a loud siren and requires five minutes to silence (cost: £50 in staff annoyance). A false negative fails to sound an alarm during a toxic chemical fire, destroying the facility (cost: £10,000,000). Tuning the alarm sensitivity to minimise total error count treats both mistakes equally, risking disaster. A cost-sensitive alarm triggers at the slightest whiff of smoke because the asymmetric penalty of silence is existential.",
+    steps: [
+      {
+        "title": "1. Formulate the enterprise cost matrix",
+        "body": "Define cost matrix $C(i, j)$ quantifying costs of True Positives ($C_{TP}$), False Positives ($C_{FP}$), True Negatives ($C_{TN}$), and False Negatives ($C_{FN}$)."
+      },
+      {
+        "title": "2. Select incorporation strategy",
+        "body": "Decide whether to embed costs into loss functions during training (e.g. weighted cross-entropy) or adjust classification decision threshold $p^*$ post-processing on calibrated probabilities."
+      },
+      {
+        "title": "3. Derive Bayes risk-optimal decision threshold",
+        "body": "Under Bayes decision theory, predict positive whenever $P(Y=1 \\mid x) > p^*$, where $p^* = \\frac{C_{FP} - C_{TN}}{(C_{FP} - C_{TN}) + (C_{FN} - C_{TP})}$."
+      },
+      {
+        "title": "4. Calibrate probabilities and evaluate expected cost",
+        "body": "Calibrate classifier output probabilities (via Platt scaling or isotonic regression) and evaluate total financial loss $\\sum C(\\hat{y}_i, y_i)$ on test data rather than 0-1 accuracy."
+      }
+    ],
+    math: [
+      {
+        "h": "Expected Conditional Cost (Bayes Risk)",
+        "tex": "R(\\alpha = 1 \\mid x) = C_{TP} P(Y=1 \\mid x) + C_{FP} P(Y=0 \\mid x), \\quad R(\\alpha = 0 \\mid x) = C_{FN} P(Y=1 \\mid x) + C_{TN} P(Y=0 \\mid x)",
+        "p": "The expected risk of taking action alpha conditioned on feature vector x. Optimal Bayes decision selects the action minimising expected risk."
+      },
+      {
+        "h": "Bayes Optimal Decision Threshold",
+        "tex": "p^* = \\frac{C_{FP} - C_{TN}}{(C_{FP} - C_{TN}) + (C_{FN} - C_{TP})} \\approx \\frac{C_{FP}}{C_{FP} + C_{FN}} \\quad (\\text{when } C_{TP} = C_{TN} = 0)",
+        "p": "When false negatives cost 9 times more than false positives (C_FN = 90, C_FP = 10), the optimal threshold drops to p* = 10 / (10 + 90) = 0.10."
+      },
+      {
+        "h": "Cost-Weighted Cross-Entropy Loss",
+        "tex": "\\mathcal{L}_{\\mathrm{cost}}(\\theta) = -\\frac{1}{n} \\sum_{i=1}^n \\left[ w_1 y_i \\log \\hat{p}_i + w_0 (1 - y_i) \\log(1 - \\hat{p}_i) \\right], \\quad w_1 = C_{FN}, \\; w_0 = C_{FP}",
+        "p": "Directly penalises false negative gradient steps in proportion to financial penalty during backpropagation or IRLS updates."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Cost-Sensitive Classification: Threshold Shifting vs Standard 0.5 Threshold\nnp.random.seed(42)\nn_samples = 2000\n\n# Synthetic fraudulent transactions: 95% legitimate (0), 5% fraud (1)\nX = np.random.normal(0, 1, (n_samples, 4))\nlatent = X[:, 0] * 1.2 - X[:, 1] * 0.8 + np.random.normal(0, 0.5, n_samples)\nprobs = 1.0 / (1.0 + np.exp(-latent))\ny = (probs > np.percentile(probs, 95)).astype(int)  # Exactly 5% fraud\n\n# Split into Train and Test\nn_train = 1200\nX_train, X_test = X[:n_train], X[n_train:]\ny_train, y_test = y[:n_train], y[n_train:]\n\n# Cost Matrix:\n# False Negative (missed fraud): £500\n# False Positive (manual fraud review): £20\n# True Positive / True Negative: £0\nC_FN = 500.0\nC_FP = 20.0\nC_TP = 0.0\nC_TN = 0.0\n\n# Bayes Optimal Threshold: p* = C_FP / (C_FP + C_FN)\nbayes_threshold = C_FP / (C_FP + C_FN)\nprint(f\"Theoretical Bayes optimal decision threshold: {bayes_threshold:.4f} (not 0.50!)\")\n\n# Fit standard probabilistic classifier\nmodel = LogisticRegression(solver='liblinear')\nmodel.fit(X_train, y_train)\ntest_probs = model.predict_proba(X_test)[:, 1]\n\n# Strategy 1: Standard Default Threshold (p = 0.50)\npreds_default = (test_probs >= 0.50).astype(int)\n\n# Strategy 2: Bayes Cost-Optimal Threshold (p = p*)\npreds_cost_optimal = (test_probs >= bayes_threshold).astype(int)\n\n# Financial Loss Calculation\ndef calculate_financial_cost(y_true, y_pred, c_fn, c_fp):\n    fn = np.sum((y_true == 1) & (y_pred == 0))\n    fp = np.sum((y_true == 0) & (y_pred == 1))\n    tp = np.sum((y_true == 1) & (y_pred == 1))\n    tn = np.sum((y_true == 0) & (y_pred == 0))\n    total_cost = fn * c_fn + fp * c_fp\n    return total_cost, fn, fp, tp, tn\n\ncost_def, fn_def, fp_def, tp_def, tn_def = calculate_financial_cost(y_test, preds_default, C_FN, C_FP)\ncost_opt, fn_opt, fp_opt, tp_opt, tn_opt = calculate_financial_cost(y_test, preds_cost_optimal, C_FN, C_FP)\n\nprint(\"\\n--- Performance Comparison on Test Set (800 samples) ---\")\nprint(f\"Default (p=0.50):       Total Cost: £{cost_def:,.2f} | Missed Frauds (FN): {fn_def} | False Alarms (FP): {fp_def}\")\nprint(f\"Cost-Optimal (p={bayes_threshold:.2f}): Total Cost: £{cost_opt:,.2f} | Missed Frauds (FN): {fn_opt} | False Alarms (FP): {fp_opt}\")\nprint(f\"Total Money Saved: £{cost_def - cost_opt:,.2f} ({((cost_def - cost_opt) / cost_def) * 100:.1f}% reduction in financial damage)\")",
+    keyPoints: [
+      "Replaces error count minimisation with expected loss minimisation based on a domain-specific cost matrix $C(i, j)$.",
+      "Bayes Decision Theory proves the optimal decision threshold is $p^* = \\frac{C_{FP} - C_{TN}}{(C_{FP} - C_{TN}) + (C_{FN} - C_{TP})}$.",
+      "Threshold tuning on well-calibrated probabilities avoids retraining and enables instant adaptation to fluctuating economic cost regimes.",
+      "Cost-weighted loss functions inject cost weights directly into gradients during empirical risk minimisation.",
+      "Evaluated using total enterprise cost, expected financial loss, or cost-sensitive profit curves rather than ROC AUC or 0-1 accuracy."
+    ],
+    pitfalls: [
+      "Uncalibrated probabilities: Bayes optimal threshold shifting strictly assumes predicted probabilities match empirical event frequencies; uncalibrated scores corrupt threshold performance.",
+      "Relying on accuracy as an evaluation metric: In asymmetric domains, a trivial model predicting \"Legitimate\" 100% of the time achieves 99% accuracy while bankrupting the firm.",
+      "Assuming static costs: Operational costs (e.g. manual audit wage, regulatory fine per breach) shift over time; hard-coding thresholds into codebases creates silent economic loss."
+    ],
+    quiz: [
+      {
+        "q": "If a False Negative costs £450 and a False Positive costs £50 (with zero cost for correct predictions), what is the Bayes optimal decision threshold?",
+        "o": [
+          "p* = 50 / (50 + 450) = 0.10",
+          "p* = 450 / (50 + 450) = 0.90",
+          "p* = 0.50",
+          "p* = 450 - 50 = 400"
+        ],
+        "a": 0,
+        "why": "From Bayes decision theory p* = C_FP / (C_FP + C_FN) = 50 / 500 = 0.10. Any sample with predicted risk > 10% should be flagged to minimise expected financial loss."
+      },
+      {
+        "q": "Why is probability calibration essential before applying Bayes decision threshold shifting?",
+        "o": [
+          "Because the theoretical optimal threshold p* relies on the model output representing true posterior probabilities P(Y=1|x)",
+          "Because calibration scales all features to zero mean and unit variance",
+          "Because uncalibrated models cannot compute predictions",
+          "Because calibration makes the dataset completely balanced"
+        ],
+        "a": 0,
+        "why": "The derivation of p* assumes hat{p} = P(Y=1|x). If model scores are uncalibrated (e.g. raw SVM margins or distorted tree scores), comparing them to p* destroys expected loss guarantees."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "confusion-matrix"
+    ],
+    related: [
+      "logistic_regression",
+      "multi-label-classification",
+      "confusion-matrix",
+      "cross-validation"
+    ],
+    keywords: "cost sensitive learning, bayes decision theory, cost matrix, optimal threshold, false negative cost, class imbalance, probability calibration"
+  },
+
+  {
+    id: "self-organising-maps",
+    short: "Self-organising maps",
+    title: "Self-Organising Maps (Kohonen Networks)",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Unsupervised competitive neural network for non-linear dimensionality reduction and clustering: master Kohonen lattices, Best Matching Units (BMU), and topological neighbourhood adaptation.",
+    lead: "Developed by Teuvo Kohonen, Self-Organising Maps map high-dimensional complex manifolds onto a discrete, low-dimensional (typically 2D) grid of neurons while preserving spatial topology.",
+    intuition: [
+      "Exploring high-dimensional datasets with dozens or hundreds of features is difficult because human visual perception is confined to two and three dimensions. Standard linear projection methods like PCA can obliterate non-linear manifolds, while k-means clustering segments data without revealing the geometric relationships between cluster centroids.",
+      "Developed by Finnish neuroscientist Teuvo Kohonen in the 1980s, Self-Organising Maps (SOMs) provide a unique blend of vector quantisation, non-linear dimensionality reduction, and clustering. A SOM consists of a regular low-dimensional lattice of neurons (typically a 2D rectangular or hexagonal grid). Each neuron $i$ holds a weight vector $m_i$ possessing the identical dimensionality as the input data.",
+      "Learning occurs through an unsupervised competitive learning process inspired by retinotopic mapping in the cerebral cortex. When an input vector $x$ is presented, all neurons compete. The neuron whose weight vector is closest to $x$ in Euclidean space is declared the Best Matching Unit (BMU).",
+      "Unlike k-means—which updates only the winning centroid—a SOM updates both the BMU and its spatial topological neighbours on the 2D grid. The magnitude of the update decays with both topological grid distance (via a Gaussian neighbourhood kernel) and training iteration time. Consequently, neighbouring neurons on the 2D grid are pulled toward similar regions of high-dimensional space, preserving topological neighbourhood relations."
+    ],
+    analogy: "Imagine a flexible 2D rubber mesh laid out across a flat table. You drop points of molten solder in a 3D glass room above the table. For every drop of solder, you find the closest point on the rubber mesh (the BMU) and tug it upwards toward the solder drop. Because the rubber sheet is elastic, pulling the winning point also stretches neighbouring sections of the mesh upwards. Over thousands of tugs, the 2D rubber sheet drapes itself smoothly across the 3D contour of solder points.",
+    steps: [
+      {
+        "title": "1. Initialise lattice geometry and neuron weights",
+        "body": "Construct a 2D grid (e.g. $10 \\times 10$ rectangular or hexagonal neurons). Initialise weight vectors $m_i \\in \\mathbb{R}^d$ randomly or using the first two principal component axes."
+      },
+      {
+        "title": "2. Find Best Matching Unit (BMU)",
+        "body": "Present sample $x \\in \\mathbb{R}^d$. Calculate Euclidean distance to all neurons: $c = \\arg\\min_i \\|x - m_i\\|_2$."
+      },
+      {
+        "title": "3. Update topological neighbourhood weights",
+        "body": "Adjust weights of all neurons: $m_i(t+1) = m_i(t) + \\alpha(t) h_{ci}(t) [x - m_i(t)]$, where $\\alpha(t)$ is the decaying learning rate and $h_{ci}(t) = \\exp(-\\|r_c - r_i\\|^2 / (2 \\sigma(t)^2))$."
+      },
+      {
+        "title": "4. Decay radius and evaluate U-matrix",
+        "body": "Gradually reduce neighbourhood radius $\\sigma(t)$ and learning rate $\\alpha(t)$ over training epochs. Visualise clusters using the Unified Distance Matrix (U-matrix), displaying average distance between adjacent neurons."
+      }
+    ],
+    math: [
+      {
+        "h": "Best Matching Unit (BMU) Selection",
+        "tex": "c = \\arg\\min_{i \\in \\mathcal{V}} \\|x(t) - m_i(t)\\|_2",
+        "p": "Competitive step: the winner c is the neuron in lattice V with minimal Euclidean distance to input vector x(t)."
+      },
+      {
+        "h": "Weight Vector Update Rule",
+        "tex": "m_i(t+1) = m_i(t) + \\alpha(t) h_{ci}(t) [x(t) - m_i(t)], \\quad h_{ci}(t) = \\exp\\left(-\\frac{\\|r_c - r_i\\|^2}{2 \\sigma(t)^2}\\right)",
+        "p": "Neuron weights are pulled toward input x(t). The Gaussian spatial kernel h_ci(t) weights adaptation by the Euclidean distance between neuron coordinates r_c and r_i on the 2D lattice."
+      },
+      {
+        "h": "Quantisation and Topographic Errors",
+        "tex": "\\mathrm{QE} = \\frac{1}{n} \\sum_{k=1}^n \\|x_k - m_{c(k)}\\|, \\quad \\mathrm{TE} = \\frac{1}{n} \\sum_{k=1}^n u(x_k), \\quad u(x_k) = \\begin{cases} 0 & \\text{if 1st & 2nd BMU are adjacent} \\\\ 1 & \\text{otherwise} \\end{cases}",
+        "p": "Quantisation error (QE) measures reconstruction fidelity. Topographic error (TE) measures the proportion of samples whose 1st and 2nd BMUs are not lattice neighbours, quantifying topology preservation."
+      }
+    ],
+    code: "import numpy as np\n\n# 2D Self-Organising Map (SOM) from scratch\nclass SelfOrganisingMap:\n    def __init__(self, grid_size=(8, 8), input_dim=3, lr=0.5, sigma=2.0):\n        self.rows, self.cols = grid_size\n        self.n_neurons = self.rows * self.cols\n        self.input_dim = input_dim\n        self.lr_initial = lr\n        self.sigma_initial = sigma\n        \n        # Initialise weights randomly in [0, 1]\n        self.weights = np.random.uniform(0, 1, (self.rows, self.cols, self.input_dim))\n        \n        # 2D coordinates of neurons on the grid\n        self.grid_coords = np.array([[[r, c] for c in range(self.cols)] for r in range(self.rows)])\n        \n    def find_bmu(self, x):\n        # Compute Euclidean distance from x to all neurons\n        diff = self.weights - x\n        dist_sq = np.sum(diff**2, axis=-1)\n        bmu_idx = np.unravel_index(np.argmin(dist_sq), (self.rows, self.cols))\n        return bmu_idx\n        \n    def fit(self, X, n_epochs=100):\n        n_samples = len(X)\n        total_steps = n_epochs * n_samples\n        step = 0\n        \n        for epoch in range(n_epochs):\n            # Shuffle data\n            indices = np.random.permutation(n_samples)\n            for idx in indices:\n                x = X[idx]\n                step += 1\n                \n                # Decaying learning rate and radius\n                decay = np.exp(-step / total_steps)\n                lr = self.lr_initial * decay\n                sigma = max(self.sigma_initial * decay, 0.5)\n                \n                # Find BMU\n                bmu_r, bmu_c = self.find_bmu(x)\n                bmu_pos = np.array([bmu_r, bmu_c])\n                \n                # Compute grid distance from BMU to all neurons\n                grid_dist_sq = np.sum((self.grid_coords - bmu_pos)**2, axis=-1)\n                \n                # Gaussian neighbourhood kernel\n                h = np.exp(-grid_dist_sq / (2 * sigma**2))\n                \n                # Update weights\n                self.weights += lr * h[:, :, None] * (x - self.weights)\n\n# Synthetic 3D RGB colour cluster data (Red, Green, Blue, Yellow)\nnp.random.seed(42)\nreds = np.random.uniform([0.7, 0, 0], [1, 0.3, 0.3], (25, 3))\ngreens = np.random.uniform([0, 0.7, 0], [0.3, 1, 0.3], (25, 3))\nblues = np.random.uniform([0, 0, 0.7], [0.3, 0.3, 1], (25, 3))\nyellows = np.random.uniform([0.7, 0.7, 0], [1, 1, 0.3], (25, 3))\nX_colours = np.vstack([reds, greens, blues, yellows])\n\nsom = SelfOrganisingMap(grid_size=(6, 6), input_dim=3, lr=0.5, sigma=2.0)\nsom.fit(X_colours, n_epochs=50)\n\n# Calculate Quantisation Error\ndists = []\nfor x in X_colours:\n    bmu_r, bmu_c = som.find_bmu(x)\n    dists.append(np.linalg.norm(x - som.weights[bmu_r, bmu_c]))\nqe = np.mean(dists)\n\nprint(f\"SOM Lattice Dimensions: {som.rows}x{som.cols} ({som.n_neurons} neurons)\")\nprint(f\"Input Data: {X_colours.shape} (RGB colour vectors)\")\nprint(f\"Average Quantisation Error: {qe:.4f}\")\nprint(\"Top-left neuron weight (RGB):  \", som.weights[0, 0].round(3))\nprint(\"Bottom-right neuron weight (RGB):\", som.weights[-1, -1].round(3))",
+    keyPoints: [
+      "Unsupervised competitive neural network that projects high-dimensional data onto a low-dimensional topological grid (typically 2D).",
+      "Best Matching Unit (BMU) competition: the neuron closest in Euclidean distance to the input sample wins the iteration.",
+      "Topological preservation: the BMU and its spatial lattice neighbours are updated together via a decaying Gaussian neighbourhood kernel.",
+      "U-matrix (Unified Distance Matrix) visualises clustering boundaries by calculating Euclidean distance between adjacent neurons.",
+      "Quantisation error measures geometric distortion, while topographic error evaluates the proportion of broken neighbourhood relationships."
+    ],
+    pitfalls: [
+      "Scale sensitivity: SOMs rely on Euclidean distance; unscaled features with large numerical magnitudes dominate BMU selection and corrupt maps.",
+      "Dead neurons from poor initialisation: Random weight initialisation can leave peripheral neurons outside the data support that never win competition; PCA initialisation prevents dead neurons.",
+      "Computational scaling: Standard SOM scales as $O(n \\cdot N_{\\mathrm{neurons}} \\cdot d)$ per epoch, becoming sluggish on massive datasets."
+    ],
+    quiz: [
+      {
+        "q": "What is the crucial mechanism that allows a Self-Organising Map to preserve topology unlike standard k-means clustering?",
+        "o": [
+          "Updating both the winning neuron (BMU) and its spatial neighbours on the 2D lattice using a neighbourhood function",
+          "Using backpropagation and stochastic gradient descent",
+          "Normalising all feature columns to zero mean and unit variance",
+          "Fitting a linear regression model on the cluster labels"
+        ],
+        "a": 0,
+        "why": "In k-means, only the winning centroid is updated. In a SOM, the BMU and its topological neighbours on the 2D lattice are pulled toward the sample, preserving spatial topology."
+      },
+      {
+        "q": "What does the U-matrix (Unified Distance Matrix) represent in a trained SOM visualisation?",
+        "o": [
+          "The Euclidean distance between adjacent neurons on the lattice, where high values denote cluster boundaries and valleys denote cluster centres",
+          "The training loss curve plotted over epochs",
+          "The confusion matrix of classification predictions",
+          "The variance explained by each principal component"
+        ],
+        "a": 0,
+        "why": "The U-matrix displays distances between neighbouring neuron weight vectors; high-distance ridges signify boundaries separating distinct clusters."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kmeans_clustering"
+    ],
+    related: [
+      "kmeans_clustering",
+      "affinity_propagation",
+      "spectral_clustering",
+      "cross-validation"
+    ],
+    keywords: "self organising maps, som, kohonen network, bmu, competitive learning, u matrix, topological mapping, unsupervised learning"
+  },
+
+  {
+    id: "biclustering",
+    short: "Biclustering",
+    title: "Biclustering (Co-clustering)",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Simultaneously cluster rows and columns of a data matrix: master Spectral Co-clustering, Spectral Biclustering, and gene expression analysis.",
+    lead: "Traditional clustering groups rows across all features or features across all samples. Biclustering identifies local sub-matrices where a specific subset of samples exhibits coherent behaviour across a specific subset of features.",
+    intuition: [
+      "Traditional clustering algorithms partition observations based on their values across all measured features: k-means or DBSCAN compares samples along the entirety of feature space $\\mathbb{R}^d$. However, in genomics, e-commerce, and text mining, relationships are often strictly localized: a group of 50 genes may be co-regulated only in a tiny subset of 12 cancer patients, while expressing unrelated random baseline noise across the other 500 patients.",
+      "When classical clustering evaluates distance over all 20,000 genes, the localized 50-gene co-regulation is completely overwhelmed by the background noise of the other 19,950 uninformative genes. Similarly, in collaborative filtering, a group of 300 users may share identical preferences for French arthouse cinema, but have completely divergent preferences across Hollywood blockbusters and sports documentaries.",
+      "Biclustering (also termed co-clustering or two-mode clustering) solves this by clustering rows and columns simultaneously. Rather than partitioning the entire row space or column space globally, biclustering identifies local sub-matrices (biclusters) where a specific subset of rows exhibits coherent, correlated, or constant values across a specific subset of columns.",
+      "Spectral Co-clustering models the data matrix as an adjacency matrix of an undirected bipartite graph between row and column nodes. By computing singular vectors of the normalised data matrix, it solves a graph partition problem that rearranges rows and columns to expose block-diagonal and checkerboard structures."
+    ],
+    analogy: "Imagine a giant crossword puzzle grid filled with random jumbled letters. If you look at the whole grid at once, it appears completely chaotic. Biclustering is like finding hidden word rectangles: taking five specific rows and four specific columns, then sliding them together so their intersection forms a perfectly readable English word, even while all surrounding letters remain gibberish.",
+    steps: [
+      {
+        "title": "1. Formulate data matrix and select bicluster model",
+        "body": "Structure input matrix $A \\in \\mathbb{R}^{n \\times p}$. Determine whether seeking constant value blocks, constant row/column shifted blocks, or coherent scale/interaction sub-matrices."
+      },
+      {
+        "title": "2. Normalise bipartite graph representation",
+        "body": "For Spectral Co-clustering, compute row sums $R_i = \\sum_j A_{ij}$ and column sums $C_j = \\sum_i A_{ij}$. Construct normalised matrix $A_n = R^{-1/2} A C^{-1/2}$."
+      },
+      {
+        "title": "3. Extract singular vectors via SVD",
+        "body": "Compute Singular Value Decomposition $A_n = U \\Sigma V^T$. For $k$ biclusters, extract the second through $(1 + \\lceil \\log_2 k \\rceil)$ singular vectors from $U$ and $V$."
+      },
+      {
+        "title": "4. Cluster concatenated singular vectors",
+        "body": "Form matrix $Z = [R^{-1/2} U_k ; C^{-1/2} V_k]$. Apply k-means to $Z$ to simultaneously assign row labels and column labels, revealing block-diagonal structure."
+      }
+    ],
+    math: [
+      {
+        "h": "Mean Squared Residue (Cheng and Church Score)",
+        "tex": "H(I, J) = \\frac{1}{|I| |J|} \\sum_{i \\in I, j \\in J} (a_{ij} - a_{iJ} - a_{Ij} + a_{IJ})^2",
+        "p": "Measures coherence of a bicluster sub-matrix formed by rows I and columns J. Here a_iJ is row mean, a_Ij is column mean, and a_IJ is overall bicluster mean. A residue of zero indicates perfect additive coherence."
+      },
+      {
+        "h": "Normalised Bipartite Graph Laplacian",
+        "tex": "A_n = R^{-1/2} A C^{-1/2}, \\quad R = \\operatorname{diag}(A \\mathbf{1}_p), \\; C = \\operatorname{diag}(\\mathbf{1}_n^T A)",
+        "p": "Normalisation ensures degree-invariance on bipartite graph connecting row nodes to column nodes, mapping the problem directly into spectral graph theory."
+      },
+      {
+        "h": "Spectral Co-clustering Partition",
+        "tex": "z = \\begin{bmatrix} R^{-1/2} u \\\\ C^{-1/2} v \\end{bmatrix}, \\quad A_n v = \\sigma u, \\; A_n^T u = \\sigma v",
+        "p": "The left and right singular vectors u and v of normalised matrix A_n define coordinates that minimise normalised cut on the bipartite graph."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.cluster import KMeans\n\n# Spectral Co-Clustering from scratch\ndef spectral_coclustering(A, n_clusters=2):\n    n_rows, n_cols = A.shape\n    \n    # 1. Row and Column marginals\n    R = np.sum(A, axis=1, keepdims=True)\n    C = np.sum(A, axis=0, keepdims=True)\n    \n    # Prevent division by zero\n    R[R == 0] = 1e-12\n    C[C == 0] = 1e-12\n    \n    # 2. Normalised matrix A_n = R^{-1/2} A C^{-1/2}\n    R_inv_sqrt = 1.0 / np.sqrt(R)\n    C_inv_sqrt = 1.0 / np.sqrt(C)\n    A_n = R_inv_sqrt * A * C_inv_sqrt\n    \n    # 3. SVD of normalised matrix\n    U, S, Vt = np.linalg.svd(A_n, full_matrices=False)\n    V = Vt.T\n    \n    # Use singular vectors corresponding to second largest singular values\n    # For n_clusters, take vectors 1 through n_clusters\n    n_vecs = int(np.ceil(np.log2(n_clusters))) + 1\n    U_sub = U[:, 1:n_vecs]\n    V_sub = V[:, 1:n_vecs]\n    \n    # Scale back by R^{-1/2} and C^{-1/2}\n    Z_rows = R_inv_sqrt * U_sub\n    Z_cols = C_inv_sqrt * V_sub\n    \n    # 4. Cluster rows and columns using k-means\n    km_rows = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit(Z_rows)\n    km_cols = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit(Z_cols)\n    \n    return km_rows.labels_, km_cols.labels_\n\n# Create synthetic matrix with 2 hidden block-diagonal biclusters\nnp.random.seed(42)\nn_r, n_c = 60, 40\ndata = np.random.uniform(1.0, 5.0, (n_r, n_c))\n\n# Bicluster 1: rows 0-24, cols 0-14 have elevated mean\ndata[0:25, 0:15] += 20.0\n# Bicluster 2: rows 25-59, cols 15-39 have elevated mean\ndata[25:60, 15:40] += 20.0\n\n# Shuffle rows and columns to scramble visual structure\nrow_perm = np.random.permutation(n_r)\ncol_perm = np.random.permutation(n_c)\nscrambled = data[row_perm, :][:, col_perm]\n\n# Run Spectral Co-clustering\nrow_labels, col_labels = spectral_coclustering(scrambled, n_clusters=2)\n\nprint(f\"Scrambled matrix shape: {scrambled.shape}\")\nprint(f\"Discovered row cluster sizes: {np.bincount(row_labels)}\")\nprint(f\"Discovered column cluster sizes: {np.bincount(col_labels)}\")\nprint(\"Row partition matches ground truth:\", len(np.unique(row_labels[row_perm < 25])) == 1)\nprint(\"Column partition matches ground truth:\", len(np.unique(col_labels[col_perm < 15])) == 1)",
+    keyPoints: [
+      "Simultaneously clusters rows and columns of a matrix, isolating local sub-matrices of coherent values.",
+      "Vital when target patterns exist only across a subset of features for a subset of samples (e.g. gene pathways or niche product tastes).",
+      "Spectral Co-clustering frames the task as finding a minimal normalised cut on a bipartite graph between rows and columns.",
+      "Solved efficiently via Singular Value Decomposition (SVD) of the row- and column-normalised data matrix.",
+      "Cheng-Church score (Mean Squared Residue) provides a standard quality benchmark for additive and constant biclusters."
+    ],
+    pitfalls: [
+      "Sensitivity to negative values: Spectral co-clustering interprets elements as bipartite edge weights, requiring non-negative entries ($A_{ij} \\ge 0$).",
+      "Overlapping biclusters: Standard spectral co-clustering produces disjoint partitions; soft or overlapping biclustering requires Plaid or iterative residue models.",
+      "Sensitivity to background noise scale: When matrix sparsity is extreme or noise variance exceeds signal jump, singular vectors fail to separate."
+    ],
+    quiz: [
+      {
+        "q": "Why does traditional k-means clustering fail to detect localized gene expression pathways across patients?",
+        "o": [
+          "k-means measures distance across all 20,000 genes, so the localized 50-gene signal is overwhelmed by noise in the remaining genes",
+          "k-means requires square symmetric matrices",
+          "k-means cannot be applied to biological data",
+          "k-means only works on binary zero-one data"
+        ],
+        "a": 0,
+        "why": "Traditional clustering computes Euclidean distances globally across all features. When a pathway is active only in a tiny fraction of genes, global distance is dominated by irrelevant background genes."
+      },
+      {
+        "q": "How does Spectral Co-clustering simultaneously assign cluster labels to both rows and columns?",
+        "o": [
+          "By representing the matrix as an undirected bipartite graph and clustering the concatenated left and right singular vectors",
+          "By running k-means on rows and then running linear regression on columns",
+          "By taking the inverse Fourier transform of the matrix",
+          "By discarding all columns with variance below 1.0"
+        ],
+        "a": 0,
+        "why": "Spectral Co-clustering frames rows and columns as bipartite graph nodes. SVD on the normalised matrix yields singular vectors corresponding to graph cuts for both rows and columns."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kmeans_clustering",
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "kmeans_clustering",
+      "spectral_clustering",
+      "svd-and-truncated-svd",
+      "self-organising-maps"
+    ],
+    keywords: "biclustering, co-clustering, two mode clustering, spectral coclustering, cheng church, gene expression, bipartite graph, singular value decomposition"
+  },
+
+  {
+    id: "time-series-clustering-with-dtw",
+    short: "Time-series DTW",
+    title: "Time-Series Clustering with Dynamic Time Warping",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Cluster temporal sequences of varying lengths and phase shifts: master Dynamic Time Warping (DTW) distance, Sakoe–Chiba warping bands, and k-DBA centroid averaging.",
+    lead: "Euclidean distance fails on time series when temporal patterns are out of phase or stretched in duration. Dynamic Time Warping non-linearly aligns the time axes of two sequences to measure true morphological similarity.",
+    intuition: [
+      "When clustering temporal sequences—such as electrocardiogram (ECG) heartbeats, smart-meter energy consumption profiles, gesture accelerometry, or financial stock trajectories—standard distance metrics fail. Euclidean distance strictly pairs sample $x_i(t)$ with sample $x_j(t)$ at the identical time index $t$. If one heartbeat is delayed by 50 milliseconds, or if one speaker pronounces a vowel twice as slowly, Euclidean distance reports a colossal distance even though the underlying morphological shapes are identical.",
+      "Dynamic Time Warping (DTW) overcomes this rigid lock-step assumption by warping the time dimension non-linearly. It allows multiple consecutive points in one sequence to match a single point in another, accommodating local tempo variations, phase shifts, and differing sequence lengths.",
+      "The optimal alignment is determined via dynamic programming, constructing an $n \\times m$ cost matrix where entry $(i, j)$ represents the minimal accumulated distance along a valid warping path from start $(1, 1)$ to end $(n, m)$. Valid paths must satisfy boundary conditions, monotonicity (time cannot flow backwards), and continuity (no time steps can be skipped).",
+      "To prevent pathological warping (where a single point in one sequence is matched to an entire plateau in another) and to accelerate computation from $O(n^2)$ to $O(n \\cdot w)$, practitioners apply global window constraints like the Sakoe–Chiba band. When clustering collections of time series, k-means is adapted using DTW Barycentre Averaging (DBA) to iteratively compute the optimal average centroid sequence."
+    ],
+    analogy: "Imagine comparing two musicians playing the identical trumpet solo. The first musician plays briskly in 4/4 time; the second plays with rubato, lingering on the high notes and rushing through the arpeggios. Comparing their sound waves sample-by-sample with Euclidean distance concludes they are playing completely different songs. Dynamic Time Warping acts like an expert conductor, stretching and compressing the time axis so each note aligns with its counterpart, recognising the identical melody.",
+    steps: [
+      {
+        "title": "1. Formulate pairwise distance cost matrix",
+        "body": "Given two sequences $X = (x_1, \\dots, x_n)$ and $Y = (y_1, \\dots, y_m)$, compute local pairwise distances $d(x_i, y_j) = (x_i - y_j)^2$."
+      },
+      {
+        "title": "2. Enforce Sakoe–Chiba warping window",
+        "body": "Constrain the search space: allow alignment only when $|i - j| \\le w$, where $w$ is the warping window width (typically 5–10% of sequence length)."
+      },
+      {
+        "title": "3. Fill dynamic programming accumulation table",
+        "body": "Compute cumulative cost: $D(i, j) = d(x_i, y_j) + \\min(D(i-1, j), D(i, j-1), D(i-1, j-1))$. The overall DTW distance is $\\sqrt{D(n, m)}$."
+      },
+      {
+        "title": "4. Cluster using k-medoids or k-DBA",
+        "body": "Compute pairwise DTW distance matrix across all $N$ time series and cluster using k-medoids (PAM), or iteratively update synthetic cluster centroids via DTW Barycentre Averaging (DBA)."
+      }
+    ],
+    math: [
+      {
+        "h": "Dynamic Programming Recurrence",
+        "tex": "D(i, j) = (x_i - y_j)^2 + \\min \\begin{cases} D(i - 1, j) & \\text{(insertion / warp Y)} \\\\ D(i, j - 1) & \\text{(deletion / warp X)} \\\\ D(i - 1, j - 1) & \\text{(match)} \\end{cases}",
+        "p": "Accumulated cost matrix recursion. Each step chooses the minimal cost preceding step to find the optimal global warping path."
+      },
+      {
+        "h": "Warping Path Constraints",
+        "tex": "W = (w_1, \\dots, w_K), \\quad w_1 = (1, 1), \\; w_K = (n, m), \\quad w_k = (i, j) \\implies w_{k+1} \\in \\{(i+1, j), (i, j+1), (i+1, j+1)\\}",
+        "p": "Enforces boundary conditions (paths must start at beginning and finish at end) and step size conditions (monotonicity and continuity)."
+      },
+      {
+        "h": "Sakoe–Chiba Warping Window Constraint",
+        "tex": "|i - j| \\le w",
+        "p": "Restricts the warping path to a corridor of width w around the main diagonal, preventing pathological time distortion and speeding up computation from O(nm) to O(nw)."
+      }
+    ],
+    code: "import numpy as np\n\n# Dynamic Time Warping (DTW) with Sakoe-Chiba Band from scratch\ndef dtw_distance(x, y, window=None):\n    n, m = len(x), len(y)\n    if window is None:\n        window = max(n, m)\n    else:\n        window = max(window, abs(n - m))\n        \n    # Initialise cost matrix with infinity\n    dtw_matrix = np.full((n + 1, m + 1), float('inf'))\n    dtw_matrix[0, 0] = 0.0\n    \n    for i in range(1, n + 1):\n        for j in range(max(1, i - window), min(m + 1, i + window + 1)):\n            cost = (x[i - 1] - y[j - 1])**2\n            dtw_matrix[i, j] = cost + min(\n                dtw_matrix[i - 1, j],      # Insertion\n                dtw_matrix[i, j - 1],      # Deletion\n                dtw_matrix[i - 1, j - 1]   # Match\n            )\n            \n    return np.sqrt(dtw_matrix[n, m])\n\n# Generate synthetic time-series with phase shift and tempo differences\nnp.random.seed(42)\nt = np.linspace(0, 4 * np.pi, 60)\n\n# Class 1: Sine wave with random phase shifts\nclass1_series = [np.sin(t + np.random.uniform(-0.8, 0.8)) + np.random.normal(0, 0.1, len(t)) for _ in range(10)]\n\n# Class 2: Square/Triangle wave\nclass2_series = [np.sign(np.sin(t + np.random.uniform(-0.8, 0.8))) + np.random.normal(0, 0.1, len(t)) for _ in range(10)]\n\nall_series = class1_series + class2_series\nN = len(all_series)\n\n# Compute pairwise DTW distance matrix\ndist_matrix = np.zeros((N, N))\nfor i in range(N):\n    for j in range(i + 1, N):\n        d = dtw_distance(all_series[i], all_series[j], window=10)\n        dist_matrix[i, j] = d\n        dist_matrix[j, i] = d\n\n# Simple k-medoids clustering on DTW distance matrix\ndef k_medoids(dist_mat, k=2, max_iters=20):\n    n = dist_mat.shape[0]\n    # Initialise medoids randomly\n    medoids = np.array([0, N - 1])\n    labels = np.zeros(n, dtype=int)\n    \n    for _ in range(max_iters):\n        # Assign samples to closest medoid\n        labels = np.argmin(dist_mat[:, medoids], axis=1)\n        # Update medoids\n        new_medoids = medoids.copy()\n        for cluster_id in range(k):\n            members = np.where(labels == cluster_id)[0]\n            if len(members) > 0:\n                sub_dist = dist_mat[np.ix_(members, members)]\n                best_member = members[np.argmin(np.sum(sub_dist, axis=1))]\n                new_medoids[cluster_id] = best_member\n        if np.array_equal(new_medoids, medoids):\n            break\n        medoids = new_medoids\n    return labels, medoids\n\nlabels, medoids = k_medoids(dist_matrix, k=2)\ntrue_labels = np.array([0]*10 + [1]*10)\nclustering_acc = max(np.mean(labels == true_labels), np.mean(labels == (1 - true_labels)))\n\nprint(f\"Total time series clustered: {N}\")\nprint(f\"DTW distance between phase-shifted identical waves: {dist_matrix[0, 1]:.3f}\")\nprint(f\"DTW distance between Sine and Square waves:        {dist_matrix[0, 10]:.3f}\")\nprint(f\"k-medoids Clustering Accuracy: {clustering_acc * 100:.1f}%\")",
+    keyPoints: [
+      "Non-linearly aligns temporal sequences to measure morphological similarity invariant to tempo changes and phase shifts.",
+      "Replaces rigid one-to-one Euclidean matching with one-to-many warping via dynamic programming in $O(n \\cdot m)$ time.",
+      "Sakoe–Chiba band $|i - j| \\le w$ prevents pathological distortions and accelerates calculation to $O(n \\cdot w)$.",
+      "Clustering is performed using k-medoids (PAM) on precomputed distance matrices or k-means with DTW Barycentre Averaging (DBA).",
+      "Standard benchmark for human gesture recognition, sensor telemetry, ECG cardiology, and speech processing."
+    ],
+    pitfalls: [
+      "Computational scaling: Pairwise DTW across $N$ time series of length $L$ requires $O(N^2 \\cdot L^2)$ operations; LB_Keogh lower bounding is necessary for large datasets.",
+      "Pathological warping: Without a Sakoe-Chiba or Itakura window constraint, a flat plateau in one series can match dozens of peaks in another, producing artificially low distances.",
+      "Triangular inequality violation: Standard DTW does not strictly satisfy the triangle inequality, meaning DTW is technically a semi-metric rather than a true metric."
+    ],
+    quiz: [
+      {
+        "q": "Why does Euclidean distance perform poorly compared to DTW when comparing audio speech signals of the same word?",
+        "o": [
+          "Euclidean distance requires exact lock-step temporal alignment, so speaking slightly slower or with a delayed start produces huge artificial distance",
+          "Euclidean distance cannot be computed on floating point numbers",
+          "Audio speech signals have infinite variance",
+          "Euclidean distance only works on 2D images"
+        ],
+        "a": 0,
+        "why": "Euclidean distance pairs points strictly by index t. If a speaker lingers on a syllable, waveforms fall out of phase, creating massive point-to-point Euclidean discrepancy."
+      },
+      {
+        "q": "What is the purpose of enforcing a Sakoe–Chiba band constraint |i - j| <= w in DTW?",
+        "o": [
+          "It prevents excessive pathological time stretching and reduces computational complexity from O(n^2) to O(nw)",
+          "It guarantees that the distance will always be zero",
+          "It transforms the time series into frequency domain Fourier coefficients",
+          "It eliminates the need for dynamic programming"
+        ],
+        "a": 0,
+        "why": "The Sakoe-Chiba band restricts warping to a diagonal corridor of width w, preventing extreme time warping blunders and speeding up computation."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kmedoids_clustering"
+    ],
+    related: [
+      "kmedoids_clustering",
+      "kmeans_clustering",
+      "stationarity-acf-and-pacf",
+      "biclustering"
+    ],
+    keywords: "dtw, dynamic time warping, time series clustering, sakoe chiba band, k-dba, k-medoids, phase shift, alignment"
+  },
+
+  {
+    id: "svd-and-truncated-svd",
+    short: "SVD & truncated SVD",
+    title: "Singular Value Decomposition and Truncated SVD",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Decompose any matrix into orthogonal rotation and scaling components: master the Eckart–Young–Mirsky low-rank theorem and Latent Semantic Analysis (LSA).",
+    lead: "While eigendecomposition applies only to square matrices, Singular Value Decomposition (SVD) factors any rectangular matrix into orthonormal singular vectors and singular values, providing the optimal low-rank matrix approximation.",
+    intuition: [
+      "Every rectangular matrix $X \\in \\mathbb{R}^{n \\times p}$ represents a linear transformation mapping vectors from $\\mathbb{R}^p$ to $\\mathbb{R}^n$. Geometrically, any linear transformation maps an origin-centred unit hypersphere into a hyper-ellipsoid. The Singular Value Decomposition (SVD) formalises this geometric reality into three elementary operations: an initial orthogonal rotation in $\\mathbb{R}^p$, an axis-aligned stretching, and a secondary orthogonal rotation in $\\mathbb{R}^n$.",
+      "Mathematically, SVD decomposes $X = U \\Sigma V^T$, where $U \\in \\mathbb{R}^{n \\times n}$ contains orthonormal left singular vectors (eigenvectors of $X X^T$), $V \\in \\mathbb{R}^{p \\times p}$ contains orthonormal right singular vectors (eigenvectors of $X^T X$), and $\\Sigma \\in \\mathbb{R}^{n \\times p}$ is a diagonal matrix of non-negative singular values $\\sigma_1 \\ge \\sigma_2 \\ge \\dots \\ge \\sigma_r > 0$ ordered by magnitude.",
+      "The foundational power of SVD lies in the Eckart–Young–Mirsky theorem. It proves that keeping only the top $k$ singular values and their corresponding singular vectors—constructing Truncated SVD $X_k = \\sum_{i=1}^k \\sigma_i u_i v_i^T$—yields the mathematically optimal rank-$k$ approximation of $X$ under both the Frobenius norm and spectral norm.",
+      "Truncated SVD is ubiquitous across machine learning: in text mining, applying Truncated SVD to sparse term-document matrices constitutes Latent Semantic Analysis (LSA), compressing thousands of vocabulary words into dense semantic concept vectors; in recommendation systems, it underpins matrix factorisation; in signal processing, it denoises data by truncating small noise singular values."
+    ],
+    analogy: "Imagine a complex orchestral recording featuring 100 instruments playing at once. SVD decomposes the master audio track into distinct, independent sonic layers ordered by volume. The first few singular vectors capture the massive booming rhythm section and lead vocals (the low-rank signal). The tiny 90th to 100th singular vectors capture the faint rustle of sheet music and background air conditioning (the noise). Truncating the matrix keeps the music intact while eliminating the hiss.",
+    steps: [
+      {
+        "title": "1. Formulate rectangular data matrix",
+        "body": "Structure matrix $X \\in \\mathbb{R}^{n \\times p}$ (e.g. document-term count matrix, user-item ratings, or sensor channels)."
+      },
+      {
+        "title": "2. Compute SVD factorization",
+        "body": "Compute $X = U \\Sigma V^T$. In thin/reduced SVD for $n > p$, $U \\in \\mathbb{R}^{n \\times p}$, $\\Sigma \\in \\mathbb{R}^{p \\times p}$, and $V \\in \\mathbb{R}^{p \\times p}$."
+      },
+      {
+        "title": "3. Truncate to desired rank k",
+        "body": "Select rank $k \\ll \\min(n, p)$. Retain the first $k$ columns of $U$ ($U_k$), the top $k \\times k$ block of $\\Sigma$ ($\\Sigma_k$), and the first $k$ columns of $V$ ($V_k$)."
+      },
+      {
+        "title": "4. Project and reconstruct",
+        "body": "Obtain low-dimensional sample coordinates: $Z = X V_k = U_k \\Sigma_k$. Reconstruct low-rank approximation: $\\hat{X}_k = U_k \\Sigma_k V_k^T$."
+      }
+    ],
+    math: [
+      {
+        "h": "Full Singular Value Decomposition",
+        "tex": "X = U \\Sigma V^T = \\sum_{i=1}^r \\sigma_i u_i v_i^T, \\quad U^T U = I_n, \\; V^T V = I_p, \\; \\sigma_1 \\ge \\sigma_2 \\ge \\dots \\ge 0",
+        "p": "Decomposes matrix X into a sum of r rank-1 outer products u_i v_i^T, weighted by descending singular values sigma_i."
+      },
+      {
+        "h": "Eckart–Young–Mirsky Low-Rank Approximation Theorem",
+        "tex": "\\min_{\\operatorname{rank}(B) = k} \\|X - B\\|_F = \\|X - X_k\\|_F = \\sqrt{\\sum_{i=k+1}^r \\sigma_i^2}, \\quad X_k = U_k \\Sigma_k V_k^T",
+        "p": "Truncated SVD provides the exact best rank-k approximation under Frobenius norm. The minimum achievable reconstruction error equals the square root of discarded singular values squared."
+      },
+      {
+        "h": "Mathematical Equivalence to PCA",
+        "tex": "\\operatorname{Cov}(X) = \\frac{1}{n - 1} X_c^T X_c = \\frac{1}{n - 1} V \\Sigma^2 V^T",
+        "p": "When data matrix X_c is mean-centred across rows, the right singular vectors V of X_c are identical to the principal component loading vectors of Cov(X), with eigenvalues lambda_i = sigma_i^2 / (n - 1)."
+      }
+    ],
+    code: "import numpy as np\n\n# Truncated SVD and Latent Semantic Analysis (LSA) from scratch\nnp.random.seed(42)\n\n# Synthetic Term-Document Matrix (6 terms x 8 documents)\n# Terms: [algorithm, coding, neural, python, finance, stocks, trading, investment]\nterms = ['neural', 'python', 'algorithm', 'finance', 'stocks', 'trading']\ndocs = [f\"Doc_{i+1}\" for i in range(8)]\n\n# Docs 0-3 are Tech articles; Docs 4-7 are Finance articles\nX = np.array([\n    # D1  D2  D3  D4  D5  D6  D7  D8\n    [ 3,  2,  4,  3,  0,  0,  0,  0],  # neural\n    [ 4,  5,  3,  4,  1,  0,  0,  0],  # python\n    [ 2,  3,  4,  2,  0,  1,  0,  0],  # algorithm\n    [ 0,  0,  0,  1,  4,  5,  3,  4],  # finance\n    [ 0,  0,  0,  0,  5,  4,  5,  3],  # stocks\n    [ 0,  1,  0,  0,  3,  4,  4,  5],  # trading\n], dtype=float)\n\n# 1. Compute Full SVD: X = U Sigma V^T\nU, S, Vt = np.linalg.svd(X, full_matrices=False)\nV = Vt.T\n\n# 2. Truncate to rank k=2 (discovering 2 latent concepts: Tech vs Finance)\nk = 2\nU_k = U[:, :k]\nS_k = np.diag(S[:k])\nV_k = V[:, :k]\n\n# Low-rank reconstruction\nX_reconstructed = U_k @ S_k @ V_k.T\n\n# Frobenius reconstruction error\nerr_actual = np.linalg.norm(X - X_reconstructed, 'fro')\nerr_theoretical = np.sqrt(np.sum(S[k:]**2))\n\n# Document representation in 2D latent concept space\ndoc_coords = V_k @ S_k\n\nprint(f\"Singular values of term-document matrix: {S.round(2)}\")\nprint(f\"Explained variance by top {k} components: {(np.sum(S[:k]**2) / np.sum(S**2))*100:.1f}%\")\nprint(f\"Actual Frobenius Error:      {err_actual:.4f}\")\nprint(f\"Theoretical Eckart-Young Error: {err_theoretical:.4f} (exact match!)\")\n\nprint(\"\\nDocument coordinates in 2D Latent Semantic Space:\")\nfor d_name, coord in zip(docs, doc_coords):\n    category = \"Tech\" if coord[0] > coord[1] else \"Finance\"\n    print(f\"  {d_name}: [{coord[0]:+5.2f}, {coord[1]:+5.2f}] -> Identified as {category}\")",
+    keyPoints: [
+      "Decomposes any rectangular matrix $X \\in \\mathbb{R}^{n \\times p}$ into orthonormal singular vectors and singular values: $X = U \\Sigma V^T$.",
+      "Eckart–Young–Mirsky theorem guarantees that Truncated SVD $X_k = U_k \\Sigma_k V_k^T$ is the optimal rank-$k$ approximation under Frobenius and spectral norms.",
+      "Underpins Latent Semantic Analysis (LSA), transforming sparse high-dimensional term-document matrices into dense low-dimensional semantic representations.",
+      "Unlike PCA, Truncated SVD does not require centreing data to zero mean, preserving memory sparsity in massive term-document or rating matrices.",
+      "Right singular vectors $V$ of mean-centred data correspond exactly to principal component directions in PCA."
+    ],
+    pitfalls: [
+      "Confusing SVD with PCA: PCA requires column-centreing first; running SVD without centreing finds directions of maximum energy from the origin, not maximum variance around the mean.",
+      "Negative values in semantic concepts: SVD generates both positive and negative entries, meaning latent components lack strict parts-based physical interpretability; Non-Negative Matrix Factorisation (NMF) solves this.",
+      "High memory consumption with dense matrices: Full SVD of an $n \\times p$ matrix requires $O(\\min(n p^2, n^2 p))$ operations; randomized SVD or Lanczos iterations should be used for large matrices."
+    ],
+    quiz: [
+      {
+        "q": "What does the Eckart–Young–Mirsky theorem establish regarding Truncated SVD?",
+        "o": [
+          "Truncating SVD to rank k yields the mathematically optimal rank-k matrix approximation under both Frobenius and spectral norms",
+          "SVD singular values must always sum to 1",
+          "All rectangular matrices can be diagonalized using real numbers",
+          "Truncating SVD guarantees zero reconstruction error"
+        ],
+        "a": 0,
+        "why": "The Eckart-Young-Mirsky theorem is the bedrock result proving that X_k = U_k Sigma_k V_k^T minimises ||X - B||_F over all matrices B with rank <= k."
+      },
+      {
+        "q": "Why is Truncated SVD preferred over standard PCA for high-dimensional sparse text data (e.g. TF-IDF matrices)?",
+        "o": [
+          "centreing the matrix for PCA destroys sparsity (turning zeros into non-zeros), exhausting RAM, whereas Truncated SVD operates directly on sparse matrices",
+          "Truncated SVD cannot be computed on dense matrices",
+          "PCA only works on images, not text",
+          "Truncated SVD requires no matrix multiplications"
+        ],
+        "a": 0,
+        "why": "Column-centreing in PCA subtracts the mean, converting a 99% sparse matrix into a 100% dense matrix that instantly blows up RAM. Truncated SVD operates directly on sparse formats."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance"
+    ],
+    related: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "biclustering",
+      "kernel-pca",
+      "pls-and-principal-component-regression"
+    ],
+    keywords: "svd, singular value decomposition, truncated svd, eckart young mirsky, low rank approximation, latent semantic analysis, lsa, matrix factorisation"
+  },
+
+  {
+    id: "kernel-pca",
+    short: "Kernel PCA",
+    title: "Kernel Principal Component Analysis",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Unfold non-linear manifolds by performing PCA in reproducing kernel Hilbert spaces: master the kernel trick, double centring, and pre-image challenges.",
+    lead: "Linear PCA projects data onto straight hyperplanes, failing when data lies on concentric spheres, Swiss rolls, or curved manifolds. Kernel PCA maps samples non-linearly into high-dimensional feature space where linear PCA can separate them.",
+    intuition: [
+      "Principal Component Analysis (PCA) is inherently linear: it discovers orthogonal straight lines and flat hyperplanes that capture maximum variance. However, real-world data frequently lies on non-linear manifolds: concentric rings, spirals, Swiss rolls, or folded surfaces. On such structures, linear PCA merely squashes the non-linear manifold flat, obliterating cluster separation and manifold geometry.",
+      "Kernel PCA (Schölkopf, Smola, and Müller, 1998) overcomes this limitation by combining PCA with the kernel trick. The data points $x_i \\in \\mathbb{R}^d$ are mapped non-linearly via a mapping function $\\phi(x)$ into an arbitrarily high-dimensional (potentially infinite-dimensional) Reproducing Kernel Hilbert Space (RKHS) $\\mathcal{H}$. By Cover's theorem, complex non-linear structures become linear in sufficiently high dimensions.",
+      "Rather than calculating coordinates $\\phi(x)$ explicitly—which would be computationally impossible for infinite-dimensional feature spaces—Kernel PCA formulates the eigenvalue problem solely in terms of inner products evaluated via a Mercer kernel function $K(x_i, x_j) = \\langle \\phi(x_i), \\phi(x_j) \\rangle$ (such as the Radial Basis Function / Gaussian kernel $e^{-\\gamma \\|x_i - x_j\\|^2}$).",
+      "Because PCA requires mean-centred features, Kernel PCA performs an algebraic operation called \"double centring\" directly on the Gram kernel matrix $K$. Solving the dual eigenvalue problem on the double-centred kernel matrix yields non-linear principal component projections for training points and novel out-of-sample test instances."
+    ],
+    analogy: "Imagine two concentric rings of iron filings sitting on a flat wooden tabletop: an inner circular ring surrounded by an outer ring. No straight line drawn on the table can separate the inner ring from the outer ring. Now place a strong magnet beneath the centre of the table. The inner filings are drawn sharply upwards into the air while the outer filings remain lower down. In this newly created 3D vertical space, a flat horizontal sheet of cardboard cleanly separates the two rings. Kernel PCA performs this upward lifting mathematically via the kernel trick.",
+    steps: [
+      {
+        "title": "1. Select kernel function and compute Gram matrix",
+        "body": "Choose a valid Mercer kernel (e.g. Gaussian RBF $K(x, x') = \\exp(-\\gamma \\|x - x'\\|^2)$). Compute $n \\times n$ Gram matrix $K_{ij} = K(x_i, x_j)$."
+      },
+      {
+        "title": "2. Perform kernel double centring",
+        "body": "Because feature vectors $\\phi(x)$ must be mean-centred in $\\mathcal{H}$, compute double-centred kernel matrix: $\\tilde{K} = K - \\mathbf{1}_n K - K \\mathbf{1}_n + \\mathbf{1}_n K \\mathbf{1}_n$, where $\\mathbf{1}_n$ has all entries equal to $1/n$."
+      },
+      {
+        "title": "3. Solve dual eigenvalue problem",
+        "body": "Solve $\\tilde{K} \\alpha_k = \\lambda_k \\alpha_k$. Normalise eigenvectors such that $\\lambda_k \\|\\alpha_k\\|^2 = 1$."
+      },
+      {
+        "title": "4. Project novel test points",
+        "body": "Project arbitrary sample $x$ onto $k$-th non-linear principal component: $y_k(x) = \\sum_{i=1}^n \\alpha_{ki} \\tilde{K}(x_i, x)$."
+      }
+    ],
+    math: [
+      {
+        "h": "Dual Kernel PCA Eigenvalue Problem",
+        "tex": "\\tilde{K} \\alpha_k = \\lambda_k \\alpha_k, \\quad \\text{subject to } \\lambda_k (\\alpha_k^T \\alpha_k) = 1",
+        "p": "The primal PCA problem in feature space H translates into an n x n dual eigenvalue problem on the Gram matrix K, eliminating dependence on feature dimension."
+      },
+      {
+        "h": "Gram Matrix Double Centring",
+        "tex": "\\tilde{K} = K - \\frac{1}{n} J K - \\frac{1}{n} K J + \\frac{1}{n^2} J K J, \\quad J = \\mathbf{1}_n \\mathbf{1}_n^T",
+        "p": "Ensures that implicit feature mappings phi(x) have zero mean in Hilbert space without ever computing phi(x) explicitly."
+      },
+      {
+        "h": "Out-of-Sample Non-Linear Projection",
+        "tex": "y_k(x) = \\langle v_k, \\phi(x) \\rangle = \\sum_{i=1}^n \\alpha_{ki} \\tilde{K}(x_i, x)",
+        "p": "Projects novel input x onto the k-th non-linear principal component eigenvector v_k via linear combination of kernel evaluations."
+      }
+    ],
+    code: "import numpy as np\n\n# Kernel PCA with Radial Basis Function (RBF) Kernel from scratch\nclass KernelPCA:\n    def __init__(self, n_components=2, gamma=1.0):\n        self.n_components = n_components\n        self.gamma = gamma\n        self.alphas = None\n        self.lambdas = None\n        self.X_fit = None\n        self.K_fit = None\n        \n    def _rbf_kernel(self, X1, X2):\n        # Pairwise squared Euclidean distance\n        dists_sq = np.sum(X1**2, axis=1)[:, None] + np.sum(X2**2, axis=1)[None, :] - 2 * (X1 @ X2.T)\n        return np.exp(-self.gamma * np.maximum(dists_sq, 0))\n        \n    def fit_transform(self, X):\n        self.X_fit = X\n        n = X.shape[0]\n        \n        # 1. Compute Gram Matrix\n        K = self._rbf_kernel(X, X)\n        self.K_fit = K\n        \n        # 2. Kernel Double Centring\n        one_n = np.ones((n, n)) / n\n        K_tilde = K - one_n @ K - K @ one_n + one_n @ K @ one_n\n        \n        # 3. Eigenvalue Decomposition\n        eigenvals, eigenvecs = np.linalg.eigh(K_tilde)\n        \n        # Sort eigenvalues in descending order\n        idx = np.argsort(eigenvals)[::-1]\n        eigenvals = eigenvals[idx]\n        eigenvecs = eigenvecs[:, idx]\n        \n        # Select top k components\n        top_evals = eigenvals[:self.n_components]\n        top_evecs = eigenvecs[:, :self.n_components]\n        \n        # Normalise eigenvectors: lambda_k * ||alpha_k||^2 = 1\n        for k in range(self.n_components):\n            if top_evals[k] > 1e-10:\n                top_evecs[:, k] /= np.sqrt(top_evals[k])\n                \n        self.alphas = top_evecs\n        self.lambdas = top_evals\n        \n        # Projected training coordinates\n        return K_tilde @ self.alphas\n\n# Generate non-linearly separable concentric circles\nnp.random.seed(42)\nn_per_ring = 100\n\n# Inner circle\nr_inner = np.random.normal(1.0, 0.1, n_per_ring)\ntheta_inner = np.random.uniform(0, 2 * np.pi, n_per_ring)\nX_inner = np.column_stack([r_inner * np.cos(theta_inner), r_inner * np.sin(theta_inner)])\n\n# Outer circle\nr_outer = np.random.normal(3.0, 0.1, n_per_ring)\ntheta_outer = np.random.uniform(0, 2 * np.pi, n_per_ring)\nX_outer = np.column_stack([r_outer * np.cos(theta_outer), r_outer * np.sin(theta_outer)])\n\nX = np.vstack([X_inner, X_outer])\ny = np.array([0]*n_per_ring + [1]*n_per_ring)\n\n# Fit Kernel PCA with gamma=0.5\nkpca = KernelPCA(n_components=2, gamma=0.5)\nX_kpca = kpca.fit_transform(X)\n\n# Evaluate linear separability along the 1st principal component\npc1 = X_kpca[:, 0]\n# Find optimal split threshold\nthresholds = np.linspace(np.min(pc1), np.max(pc1), 100)\nbest_acc = max(np.mean((pc1 > t) == y) for t in thresholds)\n\nprint(f\"Dataset: Concentric Circles ({X.shape[0]} samples)\")\nprint(f\"Top 2 Kernel PCA eigenvalues: {kpca.lambdas[:2].round(3)}\")\nprint(f\"Linear separability on 1st Kernel PC: {best_acc * 100:.1f}% (100% cleanly separated!)\")",
+    keyPoints: [
+      "Unfolds complex non-linear manifolds by projecting data into a high-dimensional Hilbert space where linear PCA applies.",
+      "Employs the kernel trick: solves an $n \\times n$ dual eigenvalue problem without explicitly computing coordinates $\\phi(x)$.",
+      "Kernel double centring $\\tilde{K} = K - \\mathbf{1}_n K - K \\mathbf{1}_n + \\mathbf{1}_n K \\mathbf{1}_n$ centres implicit feature mappings in Hilbert space.",
+      "Out-of-sample projections are obtained via a linear combination of kernel evaluations against training samples.",
+      "Suffers from the pre-image problem: mapping a point from the kernel Hilbert space back to input space $\\mathbb{R}^d$ is ill-posed and non-trivial."
+    ],
+    pitfalls: [
+      "Hyperparameter sensitivity: Performance depends heavily on the kernel parameter (e.g. $\\gamma$ in RBF); poor choice leads to either trivial identity mapping or collapsing onto a single point.",
+      "Memory and computational bottleneck: The Gram matrix is $n \\times n$; computing eigendecomposition scales as $O(n^3)$, making exact Kernel PCA intractable for large datasets ($n > 10,000$).",
+      "The Pre-Image Problem: Unlike linear PCA where back-projecting is trivial ($x = V z$), reconstructing original inputs from Kernel PC coordinates requires non-linear numerical optimisation."
+    ],
+    quiz: [
+      {
+        "q": "Why does standard linear PCA fail on concentric circular datasets while Kernel PCA succeeds?",
+        "o": [
+          "Linear PCA only finds orthogonal straight lines, squashing both rings together, while Kernel PCA maps rings into a Hilbert space where they separate linearly",
+          "Linear PCA requires that sample size n is smaller than feature count p",
+          "Kernel PCA requires labels while linear PCA is unsupervised",
+          "Linear PCA can only handle datasets with fewer than 50 samples"
+        ],
+        "a": 0,
+        "why": "Linear PCA is restricted to linear coordinate rotations. Kernel PCA lifts data into a high-dimensional feature space where non-linear boundaries become linearly planar."
+      },
+      {
+        "q": "What is the \"pre-image problem\" in Kernel PCA?",
+        "o": [
+          "Reconstructing an original input vector x from its low-dimensional Kernel PC projection is non-trivial because the inverse mapping from Hilbert space does not generally exist in closed form",
+          "Initialising the Gram matrix takes too much time",
+          "Finding the eigenvalues of a symmetric matrix produces complex numbers",
+          "Kernel PCA cannot project out-of-sample test points"
+        ],
+        "a": 0,
+        "why": "In linear PCA, reconstruction is x_hat = V_k z. In Kernel PCA, finding the vector in input space whose phi(x) matches a point in Hilbert space is ill-posed and requires iterative optimisation."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance",
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "svd-and-truncated-svd",
+      "biclustering",
+      "support_vector_classifier",
+      "pls-and-principal-component-regression"
+    ],
+    keywords: "kernel pca, principal component analysis, non linear dimensionality reduction, rbf kernel, kernel trick, gram matrix, double centring, pre image problem"
+  },
+
+  {
+    id: "independent-component-analysis",
+    short: "ICA",
+    title: "Independent Component Analysis",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Separate linear mixtures into statistically independent non-Gaussian sources: master the cocktail party problem, FastICA, negentropy, and kurtosis.",
+    lead: "While PCA seeks orthogonal axes of maximal variance, Independent Component Analysis (ICA) searches for directions that are statistically independent by maximising non-Gaussianity.",
+    intuition: [
+      "The quintessential motivation for Independent Component Analysis (ICA) is the \"cocktail party problem\": several people speak simultaneously in a room, and multiple microphones record mixed acoustic signals. Each microphone captures a distinct linear superposition of the speakers voices. Given only the recorded mixtures without knowledge of the speakers locations or room acoustics, can we recover the original isolated vocal tracks? This challenge is known as Blind Source Separation (BSS).",
+      "Principal Component Analysis (PCA) fails on this problem. PCA enforces orthogonality and seeks directions of maximum variance. However, uncorrelatedness is purely a second-order linear relationship: two variables can be completely uncorrelated yet strongly dependent. ICA demands statistical independence: the joint probability distribution must factorise into the product of marginals, $p(s_1, \\dots, s_m) = \\prod_{i=1}^m p_i(s_i)$.",
+      "The algorithmic key to ICA is the Central Limit Theorem (CLT). According to the CLT, the sum of independent random variables tends toward a Gaussian distribution: any linear mixture of non-Gaussian source signals will be more Gaussian than the original individual sources. Therefore, to untangle the mixture and isolate the pure sources, we must search for unmixing vectors that maximise the non-Gaussianity of the recovered signals.",
+      "Aapo Hyvärinen developed the FastICA algorithm, an efficient fixed-point iteration scheme that measures non-Gaussianity via negentropy (the entropy difference between a distribution and a Gaussian with identical covariance). FastICA whitens data via PCA, then uses fixed-point updates to extract statistically independent components."
+    ],
+    analogy: "Imagine blending a banana smoothie containing strawberries, blueberries, and bananas. A standard kitchen blender homogenises everything into a uniform purplish paste (the Gaussian mixture). PCA merely tells you the total volume and density of the paste. ICA is like a magical reverse centrifuge that examines the subtle non-uniform textures (non-Gaussianity), unmixing the smoothie back into discrete piles of whole strawberries, blueberries, and bananas.",
+    steps: [
+      {
+        "title": "1. Mean-centre and whiten the observed data",
+        "body": "Centre observations to zero mean: $x \\leftarrow x - \\mathbb{E}[x]$. Whiten data using eigenvalue decomposition of covariance $\\Sigma = E D E^T$, setting $\\tilde{x} = E D^{-1/2} E^T x$ such that $\\mathbb{E}[\\tilde{x} \\tilde{x}^T] = I$."
+      },
+      {
+        "title": "2. Select contrast function for non-Gaussianity",
+        "body": "Choose a non-quadratic contrast function $G(u)$ approximating negentropy (such as $G(u) = \\frac{1}{a} \\log \\cosh(a u)$ or $G(u) = -\\exp(-u^2 / 2)$), which are robust to outliers."
+      },
+      {
+        "title": "3. Execute FastICA fixed-point iteration",
+        "body": "For unmixing weight vector $w$, iterate: $w^+ = \\mathbb{E}[\\tilde{x} g(w^T \\tilde{x})] - \\mathbb{E}[g'(w^T \\tilde{x})] w$, where $g(u) = G'(u)$. Normalise $w \\leftarrow w^+ / \\|w^+\\|_2$."
+      },
+      {
+        "title": "4. Decorrelate vectors and recover sources",
+        "body": "Symmetrically or sequentially orthogonalise weight vectors (e.g. via Gram–Schmidt or $W \\leftarrow (W W^T)^{-1/2} W$) to prevent convergence to identical components. Reconstruct independent sources: $\\hat{s} = W \\tilde{x}$."
+      }
+    ],
+    math: [
+      {
+        "h": "Linear Mixture and Unmixing Model",
+        "tex": "x = A s = \\sum_{i=1}^m a_i s_i, \\quad \\hat{s} = W x = W A s",
+        "p": "Observed signals x are formed by unknown mixing matrix A multiplying independent sources s. The objective is finding unmixing matrix W such that WA approximates a permutation and scaling matrix."
+      },
+      {
+        "h": "Negentropy Measure of Non-Gaussianity",
+        "tex": "J(y) = H(y_{\\mathrm{gauss}}) - H(y) \\approx k_1 [\\mathbb{E}\\{G_1(y)\\}]^2 + k_2 [\\mathbb{E}\\{G_2(y)\\} - \\mathbb{E}\\{G_2(\\nu)\\}]^2",
+        "p": "Gaussian distributions have maximal entropy among all distributions with identical variance. Negentropy J(y) is strictly non-negative and zero if and only if y is Gaussian; maximising negentropy isolates independent components."
+      },
+      {
+        "h": "FastICA Fixed-Point Update Rule",
+        "tex": "w^+ = \\mathbb{E}[x g(w^T x)] - \\mathbb{E}[g'(w^T x)] w, \\quad w \\leftarrow \\frac{w^+}{\\|w^+\\|}",
+        "p": "Fixed-point iteration derived from Newton-Raphson optimisation on Kuhn-Tucker conditions under constraint ||w|| = 1. Converges with cubic speed."
+      }
+    ],
+    code: "import numpy as np\n\n# FastICA from scratch for Blind Source Separation\nnp.random.seed(42)\nn_samples = 2000\ntime = np.linspace(0, 8, n_samples)\n\n# 1. Generate two non-Gaussian independent sources\n# Source 1: Sinusoidal signal\ns1 = np.sin(2 * time)\n# Source 2: Square wave signal\ns2 = np.sign(np.sin(3 * time))\nS = np.column_stack([s1, s2])\n\n# 2. Mix sources with an arbitrary mixing matrix A\nA = np.array([[1.0, 1.5],\n              [0.8, -0.6]])\nX = S @ A.T  # Mixed observed signals\n\n# 3. FastICA Implementation\ndef fast_ica(X, n_components=2, max_iters=200, tol=1e-6):\n    n, p = X.shape\n    # Step A: Mean-centreing\n    X_mean = np.mean(X, axis=0)\n    X_centreed = X - X_mean\n    \n    # Step B: Whitening via SVD\n    cov = (X_centreed.T @ X_centreed) / n\n    U, D, _ = np.linalg.svd(cov)\n    whitening_matrix = U @ np.diag(1.0 / np.sqrt(D)) @ U.T\n    X_white = X_centreed @ whitening_matrix.T\n    \n    # Contrast function g(u) = tanh(u), g'(u) = 1 - tanh^2(u)\n    def g(u): return np.tanh(u)\n    def g_prime(u): return 1.0 - np.tanh(u)**2\n    \n    # Step C: Fixed-point iteration with Gram-Schmidt orthogonalisation\n    W = np.zeros((n_components, n_components))\n    \n    for i in range(n_components):\n        w = np.random.normal(size=n_components)\n        w /= np.linalg.norm(w)\n        \n        for it in range(max_iters):\n            # w+ = E[x * g(w^T x)] - E[g'(w^T x)] * w\n            wx = X_white @ w\n            w_new = np.mean(X_white * g(wx)[:, None], axis=0) - np.mean(g_prime(wx)) * w\n            \n            # Orthogonalise against previously found vectors\n            for j in range(i):\n                w_new -= (w_new @ W[j]) * W[j]\n            w_new /= np.linalg.norm(w_new)\n            \n            # Check convergence\n            if np.abs(np.abs(w_new @ w) - 1.0) < tol:\n                w = w_new\n                break\n            w = w_new\n            \n        W[i] = w\n        \n    # Reconstructed independent components\n    S_hat = X_white @ W.T\n    return S_hat, W\n\nS_recovered, W_est = fast_ica(X, n_components=2)\n\n# Normalise recovered signals to unit variance for correlation check\nS_norm = (S - np.mean(S, axis=0)) / np.std(S, axis=0)\nS_rec_norm = (S_recovered - np.mean(S_recovered, axis=0)) / np.std(S_recovered, axis=0)\n\n# Check correlation matrix between original and recovered\ncorr = np.abs(S_norm.T @ S_rec_norm) / len(S)\n\nprint(f\"Mixing Matrix A:\n{A}\")\nprint(f\"\nCorrelation between original and recovered sources:\")\nprint(f\"Source 1 max correlation: {np.max(corr[0]):.4f}\")\nprint(f\"Source 2 max correlation: {np.max(corr[1]):.4f} (clean separation!)\")",
+    keyPoints: [
+      "Decomposes linear mixtures of signals into statistically independent, non-Gaussian components.",
+      "Exploits the Central Limit Theorem: mixtures are always more Gaussian than independent sources; maximising non-Gaussianity unmixes them.",
+      "Requires that at most one source distribution is Gaussian (multiple Gaussian sources cannot be separated due to rotational symmetry).",
+      "FastICA uses a fixed-point iteration derived from negentropy approximations, converging with cubic speed.",
+      "Possesses intrinsic ambiguities: source variance (scaling) and component ordering cannot be uniquely determined from observed mixtures alone."
+    ],
+    pitfalls: [
+      "Gaussian source limitation: If two or more independent sources are Gaussian, their joint distribution is spherically symmetric, making rotation indeterminate.",
+      "Scale and sign ambiguity: The magnitude and sign of recovered sources are unidentifiable ($(-a) \\cdot (-s) = a s$); recovered signals must be standardised.",
+      "Permutation ambiguity: ICA cannot infer the original ordering of sources; component 1 might correspond to source 2 or source 5."
+    ],
+    quiz: [
+      {
+        "q": "Why does Independent Component Analysis require that source distributions are non-Gaussian?",
+        "o": [
+          "Because the joint distribution of multiple Gaussian sources is spherically symmetric, making any orthogonal rotation equally valid and unidentifiable",
+          "Because Gaussian distributions cannot be differentiated",
+          "Because the Central Limit Theorem only applies to non-Gaussian variables",
+          "Because Gaussian random variables cannot be multiplied by matrices"
+        ],
+        "a": 0,
+        "why": "A multivariate Gaussian with identity covariance is spherically symmetric: rotating it yields an identical Gaussian. Without non-Gaussianity, independent directions cannot be distinguished."
+      },
+      {
+        "q": "What is the relationship between uncorrelatedness and statistical independence in the context of PCA and ICA?",
+        "o": [
+          "Independence implies uncorrelatedness (zero covariance), but uncorrelatedness does not imply independence for non-Gaussian variables",
+          "Uncorrelatedness and independence are mathematically identical in all cases",
+          "PCA guarantees independence while ICA only guarantees uncorrelatedness",
+          "Uncorrelated variables always have zero mutual information"
+        ],
+        "a": 0,
+        "why": "Uncorrelatedness only means E[XY] = E[X]E[Y] (second-order orthogonality). Statistical independence requires p(X, Y) = p(X)p(Y) across all higher-order moments."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance",
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "svd-and-truncated-svd",
+      "kernel-pca",
+      "non-negative-matrix-factorisation",
+      "mutual-information"
+    ],
+    keywords: "ica, independent component analysis, fastica, cocktail party problem, blind source separation, negentropy, non-gaussianity, central limit theorem"
+  },
+
+  {
+    id: "non-negative-matrix-factorisation",
+    short: "NMF",
+    title: "Non-Negative Matrix Factorisation",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Decompose non-negative data into additive, parts-based representations: master multiplicative update rules, Lee & Seung convergence, and topic modelling.",
+    lead: "PCA and SVD allow negative values, producing components that cancel each other out destructively. Non-Negative Matrix Factorisation (NMF) constrains factors to strictly non-negative values, yielding intuitive additive parts-based representations.",
+    intuition: [
+      "In countless machine learning domains, the quantities being analysed are physically non-negative: pixel brightness in facial imagery, word occurrence counts in documents, power spectral densities in audio spectrograms, or customer purchase counts. However, classical linear methods like PCA, SVD, and ICA compute basis components that contain negative values.",
+      "When SVD reconstructs a facial image, it starts with an average \"eigenface\" and adds or subtracts strange ghostly basis patterns. These complex destructive cancellations lack human perceptual meaning: human brains recognise faces as additive combinations of parts (eyes, nose, mouth).",
+      "Non-Negative Matrix Factorisation (NMF), popularised by Daniel Lee and H. Sebastian Seung in 1999, enforces strict non-negativity on both factor matrices: $V \\approx W H$, where $V \\in \\mathbb{R}_+^{n \\times p}$, $W \\in \\mathbb{R}_+^{n \\times k}$, and $H \\in \\mathbb{R}_+^{k \\times p}$.",
+      "Because subtraction is mathematically forbidden, the columns of $W$ represent additive basis elements (parts or topics), while the columns of $H$ represent non-negative activation encodings. The resulting decomposition is sparse, highly interpretable, and naturally extracts meaningful parts-based representations without requiring explicit sparsity penalties."
+    ],
+    analogy: "Imagine painting a landscape with an artist palette. SVD is like an anti-matter paintbrush that can paint both opaque paint and \"negative anti-paint\" that deletes colour beneath it. NMF operates like real physical paint: you can only add pigment onto the canvas, never subtract. To render a face with NMF, you must layer a nose onto a face shape, then layer eyes and a mouth. Every component corresponds to a real, tangible physical part.",
+    steps: [
+      {
+        "title": "1. Formulate non-negative data matrix",
+        "body": "Structure input matrix $V \\in \\mathbb{R}_+^{n \\times p}$ such that all entries $V_{ij} \\ge 0$. Choose rank $k \\ll \\min(n, p)$."
+      },
+      {
+        "title": "2. Initialise factor matrices W and H",
+        "body": "Initialise $W \\in \\mathbb{R}_+^{n \\times k}$ and $H \\in \\mathbb{R}_+^{k \\times p}$ with positive random numbers or Non-negative Double SVD (NNDSVD)."
+      },
+      {
+        "title": "3. Execute Lee–Seung multiplicative updates",
+        "body": "Iterate multiplicative updates: $H \\leftarrow H \\odot \\frac{W^T V}{W^T W H}$ and $W \\leftarrow W \\odot \\frac{V H^T}{W H H^T}$, where division and multiplication are element-wise."
+      },
+      {
+        "title": "4. Monitor convergence and inspect latent topics",
+        "body": "Track Frobenius loss $\\|V - W H\\|_F^2$ or generalised KL divergence $D_{\\mathrm{KL}}(V \\parallel WH)$. Normalise columns of $W$ to inspect latent parts or topic vocabulary distributions."
+      }
+    ],
+    math: [
+      {
+        "h": "Frobenius Matrix Factorisation Objective",
+        "tex": "\\min_{W \\ge 0, \\; H \\ge 0} \\frac{1}{2} \\|V - W H\\|_F^2 = \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^p \\left(V_{ij} - (WH)_{ij}\\right)^2",
+        "p": "Constrained optimisation problem. While non-convex jointly in (W, H), the objective is convex in W with fixed H, and convex in H with fixed W."
+      },
+      {
+        "h": "Lee–Seung Multiplicative Update Rules",
+        "tex": "H_{kj} \\leftarrow H_{kj} \\frac{(W^T V)_{kj}}{(W^T W H)_{kj}}, \\quad W_{ik} \\leftarrow W_{ik} \\frac{(V H^T)_{ik}}{(W H H^T)_{ik}}",
+        "p": "Multiplicative scaling factor: when numerator equals denominator, the gradient is zero and the update reaches a stationary point. Guaranteed to preserve non-negativity automatically."
+      },
+      {
+        "h": "Generalised Kullback–Leibler NMF Divergence",
+        "tex": "D_{\\mathrm{KL}}(V \\parallel W H) = \\sum_{i, j} \\left( V_{ij} \\log \\frac{V_{ij}}{(WH)_{ij}} - V_{ij} + (WH)_{ij} \\right)",
+        "p": "Alternative divergence used for count and audio spectrogram matrices, equivalent to maximum likelihood under Poisson noise assumptions."
+      }
+    ],
+    code: "import numpy as np\n\n# Non-Negative Matrix Factorisation (NMF) from scratch via Lee & Seung Multiplicative Updates\ndef nmf_lee_seung(V, k, max_iters=200, tol=1e-5):\n    n, p = V.shape\n    # Initialise W and H with positive random values\n    np.random.seed(42)\n    W = np.random.uniform(0.1, 1.0, (n, k))\n    H = np.random.uniform(0.1, 1.0, (k, p))\n    eps = 1e-12\n    \n    loss_history = []\n    \n    for it in range(max_iters):\n        # 1. Update H: H <- H * (W^T V) / (W^T W H + eps)\n        numerator_H = W.T @ V\n        denominator_H = (W.T @ W) @ H + eps\n        H *= (numerator_H / denominator_H)\n        \n        # 2. Update W: W <- W * (V H^T) / (W H H^T + eps)\n        numerator_W = V @ H.T\n        denominator_W = W @ (H @ H.T) + eps\n        W *= (numerator_W / denominator_W)\n        \n        # Compute Frobenius reconstruction loss\n        loss = 0.5 * np.sum((V - W @ H)**2)\n        loss_history.append(loss)\n        \n        if it > 0 and abs(loss_history[-2] - loss) < tol:\n            break\n            \n    return W, H, loss_history\n\n# Synthetic Document-Topic Matrix (8 documents x 6 terms)\n# 3 documents about Machine Learning, 3 about Gardening, 2 about Cooking\nterms = ['gradient', 'neural', 'trees', 'soil', 'flowers', 'recipe']\nV = np.array([\n    # ML terms       Gardening terms   Cooking\n    [ 5,  4,  1,     0,  0,  0],  # Doc 1: ML\n    [ 4,  5,  0,     0,  0,  0],  # Doc 2: ML\n    [ 6,  4,  2,     0,  0,  1],  # Doc 3: ML\n    [ 0,  0,  4,     5,  4,  0],  # Doc 4: Gardening\n    [ 0,  0,  3,     4,  5,  0],  # Doc 5: Gardening\n    [ 0,  0,  5,     3,  4,  1],  # Doc 6: Gardening\n    [ 0,  0,  0,     1,  0,  5],  # Doc 7: Cooking\n    [ 0,  1,  0,     0,  1,  6],  # Doc 8: Cooking\n], dtype=float)\n\n# Fit NMF with k=3 topics\nk = 3\nW, H, losses = nmf_lee_seung(V, k=k, max_iters=250)\n\nprint(f\"Data Matrix V shape: {V.shape}\")\nprint(f\"Discovered Basis Matrix W (Docs x Topics): {W.shape}\")\nprint(f\"Discovered Component Matrix H (Topics x Terms): {H.shape}\")\nprint(f\"Initial Loss: {losses[0]:.2f} -> Final Loss: {losses[-1]:.2f}\")\nprint(\"All values non-negative:\", np.all(W >= 0) and np.all(H >= 0))\n\nprint(\"\nDiscovered Topics (Top Terms in H):\")\nfor t_idx in range(k):\n    top_term_indices = np.argsort(H[t_idx])[::-1]\n    top_words = [f\"{terms[i]} ({H[t_idx, i]:.2f})\" for i in top_term_indices[:3]]\n    print(f\"  Topic {t_idx+1}: {', '.join(top_words)}\")",
+    keyPoints: [
+      "Factorises non-negative matrix $V \\approx W H$ with strictly non-negative factor matrices ($W, H \\ge 0$).",
+      "Disallows destructive subtraction, yielding interpretable additive parts-based representations.",
+      "Lee–Seung multiplicative update rules ensure non-negativity automatically without Lagrange multiplier projections.",
+      "Naturally induces sparsity: many entries in $W$ and $H$ converge strictly to zero without $L_1$ penalties.",
+      "Widely used in topic modelling, gene expression clustering, recommender systems, and audio source separation."
+    ],
+    pitfalls: [
+      "Non-convexity and local minima: The joint objective is non-convex in $(W, H)$; different random initialisations converge to different local optima.",
+      "Non-uniqueness of factorisation: If an invertible matrix $B$ exists such that $W B \\ge 0$ and $B^{-1} H \\ge 0$, then $(W B)(B^{-1} H) = W H$ is an alternative valid factorisation.",
+      "Strict non-negativity requirement: Cannot process inputs containing negative values; features must be strictly non-negative."
+    ],
+    quiz: [
+      {
+        "q": "Why does Non-Negative Matrix Factorisation produce more interpretable parts-based representations than SVD/PCA on facial images?",
+        "o": [
+          "Because non-negativity forbids negative values, so components can only combine additively rather than cancelling each other out",
+          "Because NMF is a supervised algorithm that uses facial landmark labels",
+          "Because NMF computes exact orthogonal eigenvectors",
+          "Because NMF always converges to a global minimum in one step"
+        ],
+        "a": 0,
+        "why": "In SVD, components contain negative values that subtract features destructively. In NMF, all factors are non-negative, forcing parts to combine purely additively."
+      },
+      {
+        "q": "How do the Lee–Seung multiplicative updates preserve non-negativity during optimisation?",
+        "o": [
+          "The update factor is a ratio of positive quantities, so multiplying an existing positive value by this ratio guarantees the result remains positive",
+          "They project negative values to zero after each gradient step",
+          "They take the absolute value of all matrices at each iteration",
+          "They add a large positive constant to the matrix"
+        ],
+        "a": 0,
+        "why": "Because V, W, and H are initialised with positive numbers, all matrix products in the numerator and denominator are positive. Multiplying a positive entry by a positive ratio can never produce a negative number."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "svd-and-truncated-svd",
+      "biclustering",
+      "independent-component-analysis",
+      "biclustering"
+    ],
+    keywords: "nmf, non negative matrix factorisation, lee seung, multiplicative updates, topic modelling, parts based representation, frobenius loss"
+  },
+
+  {
+    id: "mds-and-isomap",
+    short: "MDS & Isomap",
+    title: "Multidimensional Scaling and Isomap",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Preserve pairwise distances and uncover non-linear manifold geometry: compare Classical MDS with shortest-path geodesic distance in Isomap.",
+    lead: "When high-dimensional data lives on a curved manifold, Euclidean straight-line distance cuts through empty space. Isomap uses a k-nearest-neighbour graph and Dijkstra shortest paths to estimate true geodesic distances along the manifold, embedding them via Classical MDS.",
+    intuition: [
+      "How can you construct a map of European cities if you only possess a table of driving distances between them, with zero knowledge of their GPS coordinates? This is the domain of Multidimensional Scaling (MDS): given an $n \\times n$ matrix of pairwise dissimilarities $D$, find a configuration of points in low-dimensional space $\\mathbb{R}^d$ (typically $d=2$) whose Euclidean distances match the input dissimilarities as closely as possible.",
+      "Classical MDS (Principal Coordinate Analysis, PCoA) solves this in closed form: it squares the distances, performs double centring to construct an inner product Gram matrix $B = -\\frac{1}{2} H D^2 H$, and extracts coordinates via eigendecomposition. If the input dissimilarities are exact Euclidean distances, Classical MDS is mathematically identical to PCA.",
+      "However, when data lies on a complex non-linear manifold (such as the famous \"Swiss roll\" or \"S-curve\"), Euclidean distance measured through ambient high-dimensional space is deceptive: two points on adjacent layers of the rolled spiral have a tiny straight-line distance through empty air, but are far apart along the surface of the manifold.",
+      "Isomap (Isometric Feature Mapping, Tenenbaum et al., 2000) resolves this by replacing straight-line Euclidean distance with true geodesic distance (distance along the manifold surface). It builds a $k$-nearest neighbour graph connecting local adjacent points, computes all-pairs shortest paths through the graph via Dijkstra or Floyd–Warshall to estimate geodesic distances, and applies Classical MDS to embed the unrolled manifold into 2D."
+    ],
+    analogy: "Imagine a rolled-up silk carpet with two ants standing on it: Ant A on the outer layer, Ant B directly beneath it on the inner layer. A straight ruler piercing through the fabric says they are 5 millimetres apart (Euclidean distance). But to actually walk to each other without biting through the silk, Ant A must crawl 3 metres around the spiral (geodesic distance). Isomap measures the crawl distance along the fabric, then unrolls the carpet flat on the floor.",
+    steps: [
+      {
+        "title": "1. Construct local neighbourhood graph",
+        "body": "Construct an undirected graph $G$: connect sample $x_i$ to its $k$-nearest neighbours (or points within radius $\\epsilon$), weighting edges by local Euclidean distance $d_X(i, j)$."
+      },
+      {
+        "title": "2. Compute all-pairs shortest paths",
+        "body": "Estimate manifold geodesic distance $D_G(i, j)$ between all pairs of points using Dijkstra algorithm (or Floyd–Warshall), finding the shortest path across graph edges."
+      },
+      {
+        "title": "3. Formulate centred Gram matrix",
+        "body": "Compute squared distance matrix $D_G^2$. Apply double centring matrix $H = I - \\frac{1}{n} \\mathbf{1}\\mathbf{1}^T$ to obtain inner product matrix $B = -\\frac{1}{2} H D_G^2 H$."
+      },
+      {
+        "title": "4. Extract low-dimensional coordinates",
+        "body": "Compute top $d$ eigenvalues and eigenvectors of $B$: $B = V \\Lambda V^T$. Reconstruct coordinates $Y = V_d \\Lambda_d^{1/2}$."
+      }
+    ],
+    math: [
+      {
+        "h": "Classical MDS Double Centring Formula",
+        "tex": "B = -\\frac{1}{2} H D^2 H, \\quad H = I_n - \\frac{1}{n} \\mathbf{1}_n \\mathbf{1}_n^T",
+        "p": "Converts a matrix of squared pairwise Euclidean distances D^2 into an origin-centred inner product Gram matrix B = X X^T."
+      },
+      {
+        "h": "Classical MDS Coordinate Extraction",
+        "tex": "Y = V_d \\Lambda_d^{1/2}, \\quad B = V \\Lambda V^T",
+        "p": "Eigendecomposition of Gram matrix B yields optimal low-dimensional coordinates Y minimising the Strain objective function."
+      },
+      {
+        "h": "Geodesic Graph Distance Approximation",
+        "tex": "d_{\\mathcal{M}}(x_i, x_j) \\approx d_G(i, j) = \\min_{p = (v_0, \\dots, v_m)} \\sum_{k=0}^{m-1} \\|v_k - v_{k+1}\\|_2",
+        "p": "In the limit of infinite data density, shortest path distance through the k-NN graph converges asymptotically to the true Riemannian geodesic distance along manifold M."
+      }
+    ],
+    code: "import numpy as np\nfrom scipy.sparse.csgraph import floyd_warshall\n\n# Isomap from scratch (k-NN graph + Floyd-Warshall + Classical MDS)\ndef isomap_from_scratch(X, n_neighbors=8, n_components=2):\n    n = len(X)\n    \n    # 1. Compute pairwise Euclidean distances\n    dists_sq = np.sum(X**2, axis=1)[:, None] + np.sum(X**2, axis=1)[None, :] - 2 * (X @ X.T)\n    dists = np.sqrt(np.maximum(dists_sq, 0))\n    \n    # 2. Build k-NN adjacency graph\n    adj_matrix = np.full((n, n), np.inf)\n    for i in range(n):\n        # Find k nearest neighbors (excluding self)\n        nn_indices = np.argsort(dists[i])[1:n_neighbors+1]\n        for j in nn_indices:\n            adj_matrix[i, j] = dists[i, j]\n            adj_matrix[j, i] = dists[i, j]  # Undirected graph\n            \n    # 3. Compute all-pairs shortest paths (Geodesic distance approximation)\n    D_geo = floyd_warshall(adj_matrix, directed=False)\n    \n    # Check for disconnected components\n    if np.any(np.isinf(D_geo)):\n        raise ValueError(\"Graph is disconnected; increase n_neighbors.\")\n        \n    # 4. Classical MDS on geodesic distance matrix\n    # Double centreing: B = -0.5 * H (D^2) H\n    H = np.eye(n) - np.ones((n, n)) / n\n    B = -0.5 * H @ (D_geo**2) @ H\n    \n    # Eigendecomposition\n    eigenvals, eigenvecs = np.linalg.eigh(B)\n    idx = np.argsort(eigenvals)[::-1]\n    eigenvals = eigenvals[idx]\n    eigenvecs = eigenvecs[:, idx]\n    \n    # Extract top d coordinates: Y = V_d * sqrt(Lambda_d)\n    top_evals = np.maximum(eigenvals[:n_components], 0)\n    Y = eigenvecs[:, :n_components] * np.sqrt(top_evals)\n    \n    return Y, D_geo\n\n# Generate synthetic Swiss Roll manifold\nnp.random.seed(42)\nn_points = 250\nphi = np.random.uniform(1.5 * np.pi, 4.0 * np.pi, n_points)\nheight = np.random.uniform(0, 10, n_points)\nx = phi * np.cos(phi)\ny = height\nz = phi * np.sin(phi)\nX_swiss = np.column_stack([x, y, z])\n\n# Run Isomap\nY_embedded, D_geo = isomap_from_scratch(X_swiss, n_neighbors=10, n_components=2)\n\n# Verify correlation between unrolled 1st dimension and true manifold parameter phi\ncorr_with_phi = np.abs(np.corrcoef(Y_embedded[:, 0], phi)[0, 1])\n\nprint(f\"Swiss Roll 3D shape: {X_swiss.shape}\")\nprint(f\"Isomap 2D Embedding shape: {Y_embedded.shape}\")\nprint(f\"Max Euclidean distance through air:    {np.max(np.linalg.norm(X_swiss[0] - X_swiss, axis=1)):.2f}\")\nprint(f\"Max Geodesic distance along manifold: {np.max(D_geo[0]):.2f} (captures unrolling!)\")\nprint(f\"Correlation between 1st Isomap axis and true unrolled spiral (phi): {corr_with_phi:.4f}\")",
+    keyPoints: [
+      "Multidimensional Scaling (MDS) finds a low-dimensional Euclidean embedding that preserves a given matrix of pairwise distances.",
+      "Classical MDS converts squared pairwise distances into an inner product Gram matrix via double centring $B = -\\frac{1}{2} H D^2 H$.",
+      "Isomap unrolls non-linear manifolds by substituting straight-line Euclidean distances with shortest-path geodesic distances across a $k$-NN graph.",
+      "Guaranteed to find true isometric manifold embeddings asymptotically as data density approaches infinity.",
+      "Highly sensitive to topological short-circuiting: noisy points or an overly large $k$ bridge adjacent layers, collapsing the unrolled manifold."
+    ],
+    pitfalls: [
+      "Topological short-circuiting: If $k$ is too large or noise bridges adjacent folds of a manifold, a false shortcut is created that corrupts all geodesic paths.",
+      "Disconnected components: If $k$ is too small, the graph fragments into disconnected subgraphs, yielding infinite shortest path distances.",
+      "Computational scaling: All-pairs shortest paths via Floyd-Warshall scales as $O(n^3)$; Landmark Isomap (L-Isomap) is required for datasets with $n > 5,000$."
+    ],
+    quiz: [
+      {
+        "q": "Why does Isomap construct a k-NN graph before applying Classical MDS?",
+        "o": [
+          "To estimate the true geodesic distance along the curved manifold via graph shortest paths rather than measuring straight-line Euclidean distance through empty air",
+          "To perform supervised classification on the data points",
+          "To filter out all outliers before dimensionality reduction",
+          "To reduce the number of samples from n to k"
+        ],
+        "a": 0,
+        "why": "Euclidean distance cuts through empty space across manifold folds. By traversing local nearest neighbours, graph shortest paths approximate the true manifold geodesic distance."
+      },
+      {
+        "q": "What is the mathematical role of the double centring matrix H = I - (1/n) 1 1^T in Classical MDS?",
+        "o": [
+          "It converts a matrix of squared pairwise distances into an origin-centred inner product Gram matrix B = X X^T",
+          "It standardises the columns to unit variance",
+          "It removes imaginary numbers from the distance matrix",
+          "It inverts the matrix using Cholesky factorisation"
+        ],
+        "a": 0,
+        "why": "From the identity d_{ij}^2 = ||x_i||^2 + ||x_j||^2 - 2 x_i^T x_j, double centring cancels out the row and column squared norms, leaving exactly the inner product matrix B."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "svd-and-truncated-svd",
+      "kernel-pca",
+      "spectral_clustering",
+      "random-projections-and-johnson-lindenstrauss"
+    ],
+    keywords: "isomap, mds, multidimensional scaling, geodesic distance, manifold learning, swiss roll, shortest path, floyd warshall"
+  },
+
+  {
+    id: "random-projections-and-johnson-lindenstrauss",
+    short: "Random projections & JL",
+    title: "Random Projections and the Johnson–Lindenstrauss Lemma",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Compress high-dimensional vectors with minimal distortion using random matrices: master the Johnson–Lindenstrauss lemma and Achlioptas sparse projections.",
+    lead: "Computing PCA on millions of points in 10,000 dimensions is computationally prohibitive. The Johnson–Lindenstrauss lemma proves that projecting onto a surprisingly small random subspace preserves all pairwise distances within a factor of (1 +- epsilon).",
+    intuition: [
+      "Modern machine learning applications routinely process data in ultra-high dimensions: 100,000-word TF-IDF document vectors, 1,536-dimensional neural embeddings, or high-throughput biological mass spectrometry. In these spaces, computing exact Principal Component Analysis (PCA) requires covariance matrix operations and SVD scaling as $O(n d^2)$, which is computationally crushing for large datasets.",
+      "Remarkably, the geometry of high-dimensional Euclidean space contains an extraordinary mathematical property: two random vectors drawn uniformly in high dimensions are almost guaranteed to be nearly orthogonal to each other. This geometric phenomenon is the foundation of Random Projections.",
+      "In 1984, William B. Johnson and Joram Lindenstrauss proved their celebrated lemma: any collection of $n$ points in Euclidean space $\\mathbb{R}^d$ can be projected into a lower-dimensional subspace $\\mathbb{R}^k$ such that all pairwise Euclidean distances are preserved within a factor of $(1 \\pm \\epsilon)$, provided that $k \\ge O(\\epsilon^{-2} \\log n)$.",
+      "The most profound consequence of the Johnson–Lindenstrauss lemma is that target dimension $k$ depends strictly on the number of points $n$ and the tolerance $\\epsilon$, and is entirely independent of the original dimension $d$! Even more practically, Dimitris Achlioptas (2003) proved that the random projection matrix does not even need Gaussian entries: simple sparse ternary distributions ($R_{ij} \\in \\{-1, 0, +1\\}$) provide identical guarantees while replacing matrix multiplications with fast integer additions."
+    ],
+    analogy: "Imagine projecting 1,000 glass statues in a dark room by shining a lantern to cast their 2D shadows onto a flat wall. If you align the lantern along one specific axis, statues might block each other or cast squashed shadows. But if you position the lantern at a completely random angle in 3D space, the shadows cast on the wall almost never overlap, faithfully preserving the relative distances between every statue in the room.",
+    steps: [
+      {
+        "title": "1. Determine target dimension k from JL bound",
+        "body": "Given sample size $n$ and acceptable distortion tolerance $\\epsilon \\in (0, 1)$, calculate minimum target dimension: $k \\ge \\frac{4 \\log n}{\\epsilon^2 / 2 - \\epsilon^3 / 3}$."
+      },
+      {
+        "title": "2. Generate random projection matrix R",
+        "body": "Draw random matrix $R \\in \\mathbb{R}^{d \\times k}$. For Gaussian projection, sample $R_{ij} \\sim \\mathcal{N}(0, 1/k)$. For Achlioptas sparse projection, sample $R_{ij} \\in \\{+\\sqrt{s/k}, 0, -\\sqrt{s/k}\\}$ with probabilities $\\{1/(2s), 1 - 1/s, 1/(2s)\\}$ with $s=3$."
+      },
+      {
+        "title": "3. Project data matrix into low-dimensional space",
+        "body": "Compute projected representation: $X_{\\mathrm{proj}} = X R \\in \\mathbb{R}^{n \\times k}$. Note that $R$ requires zero training data or fitting."
+      },
+      {
+        "title": "4. Verify pairwise distance preservation",
+        "body": "Verify that for all pairs $(u, v)$, the ratio $\\|X_{\\mathrm{proj}, u} - X_{\\mathrm{proj}, v}\\|^2 / \\|X_u - X_v\\|^2 \\in [1 - \\epsilon, 1 + \\epsilon]$."
+      }
+    ],
+    math: [
+      {
+        "h": "The Johnson–Lindenstrauss (JL) Lemma",
+        "tex": "(1 - \\epsilon) \\|u - v\\|_2^2 \\le \\|f(u) - f(v)\\|_2^2 \\le (1 + \\epsilon) \\|u - v\\|_2^2 \\quad \\forall u, v \\in X",
+        "p": "Guarantees that a linear mapping f preserves all pairwise Euclidean distances within a relative distortion factor epsilon."
+      },
+      {
+        "h": "Theoretical Target Dimension Bound",
+        "tex": "k \\ge \\frac{4 \\log n}{\\frac{\\epsilon^2}{2} - \\frac{\\epsilon^3}{3}} = O\\left(\\frac{\\log n}{\\epsilon^2}\\right)",
+        "p": "The required target dimension k depends only on sample size n and tolerance epsilon, completely independent of original dimension d."
+      },
+      {
+        "h": "Achlioptas Sparse Random Projection Matrix",
+        "tex": "R_{ij} = \\sqrt{\\frac{3}{k}} \\times \\begin{cases} +1 & \\text{with prob } 1/6 \\\\ 0 & \\text{with prob } 2/3 \\\\ -1 & \\text{with prob } 1/6 \\end{cases}",
+        "p": "Ternary random projection matrix where two-thirds of entries are zero, accelerating projection computation by 3x and enabling database sparse arithmetic."
+      }
+    ],
+    code: "import numpy as np\n\n# Random Projections: Gaussian vs Achlioptas Sparse from scratch\nnp.random.seed(42)\n\n# Generate 500 samples in d = 2,000 dimensions\nn_samples = 500\nd_features = 2000\nX = np.random.normal(0, 1, (n_samples, d_features))\n\n# Calculate theoretical JL target dimension for epsilon = 0.20\nepsilon = 0.20\n# k >= 4 * log(n) / (eps^2 / 2 - eps^3 / 3)\nk_bound = int(np.ceil((4 * np.log(n_samples)) / (epsilon**2 / 2 - epsilon**3 / 3)))\nk = 300  # Target dimension (compressed from 2,000 to 300)\n\n# 1. Gaussian Random Projection Matrix: R_ij ~ N(0, 1/k)\nR_gaussian = np.random.normal(0, 1.0 / np.sqrt(k), (d_features, k))\nX_proj_gauss = X @ R_gaussian\n\n# 2. Achlioptas Sparse Random Projection Matrix (s = 3)\n# 2/3 of entries are 0, entries are +sqrt(3/k) or -sqrt(3/k)\ns = 3\nrand_draw = np.random.uniform(0, 1, (d_features, k))\nR_sparse = np.zeros((d_features, k))\nR_sparse[rand_draw < 1.0 / (2 * s)] = np.sqrt(s / k)\nR_sparse[rand_draw > 1.0 - 1.0 / (2 * s)] = -np.sqrt(s / k)\nX_proj_sparse = X @ R_sparse\n\n# Evaluate pairwise distance distortion across 1,000 random pairs\nn_pairs = 1000\nidx_u = np.random.choice(n_samples, n_pairs)\nidx_v = np.random.choice(n_samples, n_pairs)\nvalid = idx_u != idx_v\nidx_u, idx_v = idx_u[valid], idx_v[valid]\n\n# Original squared distances\ndist_orig_sq = np.sum((X[idx_u] - X[idx_v])**2, axis=1)\n\n# Projected squared distances\ndist_gauss_sq = np.sum((X_proj_gauss[idx_u] - X_proj_gauss[idx_v])**2, axis=1)\ndist_sparse_sq = np.sum((X_proj_sparse[idx_u] - X_proj_sparse[idx_v])**2, axis=1)\n\n# Distortion ratios: ||f(u) - f(v)||^2 / ||u - v||^2\nratio_gauss = dist_gauss_sq / dist_orig_sq\nratio_sparse = dist_sparse_sq / dist_orig_sq\n\nprint(f\"Original dimension: {d_features} -> Projected dimension: {k} ({(1 - k/d_features)*100:.1f}% reduction)\")\nprint(f\"Theoretical JL target bound (eps={epsilon}): k >= {k_bound}\")\nprint(f\"Target distortion range: [{1 - epsilon:.2f}, {1 + epsilon:.2f}]\")\n\nprint(f\"\nGaussian Projection  - Mean ratio: {np.mean(ratio_gauss):.3f}, 99% interval: [{np.percentile(ratio_gauss, 0.5):.3f}, {np.percentile(ratio_gauss, 99.5):.3f}]\")\nprint(f\"Sparse Achlioptas   - Mean ratio: {np.mean(ratio_sparse):.3f}, 99% interval: [{np.percentile(ratio_sparse, 0.5):.3f}, {np.percentile(ratio_sparse, 99.5):.3f}]\")\nprint(f\"Sparse Matrix Sparsity: {np.mean(R_sparse == 0)*100:.1f}% zeros (3x faster multiplication!)\")",
+    keyPoints: [
+      "Embeds high-dimensional points into a lower-dimensional subspace while preserving pairwise distances within $(1 \\pm \\epsilon)$ distortion.",
+      "The Johnson–Lindenstrauss lemma dictates target dimension $k = O(\\epsilon^{-2} \\log n)$, which is completely independent of input dimension $d$.",
+      "Data-independent and training-free: the projection matrix is drawn purely at random, requiring zero optimisation or SVD factorisation.",
+      "Achlioptas sparse projection achieves identical theoretical guarantees while keeping two-thirds of matrix entries at zero.",
+      "Widely used in nearest-neighbour search indexing (Locality Sensitive Hashing, LSH), streaming algorithms, and compressed sensing."
+    ],
+    pitfalls: [
+      "Inner product distortion vs Euclidean distance: While JL preserves Euclidean distances $|u - v|$, preserving dot products $u^T v$ requires normalising vectors to unit length.",
+      "Only applies to Euclidean ($L_2$) norm: The JL lemma does not hold for Manhattan ($L_1$), Chebyshev ($L_\\infty$), or general $L_p$ norms.",
+      "Extreme sample size scaling: Because $k \\propto \\log n$, if $n$ is hundreds of millions, the required $k$ might exceed the original dimension $d$."
+    ],
+    quiz: [
+      {
+        "q": "What is the most surprising property of the target dimension k in the Johnson–Lindenstrauss lemma?",
+        "o": [
+          "k depends only on sample size n and distortion tolerance epsilon, and is completely independent of the original dimension d",
+          "k must always equal the rank of the covariance matrix",
+          "k must be strictly greater than d",
+          "k depends on the eigenvalues of the dataset"
+        ],
+        "a": 0,
+        "why": "The JL lemma bound k >= O(log(n) / eps^2) contains no dependence on original dimension d, allowing 1,000,000-dimensional data to be compressed to the same k as 1,000-dimensional data."
+      },
+      {
+        "q": "Why is Achlioptas sparse random projection computationally faster than Gaussian random projection?",
+        "o": [
+          "Two-thirds of its entries are exactly zero and non-zero entries are simple integers, accelerating matrix multiplication by 3x with sparse arithmetic",
+          "It requires computing the SVD of the dataset",
+          "It produces an exact zero distortion ratio",
+          "It eliminates the need for test data"
+        ],
+        "a": 0,
+        "why": "The Achlioptas ternary distribution has 2/3 zeros and entries in {-1, 0, +1}, turning dense floating-point matrix multiplications into fast sparse integer additions."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "svd-and-truncated-svd",
+      "kernel-pca",
+      "mds-and-isomap"
+    ],
+    keywords: "random projections, johnson lindenstrauss lemma, achlioptas, dimensionality reduction, euclidean distance preservation, lsh, sparse projection"
+  },
+
+  {
+    id: "one-class-svm",
+    short: "One-class SVM",
+    title: "One-Class Support Vector Machines",
+    task: "concepts",
+    module: "Anomaly detection",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Learn non-linear boundary around normal data to detect novel anomalies: master the Schölkopf hyperplane and Tax & Duin hypersphere formulations.",
+    lead: "In anomaly detection, negative examples are rare, unknown, or infinitely varied. The One-Class SVM trains exclusively on nominal data, learning a tight decision boundary that envelops the normal data distribution.",
+    intuition: [
+      "Supervised classification requires representative training samples from all classes. However, in mission-critical applications—such as credit card fraud detection, industrial wind turbine vibration monitoring, network intrusion detection, or manufacturing defect inspection—anomalies are either exceedingly rare or take completely novel, unimagined forms. Trying to train a standard binary classifier fails because you cannot sample the infinite universe of potential anomalies.",
+      "One-Class Classification addresses this challenge by learning strictly from positive, nominal data. Introduced by Bernhard Schölkopf et al. (2001), the One-Class Support Vector Machine (OC-SVM) maps normal training instances into a high-dimensional feature space $\\mathcal{H}$ via a kernel function (typically RBF) and seeks a maximum-margin hyperplane that separates the normal data cloud from the coordinate origin.",
+      "Geometrically, the origin serves as a proxy for all anomalous patterns. In the dual formulation, the algorithm identifies a sparse subset of normal points as support vectors that define the outer perimeter of the normal data distribution.",
+      "A hyperparameter $\\nu \\in (0, 1]$ controls the trade-off: it acts as an exact upper bound on the fraction of training outliers permitted outside the boundary, and a lower bound on the fraction of support vectors. Alternatively, David Tax and Robert Duin proposed Support Vector Data Description (SVDD), which encloses normal points within a minimum-volume hypersphere of radius $R$; for stationary RBF kernels, SVDD and Schölkopf One-Class SVM are mathematically equivalent."
+    ],
+    analogy: "Imagine an ancient walled city built on an open plain. The city guards do not know what future invaders will look like (whether bandits, foreign armies, or monsters). Instead of trying to identify enemies, the city architects build a circular stone fortress wall closely enclosing all the lawful citizens homes. Any individual found standing inside the fortress walls is considered a citizen; anyone found outside the perimeter wall is flagged as a stranger.",
+    steps: [
+      {
+        "title": "1. Collect nominal training dataset",
+        "body": "Assemble feature matrix $X \\in \\mathbb{R}^{n \\times p}$ composed exclusively (or predominantly) of normal, non-anomalous operational instances."
+      },
+      {
+        "title": "2. Select kernel and configure outlier fraction nu",
+        "body": "Choose a Gaussian RBF kernel $K(x, x') = \\exp(-\\gamma \\|x - x'\\|^2)$. Set hyperparameter $\\nu \\in (0, 1]$ representing the expected contamination rate (e.g. $\\nu = 0.05$ for 5% outliers)."
+      },
+      {
+        "title": "3. Solve quadratic programming dual problem",
+        "body": "Maximise dual objective: $\\min_\\alpha \\frac{1}{2} \\sum_{i, j} \\alpha_i \\alpha_j K(x_i, x_j)$ subject to $0 \\le \\alpha_i \\le \\frac{1}{\\nu n}$ and $\\sum_{i=1}^n \\alpha_i = 1$. Support vectors satisfy $\\alpha_i > 0$."
+      },
+      {
+        "title": "4. Compute offset rho and evaluate decision function",
+        "body": "Calculate threshold $\\rho = \\sum_{i=1}^n \\alpha_i K(x_i, x_{sv})$ for any support vector with $0 < \\alpha_{sv} < 1/(\\nu n)$. Score novel sample $x$: $f(x) = \\operatorname{sign}\\left(\\sum_{i=1}^n \\alpha_i K(x_i, x) - \\rho\\right)$. Points with $f(x) < 0$ are anomalies."
+      }
+    ],
+    math: [
+      {
+        "h": "Schölkopf One-Class SVM Primal Formulation",
+        "tex": "\\min_{w, \\xi, \\rho} \\frac{1}{2} \\|w\\|^2 + \\frac{1}{\\nu n} \\sum_{i=1}^n \\xi_i - \\rho \\quad \\text{subject to} \\quad \\langle w, \\phi(x_i) \\rangle \\ge \\rho - \\xi_i, \\; \\xi_i \\ge 0",
+        "p": "Separates normal mapped data from origin with maximum margin rho. Slack variables xi_i penalise instances falling on the origin side of the separating boundary."
+      },
+      {
+        "h": "Dual Quadratic Programming Problem",
+        "tex": "\\min_\\alpha \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j K(x_i, x_j) \\quad \\text{subject to} \\quad 0 \\le \\alpha_i \\le \\frac{1}{\\nu n}, \\; \\sum_{i=1}^n \\alpha_i = 1",
+        "p": "Dual problem depends only on inner products evaluated via kernel function K(x_i, x_j). The upper bound on alpha_i prevents individual points from disproportionately warping the boundary."
+      },
+      {
+        "h": "Tax & Duin SVDD Hypersphere Primal",
+        "tex": "\\min_{R, c, \\xi} R^2 + \\frac{1}{\\nu n} \\sum_{i=1}^n \\xi_i \\quad \\text{subject to} \\quad \\|\\phi(x_i) - c\\|^2 \\le R^2 + \\xi_i, \\; \\xi_i \\ge 0",
+        "p": "Encloses normal instances within a minimum-radius hypersphere of centre c and radius R. For RBF kernels with K(x, x) = 1, SVDD yields an identical boundary to Schölkopf formulation."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.svm import OneClassSVM\n\n# One-Class SVM for Novelty and Anomaly Detection\nnp.random.seed(42)\n\n# 1. Generate normal operational data (2 clusters in 2D space)\nn_normal = 300\ncluster1 = np.random.normal(loc=[-2, -2], scale=0.6, size=(n_normal // 2, 2))\ncluster2 = np.random.normal(loc=[2, 2], scale=0.7, size=(n_normal // 2, 2))\nX_train_normal = np.vstack([cluster1, cluster2])\n\n# 2. Generate novel test data containing normal points and extreme anomalies\nn_test_normal = 100\nn_anomalies = 20\ntest_normal = np.random.normal(loc=[-2, -2], scale=0.6, size=(n_test_normal, 2))\nanomalies = np.random.uniform(low=-6, high=6, size=(n_anomalies, 2))\n# Ensure anomalies are outside normal clusters\nanomalies = anomalies[np.linalg.norm(anomalies - np.array([-2, -2]), axis=1) > 2.0]\nanomalies = anomalies[np.linalg.norm(anomalies - np.array([2, 2]), axis=1) > 2.0][:n_anomalies]\n\nX_test = np.vstack([test_normal, anomalies])\ny_test = np.array([1]*len(test_normal) + [-1]*len(anomalies))  # 1 = normal, -1 = anomaly\n\n# 3. Fit One-Class SVM with RBF kernel and nu=0.05\nnu = 0.05\noc_svm = OneClassSVM(kernel='rbf', gamma=0.5, nu=nu)\noc_svm.fit(X_train_normal)\n\n# Evaluate predictions (-1 for anomaly, +1 for inlier)\npreds_train = oc_svm.predict(X_train_normal)\npreds_test = oc_svm.predict(X_test)\n\ntrain_outlier_rate = np.mean(preds_train == -1)\ntest_anomaly_detection_rate = np.mean(preds_test[y_test == -1] == -1)\ntest_normal_retention_rate = np.mean(preds_test[y_test == 1] == 1)\n\nprint(f\"One-Class SVM fitted with nu = {nu} (target max outlier fraction)\")\nprint(f\"Training support vectors count: {len(oc_svm.support_)} / {n_normal} ({len(oc_svm.support_)/n_normal*100:.1f}%)\")\nprint(f\"Empirical training outlier fraction: {train_outlier_rate*100:.1f}% (bounded by nu = {nu*100:.1f}%)\")\nprint(f\"Test Anomaly Detection Recall:       {test_anomaly_detection_rate*100:.1f}%\")\nprint(f\"Test Normal Inlier Precision:        {test_normal_retention_rate*100:.1f}%\")",
+    keyPoints: [
+      "Learns a non-linear decision boundary enclosing normal data, detecting anomalies as points falling outside the boundary.",
+      "Trained exclusively on nominal data without requiring negative anomaly examples during training.",
+      "Schölkopf formulation separates normal points from the coordinate origin in RKHS with maximum margin.",
+      "Hyperparameter $\\nu \\in (0, 1]$ simultaneously bounds the fraction of training outliers and the fraction of support vectors.",
+      "When paired with Gaussian RBF kernels, One-Class SVM models complex multi-modal and non-convex normal distributions."
+    ],
+    pitfalls: [
+      "Sensitivity to RBF parameter gamma: If $\\gamma$ is too large, the kernel boundary tightly wraps each individual training sample into isolated islands, causing extreme overfitting and false alarm floods.",
+      "Contamination in training set: If the training set contains unlabelled anomalies, the boundary expands to enclose them; robust trimming or robust covariance is needed.",
+      "High-dimensional distance concentration: In ultra-high dimensions ($p > 1000$), Euclidean distances in RBF kernels concentrate, degrading boundary quality; dimensionality reduction should precede OC-SVM."
+    ],
+    quiz: [
+      {
+        "q": "What role does the hyperparameter nu play in the One-Class SVM?",
+        "o": [
+          "It acts as an upper bound on the fraction of training outliers and a lower bound on the fraction of support vectors",
+          "It sets the learning rate of the gradient descent solver",
+          "It specifies the number of clusters in the dataset",
+          "It defines the dimensionality of the kernel Hilbert space"
+        ],
+        "a": 0,
+        "why": "In the nu-SVM formulation, nu strictly upper-bounds the training margin errors (outlier fraction) and lower-bounds the fraction of support vectors."
+      },
+      {
+        "q": "Why does the One-Class SVM separate data from the origin in feature space?",
+        "o": [
+          "The origin serves as a natural proxy representing anomalous or zero-signal states in reproducing kernel Hilbert spaces",
+          "Because the origin has infinite variance",
+          "Because kernel matrices are singular at the origin",
+          "Because support vectors cannot have positive coordinates"
+        ],
+        "a": 0,
+        "why": "In RKHS under an RBF kernel, mapped data points cluster away from the origin on a hypersphere. Separating data from the origin encloses the high-density normal region."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "support_vector_classifier",
+      "kernel-pca"
+    ],
+    related: [
+      "support_vector_classifier",
+      "mahalanobis-distance-and-robust-covariance",
+      "local-outlier-factor",
+      "kernel-pca"
+    ],
+    keywords: "one class svm, anomaly detection, novelty detection, svdd, support vectors, schölkopf, rbf kernel, out of distribution"
+  },
+
+  {
+    id: "mahalanobis-distance-and-robust-covariance",
+    short: "Mahalanobis & robust cov",
+    title: "Mahalanobis Distance and Robust Covariance Estimation",
+    task: "concepts",
+    module: "Anomaly detection",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Detect multivariate outliers while accounting for feature covariance: master Mahalanobis distance, the masking effect, and the Minimum Covariance Determinant (MCD).",
+    lead: "Univariate thresholds miss multivariate anomalies where individual features appear normal but violate cross-feature correlations. Mahalanobis distance measures deviation in statistical units, while robust estimators prevent outliers from masking themselves.",
+    intuition: [
+      "Detecting outliers using univariate rules (such as checking if a feature exceeds 3 standard deviations from its mean) fails catastrophically in multi-dimensional datasets. Consider human biometric telemetry: a height of 150 cm is completely normal, and a body weight of 105 kg is unexceptional. However, a person who is simultaneously 150 cm tall and weighs 105 kg is a severe physical anomaly.",
+      "Euclidean distance is blind to this correlation: it measures distances as spherical bubbles, assuming features are independent and equally scaled. Prasanta Chandra Mahalanobis (1936) introduced the Mahalanobis Distance to measure the distance of a point $x$ from a distribution centre $\\mu$ while explicitly accounting for the covariance structure $\\Sigma$: $D_M(x) = \\sqrt{(x - \\mu)^T \\Sigma^{-1} (x - \\mu)}$.",
+      "Geometrically, Mahalanobis distance transforms spherical distance bubbles into ellipsoids that stretch and rotate along the principal axes of the data covariance cloud. Under multivariate normality, the squared Mahalanobis distance follows a Chi-square distribution with $p$ degrees of freedom ($D_M^2 \\sim \\chi_p^2$), enabling exact statistical hypothesis tests for outliers.",
+      "However, standard empirical sample mean and sample covariance suffer from a fatal flaw: the Masking Effect. A small cluster of extreme outliers artificially drags the sample mean toward themselves and massively inflates the covariance matrix, making their own Mahalanobis distance appear deceptively small. Peter Rousseeuw resolved this with the Minimum Covariance Determinant (MCD / FastMCD), which finds the subset of $h$ observations whose covariance has the minimum determinant, providing a robust estimator with up to 50% breakdown point."
+    ],
+    analogy: "Imagine an aerial photograph of a busy railway track cutting diagonally across a countryside meadow. If you measure distance using Euclidean metric, a train car parked on the tracks 500 metres down the line is judged to be far away. A cow standing only 5 metres off the track is judged to be close. Mahalanobis distance measures distance along the tracks: moving 500 metres along the rail line is expected normal variance, but being 5 metres off the rail is a dangerous derailment.",
+    steps: [
+      {
+        "title": "1. Centre data and examine correlation structure",
+        "body": "Inspect feature matrix $X \\in \\mathbb{R}^{n \\times p}$. Identify linear dependencies and check whether data conforms reasonably to unimodal elliptical contours."
+      },
+      {
+        "title": "2. Fit robust covariance via FastMCD (C-steps)",
+        "body": "Select subset size $h \\approx 0.75 n$. Randomly draw initial subsets, calculate covariance, compute Mahalanobis distances for all points, and select the $h$ smallest points (C-step). Iterate until determinant converges."
+      },
+      {
+        "title": "3. Calculate robust Mahalanobis distances",
+        "body": "Evaluate robust distance: $D_{\\mathrm{MCD}}(x) = \\sqrt{(x - \\hat{\\mu}_{\\mathrm{MCD}})^T \\hat{\\Sigma}_{\\mathrm{MCD}}^{-1} (x - \\hat{\\mu}_{\\mathrm{MCD}})}$."
+      },
+      {
+        "title": "4. Apply Chi-Square distribution cutoff",
+        "body": "Flag sample $x_i$ as a multivariate anomaly if $D_{\\mathrm{MCD}}^2(x_i) > \\chi_{p, 1-\\alpha}^2$, where $\\alpha$ is the significance threshold (e.g. $\\alpha = 0.001$)."
+      }
+    ],
+    math: [
+      {
+        "h": "Mahalanobis Distance Formulation",
+        "tex": "D_M(x) = \\sqrt{(x - \\mu)^T \\Sigma^{-1} (x - \\mu)} = \\|\\Sigma^{-1/2} (x - \\mu)\\|_2",
+        "p": "Measures distance in units of statistical standard deviations along the ellipsoidal axes of covariance matrix Sigma."
+      },
+      {
+        "h": "Chi-Square Distribution of Squared Distance",
+        "tex": "x \\sim \\mathcal{N}_p(\\mu, \\Sigma) \\implies D_M^2(x) = (x - \\mu)^T \\Sigma^{-1} (x - \\mu) \\sim \\chi_p^2",
+        "p": "Under multivariate Gaussian assumptions, the squared Mahalanobis distance is distributed as Chi-square with p degrees of freedom, providing rigorous analytical p-values."
+      },
+      {
+        "h": "Minimum Covariance Determinant (MCD) Objective",
+        "tex": "\\min_{H \\subset \\{1, \\dots, n\\}, \\; |H| = h} \\det\\left(\\frac{1}{h - 1} \\sum_{i \\in H} (x_i - \\bar{x}_H) (x_i - \\bar{x}_H)^T\\right)",
+        "p": "Searches for the subset of h observations (typically h = 0.5n or 0.75n) yielding the minimal determinant, resisting masking by up to 50% adversarial outliers."
+      }
+    ],
+    code: "import numpy as np\nfrom scipy.stats import chi2\n\n# Mahalanobis Distance: Standard Empirical Covariance vs FastMCD C-Step from scratch\nnp.random.seed(42)\nn_samples = 300\np_dim = 2\n\n# 1. Generate correlated 2D Gaussian data\nmean_true = np.array([0.0, 0.0])\ncov_true = np.array([[2.0, 1.6],\n                     [1.6, 2.0]])  # Strong correlation (corr = 0.8)\nX_clean = np.random.multivariate_normal(mean_true, cov_true, n_samples)\n\n# 2. Inject a masked cluster of 15 severe multivariate outliers\n# Outliers violate the correlation: x1 and x2 have opposite signs!\nn_outliers = 15\noutliers = np.random.multivariate_normal(mean=[4.0, -4.0], cov=np.eye(2)*0.2, size=n_outliers)\nX = np.vstack([X_clean, outliers])\nN = len(X)\n\n# 3. Standard Empirical Mahalanobis Distance\nmu_emp = np.mean(X, axis=0)\ncov_emp = np.cov(X, rowvar=False)\ncov_emp_inv = np.linalg.inv(cov_emp)\ndiff_emp = X - mu_emp\nd_emp = np.sqrt(np.sum(diff_emp @ cov_emp_inv * diff_emp, axis=1))\n\n# 4. FastMCD C-Step Algorithm from scratch\nh = int(0.80 * N)  # Keep 80% cleanest data points\n# Initialise with subset of smallest distances to coordinate median\nmed = np.median(X, axis=0)\ninit_dist = np.linalg.norm(X - med, axis=1)\nH_indices = np.argsort(init_dist)[:h]\n\nfor c_step in range(15):\n    X_sub = X[H_indices]\n    mu_sub = np.mean(X_sub, axis=0)\n    cov_sub = np.cov(X_sub, rowvar=False) + np.eye(p_dim)*1e-6\n    cov_sub_inv = np.linalg.inv(cov_sub)\n    \n    # Compute Mahalanobis distance for ALL points with current sub-covariance\n    diff = X - mu_sub\n    d_mcd = np.sqrt(np.sum(diff @ cov_sub_inv * diff, axis=1))\n    \n    # Select h points with smallest distances\n    new_H = np.argsort(d_mcd)[:h]\n    if np.array_equal(new_H, H_indices):\n        break\n    H_indices = new_H\n\nmu_mcd = np.mean(X[H_indices], axis=0)\ncov_mcd = np.cov(X[H_indices], rowvar=False)\n# Apply consistency factor for Gaussian data\ncov_mcd *= 1.25\ncov_mcd_inv = np.linalg.inv(cov_mcd)\ndiff_mcd = X - mu_mcd\nd_mcd_final = np.sqrt(np.sum(diff_mcd @ cov_mcd_inv * diff_mcd, axis=1))\n\n# Chi-Square Cutoff for p=2 degrees of freedom (alpha = 0.001)\ncutoff = np.sqrt(chi2.ppf(0.999, df=p_dim))\n\noutlier_indices = np.arange(n_samples, N)\nmasked_detected_emp = np.sum(d_emp[outlier_indices] > cutoff)\nmasked_detected_mcd = np.sum(d_mcd_final[outlier_indices] > cutoff)\n\nprint(f\"Dataset: {N} total samples ({n_outliers} masked correlation-violating outliers)\")\nprint(f\"Chi-square 99.9% distance threshold: {cutoff:.3f}\")\nprint(f\"\nStandard Empirical Estimator:\")\nprint(f\"  Detected outliers: {masked_detected_emp} / {n_outliers} (masking effect failed!)\")\nprint(f\"  Max outlier distance: {np.max(d_emp[outlier_indices]):.2f}\")\nprint(f\"\nRobust Minimum Covariance Determinant (MCD):\")\nprint(f\"  Detected outliers: {masked_detected_mcd} / {n_outliers} (100% detected!)\")\nprint(f\"  Max outlier distance: {np.max(d_mcd_final[outlier_indices]):.2f} (cleanly exposed!)\")",
+    keyPoints: [
+      "Measures statistical distance from a multivariate distribution centre, accounting for correlation and unequal variance.",
+      "Follows a Chi-square distribution ($D_M^2 \\sim \\chi_p^2$) under normality, providing exact analytical hypothesis tests.",
+      "Standard sample covariance is corrupted by the Masking Effect: outliers inflate covariance, hiding their own anomalousness.",
+      "Minimum Covariance Determinant (MCD / FastMCD) searches for the subset of $h$ samples minimising covariance determinant, resisting up to 50% outliers.",
+      "Essential for multivariate quality control, financial fraud detection, and robust feature standardisation."
+    ],
+    pitfalls: [
+      "Singular covariance matrix: When features are collinear or $p > n$, the covariance matrix $\\Sigma$ is non-invertible; pseudo-inversion or shrinkage (Ledoit–Wolf) is required.",
+      "Multivariate non-normality: If data has heavy tails or multimodal clusters, applying $\\chi_p^2$ cutoffs flags legitimate extreme points as false positives.",
+      "High-dimensional breakdown: MCD requires $n > 2p$; when $p$ is large relative to $n$, robust covariance estimation requires regularisation or projection pursuit."
+    ],
+    quiz: [
+      {
+        "q": "Why can two observations have the identical Euclidean distance from the data mean but radically different Mahalanobis distances?",
+        "o": [
+          "Because Mahalanobis distance scales distance by variance and correlation: moving along the direction of high covariance is normal, while moving perpendicular to correlation is anomalous",
+          "Because Mahalanobis distance uses Manhattan L1 distance",
+          "Because Euclidean distance cannot be used in more than 2 dimensions",
+          "Because Mahalanobis distance sets negative coordinates to zero"
+        ],
+        "a": 0,
+        "why": "Mahalanobis distance accounts for covariance. If two features are 99% correlated, a point off the correlation axis is an extreme outlier, whereas a point along the axis is normal variance."
+      },
+      {
+        "q": "What is the \"masking effect\" in outlier detection with standard empirical covariance?",
+        "o": [
+          "Outliers inflate the sample covariance matrix and shift the mean toward themselves, artificially reducing their own Mahalanobis distance and hiding their presence",
+          "Outliers cause the eigenvalues to become negative",
+          "The distance formula divides by zero",
+          "Data points with zero values mask other features"
+        ],
+        "a": 0,
+        "why": "Because sample mean and covariance are non-robust, extreme outliers stretch the covariance ellipse toward themselves, lowering their computed Mahalanobis distance below detection cutoffs."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "expectation-variance-and-covariance"
+    ],
+    related: [
+      "one-class-svm",
+      "local-outlier-factor",
+      "chi-square-tests",
+      "residual-diagnostics-and-heteroscedasticity"
+    ],
+    keywords: "mahalanobis distance, robust covariance, mcd, minimum covariance determinant, fastmcd, masking effect, chi square distribution, multivariate outlier"
+  },
+
+  {
+    id: "bayesian-networks",
+    short: "Bayesian networks",
+    title: "Bayesian Networks and Directed Graphical Models",
+    task: "concepts",
+    module: "Probabilistic models",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Represent complex joint probability distributions compactly using Directed Acyclic Graphs: master conditional independence, d-separation, and belief propagation.",
+    lead: "A joint distribution over N discrete variables requires 2^N - 1 parameters, causing exponential intractability. Bayesian Networks exploit conditional independence encoded in directed graphs to factorise joint probabilities into compact local conditional probability tables (CPTs).",
+    intuition: [
+      "A full joint probability distribution over $N$ binary random variables requires specifying $2^N - 1$ independent probability values. For a medical diagnostic system or financial risk engine with 50 variables, storing the joint distribution would require over $10^{15}$ parameters—vastly exceeding the capacity of any computer and requiring impossible amounts of training data.",
+      "Fortunately, real-world random variables are not all directly dependent on each other: lung cancer depends directly on smoking and radon exposure, but is conditionally independent of age given smoking history and cellular DNA damage. Bayesian Networks (pioneered by Judea Pearl in the 1980s) formalise these structural independencies using Directed Acyclic Graphs (DAGs).",
+      "In a Bayesian Network, each node represents a random variable, and directed edges represent direct probabilistic or causal dependencies. The fundamental local Markov property dictates that each node $X_i$ is conditionally independent of all its non-descendants given its parents: $P(X_1, \\dots, X_n) = \\prod_{i=1}^n P(X_i \\mid \\operatorname{Parents}(X_i))$.",
+      "This factorization slashes parameter complexity from exponential $O(2^N)$ to linear or polynomial $O(N \\cdot 2^k)$, where $k$ is the maximum number of parents per node. Furthermore, Pearl's graphical d-separation criterion provides an exact topological algorithm to read off whether any two sets of variables are conditionally independent given observed evidence, enabling exact probabilistic inference via Variable Elimination or Belief Propagation."
+    ],
+    analogy: "Imagine a corporate hierarchy with a CEO, department managers, team leads, and interns. If an intern needs to know company policy on travel expenses, they ask their direct team lead. Once the team lead gives the instruction, knowing the personal mood of the CEO or the managers in other departments provides zero additional information. The team lead acts as the parent node, shielding the intern from all non-descendants.",
+    steps: [
+      {
+        "title": "1. Define variables and construct DAG structure",
+        "body": "Identify domain random variables and construct Directed Acyclic Graph $G = (V, E)$, ensuring no directed cyclical loops exist."
+      },
+      {
+        "title": "2. Populate Conditional Probability Tables (CPTs)",
+        "body": "For each node $X_i$, specify local distribution $P(X_i \\mid \\operatorname{Pa}(X_i))$. For discrete variables, populate CPTs empirically or via expert elicitation."
+      },
+      {
+        "title": "3. Test conditional independence via d-separation",
+        "body": "Evaluate whether query nodes $X$ and $Y$ are d-separated given evidence set $Z$ by checking paths across causal chains ($A \\to B \\to C$), forks ($A \\leftarrow B \\to C$), and colliders ($A \\to B \\leftarrow C$)."
+      },
+      {
+        "title": "4. Perform probabilistic inference (Variable Elimination)",
+        "body": "Compute posterior $P(Query \\mid Evidence)$ by setting observed variables to evidence values, multiplying relevant factors, and summing out (marginalising) unobserved nuisance variables."
+      }
+    ],
+    math: [
+      {
+        "h": "Bayesian Network Joint Factorisation Chain Rule",
+        "tex": "P(X_1, \\dots, X_n) = \\prod_{i=1}^n P(X_i \\mid \\operatorname{Pa}(X_i))",
+        "p": "The joint probability factorises into the product of local conditional distributions for each node conditioned only on its immediate parent set Pa(X_i)."
+      },
+      {
+        "h": "The Three Canonical d-Separation Motifs",
+        "tex": "\\begin{aligned} \\text{Chain: } & A \\to B \\to C & (A \\perp C \\mid B) \\\\ \\text{Fork: } & A \\leftarrow B \\to C & (A \\perp C \\mid B) \\\\ \\text{Collider: } & A \\to B \\leftarrow C & (A \\perp C \\mid \\emptyset, \\; A \\not\\perp C \\mid B) \\end{aligned}",
+        "p": "Chains and forks are blocked when middle node B is observed. Colliders are naturally blocked, but become UNBLOCKED (active) when collider B or its descendant is observed (explaining away)."
+      },
+      {
+        "h": "Variable Elimination Factor Marginalisation",
+        "tex": "\\phi_{\\mathrm{new}}(Y) = \\sum_{X} \\prod_{k \\in \\mathcal{F}_X} \\phi_k(X, Y)",
+        "p": "Inference operation: multiplies all probability factors involving variable X and sums out X, leaving a reduced factor over remaining variables Y."
+      }
+    ],
+    code: "import numpy as np\n\n# Exact Variable Elimination on a Classic 4-Node Bayesian Network\n# Structure: Burglar (B) -> Alarm (A) <- Earthquake (E)\n#                          Alarm (A) -> JohnCalls (J)\n\n# 1. Define Prior and Conditional Probability Tables (CPTs)\n# B in {0, 1}, E in {0, 1}, A in {0, 1}, J in {0, 1}\nP_B = np.array([0.999, 0.001])         # P(B=0), P(B=1)\nP_E = np.array([0.998, 0.002])         # P(E=0), P(E=1)\n\n# P(A=1 | B, E): shape (2, 2) where index is [B, E]\nP_A_given_BE = np.array([\n    [0.001, 0.290],  # B=0: E=0 -> 0.001, E=1 -> 0.29\n    [0.940, 0.950]   # B=1: E=0 -> 0.940, E=1 -> 0.95\n])\n\n# P(J=1 | A): shape (2,) where index is [A]\nP_J_given_A = np.array([0.05, 0.90])   # A=0 -> 0.05, A=1 -> 0.90\n\n# 2. Query: What is P(Burglary = 1 | JohnCalls = 1)?\n# P(B, J=1) = sum_E sum_A P(B) * P(E) * P(A | B, E) * P(J=1 | A)\n\njoint_B_J = np.zeros(2)\n\nfor b in [0, 1]:\n    prob_b = 0.0\n    for e in [0, 1]:\n        for a in [0, 1]:\n            # P(B=b)\n            p_b = P_B[b]\n            # P(E=e)\n            p_e = P_E[e]\n            # P(A=a | B=b, E=e)\n            p_a = P_A_given_BE[b, e] if a == 1 else (1.0 - P_A_given_BE[b, e])\n            # P(J=1 | A=a)\n            p_j = P_J_given_A[a]\n            \n            prob_b += p_b * p_e * p_a * p_j\n    joint_B_J[b] = prob_b\n\n# Normalise by P(J=1)\nposterior_B_given_J = joint_B_J / np.sum(joint_B_J)\n\n# 3. Demonstrate \"Explaining Away\" (Collider behaviour)\n# What if we now observe Earthquake = 1? Does P(Burglary = 1) drop?\njoint_B_J_E = np.zeros(2)\nfor b in [0, 1]:\n    prob_b = 0.0\n    e = 1  # Given Earthquake = 1\n    for a in [0, 1]:\n        p_b = P_B[b]\n        p_e = P_E[e]\n        p_a = P_A_given_BE[b, e] if a == 1 else (1.0 - P_A_given_BE[b, e])\n        p_j = P_J_given_A[a]\n        prob_b += p_b * p_e * p_a * p_j\n    joint_B_J_E[b] = prob_b\n\nposterior_B_given_J_E = joint_B_J_E / np.sum(joint_B_J_E)\n\nprint(f\"Prior P(Burglary = 1):                {P_B[1]:.4f} (0.1%)\")\nprint(f\"Posterior P(Burglary = 1 | JohnCalls=1): {posterior_B_given_J[1]:.4f} ({posterior_B_given_J[1]*100:.1f}%)\")\nprint(f\"Posterior P(Burglary = 1 | JohnCalls=1, Earthquake=1): {posterior_B_given_J_E[1]:.4f} ({posterior_B_given_J_E[1]*100:.1f}%)\")\nprint(f\"Explaining Away Effect: Learning Earthquake occurred reduced Burglary probability by {((posterior_B_given_J[1] - posterior_B_given_J_E[1])/posterior_B_given_J[1])*100:.1f}%\")",
+    keyPoints: [
+      "Compactly parameterises complex joint distributions using Directed Acyclic Graphs (DAGs) and local conditional probabilities.",
+      "Reduces exponential parameter complexity $O(2^N)$ to polynomial scale by exploiting conditional independence.",
+      "The local Markov property guarantees each variable is independent of non-descendants given its parents.",
+      "d-separation provides a topological algorithm to determine conditional independence across chains, forks, and colliders.",
+      "Colliders ($A \\to B \\leftarrow C$) exhibit \"explaining away\": observing $B$ induces conditional dependence between independent causes $A$ and $C$."
+    ],
+    pitfalls: [
+      "Confusing conditional independence with marginal independence: In a collider ($A \\to B \\leftarrow C$), $A$ and $C$ are marginally independent, but conditioning on $B$ makes them dependent.",
+      "Inference complexity on loopy graphs: Exact inference via variable elimination or junction tree is NP-hard in general graphs with high tree-width, requiring approximate MCMC or loopy belief propagation.",
+      "Causal over-interpretation: A Bayesian network models statistical conditional independence; inferring true causal counterfactuals requires Pearl do-calculus and intervention assumptions."
+    ],
+    quiz: [
+      {
+        "q": "In the collider structure A -> B <- C, what happens to the independence between A and C when B is observed?",
+        "o": [
+          "A and C were marginally independent, but observing B (or any descendant of B) creates conditional dependence between them (explaining away)",
+          "A and C become strictly independent",
+          "A and C become identical variables",
+          "B becomes independent of both A and C"
+        ],
+        "a": 0,
+        "why": "In a collider, A and C are marginally independent. Observing the common effect B creates an explaining-away coupling: knowing A occurred explains B, lowering the probability of C."
+      },
+      {
+        "q": "How does a Bayesian Network reduce the number of parameters required to specify a joint distribution over N binary variables?",
+        "o": [
+          "By factorising P(X_1, ..., X_N) into a product of local CPTs P(X_i | Parents(X_i)), scaling with parent count rather than total variable count",
+          "By setting all probabilities to equal values",
+          "By converting binary variables into continuous variables",
+          "By computing the SVD of the graph adjacency matrix"
+        ],
+        "a": 0,
+        "why": "Instead of storing all 2^N - 1 states, each node only stores probabilities conditioned on its immediate parents, reducing complexity to O(N * 2^k) where k is max parent count."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "probability-rules-and-bayes-theorem"
+    ],
+    related: [
+      "probability-rules-and-bayes-theorem",
+      "causal-graphs-dags-and-adjustment",
+      "markov-random-fields",
+      "markov-chains-and-stationary-distributions"
+    ],
+    keywords: "bayesian networks, directed graphical models, conditional independence, d-separation, variable elimination, explaining away, cpts, belief propagation"
+  },
+
+  {
+    id: "markov-random-fields",
+    short: "Markov random fields",
+    title: "Markov Random Fields and Undirected Graphical Models",
+    task: "concepts",
+    module: "Probabilistic models",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Model symmetric spatial and relational interactions with undirected graphical models: master clique potentials, the Hammersley–Clifford theorem, and image denoising.",
+    lead: "While Bayesian networks model directed causal flows, many physical and spatial dependencies (like neighbouring pixels in an image or social ties) are symmetric. Markov Random Fields (MRFs) specify joint distributions as products of maximal clique potentials.",
+    intuition: [
+      "Directed graphical models (Bayesian Networks) are natural for causal processes where time flows forward from cause to effect. However, in spatial and relational systems—such as pixels in a 2D digital image, spatial disease incidence across bordering counties, or spin orientations in a crystal lattice—dependencies are inherently bidirectional and symmetric. Pixel A influences Pixel B just as strongly as Pixel B influences Pixel A.",
+      "Markov Random Fields (MRFs), also called Undirected Graphical Models, represent joint probability distributions over undirected graphs $G = (V, E)$. The Markov properties in an MRF state that a variable is conditionally independent of all other nodes in the network given its Markov Blanket (its immediate neighbouring nodes in the graph).",
+      "How do we parameterise a joint distribution on an undirected graph? In 1971, John Hammersley and Peter Clifford proved the fundamental theorem of undirected graphical models: any strictly positive probability distribution satisfying the Markov properties factorises as a Gibbs distribution over the maximal cliques of the graph: $P(x) = \\frac{1}{Z} \\prod_{C \\in \\mathcal{C}} \\psi_C(x_C) = \\frac{1}{Z} \\exp\\left(-\\sum_{C} E_C(x_C)\\right)$.",
+      "Here, $\\psi_C(x_C) > 0$ are non-negative potential functions (or clique energy functions $E_C$), and $Z = \\sum_x \\exp(-E(x))$ is the normalising constant (termed the Partition Function in statistical physics). While the partition function $Z$ is intractable to compute exactly for large grids, algorithms like Iterated Conditional Modes (ICM) or Graph Cuts perform rapid maximum a posteriori (MAP) inference for applications like image denoising and semantic segmentation."
+    ],
+    analogy: "Imagine a flock of starlings performing a murmur in the evening sky. No single bird is the directed \"leader\" commanding the others. Instead, each individual starling constantly adjusts its velocity and distance symmetrically relative to its six or seven nearest neighbours. When one bird veers left to avoid a falcon, its neighbours follow, propagating a smooth fluid wave through the entire flock.",
+    steps: [
+      {
+        "title": "1. Construct undirected graph structure",
+        "body": "Define graph $G = (V, E)$ where edges represent symmetric interactions (e.g. 4-connected grid on image pixels)."
+      },
+      {
+        "title": "2. Define clique potential energy functions",
+        "body": "Assign energy functions $E_C(x_C)$ to cliques: for pairwise MRFs, specify unary potentials $E_i(x_i)$ (data likelihood) and pairwise potentials $E_{ij}(x_i, x_j)$ (neighbour smoothing)."
+      },
+      {
+        "title": "3. Formulate total Gibbs energy",
+        "body": "Express joint probability as $P(x) = \\frac{1}{Z} \\exp(-E(x))$, where total energy $E(x) = \\sum_{i} E_i(x_i) + \\sum_{(i, j) \\in E} E_{ij}(x_i, x_j)$. Minimising energy maximises posterior probability."
+      },
+      {
+        "title": "4. Perform MAP inference via Iterated Conditional Modes (ICM)",
+        "body": "Initialise state (e.g. noisy image). Iterate over nodes: update node $x_i \\leftarrow \\arg\\min_{k} [E_i(k) + \\sum_{j \\in \\mathcal{N}(i)} E_{ij}(k, x_j)]$. Repeat until energy converges."
+      }
+    ],
+    math: [
+      {
+        "h": "Hammersley–Clifford Theorem (Gibbs Distribution)",
+        "tex": "P(x) = \\frac{1}{Z} \\prod_{C \\in \\mathcal{C}} \\psi_C(x_C) = \\frac{1}{Z} \\exp\\left(-\\sum_{C \\in \\mathcal{C}} E_C(x_C)\\right), \\quad Z = \\sum_{x} \\exp(-E(x))",
+        "p": "A positive distribution satisfies the local Markov properties of graph G if and only if it factorises over the maximal cliques C of G. Z is the normalising partition function."
+      },
+      {
+        "h": "Pairwise MRF Energy Formulation (Ising / Potts Model)",
+        "tex": "E(x) = \\sum_{i \\in V} \\phi_i(x_i, y_i) + \\beta \\sum_{(i, j) \\in E} \\mathbb{I}(x_i \\neq x_j)",
+        "p": "Standard energy model for vision: unary term phi_i enforces fidelity to noisy measurement y_i; pairwise Potts penalty beta enforces spatial smoothness among adjacent pixels."
+      },
+      {
+        "h": "Local Markov Property and Markov Blanket",
+        "tex": "P(X_i \\mid X_{-i}) = P(X_i \\mid X_{\\mathcal{N}(i)}) = \\frac{\\exp(-E_i(x_i) - \\sum_{j \\in \\mathcal{N}(i)} E_{ij}(x_i, x_j))}{\\sum_{x'_i} \\exp(-E_i(x'_i) - \\sum_{j \\in \\mathcal{N}(i)} E_{ij}(x'_i, x_j))}",
+        "p": "Conditioned on its immediate graph neighbours N(i) (its Markov blanket), node X_i is conditionally independent of all remaining nodes in the graph."
+      }
+    ],
+    code: "import numpy as np\n\n# Binary Image Denoising using a Markov Random Field (Ising Model) and ICM from scratch\nnp.random.seed(42)\n\n# 1. Create a synthetic clean 20x20 binary image (+1 and -1)\nsize = 20\nclean_img = -np.ones((size, size), dtype=int)\n# Draw a square in the centre\nclean_img[5:15, 5:15] = 1\n\n# 2. Corrupt image with 25% random bit-flip noise\nnoisy_img = clean_img.copy()\nflip_mask = np.random.uniform(0, 1, (size, size)) < 0.25\nnoisy_img[flip_mask] *= -1\n\n# 3. Iterated Conditional Modes (ICM) MAP Inference\n# Energy E(x) = -eta * sum_i (x_i * y_i) - beta * sum_{<i, j>} (x_i * x_j)\neta = 2.0   # Data fidelity weight (how much we trust noisy pixel y_i)\nbeta = 1.5  # Spatial smoothness weight (how much adjacent pixels must agree)\n\nx_state = noisy_img.copy()  # Initial state\nmax_iters = 10\n\ndef compute_total_energy(x, y, eta, beta):\n    # Data fidelity term\n    data_energy = -eta * np.sum(x * y)\n    # Horizontal interactions\n    h_energy = -beta * np.sum(x[:, :-1] * x[:, 1:])\n    # Vertical interactions\n    v_energy = -beta * np.sum(x[:-1, :] * x[1:, :])\n    return data_energy + h_energy + v_energy\n\nenergy_history = [compute_total_energy(x_state, noisy_img, eta, beta)]\n\n# ICM coordinate descent iterations\nfor it in range(max_iters):\n    changes = 0\n    for r in range(size):\n        for c in range(size):\n            y_val = noisy_img[r, c]\n            \n            # Sum of 4-connected neighbours\n            neighbour_sum = 0\n            if r > 0: neighbour_sum += x_state[r - 1, c]\n            if r < size - 1: neighbour_sum += x_state[r + 1, c]\n            if c > 0: neighbour_sum += x_state[r, c - 1]\n            if c < size - 1: neighbour_sum += x_state[r, c + 1]\n            \n            # Compare local energy for x = +1 vs x = -1\n            # E_local(val) = -eta * (val * y_val) - beta * (val * neighbour_sum)\n            e_plus = -eta * (1 * y_val) - beta * (1 * neighbour_sum)\n            e_minus = -eta * (-1 * y_val) - beta * (-1 * neighbour_sum)\n            \n            new_val = 1 if e_plus < e_minus else -1\n            if new_val != x_state[r, c]:\n                x_state[r, c] = new_val\n                changes += 1\n                \n    curr_energy = compute_total_energy(x_state, noisy_img, eta, beta)\n    energy_history.append(curr_energy)\n    if changes == 0:\n        break\n\n# Evaluate error rates\nerror_noisy = np.mean(clean_img != noisy_img)\nerror_denoised = np.mean(clean_img != x_state)\n\nprint(f\"Image dimensions: {size}x{size} (400 binary pixels)\")\nprint(f\"Initial Noisy Pixel Error:    {error_noisy * 100:.1f}%\")\nprint(f\"MRF Denoised Pixel Error:     {error_denoised * 100:.1f}% (noise eliminated!)\")\nprint(f\"Initial Energy: {energy_history[0]:.1f} -> Final Converged Energy: {energy_history[-1]:.1f}\")\nprint(\"Energy monotonically decreasing:\", np.all(np.diff(energy_history) <= 1e-6))",
+    keyPoints: [
+      "Undirected graphical model parameterised by non-negative clique potentials over undirected graph cliques.",
+      "Ideal for symmetric spatial and relational systems where directed causal arrows do not apply (e.g. image lattices, physical spins).",
+      "Hammersley–Clifford theorem proves any strictly positive Markov distribution factorises as a Gibbs distribution $P(x) = \\frac{1}{Z} \\exp(-E(x))$.",
+      "The normalising partition function $Z = \\sum_x \\exp(-E(x))$ is computationally intractable in general, summing over exponentially many states.",
+      "Iterated Conditional Modes (ICM) performs greedy coordinate descent on local node energies, guaranteeing monotonic convergence to a local energy minimum."
+    ],
+    pitfalls: [
+      "Intractability of the partition function Z: Computing marginal likelihoods or maximum likelihood parameter gradients requires evaluating $Z$, demanding MCMC or contrastive divergence.",
+      "ICM local minima trapping: Because ICM is greedy coordinate descent, it can get trapped in sub-optimal local energy minima; Graph Cuts (alpha-expansion) or simulated annealing find global/stronger optima.",
+      "Over-smoothing boundaries: If the pairwise spatial smoothness weight $\\beta$ is set too large, fine edge details and sharp image contours are erased into homogeneous blobs."
+    ],
+    quiz: [
+      {
+        "q": "Why are Markov Random Fields preferred over Bayesian Networks for 2D image pixel grids?",
+        "o": [
+          "Pixel dependencies are symmetric and bidirectional, so imposing an arbitrary directed acyclic ordering would create artificial causal bias",
+          "Bayesian networks cannot be used with discrete variables",
+          "Markov Random Fields require no math or probability",
+          "Images have negative pixel values that Bayesian networks cannot process"
+        ],
+        "a": 0,
+        "why": "Adjacent pixels mutually influence each other symmetrically. Imposing directed arrows on an image grid creates an artificial ordering and DAG cycles."
+      },
+      {
+        "q": "What is the primary computational bottleneck when training general Markov Random Fields via Maximum Likelihood?",
+        "o": [
+          "Evaluating the partition function Z = sum_x exp(-E(x)), which sums over exponentially many global configurations",
+          "Inverting a 2x2 matrix",
+          "Computing the discrete Fourier transform",
+          "Drawing random numbers"
+        ],
+        "a": 0,
+        "why": "The partition function Z normalises the distribution. For an N-pixel binary image, Z requires summing over 2^N states, which is computationally intractable for exact likelihood."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "bayesian-networks",
+      "probability-rules-and-bayes-theorem"
+    ],
+    related: [
+      "bayesian-networks",
+      "markov-chains-and-stationary-distributions",
+      "variational-inference",
+      "bayesian-networks"
+    ],
+    keywords: "markov random field, mrf, undirected graphical model, hammersley clifford, gibbs distribution, ising model, icm, partition function, image denoising"
+  }
 ];

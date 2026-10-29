@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvt325sn">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvt325sn">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt3hqu2">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt3hqu2">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -95,8 +95,8 @@
 
 np.random.<span class="f">seed</span>(<span class="n">42</span>)
 n_per_class, K = <span class="n">60</span>, <span class="n">3</span>
-centers = [[-<span class="n">1.5</span>, -<span class="n">1.0</span>], [<span class="n">1.5</span>, -<span class="n">1.0</span>], [<span class="n">0.0</span>, <span class="n">1.8</span>]]
-X = np.<span class="f">vstack</span>([np.random.<span class="f">normal</span>(c, <span class="n">0.6</span>, (n_per_class, <span class="n">2</span>)) <span class="k">for</span> c <span class="k">in</span> centers])
+centres = [[-<span class="n">1.5</span>, -<span class="n">1.0</span>], [<span class="n">1.5</span>, -<span class="n">1.0</span>], [<span class="n">0.0</span>, <span class="n">1.8</span>]]
+X = np.<span class="f">vstack</span>([np.random.<span class="f">normal</span>(c, <span class="n">0.6</span>, (n_per_class, <span class="n">2</span>)) <span class="k">for</span> c <span class="k">in</span> centres])
 y = np.<span class="f">repeat</span>([<span class="n">0</span>, <span class="n">1</span>, <span class="n">2</span>], n_per_class)
 N, p = X.shape
 X_b = np.<span class="f">column_stack</span>([np.<span class="f">ones</span>(N), X])
@@ -189,11 +189,11 @@ ovr_acc = np.<span class="f">mean</span>(np.<span class="f">argmax</span>(ovr_pr
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvt325sn" defer></script>
-<script src="../../assets/labs/core.js?v=mvt325sn" defer></script>
-<script src="../../assets/labs/algos.js?v=mvt325sn" defer></script>
-<script src="../../assets/labs/models.js?v=mvt325sn" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvt325sn" defer></script>
-<script src="../../assets/learn.js?v=mvt325sn" defer></script>
+<script src="../../assets/site.js?v=mvt3hqu2" defer></script>
+<script src="../../assets/labs/core.js?v=mvt3hqu2" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt3hqu2" defer></script>
+<script src="../../assets/labs/models.js?v=mvt3hqu2" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt3hqu2" defer></script>
+<script src="../../assets/learn.js?v=mvt3hqu2" defer></script>
 </body>
 </html>

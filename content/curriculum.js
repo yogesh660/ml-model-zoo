@@ -46,7 +46,7 @@ module.exports = [
       { title: 'Kernel and instance-based', lessons: ['knn_regressor', 'support_vector_regression', 'gaussian_process_regressor'] },
       { title: 'Trees and ensembles', lessons: ['decision_tree_regressor', 'random_forest_regressor', 'gradient_boosting_regressor', 'xgboost_regressor', 'lightgbm_regressor', 'catboost_regressor'] },
       { title: 'Neural networks', lessons: ['mlp_regressor'] },
-      { title: 'Beyond the basics', lessons: ['quantile-regression', 'gams-and-splines', ...X('Poisson and Tweedie regression', 'Isotonic regression', 'PLS and principal component regression', 'MARS')] },
+      { title: 'Beyond the basics', lessons: ['quantile-regression', 'gams-and-splines', 'poisson-and-tweedie-regression', 'isotonic-regression', 'pls-and-principal-component-regression', 'mars'] },
     ],
   },
   {
@@ -57,7 +57,7 @@ module.exports = [
       { title: 'Linear and probabilistic', lessons: ['logistic_regression', 'linear_discriminant_analysis', 'quadratic_discriminant_analysis', 'gaussian_naive_bayes', 'multinomial_bernoulli_nb'] },
       { title: 'Margin and instance-based', lessons: ['support_vector_classifier', 'knn_classifier'] },
       { title: 'Trees and ensembles', lessons: ['decision_tree_classifier', 'random_forest_classifier', 'adaboost_classifier', 'gradient_boosted_classifiers', 'stacking_voting_classifiers'] },
-      { title: 'Beyond the basics', lessons: ['bagging-and-extra-trees', 'multiclass-strategies-one-vs-rest-one-vs-one-softmax', 'class-imbalance-weights-smote-threshold-moving', 'probability-calibration-platt-scaling-isotonic-reliability-curves', ...X('Ordinal classification', 'Multi-label classification', 'Cost-sensitive learning')] },
+      { title: 'Beyond the basics', lessons: ['bagging-and-extra-trees', 'multiclass-strategies-one-vs-rest-one-vs-one-softmax', 'class-imbalance-weights-smote-threshold-moving', 'probability-calibration-platt-scaling-isotonic-reliability-curves', 'ordinal-classification', 'multi-label-classification', 'cost-sensitive-learning'] },
     ],
   },
   {
@@ -69,7 +69,7 @@ module.exports = [
       { title: 'Hierarchical', lessons: ['agglomerative_hierarchical', 'divisive_hierarchical', 'birch_clustering'] },
       { title: 'Density-based', lessons: ['dbscan_clustering', 'hdbscan_clustering', 'optics_clustering', 'mean_shift_clustering'] },
       { title: 'Probabilistic and graph-based', lessons: ['gaussian_mixture_models', 'spectral_clustering', 'affinity_propagation'] },
-      { title: 'Beyond the basics', lessons: [...X('Self-organising maps', 'Biclustering', 'Time-series clustering with DTW')] },
+      { title: 'Beyond the basics', lessons: ['self-organising-maps', 'biclustering', 'time-series-clustering-with-dtw'] },
     ],
   },
   {
@@ -77,9 +77,9 @@ module.exports = [
     blurb: 'Dimensionality reduction, anomaly detection, optimisation, tuning, interpretability, recommenders and the theory that explains why learning works.',
     tasks: ['ml'],
     modules: [
-      { title: 'Dimensionality reduction', lessons: ['pca', 't-sne', 'umap', ...X('SVD and truncated SVD', 'Kernel PCA', 'Independent component analysis', 'Non-negative matrix factorisation', 'MDS and Isomap', 'Random projections and Johnson–Lindenstrauss')] },
-      { title: 'Anomaly detection', lessons: ['isolation-forest', 'local-outlier-factor', ...X('One-class SVM', 'Mahalanobis distance and robust covariance')] },
-      { title: 'Probabilistic models', lessons: ['em-algorithm', ...X('Bayesian networks', 'Markov random fields', 'Gaussian process classifier')] },
+      { title: 'Dimensionality reduction', lessons: ['pca', 't-sne', 'umap', 'svd-and-truncated-svd', 'kernel-pca', 'independent-component-analysis', 'non-negative-matrix-factorisation', 'mds-and-isomap', 'random-projections-and-johnson-lindenstrauss'] },
+      { title: 'Anomaly detection', lessons: ['isolation-forest', 'local-outlier-factor', 'one-class-svm', 'mahalanobis-distance-and-robust-covariance'] },
+      { title: 'Probabilistic models', lessons: ['em-algorithm', 'bayesian-networks', 'markov-random-fields', ...X('Gaussian process classifier')] },
       { title: 'Optimisation', lessons: ['convex-optimisation-and-duality', 'lagrange-multipliers-and-kkt-conditions', ...X('Coordinate descent', 'Newton\'s method', 'Proximal gradient methods')] },
       { title: 'Model selection', lessons: ['hyperparameter-search-grid-random-successive-halving', 'bayesian-optimisation-and-optuna', 'learning-curves-and-diagnosing-fit', 'nested-cross-validation', ...X('Ensemble theory: bagging, boosting, stacking compared', 'Conformal prediction')] },
       { title: 'Interpretability and fairness', lessons: ['permutation-and-impurity-feature-importance', 'shap', 'pdp-ice-and-ale-plots', ...X('LIME', 'Counterfactual explanations', 'Fairness metrics and mitigation')] },
