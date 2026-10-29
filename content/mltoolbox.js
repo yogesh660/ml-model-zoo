@@ -7530,5 +7530,102 @@ print(f"MAP@5:   {map_score:.4f}")`,
     "collaborative-filtering"
   ],
   "keywords": "apriori, association rules, market basket analysis, support, confidence, lift, downward closure, frequent itemsets, pattern mining"
+},
+
+{
+  "id": "fp-growth",
+  "short": "FP-growth",
+  "title": "FP-growth: Frequent Pattern Mining Without Candidate Generation",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Mining frequent itemsets efficiently using a compact FP-tree structure and recursive divide-and-conquer, bypassing costly candidate generation.",
+  "lead": "While the classical Apriori algorithm requires repeatedly scanning the entire transaction database to test millions of combinatorial candidate sets, FP-growth (Frequent Pattern Growth) compresses the transaction database into a compact prefix-tree structure called an FP-tree. Frequent itemsets are then discovered through recursive conditional pattern tree projections without generating candidate combinations.",
+  "analogy": "Imagine taking inventory across thousands of supermarket receipts. Apriori checks whether milk and bread frequently appear together by rescanning all paper receipts, then rescans again for triples and quadruples. FP-growth instead merges identical shopping paths into a single branching tree where shared prefixes share nodes with visit counters. Finding patterns then becomes tracing paths backwards from item leaves rather than repeatedly shuffling through paper receipts.",
+  "intuition": [
+    "Frequent pattern mining searches for combinations of items that appear in transactions above a user-specified minimum support threshold $s_{\\min}$. In retail market basket analysis, web navigation tracking, and telemetry mining, transactions often share common subsets of items.",
+    "The bottleneck of Apriori is the candidate generation step $L_k \\to C_{k+1}$, where combinatorial explosion generates vast candidate sets that require expensive multi-pass disk reads. FP-growth eliminates candidate generation by scanning the database only twice: the first scan counts 1-item supports to discard infrequent items, and the second inserts sorted frequent items into a compact Trie-like FP-tree.",
+    "In an FP-tree, transactions sharing frequent prefixes share identical tree nodes, dramatically compressing memory usage. An auxiliary header table maintains linked lists chaining all occurrences of each item throughout the tree.",
+    "FP-growth mines patterns from the bottom of the header table up (from least frequent to most frequent). For each item, it extracts its conditional pattern base (prefix paths leading to the item), builds a small conditional FP-tree, and recursively extracts frequent itemsets. Divide-and-conquer transforms a global search problem into localized branch projections."
+  ],
+  "steps": [
+    "Scan database pass 1: Count support for all individual items. Filter out items with support below $s_{\\min}$. Sort remaining frequent 1-items in descending order of frequency (F-list).",
+    "Scan database pass 2: For each transaction, filter out infrequent items, sort remaining items according to the F-list, and insert the sorted sequence into the FP-tree, incrementing node counts and linking items via the header table.",
+    "Bottom-up traversal: For each item in the header table starting from the least frequent, trace parent pointers upward to gather its conditional pattern base (sub-paths and branch path counts).",
+    "Construct conditional FP-tree: Accumulate item counts within the conditional pattern base. Retain items meeting minimum support and build the smaller conditional FP-tree.",
+    "Recursive divide-and-conquer: If the conditional tree contains a single path, enumerate all combinations directly. Otherwise, recursively mine the conditional tree and concatenate the base item."
+  ],
+  "math": [
+    {
+      "h": "Support and Minimum Support Threshold",
+      "tex": "\\mathrm{supp}(X) = \\frac{|\\{T \\in \\mathcal{D} : X \\subseteq T\\}|}{|\\mathcal{D}|} \\ge s_{\\min}",
+      "p": "An itemset $X$ is frequent if its relative support within the transactional database $\\mathcal{D}$ meets or exceeds the minimum support threshold $s_{\\min} \\in (0, 1]$."
+    },
+    {
+      "h": "Conditional Pattern Base Representation",
+      "tex": "\\mathcal{B}_i = \\left\\{ (p_k, c_k) \\;\\middle|\\; p_k = \\mathrm{prefix}(v_k), \\; c_k = \\mathrm{count}(v_k), \\; v_k \\in \\mathrm{nodes}(i) \\right\\}",
+      "p": "The conditional pattern base for item $i$ consists of prefix paths $p_k$ leading from the root to each node $v_k$ containing item $i$, weighted by the count $c_k$ of node $v_k$."
+    },
+    {
+      "h": "Conditional FP-Tree Node Count Projection",
+      "tex": "\\mathrm{supp}_{\\mathcal{B}_i}(x) = \\sum_{(p_k, c_k) \\in \\mathcal{B}_i : x \\in p_k} c_k",
+      "p": "An item $x$ is retained in the conditional FP-tree for item $i$ only if its aggregated count across all prefix paths in $\\mathcal{B}_i$ meets the minimum support threshold."
+    }
+  ],
+  "code": "import collections\nfrom typing import Dict, List, Optional, Set, Tuple\n\nclass FPNode:\n    def __init__(self, item: Optional[str], count: int, parent: Optional['FPNode']):\n        self.item = item\n        self.count = count\n        self.parent = parent\n        self.children: Dict[str, 'FPNode'] = {}\n        self.node_link: Optional['FPNode'] = None\n\nclass FPTree:\n    def __init__(self, min_support: int):\n        self.min_support = min_support\n        self.root = FPNode(None, 0, None)\n        self.header_table: Dict[str, Tuple[int, Optional[FPNode]]] = {}\n\n    def fit(self, transactions: List[List[str]]):\n        counts = collections.Counter(item for txn in transactions for item in txn)\n        frequent = {item: c for item, c in counts.items() if c >= self.min_support}\n        if not frequent:\n            return\n        \n        # Sort frequent items descending by frequency\n        f_list = sorted(frequent.keys(), key=lambda x: (-frequent[x], x))\n        order = {item: i for i, item in enumerate(f_list)}\n        \n        # Initialise header table: item -> [count, head_node]\n        self.header_table = {item: [frequent[item], None] for item in f_list}\n\n        # Second pass: construct FP-tree\n        for txn in transactions:\n            filtered = [item for item in txn if item in frequent]\n            filtered.sort(key=lambda x: order[x])\n            curr = self.root\n            for item in filtered:\n                if item in curr.children:\n                    curr.children[item].count += 1\n                else:\n                    new_node = FPNode(item, 1, curr)\n                    curr.children[item] = new_node\n                    # Link to header table\n                    if self.header_table[item][1] is None:\n                        self.header_table[item][1] = new_node\n                    else:\n                        tail = self.header_table[item][1]\n                        while tail.node_link is not None:\n                            tail = tail.node_link\n                        tail.node_link = new_node\n                curr = curr.children[item]\n\n# Example transactions\ntransactions = [\n    ['bread', 'milk'],\n    ['bread', 'diaper', 'beer', 'eggs'],\n    ['milk', 'diaper', 'beer', 'cola'],\n    ['bread', 'milk', 'diaper', 'beer'],\n    ['bread', 'milk', 'diaper', 'cola']\n]\n\ntree = FPTree(min_support=3)\ntree.fit(transactions)\nprint(\"Frequent 1-items in header:\", list(tree.header_table.keys()))\n# Frequent 1-items in header: ['bread', 'milk', 'diaper', 'beer']",
+  "keyPoints": [
+    "FP-growth avoids candidate generation, scanning the transactional database only twice.",
+    "The FP-tree compactly encodes transactions by merging identical prefixes, saving substantial RAM.",
+    "Header tables with horizontal linked lists enable rapid extraction of conditional pattern bases.",
+    "Mining is recursive and divide-and-conquer: each conditional FP-tree operates on a fraction of the original data."
+  ],
+  "pitfalls": [
+    "If transactions have almost no shared prefixes (sparse, high-cardinality data), the FP-tree cannot compress and may consume more memory than the raw dataset.",
+    "Setting the minimum support threshold too low causes combinatorial explosion in the number of mined patterns, leading to out-of-memory errors.",
+    "Header table pointer traversals introduce pointer chasing, which can exhibit poor CPU cache locality compared to dense matrix arrays."
+  ],
+  "quiz": [
+    {
+      "q": "Why is FP-growth generally significantly faster than the classical Apriori algorithm?",
+      "o": [
+        "It replaces support counting with random sampling approximations",
+        "It avoids candidate generation by recursively mining a compact prefix tree",
+        "It works only on numerical data using continuous gradient descent",
+        "It evaluates rules using k-means clustering instead of set intersections"
+      ],
+      "a": 1,
+      "why": "FP-growth compresses transactions into an FP-tree in just two database scans and mines frequent patterns recursively without generating costly candidate itemsets."
+    },
+    {
+      "q": "What purpose does the header table serve in an FP-tree?",
+      "o": [
+        "It stores the transaction IDs of every purchase receipt",
+        "It chains all tree nodes containing a specific item together for fast prefix path retrieval",
+        "It caches association rules and confidence scores",
+        "It computes the principal component projections of the items"
+      ],
+      "a": 1,
+      "why": "The header table maintains an item index pointing to a linked list of all occurrences of that item across tree branches, facilitating quick traversal to build conditional pattern bases."
+    },
+    {
+      "q": "Under what condition does an FP-tree fail to provide significant memory compression?",
+      "o": [
+        "When all transactions share identical long prefixes",
+        "When the transactional data is extremely sparse with little prefix overlap",
+        "When the minimum support threshold is set close to 1.0",
+        "When the number of transactions is much larger than the number of unique items"
+      ],
+      "a": 1,
+      "why": "If transactions have negligible item overlap, very few prefixes can be shared, resulting in a bushy tree with almost as many nodes as total transaction items plus pointer overhead."
+    }
+  ],
+  "related": [
+    "apriori-and-association-rules",
+    "collaborative-filtering",
+    "two-tower-retrieval"
+  ],
+  "keywords": "fp-growth, frequent pattern growth, association rules, frequent itemsets, market basket analysis, fp-tree, data mining",
+  "usedBy": []
 }
 ];

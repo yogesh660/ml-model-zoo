@@ -2696,4 +2696,1855 @@ print(f"Throughput speedup factor:   {throughput_batch / throughput_online:.1f}x
     related: ['scikit-learn-pipelines-and-columntransformer', 'data-leakage', 'time-series-cross-validation'],
     keywords: 'batch inference online inference real time prediction feature store streaming latency throughput training serving skew mlops',
   },
+
+{
+  "id": "dates-time-zones-and-temporal-joins",
+  "short": "Dates, time zones & joins",
+  "title": "Dates, Time Zones, and Temporal Joins in Data Engineering",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Mastering ISO 8601 timestamps, UTC normalisation, daylight saving edge cases, as-of joins, and point-in-time correct temporal feature lookups.",
+  "lead": "Temporal data is ubiquitous in real-world machine learning, yet improper handling of time zones, daylight saving shifts, and non-aligned timestamps introduces subtle, silent data corruption and severe lookahead leakage. A single local time mix-up can make an event appear an hour before it actually occurred, or corrupt training targets when matching asynchronous market prices to client orders.",
+  "analogy": "Imagine matching flight departure announcements in Tokyo with passenger bookings recorded in New York. If both systems record \"14:00\" without specifying time zones or offsets, you cannot know which happened first. Converting every event to Greenwich Mean Time (UTC) establishes a single unambiguous timeline, while an as-of join acts like looking at the departure board right at the moment you step up to the gate, ensuring you only see the latest scheduled boarding gate rather than tomorrow's update.",
+  "intuition": [
+    "Temporal information spans two concepts: physical time (an absolute point on the cosmic timeline, correctly measured in Unix epoch seconds or UTC ISO 8601 strings) and civil time (local wall-clock time subject to political boundaries, time zones, and daylight saving time adjustments).",
+    "A fundamental rule of data engineering is: ingest and store all timestamps in UTC ($+00:00$), and only convert to local civil time at the presentation layer or when extracting calendar features (such as local hour of day or day of week). Daylight saving transitions create ambiguous times (an hour repeating during autumn fallback) and nonexistent times (an hour skipped during spring forward).",
+    "Standard relational equijoins require exact timestamp matches ($t_A = t_B$), which almost never occurs across independent distributed telemetry streams. Instead, time-series workflows require temporal inequality joins, most notably the as-of join (or backward merge).",
+    "An as-of join merges each record from a primary table with the most recent preceding record from a secondary reference table, strictly enforcing $t_{\\mathrm{ref}} \\le t_{\\mathrm{event}}$. This guarantees point-in-time correctness, preventing target leakage where future prices or status changes inadvertently leak into past feature states."
+  ],
+  "steps": [
+    "Ingest and canonicalise: Parse input strings against ISO 8601 standard (`YYYY-MM-DDTHH:MM:SSZ`), resolve timezone offsets immediately, and store as UTC timestamps or epoch nanoseconds.",
+    "Feature extraction in local time: When creating behavioural features (e.g. rush-hour indicators, morning vs evening shopping), convert UTC to user-local civil time using the regional timezone database (IANA tzdb).",
+    "Index sorting: Ensure both event and reference tables are strictly sorted by entity ID and timestamp prior to temporal joining.",
+    "Point-in-time as-of join: Execute backward matching (`join_asof`) on matching keys (e.g. `user_id`, `ticker`) matching the latest reference timestamp $\\le$ the query timestamp.",
+    "Tolerance and lookahead audit: Configure a backward tolerance window (e.g. do not match reference data older than 24 hours) and assert zero forward-looking records."
+  ],
+  "math": [
+    {
+      "h": "Universal Time Normalisation",
+      "tex": "t_{\\mathrm{UTC}} = t_{\\mathrm{local}} - \\Delta_{\\mathrm{tz}}(\\mathrm{date}, \\mathrm{location})",
+      "p": "Physical time is invariant. Local civil time is adjusted by the historical offset $\\Delta_{\\mathrm{tz}}$ dictated by timezone rules and daylight saving time."
+    },
+    {
+      "h": "As-Of Temporal Join Specification",
+      "tex": "j^*(i) = \\operatorname*{arg\\,max}_{j \\in \\mathcal{R}_{k_i}} \\left\\{ t_j \\;\\middle|\\; t_j \\le t_i \\;\\land\\; t_i - t_j \\le \\tau_{\\max} \\right\\}",
+      "p": "For query event $i$ with key $k_i$ at time $t_i$, the as-of join identifies reference index $j^*$ with the latest timestamp $t_j$ strictly before $t_i$, bounded by maximum lookback tolerance $\\tau_{\\max}$."
+    },
+    {
+      "h": "Lookahead Leakage Violation Condition",
+      "tex": "\\exists i, j : \\text{Joined}(i, j) \\implies t_j > t_i \\quad [\\text{Fatal Target Leakage}]",
+      "p": "If any feature state incorporated at decision time $t_i$ derives from an event at $t_j > t_i$, the offline validation model evaluates with non-causal future information."
+    }
+  ],
+  "code": "import pandas as pd\nimport numpy as np\n\n# Create trade execution events (primary table)\ntrades = pd.DataFrame({\n    'timestamp': pd.to_datetime([\n        '2026-03-15 10:00:02Z',\n        '2026-03-15 10:00:07Z',\n        '2026-03-15 10:00:15Z'\n    ]),\n    'symbol': ['AAPL', 'AAPL', 'AAPL'],\n    'shares': [100, 250, 50]\n})\n\n# Create asynchronous quote updates (reference table)\nquotes = pd.DataFrame({\n    'timestamp': pd.to_datetime([\n        '2026-03-15 10:00:00Z',\n        '2026-03-15 10:00:05Z',\n        '2026-03-15 10:00:12Z',\n        '2026-03-15 10:00:20Z'\n    ]),\n    'symbol': ['AAPL', 'AAPL', 'AAPL', 'AAPL'],\n    'bid_price': [182.10, 182.25, 182.15, 182.40]\n})\n\n# Sort both frames by timestamp (prerequisite for merge_asof)\ntrades = trades.sort_values('timestamp')\nquotes = quotes.sort_values('timestamp')\n\n# Point-in-time backward join: find the latest quote before each trade\nenriched_trades = pd.merge_asof(\n    trades,\n    quotes,\n    on='timestamp',\n    by='symbol',\n    direction='backward',\n    tolerance=pd.Timedelta('10s')\n)\n\nprint(enriched_trades[['timestamp', 'symbol', 'shares', 'bid_price']])\n# Output matches 10:00:02 -> 182.10, 10:00:07 -> 182.25, 10:00:15 -> 182.15",
+  "keyPoints": [
+    "Store and transport timestamps exclusively in UTC; convert to local civil time solely for domain features or reporting.",
+    "As-of joins match each record with the most recent preceding entry from another table, preventing future data leakage.",
+    "Temporal joins require both dataframes to be sorted chronologically on the join timestamp.",
+    "Daylight saving transitions cause duplicate hours in autumn and missing hours in spring in naive local datetimes."
+  ],
+  "pitfalls": [
+    "Using naive datetime objects without timezone metadata (`tz_localize(None)`), causing silent 1-to-5 hour offsets when merging across systems.",
+    "Performing standard forward joins or nearest joins in trading or medical records, allowing future outcomes to leak into predictive features.",
+    "Neglecting daylight saving shifts when aggregating by \"local hour of day\", resulting in artificial spikes or dips twice a year."
+  ],
+  "quiz": [
+    {
+      "q": "Why should database timestamps almost always be stored in UTC rather than local time?",
+      "o": [
+        "UTC stores smaller integer values that take half the disk space",
+        "UTC provides an unambiguous, monotonic timeline free from daylight saving anomalies and timezone shifts",
+        "Database engines cannot index columns that contain timezone offsets",
+        "UTC automatically handles categorical variable encodings"
+      ],
+      "a": 1,
+      "why": "UTC is an invariant, continuous reference standard without discontinuities caused by daylight saving changes or local government decree."
+    },
+    {
+      "q": "What distinguishes an as-of join (`merge_asof`) with `direction=\"backward\"` from an inner join?",
+      "o": [
+        "It requires exact timestamp equivalence across both tables",
+        "It pairs each row in the left table with the closest preceding timestamp in the right table",
+        "It replaces missing values with the overall column mean",
+        "It randomly samples rows from the secondary dataset"
+      ],
+      "a": 1,
+      "why": "A backward as-of join matches each record with the most recent historical record that occurred at or before that record's timestamp."
+    },
+    {
+      "q": "What critical machine learning error occurs if an analyst uses `direction=\"nearest\"` when enriching transaction data with reference prices?",
+      "o": [
+        "Multicollinearity in continuous predictors",
+        "Lookahead leakage, because future reference prices after the transaction could be selected",
+        "Underfitting due to excessive regularisation",
+        "Covariate shift between train and test sets"
+      ],
+      "a": 1,
+      "why": "`direction=\"nearest\"` can select a reference timestamp that occurred in the future relative to the transaction, leaking unavailable future information into features."
+    }
+  ],
+  "related": [
+    "data-leakage",
+    "pandas-and-polars-patterns",
+    "train-validation-test-splits-group-and-time-based"
+  ],
+  "keywords": "dates, time zones, temporal joins, as-of join, merge_asof, utc, daylight saving, lookahead leakage, point-in-time correctness",
+  "usedBy": []
+},
+
+{
+  "id": "binning-and-discretisation",
+  "short": "Binning & discretisation",
+  "title": "Binning and Discretisation: Transforming Continuous Predictors",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 14,
+  "noLab": true,
+  "summary": "Converting continuous variables into discrete intervals using uniform, quantile, k-means, and supervised decision tree binning strategies.",
+  "lead": "Continuous features often exhibit non-linear relationships, extreme outliers, or multimodal distributions that linear and generalised additive models struggle to capture directly. Discretisation maps continuous scales into discrete ordinal or categorical bins, introducing non-linear step responses, dampening outlier sensitivity, and producing interpretable scorecards.",
+  "analogy": "Consider categorising human ages for life insurance. Rather than forcing a single rigid linear relationship across all ages from 0 to 100, insurers split ages into distinct brackets: 18–25, 26–40, 41–60, and 60+. Within each bucket, risk is relatively uniform, and the risk premium can step up discretely without requiring complex high-degree polynomial curves.",
+  "intuition": [
+    "Discretisation partitions the domain of a continuous variable $X$ into $K$ intervals $[b_{k-1}, b_k)$, assigning each observation a discrete bin index or one-hot indicator. This effectively replaces a single continuous parameter with $K$ piecewise constant basis functions.",
+    "Unsupervised discretisation relies solely on feature distributions. Equal-width (uniform) binning divides the range into intervals of identical length, but is vulnerable to outliers compressing the vast majority of data into one bin. Equal-frequency (quantile) binning places an identical number of samples in every bin, making it robust against heavy tails and skewness.",
+    "Clustering-based binning (e.g. 1D k-means) clusters values into natural density modes, setting cut points midway between cluster centroids.",
+    "Supervised discretisation uses the target variable $y$ to determine optimal cutoffs. A single-variable decision tree finds split thresholds that maximise mutual information or minimise impurity with respect to $y$, directly isolating regions of differing risk or class probability."
+  ],
+  "steps": [
+    "Assess variable distribution: Inspect histograms, skewness, and kurtosis to determine whether the feature is uniform, bell-shaped, or heavily tailed.",
+    "Select binning strategy: Choose equal-frequency for skewed distributions, equal-width for uniformly bounded metrics, or decision tree binning for non-linear target associations.",
+    "Compute cut points on training data only: Fit bin edges $\\{b_0, b_1, \\dots, b_K\\}$ strictly on the training partition to avoid data leakage.",
+    "Handle boundary conditions: Ensure the outer edges extend to $(-\\infty, \\infty)$ so unseen minimum or maximum values in production do not produce missing values.",
+    "Encode discrete intervals: Encode bins as ordinal integers (for tree models) or one-hot dummy variables (for linear models and credit scorecards)."
+  ],
+  "math": [
+    {
+      "h": "Equal-Width (Uniform) Interval Partitioning",
+      "tex": "w = \\frac{\\max(X) - \\min(X)}{K}, \\quad b_k = \\min(X) + k \\cdot w, \\quad k \\in \\{0, 1, \\dots, K\\}",
+      "p": "Equal-width binning divides the total observed range into $K$ intervals of fixed length $w$."
+    },
+    {
+      "h": "Equal-Frequency (Quantile) Partitioning",
+      "tex": "b_k = Q_X\\left(\\frac{k}{K}\\right), \\quad P(X \\in [b_{k-1}, b_k)) = \\frac{1}{K}",
+      "p": "Quantile binning places bin edges at percentiles such that each of the $K$ bins contains exactly $1/K$ of the empirical probability mass."
+    },
+    {
+      "h": "Piecewise Constant Basis Expansion",
+      "tex": "f(X) = \\sum_{k=1}^K w_k \\cdot \\mathbb{I}(X \\in [b_{k-1}, b_k))",
+      "p": "Linear models fit a separate weight $w_k$ to each bin indicator $\\mathbb{I}$, learning arbitrary piecewise constant step functions without explicit polynomial features."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.preprocessing import KBinsDiscretizer\n\n# Generate skewed continuous data (e.g. income or transaction amounts)\nnp.random.seed(42)\nincome = np.random.exponential(scale=35000, size=1000).reshape(-1, 1)\n\n# Fit quantile-based discretisation (5 bins with equal sample frequency)\nquantile_bin = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='quantile')\nbinned_q = quantile_bin.fit_transform(income)\n\n# Fit uniform (equal-width) discretisation\nuniform_bin = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='uniform')\nbinned_u = uniform_bin.fit_transform(income)\n\nprint(\"Quantile cut points:\\n\", np.round(quantile_bin.bin_edges_[0], 1))\nprint(\"Quantile bin counts:\\n\", np.bincount(binned_q.flatten().astype(int)))\nprint(\"Uniform bin counts (heavily imbalanced):\\n\", np.bincount(binned_u.flatten().astype(int)))\n# Notice quantile creates balanced ~200 items/bin, while uniform starves upper bins",
+  "keyPoints": [
+    "Discretisation converts continuous variables into discrete bins, enabling linear models to learn non-linear step responses.",
+    "Quantile (equal-frequency) binning handles heavy-tailed skewed distributions without collapsing all samples into one bin.",
+    "Cut points must always be calculated strictly on the training set and applied unchanged to validation and test sets.",
+    "Supervised binning using decision tree splits finds thresholds that directly optimise class separation."
+  ],
+  "pitfalls": [
+    "Information loss: Discretisation discards fine-grained intra-bin variance, treating all values within an interval as completely identical.",
+    "Arbitrary boundary artifacts: Two data points on opposite sides of a cut boundary (e.g. 49.9 and 50.1) receive different representations, while 50.1 and 69.9 receive the same.",
+    "Calculating quantile thresholds on the combined dataset before train/test splitting, causing target leakage."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary vulnerability of equal-width (uniform) binning when applied to skewed distributions?",
+      "o": [
+        "It requires computationally expensive iterative matrix inversion",
+        "Outliers stretch the range, crowding the vast majority of observations into a single bin",
+        "It cannot be encoded into one-hot binary columns",
+        "It violates the Gauss-Markov theorem for linear regression"
+      ],
+      "a": 1,
+      "why": "In a skewed distribution with extreme outliers, the span $(\\max - \\min)$ is dominated by rare values, leaving nearly all normal observations compressed into the first interval."
+    },
+    {
+      "q": "Why does quantile binning generally outperform equal-width binning for financial variables like wealth or income?",
+      "o": [
+        "It guarantees an equal number of samples in every bin, making it robust against extreme long tails",
+        "It transforms categorical strings into continuous floating point numbers",
+        "It eliminates the need for cross-validation",
+        "It enforces normal Gaussianity on the output labels"
+      ],
+      "a": 0,
+      "why": "Quantile binning places cutoffs at empirical percentiles, ensuring balanced sample support across all bins regardless of distribution skewness."
+    },
+    {
+      "q": "What must an engineer ensure when deploying a fitted discretiser to production inference?",
+      "o": [
+        "Bin edges must be recomputed on each incoming production batch",
+        "The first and last intervals must cover $(-\\infty, \\infty)$ to handle extreme values without generating NaNs",
+        "Every bin must contain an odd number of samples",
+        "The target variable must be passed alongside the test features"
+      ],
+      "a": 1,
+      "why": "Production features may exhibit values lower than the training minimum or higher than the maximum. Infinite bounds prevent out-of-range errors."
+    }
+  ],
+  "related": [
+    "encoding-categoricals-one-hot-ordinal-target-woe",
+    "scaling-and-transforms-standard-robust-box-cox-yeo-johnson",
+    "outlier-handling"
+  ],
+  "keywords": "binning, discretisation, kbinsdiscretizer, equal width, equal frequency, quantile binning, step function, feature engineering",
+  "usedBy": []
+},
+
+{
+  "id": "interactions-and-polynomial-features",
+  "short": "Interactions & polynomials",
+  "title": "Interactions and Polynomial Features: Capturing Non-Linear Synergies",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Constructing multiplicative feature interactions and polynomial expansions to model non-linear synergies while managing combinatorial feature explosion.",
+  "lead": "Linear models inherently assume that the effect of one feature on the target is entirely independent of all other features. In real-world phenomena, however, effects are deeply interactive: the impact of advertising depends on household income, and drug efficacy depends on patient body mass. Constructing interaction terms and polynomial features enables linear algorithms to capture multiplicative synergies and curved response surfaces.",
+  "analogy": "Imagine baking bread. Flour and yeast each contribute weight, but their true effect on loaf height occurs through their interactive combination: yeast without flour yields zero bread, and flour without yeast yields flatbread. A model that only adds individual flour weight plus yeast weight misses the multiplicative reaction entirely.",
+  "intuition": [
+    "In a standard linear regression $\\hat{y} = w_1 x_1 + w_2 x_2 + b$, the marginal derivative $\\frac{\\partial \\hat{y}}{\\partial x_1} = w_1$ is constant. It never changes regardless of whether $x_2$ is tiny or massive.",
+    "Adding an interaction term $x_1 x_2$ yields $\\hat{y} = w_1 x_1 + w_2 x_2 + w_{12} (x_1 x_2) + b$. Now the marginal effect $\\frac{\\partial \\hat{y}}{\\partial x_1} = w_1 + w_{12} x_2$ depends directly on the level of $x_2$, unlocking synergy or antagonism modelling.",
+    "Polynomial features expand individual inputs to higher powers ($x_1^2, x_1^3$), allowing linear models to fit quadratic parabolas, cubic curves, and multi-dimensional saddle surfaces.",
+    "The primary danger of polynomial and interaction expansion is combinatorial explosion. Expanding $d$ features to degree $p$ generates $\\binom{d+p}{p}$ terms. For 100 features at degree 2, this produces 5,151 columns, leading to extreme multicollinearity, memory bloat, and severe overfitting unless paired with L1 regularisation (Lasso) or domain-guided selection."
+  ],
+  "steps": [
+    "Domain hypothesis generation: Identify intuitive pairwise synergies based on physical or business logic (e.g. $\\text{speed} \\times \\text{time} = \\text{distance}$, $\\text{price} \\times \\text{quantity} = \\text{revenue}$) before blind generation.",
+    "Feature standardisation: Standardise raw continuous variables before creating polynomial terms to prevent high-degree powers from exploding to huge numerical scales.",
+    "Polynomial expansion: Generate cross-products and powers up to degree 2 or 3 using matrix operations or `PolynomialFeatures`.",
+    "Filter collinear columns: Check correlation matrices and variance inflation factors (VIF) to detect near-duplicate collinear interaction terms.",
+    "Regularised model fitting: Train linear models with L1/L2 regularisation (e.g. ElasticNet) to drive irrelevant cross-products to zero."
+  ],
+  "math": [
+    {
+      "h": "Two-Way Multiplicative Interaction Model",
+      "tex": "\\hat{y} = w_0 + w_1 x_1 + w_2 x_2 + w_{12} (x_1 x_2)",
+      "p": "The interaction coefficient $w_{12}$ represents the change in the slope of $x_1$ per unit increase in $x_2$."
+    },
+    {
+      "h": "Combinatorial Dimensionality Expansion",
+      "tex": "D_{\\mathrm{expanded}} = \\binom{d + p}{p} = \\frac{(d + p)!}{d! \\, p!}",
+      "p": "Expanding a $d$-dimensional feature vector up to polynomial degree $p$ scales factorially, necessitating strict feature pruning."
+    },
+    {
+      "h": "Marginal Rate of Substitution / Sensitivity",
+      "tex": "\\frac{\\partial \\hat{y}}{\\partial x_1} = w_1 + w_{12} x_2 + 2 w_{11} x_1",
+      "p": "With both interaction and quadratic terms, the sensitivity of predictions to changes in $x_1$ is a function of both $x_1$ and $x_2$."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.preprocessing import PolynomialFeatures, StandardScaler\nfrom sklearn.linear_model import LassoCV\n\n# Generate synthetic non-linear interaction data: y = 2*x1 - 3*x2 + 4*(x1*x2) + noise\nnp.random.seed(42)\nX_raw = np.random.uniform(-2, 2, size=(200, 3))  # 3 features: x0, x1, x2\ny = 2.0 * X_raw[:, 0] - 3.0 * X_raw[:, 1] + 4.0 * (X_raw[:, 0] * X_raw[:, 1]) + np.random.normal(0, 0.5, 200)\n\n# Standardise before polynomial expansion\nscaler = StandardScaler()\nX_norm = scaler.fit_transform(X_raw)\n\n# Generate degree-2 interaction features (including bias and squares)\npoly = PolynomialFeatures(degree=2, include_bias=False)\nX_poly = poly.fit_transform(X_norm)\nfeature_names = poly.get_feature_names_out(['x0', 'x1', 'x2'])\n\n# Fit Lasso to automatically select the true interaction terms\nlasso = LassoCV(cv=5).fit(X_poly, y)\n\nprint(\"Expanded feature count:\", X_poly.shape[1])\nselected = [(name, round(coef, 2)) for name, coef in zip(feature_names, lasso.coef_) if abs(coef) > 0.1]\nprint(\"Lasso selected non-zero features:\", selected)\n# Output reveals strong weights on x0, x1, and the cross-product x0*x1",
+  "keyPoints": [
+    "Interaction terms allow the marginal effect of one predictor to depend on the magnitude of another.",
+    "Polynomial features enable linear algorithms to fit smooth non-linear curves and saddle points.",
+    "Combinatorial expansion generates thousands of features rapidly, creating multicollinearity and overfitting risks.",
+    "Regularisation methods (Lasso, ElasticNet) are critical to prune redundant interaction terms."
+  ],
+  "pitfalls": [
+    "Expanding unscaled features: Raising variables with large raw scales (e.g. salaries of 100,000) to powers causes extreme floating point overflow and gradient instability.",
+    "Failing to keep main effects: Removing linear terms ($x_1, x_2$) while retaining their interaction ($x_1 x_2$) creates models whose interpretation changes drastically under simple coordinate shifts.",
+    "Overfitting on small samples: Degree-3 or degree-4 expansions on modest datasets fit random noise patterns perfectly, collapsing test set generalisation."
+  ],
+  "quiz": [
+    {
+      "q": "What is the mathematical meaning of the coefficient $w_{12}$ on the interaction term $x_1 x_2$?",
+      "o": [
+        "The baseline prediction when all features are zero",
+        "The rate at which the slope of $x_1$ with respect to $y$ changes as $x_2$ varies",
+        "The correlation coefficient between $x_1$ and $x_2$",
+        "The shrinkage factor applied to regularise the model"
+      ],
+      "a": 1,
+      "why": "Differentiating $\\hat{y}$ with respect to $x_1$ yields $w_1 + w_{12} x_2$. Thus $w_{12}$ indicates how the impact of $x_1$ shifts per unit change in $x_2$."
+    },
+    {
+      "q": "What severe issue arises when blindly generating degree-2 polynomial features on a dataset with 500 columns?",
+      "o": [
+        "The feature count balloons to over 125,000 columns, causing memory exhaustion and extreme overfitting",
+        "Linear models can no longer compute convex loss gradients",
+        "All correlation coefficients become exactly zero",
+        "Decision tree algorithms will fail to split on the data"
+      ],
+      "a": 0,
+      "why": "Formula $\\binom{500+2}{2} = 125,750$ terms. Such explosive dimensionality overwhelms memory and requires aggressive regularisation or domain pruning."
+    },
+    {
+      "q": "Why should continuous variables be standardised prior to computing polynomial expansions?",
+      "o": [
+        "To ensure all target labels are strictly positive",
+        "To prevent high powers from producing astronomical numerical scales and numerical overflow",
+        "To convert categorical strings into integers",
+        "To force all interaction coefficients to equal 1.0"
+      ],
+      "a": 1,
+      "why": "Variables with large magnitudes ($10^4$) when squared become $10^8$, creating vast disparities in feature magnitudes that destabilise optimisation algorithms."
+    }
+  ],
+  "related": [
+    "scaling-and-transforms-standard-robust-box-cox-yeo-johnson",
+    "binning-and-discretisation",
+    "scikit-learn-pipelines-and-columntransformer"
+  ],
+  "keywords": "interactions, polynomial features, multiplicative synergy, cross-products, polynomial expansion, combinatorial explosion, feature engineering",
+  "usedBy": []
+},
+
+{
+  "id": "date-and-text-features",
+  "short": "Date & text features",
+  "title": "Date and Text Features: Engineering Tabular Signals from Unstructured Inputs",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Extracting high-value cyclical calendar signals and bag-of-words or embedding representations for tabular machine learning models.",
+  "lead": "Tabular machine learning models cannot directly process raw timestamps or free-form text strings. Converting calendar timestamps into cyclical trigonometric components and holiday indicators, while extracting term statistics, TF-IDF weights, or dense pretrained embeddings from text fields, unlocks high-signal tabular predictors without full deep language model infrastructure.",
+  "analogy": "Imagine a shopkeeper tracking sales notes. A timestamp like \"2026-12-25 09:30\" means little to an arithmetic equation until separated into \"Christmas Day\", \"Friday\", \"Morning rush\", and \"Month 12\". Similarly, a customer review saying \"the battery melted immediately\" is useless as a string, but highly predictive once flagged with high-severity sentiment terms and n-gram keyword counts.",
+  "intuition": [
+    "Raw dates contain rich multi-scale periodicity: intraday hour (24-hour cycle), day of week (7-day cycle), day of month (payday effects), month of year (seasonal cycle), and boolean holiday flags.",
+    "Treating cyclical calendar variables as simple integers (e.g. mapping hours to $0, 1, \\dots, 23$) introduces a severe false discontinuity: hour 23 and hour 0 appear 23 units apart despite being consecutive 60-minute neighbours. Sine and cosine trigonometric encodings $\\sin(2\\pi t / T)$ and $\\cos(2\\pi t / T)$ map time onto a smooth continuous 2D circle where 23:59 wraps seamlessly into 00:00.",
+    "Text fields in tabular datasets (product descriptions, customer support tickets, error logs) range from short categorical phrases to long paragraphs. Lightweight tabular text engineering uses token length, uppercase character ratios, punctuation counts, and n-gram TF-IDF representations.",
+    "Alternatively, passing short text through a small pretrained sentence transformer generates dense 384-dimensional embeddings, which can be compressed via TruncatedSVD or PCA into 8–16 dense numerical columns for gradient boosted decision trees."
+  ],
+  "steps": [
+    "Calendar component decomposition: Extract year, month, day, day of week, day of year, hour, and is_weekend booleans from canonical UTC timestamps.",
+    "Trigonometric cyclical encoding: Transform periodic variables (hour, day of week, month) into paired sine and cosine coordinates to preserve circle topology.",
+    "Calendar event enrichment: Join country-specific public holiday calendars, commercial sales events (e.g. Black Friday), and financial reporting period closes.",
+    "Text surface feature extraction: Compute character lengths, word counts, uppercase letter ratios, exclamation frequencies, and language identification.",
+    "Dense text representation: Compute TF-IDF matrices (with n-gram range (1, 2) and minimum document frequency threshold) or SVD-reduced sentence embeddings, concatenating them with tabular feature arrays."
+  ],
+  "math": [
+    {
+      "h": "Cyclical Periodic Coordinate Projection",
+      "tex": "x_{\\sin} = \\sin\\left(\\frac{2\\pi t}{T}\\right), \\quad x_{\\cos} = \\cos\\left(\\frac{2\\pi t}{T}\\right)",
+      "p": "Projects periodic index $t \\in [0, T)$ onto the 2D unit circle, ensuring Euclidean distance between boundary values $t=0$ and $t=T-1$ reflects true temporal proximity."
+    },
+    {
+      "h": "Circular Euclidean Distance Invariance",
+      "tex": "\\|(\\sin\\theta_1 - \\sin\\theta_2)^2 + (\\cos\\theta_1 - \\cos\\theta_2)^2\\| = 2 - 2\\cos(\\theta_1 - \\theta_2) = 4\\sin^2\\left(\\frac{\\theta_1 - \\theta_2}{2}\\right)",
+      "p": "The Euclidean distance between two points in projected sinusoidal space is a monotonic function of the angular difference along the cycle."
+    },
+    {
+      "h": "Term Frequency-Inverse Document Frequency (TF-IDF)",
+      "tex": "\\mathrm{tfidf}(t, d, D) = \\mathrm{tf}(t, d) \\times \\ln\\left(\\frac{1 + |D|}{1 + |\\{d \\in D : t \\in d\\}|}\\right) + 1",
+      "p": "Measures the informational specificity of token $t$ in document $d$ relative to the entire tabular corpus $D$."
+    }
+  ],
+  "code": "import numpy as np\nimport pandas as pd\nfrom sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.decomposition import TruncatedSVD\n\n# Sample tabular data with timestamps and customer support notes\ndf = pd.DataFrame({\n    'timestamp': pd.to_datetime([\n        '2026-01-01 23:45:00',\n        '2026-01-02 00:15:00',\n        '2026-07-15 14:30:00'\n    ]),\n    'ticket_text': [\n        'Payment gateway returned fatal timeout error',\n        'Unable to complete purchase during checkout timeout',\n        'How do I update my profile mailing address'\n    ]\n})\n\n# 1. Cyclical hour encoding\nhours = df['timestamp'].dt.hour + df['timestamp'].dt.minute / 60.0\ndf['hour_sin'] = np.sin(2 * np.pi * hours / 24.0)\ndf['hour_cos'] = np.cos(2 * np.pi * hours / 24.0)\n\n# 2. Text feature extraction: character count and TF-IDF\ndf['text_len'] = df['ticket_text'].str.len()\ntfidf = TfidfVectorizer(max_features=10, stop_words='english')\ntfidf_matrix = tfidf.fit_transform(df['ticket_text'])\n\n# Reduce text dimensionality for tabular inclusion\nsvd = TruncatedSVD(n_components=2, random_state=42)\ntext_dense = svd.fit_transform(tfidf_matrix)\ndf['text_svd_1'] = text_dense[:, 0]\ndf['text_svd_2'] = text_dense[:, 1]\n\nprint(df[['hour_sin', 'hour_cos', 'text_len', 'text_svd_1']])\n# Observe hour 23:45 and 00:15 have nearly identical trigonometric coordinates",
+  "keyPoints": [
+    "Trigonometric sine/cosine encodings eliminate artificial boundary gaps between consecutive cyclical times (e.g. 23:59 and 00:00).",
+    "Decomposing dates into hierarchical calendar units (day of week, holiday flag, quarter) reveals seasonality to tree algorithms.",
+    "Text fields can be efficiently represented using word counts, TF-IDF weights, or SVD-reduced sentence embeddings.",
+    "Always fit text vectorisers and normalisers exclusively on training data to prevent out-of-fold vocabulary leakage."
+  ],
+  "pitfalls": [
+    "Using only sine without cosine: Sine alone creates an ambiguous mapping where two distinct times of day (e.g. 06:00 and 18:00) share the exact same value.",
+    "High-dimensional sparse text vectors in tree models: Passing raw 50,000-column TF-IDF matrices to LightGBM or XGBoost causes memory thrashing; reduce via SVD first.",
+    "Ignoring local time when calculating \"hour of day\": UTC 02:00 corresponds to mid-morning in Tokyo but late evening in London."
+  ],
+  "quiz": [
+    {
+      "q": "Why is it necessary to include both sine and cosine terms when cyclically encoding hours of the day?",
+      "o": [
+        "Because linear regression requires even numbers of input variables",
+        "A single trigonometric wave produces identical values for two distinct times within each 24-hour cycle",
+        "Cosine removes the effect of leap years",
+        "Decision trees cannot split on negative floating point numbers"
+      ],
+      "a": 1,
+      "why": "The sine function is non-monotonic on $[0, 2\\pi)$, producing identical values for distinct hours (e.g. $\\sin(\\pi/4) = \\sin(3\\pi/4)$). Paired sine and cosine coordinates uniquely identify every point on the circle."
+    },
+    {
+      "q": "What is the most effective way to include free-text descriptions into a gradient boosted tree model alongside tabular columns?",
+      "o": [
+        "Convert the entire text into a single integer hash",
+        "Extract length/token metadata and reduce TF-IDF or embedding vectors to a small number of dense components via SVD",
+        "Train an end-to-end 70-billion parameter LLM for every single tabular row",
+        "Delete the text column because decision trees only support binary indicators"
+      ],
+      "a": 1,
+      "why": "Gradient boosted trees handle a moderate number of continuous dense signals well. Compressing text representations with SVD or sentence embeddings preserves semantic variance without overwhelming tree splits."
+    },
+    {
+      "q": "What issue arises when integer encoding the month of the year (1 to 12) in distance-based algorithms like k-NN?",
+      "o": [
+        "December (12) and January (1) appear maximally distant (distance 11) despite being consecutive months",
+        "The algorithm will fail to converge to a global minimum",
+        "The target distribution becomes multimodal",
+        "Matrix inversion yields an ill-conditioned determinant"
+      ],
+      "a": 0,
+      "why": "In linear integer encoding, 12 and 1 have an artificial distance of 11, obscuring winter seasonality across year boundaries."
+    }
+  ],
+  "related": [
+    "dates-time-zones-and-temporal-joins",
+    "bag-of-words-and-tf-idf",
+    "encoding-categoricals-one-hot-ordinal-target-woe"
+  ],
+  "keywords": "date features, text features, cyclical encoding, sine cosine encoding, tf-idf, truncated svd, calendar features, tabular feature engineering",
+  "usedBy": []
+},
+
+{
+  "id": "feature-hashing-and-high-cardinality-columns",
+  "short": "Feature hashing & cardinality",
+  "title": "Feature Hashing and High-Cardinality Columns: The Hashing Trick",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Handling massive categorical feature spaces with the hashing trick (MurmurHash) to bound memory, handle unseen categories, and avoid dictionary lookups.",
+  "lead": "When categorical variables contain hundreds of thousands or millions of unique levels (such as user IDs, IP addresses, URL tokens, or search queries), standard one-hot encoding creates enormous, unmanageable sparse matrices that exhaust memory and break distributed pipelines. The hashing trick maps arbitrary string tokens into a fixed-size vector space using fast deterministic hash functions, bounding memory usage and effortlessly absorbing previously unseen levels.",
+  "analogy": "Imagine a coat check room in a massive convention centre with 500,000 attendees. Building a dedicated numbered hook for every single potential person would require a vast warehouse. Instead, the cloakroom uses 4,096 pigeonholes numbered $0$ to $4095$. When you arrive, your name is converted into a pigeonhole number via a fixed mathematical formula. Occasionally two people share a pigeonhole, but coats take up vastly less physical room, and anyone arriving with an unexpected ticket can be accommodated immediately.",
+  "intuition": [
+    "Standard categorical encodings (one-hot, frequency, target encoding) require maintaining a global vocabulary mapping each token to an integer index. In streaming environments and massive datasets, maintaining this vocabulary causes memory growth, synchronisation bottlenecks across worker nodes, and failure on unseen out-of-vocabulary (OOV) tokens.",
+    "The hashing trick (Weinberger et al., 2009) replaces the dictionary lookup with a deterministic hash function $h(x) \\pmod B$, which directly maps any arbitrary string token to an index in a fixed $B$-dimensional array.",
+    "To prevent collision bias, a second independent sign hash function $\\xi(x) \\in \\{-1, +1\\}$ is applied. If two uncorrelated tokens happen to hash to the same bucket, their expected inner product remains zero because their signs cancel out in expectation.",
+    "The trade-off is hash collision: multiple tokens mapped to the same index introduce slight variance into feature coefficients. By choosing bucket size $B$ sufficiently large relative to the number of active non-zero features per sample, collisions remain negligible while guaranteeing strict, constant memory bounds."
+  ],
+  "steps": [
+    "Determine feature sparsity and budget: Choose bucket dimension $B = 2^b$ (typically $2^{18}$ to $2^{22}$ in production ad-tech) balancing memory constraints against collision probability.",
+    "Select fast non-cryptographic hash: Use fast hash algorithms such as MurmurHash3 or xxHash for high-throughput string hashing.",
+    "Compute bucket index and sign: For token $x$, compute index $j = |h(x)| \\pmod B$ and sign $\\xi(x) = 2 \\cdot (h_2(x) \\pmod 2) - 1$.",
+    "Accumulate feature vector: Add $\\xi(x)$ (or $\\xi(x) \\times \\text{value}$) into index $j$ of the sparse sample vector.",
+    "Fit online or linear model: Train models such as Vowpal Wabbit, SGDClassifier, or sparse linear networks directly on the hashed sparse arrays."
+  ],
+  "math": [
+    {
+      "h": "Hashing Trick Feature Mapping",
+      "tex": "\\phi_j(x) = \\sum_{i : h(x_i) = j} \\xi(x_i) \\cdot v_i, \\quad j \\in \\{0, 1, \\dots, B-1\\}",
+      "p": "Maps an arbitrary token $x_i$ with value $v_i$ into bucket $j$ using primary hash $h$ and signed hash $\\xi$."
+    },
+    {
+      "h": "Unbiased Inner Product Preservation",
+      "tex": "\\mathbb{E}[\\langle \\phi(u), \\phi(v) \\rangle] = \\langle u, v \\rangle, \\quad \\operatorname{Var}(\\langle \\phi(u), \\phi(v) \\rangle) = \\frac{1}{B} \\left( \\|u\\|^2 \\|v\\|^2 + \\langle u, v \\rangle^2 \\right)",
+      "p": "Under independent sign hashing $\\xi$, the expected inner product is completely unbiased, with collision variance decaying inversely with bucket size $B$."
+    },
+    {
+      "h": "Birthday Paradox Collision Expectation",
+      "tex": "P(\\text{collision}) \\approx 1 - \\exp\\left( -\\frac{k(k - 1)}{2B} \\right)",
+      "p": "Estimates the probability of at least one collision when hashing $k$ distinct active tokens into $B$ discrete buckets."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.feature_extraction import FeatureHasher\n\n# High-cardinality categorical records (e.g. ad impressions with millions of user IDs and domains)\nrecords = [\n    {'user_id': 'usr_948271', 'domain': 'techcrunch.com', 'country': 'GB'},\n    {'user_id': 'usr_102938', 'domain': 'github.com', 'country': 'US'},\n    {'user_id': 'usr_948271', 'domain': 'reddit.com', 'country': 'GB'},\n    {'user_id': 'usr_unseen_9999', 'domain': 'bbc.co.uk', 'country': 'GB'}  # Unseen user at inference\n]\n\n# Set fixed hash space to 2^10 = 1024 buckets (strictly bounded memory)\nhasher = FeatureHasher(n_features=1024, input_type='dict')\nsparse_hashed = hasher.fit_transform(records)\n\nprint(\"Hashed sparse matrix shape:\", sparse_hashed.shape)\nprint(\"Non-zero entries in first row:\", sparse_hashed[0].nnz)\nprint(\"Memory bound: Exactly 1024 columns regardless of how many millions of new users arrive!\")\n# Handles unseen user 'usr_unseen_9999' instantly without re-fitting or vocabulary lookup",
+  "keyPoints": [
+    "The hashing trick maps unbounded categorical strings to a fixed $B$-dimensional space using fast hash functions.",
+    "Eliminates vocabulary storage and inter-worker dictionary synchronisation in distributed clusters.",
+    "Handles out-of-vocabulary tokens seamlessly at inference time without re-indexing.",
+    "Signed hashing ensures the expected inner product between samples is mathematically unbiased."
+  ],
+  "pitfalls": [
+    "Irreversible representation: Once hashed, feature names cannot be recovered from bucket indices, making coefficient interpretation difficult.",
+    "Bucket undersizing: If $B$ is set too small relative to the number of distinct categories, excessive collisions corrupt signal and degrade accuracy.",
+    "Hashing noise features: Hashing pure random identifiers that possess zero predictive power still consumes bucket capacity and increases collision noise."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary benefit of the hashing trick over standard one-hot encoding for massive categorical columns?",
+      "o": [
+        "It guarantees zero feature collisions under all circumstances",
+        "It bounds memory usage to a constant size and requires no vocabulary dictionary lookup",
+        "It forces gradient boosted trees to converge in a single iteration",
+        "It automatically converts non-linear relationships into linear ones"
+      ],
+      "a": 1,
+      "why": "Feature hashing allocates a fixed number of buckets, requiring zero vocabulary storage in memory and absorbing unseen tokens without schema updates."
+    },
+    {
+      "q": "Why does the hashing trick employ a secondary sign hash function $\\xi(x) \\in \\{-1, +1\\}$?",
+      "o": [
+        "To ensure all output matrix entries are positive",
+        "To make the expected inner product unbiased so random collisions cancel out in expectation",
+        "To encrypt private customer identifiers against cyber attacks",
+        "To accelerate matrix multiplication by avoiding floating point arithmetic"
+      ],
+      "a": 1,
+      "why": "Independent sign hashing ensures $\\mathbb{E}[\\xi(u)\\xi(v)] = 0$ for distinct tokens $u \\ne v$, meaning collision interference averages to zero."
+    },
+    {
+      "q": "What is a major operational downside of using feature hashing in production systems?",
+      "o": [
+        "It cannot process string inputs",
+        "Loss of feature interpretability: you cannot trace a learned weight back to a specific category name",
+        "It requires calculating the full Hessian matrix during inference",
+        "It cannot be implemented in streaming Python pipelines"
+      ],
+      "a": 1,
+      "why": "Hash functions are one-way projections. When a model assigns a large weight to bucket #4912, you cannot determine which original category produced it."
+    }
+  ],
+  "related": [
+    "encoding-categoricals-one-hot-ordinal-target-woe",
+    "scikit-learn-pipelines-and-columntransformer",
+    "bag-of-words-and-tf-idf"
+  ],
+  "keywords": "feature hashing, hashing trick, high-cardinality, featurehasher, murmurhash, collision, signed hashing, memory-bounded encoding",
+  "usedBy": []
+},
+
+{
+  "id": "experiment-tracking",
+  "short": "Experiment tracking",
+  "title": "Experiment Tracking: Systematic Machine Learning Lifecycle Logging",
+  "task": "concepts",
+  "level": 1,
+  "minutes": 14,
+  "noLab": true,
+  "summary": "Logging hyperparameters, training metrics, code hashes, dataset versions, and model artifacts to ensure auditability and scientific reproducibility.",
+  "lead": "Machine learning development is fundamentally iterative and empirical: data scientists test dozens of model architectures, feature subsets, and hyperparameter combinations. Without systematic experiment tracking, critical institutional knowledge is lost in terminal outputs, scripts become irreproducible, and identifying which exact run produced the production model becomes impossible.",
+  "analogy": "Imagine a pharmaceutical laboratory testing hundreds of chemical compounds for a new vaccine. If scientists write recipes on loose napkins and throw away temperature logs once an experiment fails, they will inadvertently repeat dead ends and cannot prove to regulatory inspectors which exact process yielded the successful cure. Experiment tracking is the immutable, timestamped laboratory notebook of machine learning.",
+  "intuition": [
+    "An ad-hoc approach to ML relies on manual naming conventions (`model_v2_final_really.pkl`), local notes, and memory. This quickly breaks down when teams scale or when models must be audited months later.",
+    "Modern experiment tracking platforms (such as MLflow, Weights & Biases, Comet, and Neptune) formalise every training iteration as an immutable \"run\" that logs three core categories of information: inputs, outputs, and metadata.",
+    "Inputs include git commit SHA, uncommitted code diffs, data version hashes (e.g. DVC commit), and hyperparameter dictionaries. Outputs include epoch-by-epoch loss curves, evaluation metrics (AUC, F1, RMSE), confusion matrices, and serialized model artifacts.",
+    "Metadata tracks hardware environment (GPU type, CUDA version), Python package dependency locks (`requirements.txt`), execution timestamp, and execution author. This structured logging enables multi-run comparisons, leaderboard ranking, and automated lineage auditing."
+  ],
+  "steps": [
+    "Instrumentation: Initialize an experiment client and wrap training scripts with automated logging callbacks or context managers (`mlflow.start_run()`).",
+    "Parameter logging: Record complete configuration payloads (learning rate, tree depth, batch size, feature lists) at run initialization.",
+    "Metric streaming: Log training and validation loss curves at every epoch or step to detect overfitting and training divergence.",
+    "Artifact registration: Log serialized model checkpoints, diagnostic plots (ROC curves, calibration curves), and dependency manifests.",
+    "Lineage tagging: Tag the run with git commit hash, dataset commit ID, and author to ensure total end-to-end provenance."
+  ],
+  "math": [
+    {
+      "h": "Deterministic Run Provenance Tuple",
+      "tex": "\\mathcal{R} = \\left( \\mathcal{C}_{\\mathrm{git}}, \\mathcal{D}_{\\mathrm{hash}}, \\Theta_{\\mathrm{params}}, \\mathcal{E}_{\\mathrm{env}}, \\mathcal{M}_{\\mathrm{metrics}}, \\mathcal{A}_{\\mathrm{artifact}} \\right)",
+      "p": "A fully specified experiment run $\\mathcal{R}$ binds the code commit, data hash, hyperparameter configuration, environment lock, evaluated metrics, and saved binary artifacts."
+    },
+    {
+      "h": "Metric Trajectory Series",
+      "tex": "\\mathcal{T}_m = \\left\\{ (s, t, v_s) \\;\\middle|\\; s \\in \\{1, \\dots, S\\}, \\; v_s = m(f_{\\theta_s}(X_{\\mathrm{val}}), y_{\\mathrm{val}}) \\right\\}",
+      "p": "Experiment tracking logs timestamped metric evaluations across training steps $s$ to reconstruct full learning trajectories."
+    },
+    {
+      "h": "Model Checkpoint Lineage Verification",
+      "tex": "\\mathrm{SHA256}(\\mathcal{A}) = \\mathrm{RegistryMatch}(\\mathcal{R}_{\\mathrm{id}})",
+      "p": "Cryptographic hashing verifies that a production-deployed binary artifact exactly matches the recorded experiment run."
+    }
+  ],
+  "code": "import json\nimport hashlib\nimport time\n\nclass MiniExperimentTracker:\n    def __init__(self, experiment_name: str):\n        self.experiment_name = experiment_name\n        self.runs = []\n\n    def log_run(self, params: dict, metrics: dict, code_commit: str, data_hash: str):\n        run_record = {\n            'run_id': hashlib.sha1(f\"{time.time()}_{params}\".encode()).hexdigest()[:8],\n            'timestamp': time.strftime(\"%Y-%m-%dT%H:%M:%SZ\", time.gmtime()),\n            'code_commit': code_commit,\n            'data_hash': data_hash,\n            'params': params,\n            'metrics': metrics\n        }\n        self.runs.append(run_record)\n        return run_record\n\n# Simulate tracking two model experiments\ntracker = MiniExperimentTracker(experiment_name=\"churn-prediction\")\n\n# Run 1: Baseline Random Forest\nrun_1 = tracker.log_run(\n    params={'model': 'RandomForest', 'n_estimators': 100, 'max_depth': 6},\n    metrics={'val_auc': 0.812, 'val_logloss': 0.425},\n    code_commit='git_a4f10c',\n    data_hash='dvc_98b1e2'\n)\n\n# Run 2: Tuned Gradient Boosting\nrun_2 = tracker.log_run(\n    params={'model': 'LightGBM', 'learning_rate': 0.05, 'max_depth': 5},\n    metrics={'val_auc': 0.849, 'val_logloss': 0.381},\n    code_commit='git_c7b20e',\n    data_hash='dvc_98b1e2'\n)\n\n# Compare runs\nprint(f\"Logged {len(tracker.runs)} runs in '{tracker.experiment_name}':\")\nfor r in tracker.runs:\n    print(f\"Run {r['run_id']} | Model: {r['params']['model']} | AUC: {r['metrics']['val_auc']}\")",
+  "keyPoints": [
+    "Experiment tracking captures parameters, metrics, code revisions, and artifacts for every model run.",
+    "Prevents loss of empirical findings and eliminates ad-hoc filename versioning.",
+    "Provides auditable lineage connecting production model binaries back to their exact training data and code.",
+    "Enables multi-run metric comparisons, loss curve visualisations, and leaderboard ranking."
+  ],
+  "pitfalls": [
+    "Logging only summary metrics: Forgetting to log the git commit hash or dataset snapshot makes a run impossible to reproduce even if metrics look outstanding.",
+    "Metric logging bottleneck: Sending high-frequency metrics across a remote network on every single micro-batch degrades GPU training throughput.",
+    "Uncommitted code changes: Running experiments with dirty git working directories logs a commit hash that does not actually reflect the code that ran."
+  ],
+  "quiz": [
+    {
+      "q": "Which set of elements is essential to guarantee complete reproducibility of a machine learning experiment run?",
+      "o": [
+        "Model accuracy score and user password",
+        "Git commit hash, dataset version hash, hyperparameters, software environment lock, and random seed",
+        "Only the final serialized `.pkl` binary file",
+        "The CPU clock speed and monitor resolution"
+      ],
+      "a": 1,
+      "why": "Reproducibility requires knowing the exact code commit, immutable training dataset version, configuration parameters, dependencies, and initial random seeds."
+    },
+    {
+      "q": "What is a common performance pitfall when logging training metrics during deep neural network training?",
+      "o": [
+        "Logging strings causes floating point rounding errors",
+        "Synchronous remote network logging on every micro-batch blocks GPU computation and slows down training",
+        "Logging validation loss causes gradient explosion",
+        "Experiment tracking platforms cannot store more than 10 numbers"
+      ],
+      "a": 1,
+      "why": "Synchronous HTTP API calls inside tight GPU training loops cause GPUs to sit idle waiting for network round-trips. Metrics should be buffered or logged asynchronously."
+    },
+    {
+      "q": "Why should dataset version hashes (e.g. via DVC or LakeFS) be logged alongside hyperparameter configurations?",
+      "o": [
+        "Because datasets naturally drift or get updated over time; without the data hash, identical code will produce different models",
+        "Because databases refuse to run queries without a hash key",
+        "To compress tabular files into smaller zip archives",
+        "To automatically impute missing null values"
+      ],
+      "a": 0,
+      "why": "If the underlying data changes, re-running identical code with identical hyperparameters produces an entirely different model unless the exact dataset version was logged."
+    }
+  ],
+  "related": [
+    "reproducibility",
+    "scikit-learn-pipelines-and-columntransformer",
+    "docker-and-reproducible-environments"
+  ],
+  "keywords": "experiment tracking, mlflow, weights and biases, metrics, hyperparameters, model lineage, provenance, machine learning lifecycle",
+  "usedBy": []
+},
+
+{
+  "id": "reproducibility",
+  "short": "Reproducibility",
+  "title": "Reproducibility in Machine Learning: Determinism, Seeds, and Environments",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Achieving scientific and production reproducibility across pseudorandom number generators, multi-threading, GPU nondeterminism, and environment locks.",
+  "lead": "In software engineering, compiling the same source code with the same compiler always yields identical binaries. In machine learning, however, re-running identical code on identical data often produces different weights, fluctuating metrics, and divergent decisions. Achieving true end-to-end reproducibility requires controlling random seeds, hardware thread scheduling, GPU CUDA operations, and software dependency locks.",
+  "analogy": "Imagine following a baking recipe where the recipe specifies \"add yeast and stir until bubbly\". Depending on room temperature, humidity, and the vigour of your whisking, the dough rises differently every time. Achieving commercial culinary reproducibility requires an automated climate-controlled chamber, exact gram weights, and a mechanical mixer running at a fixed RPM for exactly 180 seconds.",
+  "intuition": [
+    "Machine learning pipelines contain dozens of stochastic elements: train/test split sampling, random weight initialisation, minibatch shuffling, dropout masks, and tree feature subsampling. Each relies on pseudorandom number generators (PRNGs).",
+    "Setting a single seed (e.g. `np.random.seed(42)`) is insufficient because modern frameworks run multiple independent PRNGs across Python built-in `random`, NumPy, PyTorch CPU, and PyTorch CUDA.",
+    "Beyond seeds, parallel hardware execution introduces non-determinism. Multi-threaded operations like OpenMP matrix multiplications and asynchronous CUDA atomic additions sum floating point numbers in varying orders. Because floating point addition is non-associative ($ (a + b) + c \\ne a + (b + c) $ due to rounding), different thread arrival orders produce different rounding errors that compound over millions of gradient steps.",
+    "Finally, environment drift (a minor patch update to scikit-learn, CUDA drivers, or BLAS linear algebra libraries) can alter default parameters or algorithmic implementations. Hermetic reproducibility requires containerised environment locks (Docker, conda-lock, or poetry.lock)."
+  ],
+  "steps": [
+    "Multi-engine PRNG seeding: Seed all active random generators: Python `random`, NumPy, PyTorch CPU, PyTorch CUDA, and environment variable `PYTHONHASHSEED`.",
+    "Enforce algorithmic determinism: Configure deep learning frameworks to enforce deterministic algorithms (`torch.use_deterministic_algorithms(True)` and `CUBLAS_WORKSPACE_CONFIG=:4096:8`).",
+    "Pin hardware concurrency: Constrain multi-threaded math libraries (MKL, OpenMP, BLAS) to fixed thread counts (`torch.set_num_threads(1)` during strict testing).",
+    "Dependency locking: Export explicit hash-pinned dependency manifests (`pip freeze` with hashes, `poetry.lock`, or Docker image digest).",
+    "Data version pinning: Reference immutable dataset commits using tools like DVC, LakeFS, or Delta Lake time-travel rather than mutable database tables."
+  ],
+  "math": [
+    {
+      "h": "Floating Point Non-Associativity",
+      "tex": "(a \\oplus b) \\oplus c \\ne a \\oplus (b \\oplus c)",
+      "p": "Due to finite precision truncation in IEEE 754 floating point arithmetic, differing summation orders in parallel threads produce non-identical results."
+    },
+    {
+      "h": "Atomic Float Accumulation Divergence",
+      "tex": "\\hat{g} = \\bigoplus_{k=1}^K g_{\\pi(k)}, \\quad \\pi \\in \\mathcal{S}_K",
+      "p": "When $K$ CUDA threads execute atomic additions, the thread arrival permutation $\\pi$ varies across runs, causing slight divergence in computed gradients $\\hat{g}$."
+    },
+    {
+      "h": "Deterministic State Transition Function",
+      "tex": "\\mathcal{S}_{t+1} = f(\\mathcal{S}_t, \\mathcal{D}_t; \\xi_t), \\quad \\xi_t = \\mathrm{PRNG}(\\sigma, t)",
+      "p": "Model state $\\mathcal{S}$ evolves deterministically if and only if initial seed $\\sigma$, dataset batch order $\\mathcal{D}_t$, and framework operations $f$ are strictly invariant."
+    }
+  ],
+  "code": "import random\nimport os\nimport numpy as np\nimport torch\n\ndef set_strict_determinism(seed: int = 42):\n    \"\"\"Enforce complete determinism across all random number generators and hardware.\"\"\"\n    # 1. Python built-in and hash seed\n    random.seed(seed)\n    os.environ['PYTHONHASHSEED'] = str(seed)\n    \n    # 2. NumPy PRNG\n    np.random.seed(seed)\n    \n    # 3. PyTorch CPU and CUDA\n    torch.manual_seed(seed)\n    if torch.cuda.is_available():\n        torch.cuda.manual_seed(seed)\n        torch.cuda.manual_seed_all(seed)\n        \n        # Enforce deterministic convolution algorithms\n        torch.backends.cudnn.deterministic = True\n        torch.backends.cudnn.benchmark = False\n        \n        # Configure cuBLAS workspace for deterministic operations\n        os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'\n    \n    # Throw an error if a non-deterministic operation is invoked\n    try:\n        torch.use_deterministic_algorithms(True)\n    except AttributeError:\n        pass\n    print(f\"Deterministic seed locked: {seed}\")\n\nset_strict_determinism(42)\n\n# Verify reproducible tensor operations\nt1 = torch.randn(3, 3)\nset_strict_determinism(42)\nt2 = torch.randn(3, 3)\nassert torch.equal(t1, t2), \"Tensors must be strictly identical across identical seeds!\"\nprint(\"Determinism verified successfully.\")",
+  "keyPoints": [
+    "True reproducibility requires seeding Python, NumPy, PyTorch, and locking `PYTHONHASHSEED`.",
+    "Floating point operations are non-associative; thread race conditions in multi-GPU and multi-CPU environments introduce variation.",
+    "Enforcing strict GPU determinism may incur a modest throughput penalty (10–20%) because fast non-deterministic atomic operations are disabled.",
+    "Containerisation (Docker) and pinned lockfiles guarantee identical compiler, driver, and library versions."
+  ],
+  "pitfalls": [
+    "Assuming `torch.manual_seed` seeds NumPy: PyTorch and NumPy use completely separate PRNG states; seeding one does not affect the other.",
+    "Multi-worker DataLoader leakage: In PyTorch DataLoaders with `num_workers > 0`, workers inherit identical seed states unless configured with a `worker_init_fn`.",
+    "Running on different GPU architectures: A model trained on an NVIDIA A100 vs an RTX 4090 will produce slightly different floating point weights even with identical seeds due to microarchitecture math differences."
+  ],
+  "quiz": [
+    {
+      "q": "Why does multi-threaded parallel floating point summation produce different numbers across runs even with identical random seeds?",
+      "o": [
+        "CPUs intentionally inject random noise to avoid overheating",
+        "Floating point addition is non-associative; varying thread execution orders sum numbers in different sequences",
+        "Random seeds expire after 100 milliseconds",
+        "Operating system kernel memory leaks randomly modify bit registers"
+      ],
+      "a": 1,
+      "why": "Because $(a + b) + c \\ne a + (b + c)$ in IEEE 754 arithmetic, changing the order in which parallel threads accumulate numbers alters the lowest-order bits."
+    },
+    {
+      "q": "What is the consequence of setting `torch.backends.cudnn.benchmark = True` in PyTorch?",
+      "o": [
+        "It forces all neural network weights to zero",
+        "It tests multiple convolution algorithms and selects the fastest, which may introduce non-determinism across runs",
+        "It disables GPU acceleration and runs everything on the CPU",
+        "It guarantees bitwise reproducibility across different hardware devices"
+      ],
+      "a": 1,
+      "why": "`cudnn.benchmark = True` benchmarks several convolution algorithms on the fly to pick the fastest one, which may change between runs and cause non-deterministic behaviour."
+    },
+    {
+      "q": "In a multi-worker PyTorch DataLoader (`num_workers=4`), what happens if you do not provide a custom `worker_init_fn`?",
+      "o": [
+        "The script crashes with a memory allocation fault",
+        "Each worker process may generate identical sequences of random augmentations, reducing data diversity",
+        "Training becomes completely deterministic",
+        "The DataLoader converts all images to grayscale"
+      ],
+      "a": 1,
+      "why": "Forked worker processes inherit the exact same base PRNG seed, causing each worker to perform identical augmentations on different items unless re-seeded per worker."
+    }
+  ],
+  "related": [
+    "experiment-tracking",
+    "docker-and-reproducible-environments",
+    "the-pytorch-training-loop"
+  ],
+  "keywords": "reproducibility, determinism, random seeds, prng, floating point non-associativity, cudnn deterministic, dependency locking",
+  "usedBy": []
+},
+
+{
+  "id": "hierarchical-forecasting-and-reconciliation",
+  "short": "Hierarchical forecasting",
+  "title": "Hierarchical Forecasting and Coherent Reconciliation: Bottom-Up, Top-Down, and MinT",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Ensuring structural consistency across nested aggregation levels (SKU, store, region, national) using optimal linear reconciliation (MinT).",
+  "lead": "In enterprise demand planning and retail supply chains, time series naturally form hierarchies: individual SKU sales roll up into product categories, store sales roll up into regional markets, and regional markets sum to national revenue. Generating independent forecasts at each level produces incoherent numbers where store-level forecasts do not add up to regional predictions. Hierarchical reconciliation mathematically aligns predictions across the entire tree, guaranteeing coherence while improving overall accuracy.",
+  "analogy": "Imagine a corporate budget spreadsheet. Department managers create their own expense forecasts, while the regional director forecasts the total regional expenditure. If the individual department line items sum to £12M but the regional director's model forecasts £10M, the finance department cannot balance the books. Reconciliation is an optimal arbitration mechanism that adjusts all numbers simultaneously so that every sub-branch adds up cleanly to its parent total while respecting which forecasts are historically most reliable.",
+  "intuition": [
+    "A hierarchical time series consists of $m$ series at different levels of aggregation, linked by a summing matrix $\\mathbf{S} \\in \\{0, 1\\}^{m \\times m_b}$, where $m_b$ is the number of bottom-level series. The relationship $\\mathbf{y}_t = \\mathbf{S} \\mathbf{b}_t$ must hold at all times.",
+    "Traditional heuristic reconciliation methods include Bottom-Up (forecast only the bottom level and aggregate upwards) and Top-Down (forecast the top series and disaggregate using historical proportions). Bottom-up suffers when bottom series are noisy and sparse; top-down loses sub-category dynamics and product-level seasonality.",
+    "Middle-Out blends both by forecasting an intermediate level and projecting both up and down, but remains suboptimal because it ignores correlations between series.",
+    "Optimal reconciliation (Hyndman et al., MinT - Minimum Trace) treats reconciliation as a generalised least squares problem. Unreconciled base forecasts $\\hat{\\mathbf{y}}$ are mapped to coherent forecasts $\\tilde{\\mathbf{y}} = \\mathbf{S} \\mathbf{P} \\hat{\\mathbf{y}}$, where the projection matrix $\\mathbf{P} = (\\mathbf{S}^T \\mathbf{W}^{-1} \\mathbf{S})^{-1} \\mathbf{S}^T \\mathbf{W}^{-1}$ minimises the total forecast error variance across the hierarchy using the base forecast error covariance matrix $\\mathbf{W}$."
+  ],
+  "steps": [
+    "Define hierarchy structure: Construct the structural summing matrix $\\mathbf{S}$ encoding parent-child aggregation relationships across all tiers.",
+    "Fit base forecasting models: Independently train optimal time series models (ARIMA, LightGBM, Exponential Smoothing) for every series at every level.",
+    "Compute base forecast residuals: Evaluate in-sample or cross-validation residuals to estimate the base error covariance matrix $\\mathbf{W}$.",
+    "Select covariance approximation: Use sample covariance, diagonal shrinkage, or structural variance scaling if series count $m$ is large.",
+    "Compute optimal projection: Calculate reconciliation projection matrix $\\mathbf{P}$ and multiply base forecasts $\\hat{\\mathbf{y}}_h$ to obtain coherent forecasts $\\tilde{\\mathbf{y}}_h = \\mathbf{S} \\mathbf{P} \\hat{\\mathbf{y}}_h$."
+  ],
+  "math": [
+    {
+      "h": "Structural Summing Matrix Equality",
+      "tex": "\\mathbf{y}_t = \\begin{bmatrix} \\mathbf{u}_t \\\\ \\mathbf{b}_t \\end{bmatrix} = \\mathbf{S} \\mathbf{b}_t, \\quad \\mathbf{S} = \\begin{bmatrix} \\mathbf{A} \\\\ \\mathbf{I}_{m_b} \\end{bmatrix}",
+      "p": "The structural summing matrix $\\mathbf{S}$ maps $m_b$ bottom-level series $\\mathbf{b}_t$ to all $m$ series in the hierarchy, where $\\mathbf{A}$ contains aggregation weights."
+    },
+    {
+      "h": "Linear Reconciliation Representation",
+      "tex": "\\tilde{\\mathbf{y}}_h = \\mathbf{S} \\mathbf{P} \\hat{\\mathbf{y}}_h, \\quad \\mathbf{P} \\in \\mathbb{R}^{m_b \\times m}",
+      "p": "Coherent forecasts $\\tilde{\\mathbf{y}}_h$ are guaranteed to add up because they are formed as a linear combination of base forecasts mapped through summing matrix $\\mathbf{S}$."
+    },
+    {
+      "h": "MinT (Minimum Trace) Optimal Solution",
+      "tex": "\\mathbf{P}_{\\mathrm{MinT}} = (\\mathbf{S}^T \\mathbf{W}^{-1} \\mathbf{S})^{-1} \\mathbf{S}^T \\mathbf{W}^{-1}",
+      "p": "MinT provides the unique unbiased linear projection that minimises the trace of the reconciled error covariance matrix $\\operatorname{Tr}[\\operatorname{Var}(\\mathbf{y} - \\tilde{\\mathbf{y}})]$, where $\\mathbf{W} = \\operatorname{Var}(\\mathbf{y} - \\hat{\\mathbf{y}})$."
+    }
+  ],
+  "code": "import numpy as np\n\n# Consider a 2-level hierarchy: Total (T) = Store A (A) + Store B (B)\n# Number of total series m = 3, bottom series m_b = 2\n# Summing matrix S: [T; A; B] = S * [A; B]\nS = np.array([\n    [1.0, 1.0],  # Total = A + B\n    [1.0, 0.0],  # A = A\n    [0.0, 1.0]   # B = B\n])\n\n# Base independent forecasts from separate models (incoherent! 80 + 45 = 125 != 130)\ny_hat = np.array([130.0, 80.0, 45.0])\n\n# Estimate base error covariance matrix W (assuming diagonal variance for simplicity)\n# Total has variance 20, A has variance 10, B has variance 15\nW = np.diag([20.0, 10.0, 15.0])\nW_inv = np.linalg.inv(W)\n\n# Compute MinT projection matrix: P = (S^T W^-1 S)^-1 S^T W^-1\nSt_Winv = S.T @ W_inv\nP_mint = np.linalg.inv(St_Winv @ S) @ St_Winv\n\n# Reconcile forecasts: y_tilde = S @ P @ y_hat\ny_tilde = S @ P_mint @ y_hat\n\nprint(\"Base forecasts (Incoherent): Total=%.1f, A=%.1f, B=%.1f (Sum=%.1f)\" % \n      (y_hat[0], y_hat[1], y_hat[2], y_hat[1] + y_hat[2]))\nprint(\"Reconciled forecasts (Coherent): Total=%.2f, A=%.2f, B=%.2f (Sum=%.2f)\" % \n      (y_tilde[0], y_tilde[1], y_tilde[2], y_tilde[1] + y_tilde[2]))\n# Notice the reconciled forecasts satisfy Total = A + B exactly!",
+  "keyPoints": [
+    "Hierarchical reconciliation ensures forecasts across all levels of aggregation add up consistently.",
+    "Base independent forecasts are almost always incoherent due to individual model estimation noise.",
+    "MinT uses generalised least squares to find the optimal unbiased coherent projection that minimises error variance.",
+    "Reconciliation consistently improves forecast accuracy compared to isolated single-level forecasts by sharing cross-hierarchy information."
+  ],
+  "pitfalls": [
+    "Singular covariance matrix: When $m > n$ (more series than time observations), the sample covariance matrix $\\mathbf{W}$ is non-invertible; use diagonal shrinkage.",
+    "Negative reconciled forecasts: Linear projection can occasionally yield small negative numbers for bottom-level series with near-zero demand; apply non-negative quadratic programming.",
+    "Ignoring cross-level correlations: Using simple Ordinary Least Squares (OLS) reconciliation assumes all base forecasts have equal variance, which is false since top aggregates have vastly different scales."
+  ],
+  "quiz": [
+    {
+      "q": "Why are base forecasts generated independently at different hierarchical levels almost never coherent?",
+      "o": [
+        "Different levels use different date formats",
+        "Independent models minimise loss on their own series without knowledge of the aggregation summing constraint $\\mathbf{y} = \\mathbf{S}\\mathbf{b}$",
+        "Computers introduce floating point non-linearity",
+        "Time series models cannot handle integers"
+      ],
+      "a": 1,
+      "why": "Base models optimise isolated loss functions without imposing structural equality constraints, causing aggregate sums to deviate from parent predictions."
+    },
+    {
+      "q": "What is the key advantage of MinT (Minimum Trace) over simple Bottom-Up forecasting?",
+      "o": [
+        "It eliminates the need to collect historical data",
+        "It incorporates signals from top and intermediate series while weighting series by their forecast reliability",
+        "It guarantees integer forecasts for inventory counts",
+        "It works without linear algebra matrix inversion"
+      ],
+      "a": 1,
+      "why": "Bottom-up discards all top-level signals and magnifies noisy bottom series. MinT combines information from all levels, weighting them by their inverse covariance."
+    },
+    {
+      "q": "What role does the summing matrix $\\mathbf{S}$ play in hierarchical forecasting?",
+      "o": [
+        "It computes the cross-entropy loss between training batches",
+        "It mathematically defines how bottom-level series aggregate to form higher-level parent series",
+        "It stores the hyperparameters of the neural network",
+        "It scales features to zero mean and unit variance"
+      ],
+      "a": 1,
+      "why": "The summing matrix $\\mathbf{S} \\in \\{0, 1\\}^{m \\times m_b}$ maps bottom series to all aggregated series such that $\\mathbf{y} = \\mathbf{S}\\mathbf{b}$."
+    }
+  ],
+  "related": [
+    "forecast-metrics-mae-mase-smape-wape",
+    "global-vs-local-models-gradient-boosting-for-forecasting",
+    "time-series-cross-validation"
+  ],
+  "keywords": "hierarchical forecasting, reconciliation, mint, minimum trace, bottom up, top down, summing matrix, coherent forecasting, demand planning",
+  "usedBy": []
+},
+
+{
+  "id": "intermittent-demand-croston-and-tsb",
+  "short": "Intermittent demand & Croston",
+  "title": "Intermittent Demand Forecasting: Croston's Method and TSB Formulation",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Forecasting sporadic and lumpy demand (spare parts, rare equipment) by decomposing series into non-zero demand size and inter-arrival intervals.",
+  "lead": "Standard forecasting methods such as ARIMA and exponential smoothing assume demand occurs continuously at every time period. When applied to intermittent or \"lumpy\" demand (such as aircraft spare parts, high-end enterprise hardware, or specialised medical equipment), continuous models predict fractional demands (e.g. 0.08 units every day), resulting in severe inventory distortion, phantom holding costs, and frequent stockouts.",
+  "analogy": "Imagine managing emergency heart defibrillators for a hospital. The hospital does not order 0.05 defibrillators every morning; rather, zero units are ordered for six months, and then suddenly five units are ordered at once when a new wing opens. Croston's method tracks two separate clocks: how long between orders, and how many units are bought when an order finally arrives.",
+  "intuition": [
+    "Intermittent time series are characterised by long sequences of zero values interspersed with occasional positive transactions. Syntetos and Boylan classify demand into four quadrants based on average inter-demand interval ($p$) and squared coefficient of variation ($CV^2$): Smooth, Intermittent, Erratic, and Lumpy.",
+    "Croston (1972) proposed decomposing the series into two separate processes: non-zero demand size $z_t$ and inter-arrival time $p_t$ (the number of periods between consecutive orders).",
+    "Whenever non-zero demand occurs, both components are updated using single exponential smoothing. When demand is zero, both state variables remain completely unchanged. The forecast per period is the ratio $\\hat{y} = z_t / p_t$.",
+    "However, Croston's formulation is positively biased. Syntetos-Boylan Approximation (SBA) applies a multiplicative shrinkage factor $(1 - \\alpha/2)$ to correct this bias. Furthermore, the Teunter-Syntetos-Babai (TSB) method updates demand probability at every single period (even when demand is zero), allowing the model to quickly detect product obsolescence or sudden end-of-life drops."
+  ],
+  "steps": [
+    "Classify demand lumpiness: Calculate average inter-arrival interval $p$ and demand size squared coefficient of variation $CV^2$ to confirm intermittent classification.",
+    "Decompose series: Separate the historical series into non-zero transaction magnitudes $z_k$ and elapsed periods between transactions $p_k$.",
+    "Apply conditional exponential smoothing: Update magnitude state $z_t$ and interval state $p_t$ strictly when demand occurs.",
+    "Apply SBA bias correction: Multiply the estimated demand rate by $(1 - \\alpha_p / 2)$ to eliminate positive estimation bias.",
+    "Or apply TSB formulation: Update demand probability $p_t$ on every time step using smoothing parameter $\\beta$ and demand size $z_t$ on non-zero steps using $\\alpha$."
+  ],
+  "math": [
+    {
+      "h": "Croston Conditional State Updates",
+      "tex": "y_t > 0 \\implies \\begin{cases} z_t = \\alpha y_t + (1 - \\alpha) z_{t-1} \\\\ p_t = \\alpha q_t + (1 - \\alpha) p_{t-1} \\end{cases}, \\quad y_t = 0 \\implies \\begin{cases} z_t = z_{t-1} \\\\ p_t = p_{t-1} \\end{cases}",
+      "p": "Demand size $z_t$ and elapsed periods $q_t$ are updated only on positive demand occurrences; states remain frozen during zero periods."
+    },
+    {
+      "h": "Syntetos-Boylan Approximation (SBA) Debiaising",
+      "tex": "\\hat{y}_{t+1} = \\left( 1 - \\frac{\\alpha}{2} \\right) \\frac{z_t}{p_t}",
+      "p": "Corrects for the positive bias inherent in the expectation of the reciprocal ratio $\\mathbb{E}[z/p] \\ne \\mathbb{E}[z]/\\mathbb{E}[p]$."
+    },
+    {
+      "h": "Teunter-Syntetos-Babai (TSB) Obsolescence Update",
+      "tex": "d_t = \\begin{cases} 1 & \\text{if } y_t > 0 \\\\ 0 & \\text{if } y_t = 0 \\end{cases}, \\quad p_t = \\beta d_t + (1 - \\beta) p_{t-1}, \\quad \\hat{y}_{t+1} = p_t \\cdot z_t",
+      "p": "TSB updates demand probability $p_t$ every period, allowing the forecast to decay to zero when a product becomes obsolete."
+    }
+  ],
+  "code": "import numpy as np\n\ndef croston_sba(series: np.ndarray, alpha: float = 0.1) -> np.ndarray:\n    \"\"\"Croston method with Syntetos-Boylan Approximation (SBA) bias correction.\"\"\"\n    n = len(series)\n    forecast = np.zeros(n)\n    \n    # Initialise states with first positive demand\n    first_idx = np.where(series > 0)[0][0]\n    z = float(series[first_idx])\n    p = 1.0\n    q = 1  # Inter-arrival counter\n    \n    for t in range(first_idx + 1, n):\n        q += 1\n        if series[t] > 0:\n            z = alpha * series[t] + (1 - alpha) * z\n            p = alpha * q + (1 - alpha) * p\n            q = 0  # Reset counter\n        # SBA forecast rate per period\n        forecast[t] = (1.0 - alpha / 2.0) * (z / p)\n        \n    return forecast\n\n# Intermittent spare parts demand (mostly zeros with sporadic spikes)\nnp.random.seed(42)\ndemand = np.array([0, 0, 4, 0, 0, 0, 0, 6, 0, 0, 0, 5, 0, 0, 0, 0, 0, 7, 0, 0])\nsba_forecast = croston_sba(demand, alpha=0.15)\n\nprint(\"Observed demand:   \", demand[-6:])\nprint(\"SBA rate forecast: \", np.round(sba_forecast[-6:], 3))\n# Notice smooth, realistic continuous rate (~0.8 to 1.1 units/period) rather than noisy swings",
+  "keyPoints": [
+    "Intermittent demand features long zero sequences separated by occasional non-zero orders.",
+    "Standard ARIMA/ETS models create severe stockout risks by producing noisy fractional estimates.",
+    "Croston decomposes demand into demand size and inter-demand arrival intervals.",
+    "TSB updates demand probability every period, making it capable of detecting product obsolescence."
+  ],
+  "pitfalls": [
+    "Evaluating with MAPE: Mean Absolute Percentage Error divides by actual demand; when actual demand is 0, MAPE produces division by zero.",
+    "Using unadjusted Croston: The standard Croston ratio $\\hat{z}/\\hat{p}$ suffers from systematic positive bias; always apply the SBA correction.",
+    "Failing to recognize obsolescence in Croston: If demand ceases permanently, Croston's states freeze forever, maintaining a positive forecast indefinitely."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Mean Absolute Percentage Error (MAPE) fail when evaluating intermittent demand forecasts?",
+      "o": [
+        "It cannot be computed for non-linear models",
+        "It involves division by actual demand $y_t$, which yields division by zero whenever demand is zero",
+        "It produces negative error values",
+        "It penalises large forecasts more than small forecasts"
+      ],
+      "a": 1,
+      "why": "In intermittent demand, the majority of time steps have $y_t = 0$. Dividing by zero renders MAPE undefined or infinite."
+    },
+    {
+      "q": "What critical flaw in classical Croston does the Teunter-Syntetos-Babai (TSB) formulation solve?",
+      "o": [
+        "Croston cannot handle negative values",
+        "Croston freezes state updates during zero periods, failing to detect when a product becomes obsolete",
+        "Croston requires GPU acceleration",
+        "Croston requires stationary Gaussian errors"
+      ],
+      "a": 1,
+      "why": "Because Croston updates only when $y_t > 0$, if a product is discontinued, the forecast remains positively frozen forever. TSB updates demand probability on zeros, decaying to zero."
+    },
+    {
+      "q": "What is the purpose of the Syntetos-Boylan Approximation (SBA) correction factor $(1 - \\alpha/2)$?",
+      "o": [
+        "It normalises the forecast to sum to 100%",
+        "It corrects the mathematical positive bias arising from the expected value of a reciprocal ratio $\\mathbb{E}[z/p]$",
+        "It multiplies forecasts by the annual inflation rate",
+        "It forces all forecasts to be integer values"
+      ],
+      "a": 1,
+      "why": "Because $\\mathbb{E}[1/p] > 1/\\mathbb{E}[p]$ by Jensen's inequality, the standard Croston ratio overestimates demand. SBA applies $(1 - \\alpha/2)$ to debias the estimate."
+    }
+  ],
+  "related": [
+    "forecast-metrics-mae-mase-smape-wape",
+    "time-series-cross-validation",
+    "global-vs-local-models-gradient-boosting-for-forecasting"
+  ],
+  "keywords": "intermittent demand, croston method, tsb, syntetos boylan approximation, sporadic demand, inventory forecasting, spare parts, lumpy demand",
+  "usedBy": []
+},
+
+{
+  "id": "prophet-and-trend-seasonality-decomposition",
+  "short": "Prophet & decomposition",
+  "title": "Prophet and Trend-Seasonality Decomposition: Generalised Additive Models for Time Series",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Decomposing business time series into piecewise linear trends, Fourier seasonality, and holiday regressors using modular Bayesian GAMs.",
+  "lead": "Classical ARIMA models require stationary transformations, differencing, and strict uniform temporal intervals. In contrast, real-world business time series exhibit multiple nested seasonal patterns (day of week, month of year), structural trend changepoints, missing observations, and dramatic holiday shifts. Prophet frames forecasting as a curve-fitting problem using a generalised additive model (GAM), providing robust automated decomposition with intuitive parameters.",
+  "analogy": "Imagine tuning a musical synthesizer. Rather than trying to describe the combined sound wave with a single complex recurrence equation, the synthesizer decomposes the sound into a low-frequency bassline (trend), repetitive harmonic oscillators (daily and weekly Fourier cycles), and occasional drum hits (holidays). Tuning the sound simply involves adjusting the volume and tempo of each independent track.",
+  "intuition": [
+    "Prophet (developed by Taylor and Letham at Meta) models a time series as an additive decomposition: $y(t) = g(t) + s(t) + h(t) + \\epsilon_t$, where $g(t)$ is trend, $s(t)$ is periodic seasonality, $h(t)$ models holiday effects, and $\\epsilon_t$ is normally distributed error.",
+    "The trend $g(t)$ is modelled as a continuous piecewise linear or logistic growth curve with automatic changepoints. A sparse Laplace prior on changepoint rate adjustments $\\delta_j$ acts like L1 regularisation, allowing the model to fit flexible curves while avoiding overfitting to short-term noise.",
+    "Seasonality $s(t)$ is modelled using truncated Fourier series: $\\sum [a_n \\cos(2\\pi n t / P) + b_n \\sin(2\\pi n t / P)]$. Using Fourier series allows the model to handle multi-period seasonality (e.g. weekly $P=7$ and yearly $P=365.25$) simultaneously without requiring regular integer spacing or differencing.",
+    "Holiday effects $h(t)$ are modelled using indicator matrices that assign separate parameters to user-specified dates, accommodating windows around holidays (e.g. Christmas Eve through Boxing Day). Because it frames forecasting as regression rather than autoregression, Prophet handles missing data seamlessly without imputation."
+  ],
+  "steps": [
+    "Format input data: Prepare a two-column dataframe with timestamp `ds` (ISO date) and target `y` (continuous metric).",
+    "Configure trend model: Select linear or logistic growth (defining capacity `cap` if upper saturation boundaries exist).",
+    "Tune changepoint flexibility: Adjust `changepoint_prior_scale` (higher values allow rapid trend shifts; lower values enforce stiff linear trends).",
+    "Configure multi-scale seasonality: Enable daily, weekly, or yearly seasonality and adjust Fourier order (higher orders capture sharper cyclical peaks).",
+    "Incorporate holiday calendars: Add predefined country holidays and custom event indicators with dedicated prior scales.",
+    "Generate future predictions: Extrapolate future timestamps and sample uncertainty intervals via Monte Carlo simulation of future trend changepoints."
+  ],
+  "math": [
+    {
+      "h": "Additive Time Series Decomposition Formulation",
+      "tex": "y(t) = g(t) + s(t) + h(t) + \\epsilon_t, \\quad \\epsilon_t \\sim \\mathcal{N}(0, \\sigma^2)",
+      "p": "The observed series is decomposed into trend $g(t)$, seasonal component $s(t)$, holiday effects $h(t)$, and Gaussian noise $\\epsilon_t$."
+    },
+    {
+      "h": "Piecewise Linear Trend with Changepoints",
+      "tex": "g(t) = \\left( k + \\mathbf{a}(t)^T \\boldsymbol{\\delta} \\right) t + \\left( m + \\mathbf{a}(t)^T \\boldsymbol{\\gamma} \\right), \\quad \\delta_j \\sim \\mathrm{Laplace}(0, \\tau)",
+      "p": "Trend slope changes by $\\delta_j$ at changepoints $s_j$, where vector $\\mathbf{a}(t)$ indicates active changepoints and $\\gamma_j = -s_j \\delta_j$ ensures continuity."
+    },
+    {
+      "h": "Fourier Series Seasonality Representation",
+      "tex": "s(t) = \\sum_{n=1}^N \\left( a_n \\cos\\left(\\frac{2\\pi n t}{P}\\right) + b_n \\sin\\left(\\frac{2\\pi n t}{P}\\right) \\right)",
+      "p": "Captures arbitrary periodic seasonality with period $P$ using $2N$ Fourier basis coefficients estimated via linear regression."
+    }
+  ],
+  "code": "import numpy as np\nimport pandas as pd\n\n# Minimal implementation of Prophet's Fourier seasonality regression\ndef build_fourier_basis(dates: pd.Series, period: float, order: int) -> np.ndarray:\n    \"\"\"Construct Fourier sin/cos columns for arbitrary period P and order N.\"\"\"\n    t = (dates - dates.min()).dt.total_seconds() / 86400.0  # Elapsed days\n    basis = []\n    for n in range(1, order + 1):\n        basis.append(np.sin(2.0 * np.pi * n * t / period))\n        basis.append(np.cos(2.0 * np.pi * n * t / period))\n    return np.column_stack(basis)\n\n# Generate synthetic daily data with trend and weekly seasonality\nnp.random.seed(42)\ndate_range = pd.date_range('2026-01-01', periods=120, freq='D')\nt_days = np.arange(len(date_range))\ntrue_trend = 100.0 + 0.5 * t_days\ntrue_season = 15.0 * np.sin(2.0 * np.pi * t_days / 7.0)\ny = true_trend + true_season + np.random.normal(0, 2.0, len(date_range))\n\n# Build design matrix: Intercept + Linear Trend + Fourier Order 3 Weekly (P=7)\nX_fourier = build_fourier_basis(pd.Series(date_range), period=7.0, order=3)\nX = np.column_stack([np.ones(len(t_days)), t_days, X_fourier])\n\n# Fit via Ridge regression\nweights = np.linalg.solve(X.T @ X + 1e-3 * np.eye(X.shape[1]), X.T @ y)\ny_pred = X @ weights\n\nprint(\"Learned baseline intercept:\", round(weights[0], 2))\nprint(\"Learned linear trend slope:\", round(weights[1], 2))\nprint(\"Mean Absolute Error:       \", round(float(np.mean(np.abs(y - y_pred))), 3))",
+  "keyPoints": [
+    "Prophet models time series using a modular Generalised Additive Model (GAM) decomposed into trend, seasonality, and holidays.",
+    "Piecewise linear trends use automatic changepoints regularised by a sparse Laplace prior.",
+    "Seasonality is flexibly represented using Fourier series, allowing multiple overlapping cycles (weekly and yearly).",
+    "Robust against missing data, non-uniform timestamp intervals, and large holiday shifts without imputation."
+  ],
+  "pitfalls": [
+    "Over-extrapolating recent trend shifts: If `changepoint_prior_scale` is set too high, the model overfits temporary dips, projecting unrealistic downward slopes into the future.",
+    "Ignoring multiplicative effects: For series where seasonal swings grow proportionally with revenue volume, using additive decomposition produces severe underestimation; set `seasonality_mode=\"multiplicative\"`.",
+    "Autocorrelation neglect: Because Prophet treats observations as independent conditional on components, confidence intervals do not account for residual autocorrelation, often being narrower than reality."
+  ],
+  "quiz": [
+    {
+      "q": "How does Prophet model complex periodic seasonality such as day-of-week and day-of-year cycles?",
+      "o": [
+        "Using recurrent LSTM neural network layers",
+        "Using truncated Fourier series expansions with configurable orders",
+        "Using k-nearest neighbour spatial lookups",
+        "Using recursive box-cox transformations"
+      ],
+      "a": 1,
+      "why": "Prophet approximates arbitrary periodic seasonal cycles using linear combinations of sine and cosine Fourier terms."
+    },
+    {
+      "q": "What is the role of the Laplace prior on trend changepoints $\\delta_j$ in Prophet?",
+      "o": [
+        "It acts like L1 regularisation (Lasso), encouraging most changepoints to be exactly zero while allowing a few significant shifts",
+        "It forces the trend slope to remain strictly positive",
+        "It ensures all predicted values are integers",
+        "It eliminates holiday anomalies automatically"
+      ],
+      "a": 0,
+      "why": "The Laplace prior places strong probability mass at zero, acting like L1 regularisation to keep the trend smooth and prevent overfitting to noise."
+    },
+    {
+      "q": "When should an analyst configure `seasonality_mode=\"multiplicative\"` instead of the default additive mode?",
+      "o": [
+        "When the dataset contains negative values",
+        "When the magnitude of seasonal swings expands proportionally as the overall baseline trend grows",
+        "When the time series contains only 5 observations",
+        "When predicting binary classification probabilities"
+      ],
+      "a": 1,
+      "why": "In many businesses, seasonal spikes represent a percentage of baseline volume (e.g. +20% at Christmas). As sales grow from 1,000 to 10,000, seasonal swings expand from 200 to 2,000, which requires multiplicative decomposition."
+    }
+  ],
+  "related": [
+    "lag-and-rolling-window-features",
+    "forecast-metrics-mae-mase-smape-wape",
+    "time-series-cross-validation"
+  ],
+  "keywords": "prophet, generalised additive models, trend decomposition, fourier seasonality, changepoints, additive seasonality, multiplicative seasonality, time series",
+  "usedBy": []
+},
+
+{
+  "id": "probabilistic-forecasts-and-quantile-loss",
+  "short": "Probabilistic forecasts & quantile",
+  "title": "Probabilistic Forecasts and Quantile Loss: Pinball Loss and Prediction Intervals",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Predicting asymmetric quantiles (p10, p50, p90) and full predictive distributions using the pinball loss function and conformalised calibration.",
+  "lead": "A single point forecast (such as predicting \"tomorrow's sales will be 150 units\") provides zero information about real-world uncertainty, downside risk, or extreme tail exposure. In supply chain inventory, under-predicting demand causes costly stockouts, whereas over-predicting causes inventory holding waste. Probabilistic forecasting models the full probability distribution or specific target percentiles using asymmetric quantile loss (pinball loss).",
+  "analogy": "Imagine packing a parachute or ordering hospital oxygen tanks. Knowing the \"average\" air consumption or \"average\" deployment speed is dangerous; you need to plan for the 99th percentile worst-case scenario. If running out of stock costs ten times more than having excess stock, you should deliberately forecast a high quantile (p90) rather than the symmetric median (p50).",
+  "intuition": [
+    "Standard Mean Squared Error (MSE) loss forces models to predict the conditional mean $\\mathbb{E}[y|x]$, which is symmetric and heavily sensitive to outliers. Mean Absolute Error (MAE) predicts the conditional median (p50).",
+    "The pinball loss (or tilted absolute value function) $\\mathcal{L}_\\tau(y, \\hat{y})$ penalises under-prediction by weight $\\tau$ and over-prediction by weight $(1 - \\tau)$, where $\\tau \\in (0, 1)$ is the target quantile.",
+    "Training a regression model (e.g. Quantile LightGBM, Quantile Regression Forests, or a neural network) with pinball loss directly predicts the $\\tau$-th conditional quantile $Q_y(\\tau | x)$ without assuming Gaussianity or homoscedasticity.",
+    "By training three models at $\\tau = 0.1, 0.5, 0.9$, an engineer produces a median forecast along with an 80% prediction interval $[Q_{0.1}, Q_{0.9}]$ that dynamically widens during volatile periods and narrows during calm periods."
+  ],
+  "steps": [
+    "Define operational cost asymmetry: Calculate relative costs of under-prediction $c_u$ vs over-prediction $c_o$ to select target operational quantile $\\tau^* = \\frac{c_u}{c_u + c_o}$ (Newsvendor formula).",
+    "Select model architecture: Choose a native quantile model such as gradient boosting with `objective=\"quantile\"` or deep neural networks with multiple quantile output heads.",
+    "Train across multiple quantile levels: Fit separate models or multi-head objectives for $\\tau \\in \\{0.05, 0.10, 0.50, 0.90, 0.95\\}$.",
+    "Check for quantile crossing: Post-process predictions to enforce monotonicity ($Q_{\\tau_1} \\le Q_{\\tau_2}$ for $\\tau_1 < \\tau_2$) using sorting or isotonic rearrangement.",
+    "Evaluate calibration and sharpness: Measure empirical coverage (proportion of actuals falling below $Q_\\tau$) and interval width (sharpness)."
+  ],
+  "math": [
+    {
+      "h": "Pinball Loss (Quantile Loss) Function",
+      "tex": "\\mathcal{L}_\\tau(y, \\hat{y}) = \\max\\left( \\tau (y - \\hat{y}), \\; (1 - \\tau)(\\hat{y} - y) \\right) = (y - \\hat{y}) \\left( \\tau - \\mathbb{I}(y < \\hat{y}) \\right)",
+      "p": "Under-predicting ($y > \\hat{y}$) incurs penalty $\\tau |y - \\hat{y}|$, while over-predicting ($y < \\hat{y}$) incurs penalty $(1 - \\tau) |y - \\hat{y}|$."
+    },
+    {
+      "h": "Conditional Quantile Optimality",
+      "tex": "Q_y(\\tau | x) = \\operatorname*{arg\\,min}_{q(x)} \\mathbb{E}_{Y|X}\\left[ \\mathcal{L}_\\tau(Y, q(X)) \\right]",
+      "p": "Minimising expected pinball loss uniquely yields the true conditional $\\tau$-th quantile function of the underlying distribution."
+    },
+    {
+      "h": "Winkler Score for Prediction Interval Evaluation",
+      "tex": "\\mathrm{WS}_{\\alpha}(l, u, y) = (u - l) + \\frac{2}{\\alpha} (l - y) \\mathbb{I}(y < l) + \\frac{2}{\\alpha} (y - u) \\mathbb{I}(y > u)",
+      "p": "Evaluates $(1 - \\alpha)$ prediction intervals $[l, u]$, balancing narrow interval width (sharpness) against severe penalties for coverage violations."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.ensemble import GradientBoostingRegressor\n\n# Generate heteroscedastic synthetic data (noise variance expands with x)\nnp.random.seed(42)\nX = np.sort(np.random.uniform(0, 10, size=500)).reshape(-1, 1)\nnoise = np.random.normal(0, 0.3 + 0.2 * X.flatten(), size=500)\ny = 2.0 * np.sin(X.flatten()) + noise\n\n# Fit 10th, 50th (median), and 90th percentiles using Quantile Gradient Boosting\nquantiles = [0.1, 0.5, 0.9]\nmodels = {}\nfor q in quantiles:\n    gbr = GradientBoostingRegressor(loss='quantile', alpha=q, n_estimators=100, max_depth=3)\n    gbr.fit(X, y)\n    models[q] = gbr\n\n# Predict on new test points\nX_test = np.array([[2.0], [5.0], [8.0]])\npreds = {q: models[q].predict(X_test) for q in quantiles}\n\nfor i, x_val in enumerate(X_test.flatten()):\n    p10, p50, p90 = preds[0.1][i], preds[0.5][i], preds[0.9][i]\n    print(f\"X={x_val:.1f} -> P10: {p10:.2f} | P50 (median): {p50:.2f} | P90: {p90:.2f} | 80% Width: {p90 - p10:.2f}\")\n# Notice prediction interval width expands substantially as X increases!",
+  "keyPoints": [
+    "Probabilistic forecasting quantifies prediction uncertainty rather than providing a single blind point estimate.",
+    "Pinball loss asymmetrically penalises under- vs over-predictions to directly target arbitrary percentiles.",
+    "Heteroscedasticity (varying uncertainty across different regimes) is captured naturally by quantile regression.",
+    "Prediction intervals should be evaluated for both empirical coverage (calibration) and narrow interval width (sharpness)."
+  ],
+  "pitfalls": [
+    "Quantile crossing: Training independent models for p10 and p90 can occasionally result in $\\hat{Q}_{0.1}(x) > \\hat{Q}_{0.9}(x)$ in sparse regions; apply monotonic sorting.",
+    "Assuming constant Gaussian error bars: Applying $\\pm 1.96 \\sigma$ uniformly across all time periods fails when variance is non-constant or skewed.",
+    "Evaluating quantile models with RMSE: Evaluating a model trained on pinball loss using RMSE evaluates the wrong statistical functional (mean instead of quantile)."
+  ],
+  "quiz": [
+    {
+      "q": "What quantile does the standard Mean Absolute Error (MAE) loss function implicitly estimate?",
+      "o": [
+        "The 90th percentile (p90)",
+        "The conditional median (50th percentile, p50)",
+        "The conditional mean $\\mathbb{E}[y|x]$",
+        "The mode of the empirical distribution"
+      ],
+      "a": 1,
+      "why": "MAE is the symmetric pinball loss where $\\tau = 0.5$. Minimising expected MAE yields the conditional median."
+    },
+    {
+      "q": "If under-estimating demand costs £90 in lost customer goodwill while over-estimating costs £10 in storage, which quantile should a retailer forecast according to the Newsvendor problem?",
+      "o": [
+        "The 10th percentile (p10)",
+        "The 50th percentile (p50)",
+        "The 90th percentile (p90)",
+        "The 100th percentile"
+      ],
+      "a": 2,
+      "why": "Formula $\\tau^* = c_u / (c_u + c_o) = 90 / (90 + 10) = 0.90$. The critical fractile dictates targeting the 90th percentile to minimise total expected costs."
+    },
+    {
+      "q": "What is \"quantile crossing\" in independent quantile regression models?",
+      "o": [
+        "When the learning rate crosses zero during gradient descent",
+        "A pathology where a higher predicted quantile (e.g. p90) evaluates to a lower number than a lower predicted quantile (e.g. p10) for some test input",
+        "When cross-validation folds overlap",
+        "When features cross the decision boundary"
+      ],
+      "a": 1,
+      "why": "Because independent models are trained separately without joint constraints, prediction curves can intersect in unseen feature regions, violating distribution monotonicity."
+    }
+  ],
+  "related": [
+    "conformal-prediction",
+    "forecast-metrics-mae-mase-smape-wape",
+    "cost-sensitive-learning"
+  ],
+  "keywords": "probabilistic forecasting, quantile regression, pinball loss, quantile loss, prediction intervals, newsvendor problem, heteroscedasticity, sharpness, calibration",
+  "usedBy": []
+},
+
+{
+  "id": "model-decay-and-retraining-policies",
+  "short": "Model decay & retraining",
+  "title": "Model Decay and Retraining Policies: Scheduled, Metric-Driven, and Continual Updating",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Designing sustainable retraining cadences, canary deployments, backtesting triggers, and shadow policies to counter operational model decay.",
+  "lead": "No machine learning model deployed to production remains optimal indefinitely. Real-world consumer preferences change, competitors alter pricing, macroeconomic climates shift, and upstream telemetry schemas mutate. Without structured retraining policies, models silently degrade in performance—a phenomenon known as model decay or model staleness. Designing robust retraining strategies balances computational cost against performance decay.",
+  "analogy": "Imagine navigational charts for a busy coastal harbour with shifting sandbanks. If cartographers update the depth maps only once a decade, ships eventually run aground on newly formed shallows. However, re-surveying the entire seabed every single hour is astronomically expensive. The harbour authority sets a sensible compromise: routine quarterly bathymetric surveys, coupled with emergency soundings whenever sonar buoy alarms detect depth drops after severe storms.",
+  "intuition": [
+    "Model decay originates from two primary mechanisms: covariate shift $P(X)$ (the distribution of incoming features changes) and concept drift $P(Y|X)$ (the relationship between features and the target label shifts).",
+    "The half-life of a model varies widely across domains: high-frequency trading and ad click-through prediction models decay within hours, fraud detection models decay within weeks as attackers adapt, while medical imaging diagnostics can remain stable for years.",
+    "Teams select among four primary retraining architectures: Scheduled (fixed cadence: daily, weekly, monthly), Metric-triggered (retraining initiates when drift metrics like PSI or KS distance breach thresholds), Performance-triggered (retraining triggers when ground-truth labels arrive and show degraded metric performance), and Online / Continual learning (model weights update continuously with streaming data).",
+    "Production retraining requires defensive safeguards: automated model evaluation on holdout golden sets, statistical tests against the incumbent champion model, shadow mode verification, and canary rollouts to prevent corrupted models from serving 100% of live traffic."
+  ],
+  "steps": [
+    "Establish performance half-life: Backtest historical model degradation across expanding holdout horizons to determine the optimal natural retraining cadence.",
+    "Select retraining architecture: Choose between scheduled cron jobs, event-driven drift triggers, or streaming incremental learning.",
+    "Define data windowing policy: Select sliding window (retain only the most recent $N$ months of data) or expanding window (retain all historical data with decay sample weights).",
+    "Execute automated candidate gate: Compare the newly trained challenger against the incumbent production champion on a recent validation slice.",
+    "Deploy via canary or shadow mode: Route 5% of live traffic to the candidate model (canary) or mirror 100% traffic silently (shadow) to verify latency and stability before full cutover."
+  ],
+  "math": [
+    {
+      "h": "Temporal Degradation Trajectory",
+      "tex": "\\mathcal{M}(t) = \\mathcal{M}_0 \\cdot e^{-\\lambda (t - t_0)} + \\epsilon_t",
+      "p": "Model metric $\\mathcal{M}(t)$ (e.g. AUC or F1) typically decays exponentially with elapsed time $(t - t_0)$, where decay parameter $\\lambda$ reflects domain volatility."
+    },
+    {
+      "h": "Sample Weighting with Exponential Decay",
+      "tex": "w_i = \\exp\\left( -\\frac{\\ln(2)}{t_{1/2}} \\cdot (t_{\\mathrm{now}} - t_i) \\right)",
+      "p": "Weights historical training observation $i$ exponentially based on elapsed time relative to half-life $t_{1/2}$, prioritising modern behaviour."
+    },
+    {
+      "h": "Champion-Challenger Inferential Hypothesis Test",
+      "tex": "Z = \\frac{\\mathcal{M}_{\\mathrm{challenger}} - \\mathcal{M}_{\\mathrm{champion}}}{\\sqrt{\\mathrm{Var}(\\mathcal{M}_{\\mathrm{chal}}) + \\mathrm{Var}(\\mathcal{M}_{\\mathrm{champ}})}} > Z_{1 - \\alpha}",
+      "p": "The challenger model replaces the incumbent champion only if it demonstrates statistically significant metric superiority on holdout verification data."
+    }
+  ],
+  "code": "import numpy as np\nfrom datetime import datetime, timedelta\n\ndef calculate_time_decay_weights(dates: np.ndarray, current_date: datetime, half_life_days: float) -> np.ndarray:\n    \"\"\"Calculate exponential time-decay sample weights for training observations.\"\"\"\n    decay_rate = np.log(2.0) / half_life_days\n    elapsed_days = np.array([(current_date - d).total_seconds() / 86400.0 for d in dates])\n    weights = np.exp(-decay_rate * elapsed_days)\n    # Normalise weights to average 1.0\n    return weights / np.mean(weights)\n\n# Simulate 5 historical observations over 90 days\nnow = datetime(2026, 6, 1)\nsample_dates = np.array([\n    now - timedelta(days=90),\n    now - timedelta(days=60),\n    now - timedelta(days=30),\n    now - timedelta(days=10),\n    now - timedelta(days=1)\n])\n\n# Compute sample weights with a 30-day half-life\nweights = calculate_time_decay_weights(sample_dates, current_date=now, half_life_days=30.0)\n\nfor d, w in zip(sample_dates, weights):\n    days_ago = (now - d).days\n    print(f\"Observation from {days_ago:2d} days ago -> Sample weight: {w:.3f}\")\n# Notice 30 days ago has half the weight of yesterday, while 90 days ago has 1/8th",
+  "keyPoints": [
+    "Model decay is inevitable due to evolving covariate distributions and shifting concept definitions.",
+    "Retraining policies combine fixed scheduled cadences with automated metric-driven alerts.",
+    "Exponential time-decay weighting enables models to adapt to modern trends without discarding older edge cases.",
+    "Candidate models must pass automated validation gates and canary testing before replacing the production champion."
+  ],
+  "pitfalls": [
+    "Unsupervised retraining loops: Automatically retraining and deploying models without human approval or strict validation gates risks training on corrupted data and propagating systemic errors.",
+    "Feedback loops (performative prediction): When model decisions alter future training data (e.g. credit approvals only yielding labels for approved borrowers), naive retraining amplifies bias.",
+    "Training on unlabelled delayed actuals: Retraining on recent data where ground truth labels have not yet matured (e.g. fraud reported 60 days late) treats unconfirmed fraudsters as legitimate users."
+  ],
+  "quiz": [
+    {
+      "q": "What is the risk of an unmonitored automated retraining loop that deploys newly trained models directly to 100% of production traffic?",
+      "o": [
+        "It guarantees memory allocation failures in the database",
+        "A temporary upstream pipeline error or corrupted data ingestion can train an invalid model that instantly takes down production service",
+        "It automatically deletes historical git repositories",
+        "Decision trees will stop splitting on continuous variables"
+      ],
+      "a": 1,
+      "why": "Without automated gating tests, canary rollouts, or circuit breakers, an automated training pipeline could consume corrupted data and replace a working model with a defective one."
+    },
+    {
+      "q": "Why should fraud detection models not be retrained on the most recent 14 days of transactional data without adjustment?",
+      "o": [
+        "Because fraud labels have high maturation delay; many fraudulent transactions have not yet been reported or confirmed",
+        "Because fraud models require exactly 365 days of data",
+        "Because Python cannot calculate ROC curves on recent data",
+        "Because fraud rates are always exactly 50%"
+      ],
+      "a": 0,
+      "why": "Fraud chargebacks and bank investigations typically take 30–90 days to settle. Training on fresh data treats undetected fraud as negative examples, poisoning model quality."
+    },
+    {
+      "q": "What is the role of a \"canary deployment\" in a model retraining lifecycle?",
+      "o": [
+        "To test whether the model runs on older Linux kernels",
+        "To route a tiny fraction (e.g. 5%) of live production traffic to the challenger model to observe real-world latency, error rates, and behaviour before full cutover",
+        "To encrypt the feature names using SHA-256",
+        "To compress the model weights into an archive"
+      ],
+      "a": 1,
+      "why": "Canary deployment limits blast radius: if the new model fails or crashes on production inputs, only 5% of users are exposed before the system automatically rolls back."
+    }
+  ],
+  "related": [
+    "concept-drift-and-performance-monitoring",
+    "data-drift-psi-ks-and-jensen-shannon",
+    "experiment-tracking"
+  ],
+  "keywords": "model decay, retraining policies, concept drift, champion challenger, canary deployment, shadow mode, time decay weights, performative prediction",
+  "usedBy": []
+},
+
+{
+  "id": "data-quality-checks",
+  "short": "Data quality checks",
+  "title": "Data Quality Checks: Defensive Schemas, Assertions, and Anomaly Detection",
+  "task": "concepts",
+  "level": 1,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Building defensive data testing pipelines with Great Expectations, Pandera, schema contracts, and volumetric anomaly detection.",
+  "lead": "Machine learning systems are uniquely silent failures: whereas a traditional software bug throws a null pointer exception and crashes with a clear stack trace, a machine learning model provided with corrupted or null data will still return floating point predictions without complaint. Defending production ML pipelines requires rigorous data quality frameworks that validate schemas, test distribution boundaries, and halt execution before bad data reaches models.",
+  "analogy": "Imagine a high-speed bottling factory. If a delivery truck arrives with shattered glass bottles or contaminated spring water, running the assembly line will ruin thousands of finished drinks and destroy bottling machinery. Quality control stations at the factory gate inspect bottle integrity, test liquid pH, and check delivery volumes before allowing materials into the manufacturing plant.",
+  "intuition": [
+    "Data quality errors stem from diverse failure modes: schema drift (column renames, type mutations), value anomalies (impossible negative ages, out-of-bounds percentages), completeness violations (null surges), and volumetric failures (a pipeline receiving 50 rows instead of 5,000,000).",
+    "Defensive data engineering applies the \"Unit Testing for Data\" paradigm. Tools like Great Expectations, Pandera, and Soda define declarative test suites that assert schema contracts prior to training and inference.",
+    "Tests fall into four tiers: Schema tests (column presence, strict types, nullability constraints), Domain constraints (ranges, regex patterns, allowed set memberships), Statistical checks (mean and standard deviation bounds, category frequency ratios), and Relational checks (foreign key referential integrity across tables).",
+    "Automating these checks in CI/CD and production orchestrators (Airflow, Dagster, Prefect) creates \"circuit breakers\" that automatically quarantine malformed batches and alert on-call engineers before corrupted inputs degrade model outputs."
+  ],
+  "steps": [
+    "Define declarative schema contract: Specify column names, dtypes, nullable flags, and permissible value domains using tools like Pandera or Great Expectations.",
+    "Establish freshness and volume expectations: Assert minimum and maximum record counts and ensure the latest timestamp is within the expected ingestion SLA.",
+    "Enforce statistical distribution bounds: Assert that continuous metrics fall within expected interquartile ranges and that categorical levels match registered vocabularies.",
+    "Embed checks in pipeline gates: Execute validation checks immediately after data ingestion and immediately prior to model scoring.",
+    "Implement circuit breakers and alerts: If critical assertions fail, halt downstream pipeline execution, quarantine the offending partition, and trigger incident notifications."
+  ],
+  "math": [
+    {
+      "h": "Z-Score Volumetric Anomaly Detection",
+      "tex": "Z_v = \\frac{N_t - \\mu_v}{\\sigma_v}, \\quad \\text{Alert if } |Z_v| > 3.0",
+      "p": "Measures whether the incoming record volume $N_t$ deviates significantly from historical rolling mean $\\mu_v$ and standard deviation $\\sigma_v$."
+    },
+    {
+      "h": "Null Ratio Bound Expectation",
+      "tex": "\\rho_{\\mathrm{null}}(c) = \\frac{1}{N} \\sum_{i=1}^N \\mathbb{I}(x_{i,c} \\text{ is null}) \\le \\epsilon_c",
+      "p": "Asserts that the empirical missing value proportion for feature $c$ does not exceed maximum allowable tolerance $\\epsilon_c$."
+    },
+    {
+      "h": "Domain Value Set Inclusion Test",
+      "tex": "\\mathcal{V}(c) = \\{x_{i,c} \\mid i \\in \\{1, \\dots, N\\}\\} \\subseteq \\mathcal{S}_{\\mathrm{valid}}",
+      "p": "Guarantees that all observed values in categorical column $c$ belong strictly to the approved set of discrete states $\\mathcal{S}_{\\mathrm{valid}}$."
+    }
+  ],
+  "code": "import pandas as pd\nimport numpy as np\n\ndef validate_dataframe(df: pd.DataFrame) -> dict:\n    \"\"\"Execute defensive data quality assertions on incoming inference batch.\"\"\"\n    errors = []\n    \n    # 1. Volume assertion\n    if len(df) < 5:\n        errors.append(f\"Volume check failed: Expected >= 5 rows, got {len(df)}\")\n        \n    # 2. Schema check: required columns\n    required = {'user_id', 'age', 'account_balance', 'country'}\n    missing = required - set(df.columns)\n    if missing:\n        errors.append(f\"Missing required columns: {missing}\")\n        \n    # 3. Domain constraints: age between 18 and 120\n    if 'age' in df.columns:\n        invalid_age = df[(df['age'] < 18) | (df['age'] > 120)]\n        if not invalid_age.empty:\n            errors.append(f\"Age domain violation: {len(invalid_age)} rows out of bounds\")\n            \n    # 4. Null ratio constraint: account_balance must have 0% nulls\n    if 'account_balance' in df.columns:\n        null_count = df['account_balance'].isnull().sum()\n        if null_count > 0:\n            errors.append(f\"Null constraint violated: account_balance has {null_count} nulls\")\n            \n    return {'is_valid': len(errors) == 0, 'errors': errors}\n\n# Sample incoming batch with data quality issues\nincoming_data = pd.DataFrame({\n    'user_id': ['u1', 'u2', 'u3', 'u4', 'u5'],\n    'age': [25, 42, -3, 65, 30],  # Negative age error!\n    'account_balance': [1200.5, np.nan, 350.0, 5000.0, 800.0],  # NaN error!\n    'country': ['GB', 'US', 'GB', 'DE', 'FR']\n})\n\nreport = validate_dataframe(incoming_data)\nprint(\"Data validation passed?\", report['is_valid'])\nfor err in report['errors']:\n    print(\" - Assertion error:\", err)\n# Pipeline halts and quarantines bad batch before feeding to model!",
+  "keyPoints": [
+    "Data quality checks prevent silent machine learning failures by validating data before model consumption.",
+    "Checks span schema contracts, column domain ranges, null proportions, and batch row counts.",
+    "Tools like Great Expectations and Pandera automate declarative dataset assertions.",
+    "Circuit breakers halt downstream execution and quarantine anomalous partitions upon critical assertion failure."
+  ],
+  "pitfalls": [
+    "Testing only in development: Writing unit tests for code while leaving production data pipelines unmonitored invites silent failures.",
+    "Overly rigid constraints: Setting zero-tolerance thresholds on volatile metrics causes false-positive alerts that cause alert fatigue.",
+    "Silent type coercion: Pandas automatically casting integer columns to floating point when null values are introduced, silently breaking downstream type assertions."
+  ],
+  "quiz": [
+    {
+      "q": "Why are data quality failures considered \"silent failures\" in machine learning pipelines?",
+      "o": [
+        "Because models make zero CPU noise when calculating matrix operations",
+        "Because models will accept corrupted, shifted, or null-imputed data and produce invalid predictions without throwing an execution exception",
+        "Because databases do not store text logs",
+        "Because Python ignores syntax errors during inference"
+      ],
+      "a": 1,
+      "why": "Unlike traditional software that throws runtime exceptions on bad input types, machine learning models process corrupted numbers smoothly, silently making incorrect decisions."
+    },
+    {
+      "q": "What is the purpose of a \"circuit breaker\" in an automated data pipeline?",
+      "o": [
+        "To increase the clock speed of GPUs during training",
+        "To automatically stop downstream execution and prevent bad data from reaching customer-facing models when critical quality checks fail",
+        "To convert CSV files into compressed Parquet files",
+        "To balance network bandwidth across worker nodes"
+      ],
+      "a": 1,
+      "why": "A circuit breaker halts downstream jobs and alerts engineers when assertions fail, preventing corrupted data from overwriting good tables or driving invalid predictions."
+    },
+    {
+      "q": "Which assertion is an example of a \"volumetric\" data quality check?",
+      "o": [
+        "Asserting that column \"age\" is a 64-bit float",
+        "Asserting that the daily partition contains between 800,000 and 1,200,000 rows based on historical volume",
+        "Asserting that \"email\" matches a valid regular expression",
+        "Asserting that the model AUC is above 0.80"
+      ],
+      "a": 1,
+      "why": "Volumetric checks inspect the quantity of incoming data (row counts, file sizes) to detect upstream ingestion drops or duplication."
+    }
+  ],
+  "related": [
+    "data-cleaning-and-validation",
+    "data-drift-psi-ks-and-jensen-shannon",
+    "concept-drift-and-performance-monitoring"
+  ],
+  "keywords": "data quality, great expectations, pandera, schema contracts, circuit breakers, data testing, null checks, volumetric anomaly detection",
+  "usedBy": []
+},
+
+{
+  "id": "churn-and-retention-modelling",
+  "short": "Churn & retention modelling",
+  "title": "Customer Churn and Retention Modelling: Survival Analysis and Hazard Functions",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 17,
+  "noLab": true,
+  "summary": "Predicting customer attrition, right-censored lifespans, and intervention timing using Kaplan-Meier, Cox Proportional Hazards, and uplift classification.",
+  "lead": "In subscription businesses and customer platforms, retaining existing customers is dramatically cheaper than acquiring new ones. However, framing churn simply as binary classification (churned vs not churned) discards the critical temporal dimension: when will the customer churn, and what is their survival probability over time? Survival analysis accounts for right-censoring to model the complete tenure curve and hazard dynamics.",
+  "analogy": "Imagine clinical researchers studying patient recovery from a rare illness. When the clinical trial concludes after two years, some patients have fully recovered, while others are still undergoing treatment. The researchers cannot classify surviving patients as \"never recovering\" or discard them as missing data. Survival analysis mathematically incorporates the fact that ongoing patients survived at least two years without assuming they will never recover.",
+  "intuition": [
+    "In customer databases, active customers have not yet churned; their true eventual churn date lies in the future. This is classic right-censoring: we know their tenure is at least $T$ days, but we cannot observe their final lifespan.",
+    "Standard binary classification models trained on a fixed time window (e.g. \"did the user churn in month 3?\") suffer from survivorship bias, window length sensitivity, and inability to predict expected remaining customer lifetime.",
+    "Survival analysis models two core mathematical functions: the Survival function $S(t) = P(T > t)$ (the probability that a customer remains active past time $t$) and the Hazard function $\\lambda(t)$ (the instantaneous churn risk rate at time $t$ given survival up to $t$).",
+    "The Kaplan-Meier estimator non-parametrically estimates the baseline survival curve across cohorts. The Cox Proportional Hazards semi-parametric model then evaluates how customer covariates (login frequency, support tickets, monthly spend) multiply the baseline hazard rate, allowing proactive retention interventions."
+  ],
+  "steps": [
+    "Define churn event and observation window: Establish rigorous operational churn definitions (e.g. cancellation confirmation or 60 days of zero activity).",
+    "Construct survival dataset: For each customer, record elapsed tenure $T_i$ and event indicator $E_i \\in \\{0, 1\\}$ ($1$ if churn was observed, $0$ if right-censored / still active).",
+    "Fit non-parametric Kaplan-Meier curves: Estimate baseline retention trajectories across customer acquisition channels or subscription tiers.",
+    "Fit Cox Proportional Hazards model: Estimate covariate hazard ratios $e^{\\beta_j}$ to quantify which behavioural features multiply or diminish churn risk.",
+    "Validate proportional hazards assumption: Test Schoenfeld residuals to ensure covariate effects remain proportional across customer tenure.",
+    "Deploy proactive retention triggers: Score active customers on cumulative churn hazard over the upcoming 30 days to trigger targeted customer success interventions."
+  ],
+  "math": [
+    {
+      "h": "Survival Function and Cumulative Hazard",
+      "tex": "S(t) = P(T > t) = \\exp\\left( -\\int_0^t \\lambda(u) \\, du \\right) = \\exp\\left( -\\Lambda(t) \\right)",
+      "p": "The survival probability $S(t)$ decays as the cumulative hazard function $\\Lambda(t)$ accumulates over tenure $t$."
+    },
+    {
+      "h": "Kaplan-Meier Non-Parametric Estimator",
+      "tex": "\\hat{S}(t) = \\prod_{t_i \\le t} \\left( 1 - \\frac{d_i}{n_i} \\right)",
+      "p": "Estimates survival curve step-by-step at event times $t_i$, where $d_i$ is the number of churn events and $n_i$ is the number of customers at risk immediately prior to $t_i$."
+    },
+    {
+      "h": "Cox Proportional Hazards Formulation",
+      "tex": "\\lambda(t \\mid \\mathbf{x}) = \\lambda_0(t) \\cdot \\exp\\left( \\boldsymbol{\\beta}^T \\mathbf{x} \\right)",
+      "p": "Decomposes churn risk into an arbitrary baseline hazard $\\lambda_0(t)$ multiplied by an exponential linear combination of customer covariates $\\mathbf{x}$."
+    }
+  ],
+  "code": "import numpy as np\nimport pandas as pd\n\ndef kaplan_meier_estimator(durations: np.ndarray, events: np.ndarray):\n    \"\"\"Compute non-parametric Kaplan-Meier survival curve.\"\"\"\n    # Sort chronologically by duration\n    order = np.argsort(durations)\n    d_sorted = durations[order]\n    e_sorted = events[order]\n    \n    unique_times = np.unique(d_sorted[e_sorted == 1])\n    n_at_risk = len(durations)\n    survival_prob = 1.0\n    km_curve = [(0.0, 1.0)]\n    \n    for t in unique_times:\n        # Count at risk and events at time t\n        at_risk = np.sum(d_sorted >= t)\n        deaths = np.sum((d_sorted == t) & (e_sorted == 1))\n        survival_prob *= (1.0 - deaths / at_risk)\n        km_curve.append((t, survival_prob))\n        \n    return km_curve\n\n# Sample customer tenure data: (tenure_months, churned: 1=churn, 0=active/censored)\ndurations = np.array([3, 5, 6, 8, 12, 12, 15, 18, 24, 24, 30, 36])\nevents = np.array([1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0])  # Several active customers\n\nkm = kaplan_meier_estimator(durations, events)\nprint(\"Customer Survival Curve (Kaplan-Meier):\")\nfor t, s in km:\n    print(f\"Month {t:2.0f} -> Survival Probability: {s * 100:.1f}%\")\n# Observe probability accounts for right-censored users who have not churned yet",
+  "keyPoints": [
+    "Survival analysis properly handles right-censored active customers without introducing survivorship bias.",
+    "The survival function $S(t)$ gives the probability of a customer remaining past tenure $t$.",
+    "The Cox model estimates hazard ratios: a feature with $\\exp(\\beta) = 1.40$ increases churn risk by 40% at any point in time.",
+    "Enables proactive, time-aware interventions by predicting when churn probability spikes."
+  ],
+  "pitfalls": [
+    "Discarding active customers: Throwing away active customers because their eventual outcome is unobserved biases the model heavily towards short-tenure churners.",
+    "Treating active customers as non-churners: Coding active customers as $y=0$ in binary classification assumes they will stay forever, underestimating long-term churn.",
+    "Violating proportional hazards: If a feature's effect changes drastically over time (e.g. onboarding discounts having large impact in month 1 but zero in month 12), standard Cox models must use time-varying covariates."
+  ],
+  "quiz": [
+    {
+      "q": "What is \"right-censoring\" in customer churn modelling?",
+      "o": [
+        "When customers leave bad reviews on external websites",
+        "When a customer is still active at the end of the observation window, so their eventual churn time is unobserved but known to exceed their current tenure",
+        "When data is stored on right-aligned database columns",
+        "When a model overfits to the most recent training batch"
+      ],
+      "a": 1,
+      "why": "Right-censoring occurs because active customers have not churned yet; we know their survival time is at least their current tenure, but not when they will eventually leave."
+    },
+    {
+      "q": "In a Cox Proportional Hazards model, what does a hazard ratio of $\\exp(\\beta_j) = 1.35$ for a feature indicate?",
+      "o": [
+        "The customer will churn in exactly 1.35 months",
+        "A one-unit increase in that feature increases the instantaneous churn rate by 35% at any given tenure point",
+        "The customer has a 35% probability of never churning",
+        "The feature is uncorrelated with customer retention"
+      ],
+      "a": 1,
+      "why": "The hazard ratio multiplies the baseline hazard $\\lambda_0(t)$. A ratio of 1.35 corresponds to a 35% relative increase in instantaneous attrition risk."
+    },
+    {
+      "q": "Why does standard binary classification (predicting churn yes/no over the next 90 days) fall short compared to survival analysis?",
+      "o": [
+        "Binary classification cannot handle numerical numbers",
+        "It collapses the continuous time-to-event dimension into an arbitrary binary window and cannot distinguish between a customer churning tomorrow versus on day 89",
+        "It requires calculating the inverse Fisher information matrix on GPUs",
+        "Binary models cannot be evaluated with ROC curves"
+      ],
+      "a": 1,
+      "why": "Binary classification loses temporal granularity and cannot estimate expected remaining customer lifespan or dynamic hazard curves over tenure."
+    }
+  ],
+  "related": [
+    "customer-segmentation-with-rfm",
+    "cohort-and-funnel-analysis",
+    "customer-lifetime-value"
+  ],
+  "keywords": "churn modelling, customer retention, survival analysis, kaplan-meier, cox proportional hazards, right-censoring, hazard function, customer lifetime",
+  "usedBy": []
+},
+
+{
+  "id": "customer-lifetime-value",
+  "short": "Customer lifetime value",
+  "title": "Customer Lifetime Value (CLV): Buy 'Til You Die Models and Expected Value",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 17,
+  "noLab": true,
+  "summary": "Estimating future customer financial value in contractual and non-contractual settings using Pareto/NBD, BG/NBD, and Gamma-Gamma spend models.",
+  "lead": "Customer Lifetime Value (CLV) is the definitive economic compass of customer-centric businesses, determining how much a company can afford to spend on customer acquisition (CAC), which customer segments merit bespoke VIP service, and how corporate equity should be valued. In non-contractual settings (e.g. e-commerce, hospitality), customers never notify a company when they leave—they simply stop buying. \"Buy 'Til You Die\" (BTYD) models probabilistically uncouple transaction frequency from the unobserved latent churn process.",
+  "analogy": "Imagine a neighbourhood coffee shop. Regular patrons visit three times a week, but occasionally someone stops showing up. Did they move to another city (churned), or did they go on a three-week holiday and will return next week? BTYD probabilistic models act like an experienced barista who knows that for a customer who usually visits daily, a 10-day silence likely means they have moved away, whereas for a once-a-month customer, a 10-day gap is entirely normal.",
+  "intuition": [
+    "In contractual settings (SaaS, telecom), churn is directly observed via subscription cancellations, making CLV tractable through retention rate discount formulas: $\\mathrm{CLV} = \\mathrm{Margin} \\times \\frac{r}{1 + d - r}$.",
+    "In non-contractual settings (e-commerce, retail), transactions occur at random intervals, and customer attrition is silent and unobserved. If a customer made 5 purchases last year and none in the last 6 months, are they dormant or dead?",
+    "BTYD models (such as Pareto/NBD and the BG/NBD model by Fader et al.) capture this using two intertwined latent processes: while \"alive\", a customer makes repeat purchases according to a Poisson process with rate $\\lambda_i$; after each transaction, the customer has a probability $p_i$ of permanently dropping out (dying).",
+    "Individual purchase rates $\\lambda_i$ and dropout probabilities $p_i$ vary across the customer base according to Gamma and Beta prior distributions, capturing customer heterogeneity. The separate Gamma-Gamma model estimates average monetary transaction value, completing the expected financial CLV calculation."
+  ],
+  "steps": [
+    "Classify business regime: Determine whether business model is contractual (subscription) or non-contractual (retail/e-commerce).",
+    "Aggregate customer RFM summary: For each customer, calculate frequency $x$ (number of repeat transactions), recency $t_x$ (time of last transaction), and total observation time $T$.",
+    "Fit BG/NBD model: Estimate latent purchase rate parameters $(r, \\alpha)$ and dropout parameters $(a, b)$ via maximum likelihood estimation.",
+    "Estimate latent alive probability: Compute $P(\\text{alive}_i \\mid x_i, t_{x,i}, T_i)$ to identify which customers are actively engaged vs dormant.",
+    "Fit Gamma-Gamma monetary model: Model average transaction values to estimate expected spend per transaction conditional on customer history.",
+    "Project discounted net present value: Multiply projected transaction counts over horizon $H$ by expected transaction margin, applying financial discount rate $d$."
+  ],
+  "math": [
+    {
+      "h": "Contractual Infinite-Horizon CLV",
+      "tex": "\\mathrm{CLV} = \\sum_{t=1}^\\infty \\frac{M \\cdot r^t}{(1 + d)^t} = M \\cdot \\frac{r}{1 + d - r}",
+      "p": "Calculates the net present value of expected cash margins $M$ under constant retention rate $r$ and annual discount rate $d$."
+    },
+    {
+      "h": "BG/NBD Latent State Likelihood",
+      "tex": "L(r, \\alpha, a, b \\mid x, t_x, T) = A_1 \\cdot A_2 \\cdot \\left( A_3 + \\mathbb{I}(x > 0) \\cdot A_4 \\right)",
+      "p": "Formulates joint likelihood over observed repeat purchases $x$, recency $t_x$, and tenure $T$, integrating out unobserved customer death times."
+    },
+    {
+      "h": "BG/NBD Probability of Being Alive",
+      "tex": "P(\\text{alive} \\mid x, t_x, T) = \\left( 1 + \\frac{a}{b + x} \\left( \\frac{\\alpha + T}{\\alpha + t_x} \\right)^{r + x} \\right)^{-1}",
+      "p": "Evaluates the probability that a customer remains active given their elapsed recency $(T - t_x)$ relative to their historical transaction frequency $x$."
+    }
+  ],
+  "code": "import numpy as np\n\ndef contractual_clv(monthly_margin: float, monthly_retention: float, annual_discount: float) -> float:\n    \"\"\"Calculate Net Present Value CLV for subscription business.\"\"\"\n    # Convert annual discount rate to monthly\n    monthly_discount = (1.0 + annual_discount) ** (1.0 / 12.0) - 1.0\n    return monthly_margin * (monthly_retention / (1.0 + monthly_discount - monthly_retention))\n\ndef simple_p_alive_heuristic(recency: float, tenure: float, frequency: int) -> float:\n    \"\"\"Heuristic approximation of probability of being alive in non-contractual setting.\"\"\"\n    if frequency == 0:\n        return 0.5\n    avg_inter_arrival = recency / frequency\n    elapsed_since_last = tenure - recency\n    # Decay probability based on how many expected purchase cycles have elapsed since last seen\n    cycles_missed = elapsed_since_last / max(avg_inter_arrival, 1.0)\n    return float(1.0 / (1.0 + np.exp(cycles_missed - 2.0)))\n\n# Example 1: Contractual SaaS Customer ($100/mo margin, 95% monthly retention, 10% discount)\nsaas_clv = contractual_clv(monthly_margin=100.0, monthly_retention=0.95, annual_discount=0.10)\nprint(f\"Contractual SaaS Expected CLV: £{saas_clv:.2f}\")\n\n# Example 2: E-commerce Latent P(Alive)\n# Customer A bought 10 times in 100 days, last bought 5 days ago (tenure 105)\np_alive_a = simple_p_alive_heuristic(recency=100.0, tenure=105.0, frequency=10)\n# Customer B bought 10 times in 100 days, last bought 200 days ago (tenure 300)\np_alive_b = simple_p_alive_heuristic(recency=100.0, tenure=300.0, frequency=10)\n\nprint(f\"Customer A (5 days silent):   P(Alive) = {p_alive_a * 100:.1f}%\")\nprint(f\"Customer B (200 days silent): P(Alive) = {p_alive_b * 100:.1f}%\")",
+  "keyPoints": [
+    "CLV quantifies the total financial net present value a customer brings throughout their entire commercial relationship.",
+    "Contractual businesses have explicit cancellations, modelled via retention discount formulas.",
+    "Non-contractual businesses feature unobserved churn, requiring Buy 'Til You Die (BTYD / BG-NBD) models.",
+    "Expected monetary value per transaction is typically modelled independently using a Gamma-Gamma distribution."
+  ],
+  "pitfalls": [
+    "Applying historical average spend blindly: Assuming a customer who spent £1,000 in their first month will continue spending £1,000 every month ignores natural regression to the mean.",
+    "Confusing revenue with gross margin: Calculating CLV on gross merchandise value (GMV) rather than contribution margin leads to catastrophic overspending on customer acquisition.",
+    "Ignoring discounting: For long horizons (3–5 years), failing to discount future cash flows overstates present financial value."
+  ],
+  "quiz": [
+    {
+      "q": "Why are standard classification models inadequate for predicting customer churn and CLV in non-contractual e-commerce?",
+      "o": [
+        "Because retail customers sign legal contracts every time they purchase",
+        "Because customers never declare when they churn; they simply stop purchasing, leaving the churn event unobserved and latent",
+        "Because e-commerce databases cannot store dates",
+        "Because e-commerce transactions only occur in integer increments"
+      ],
+      "a": 1,
+      "why": "In non-contractual commerce, there is no cancellation notice. An unobserved drop-off must be probabilistically inferred from transaction frequency and recency."
+    },
+    {
+      "q": "In the BG/NBD model, what happens to the estimated $P(\\text{alive})$ as the time elapsed since a customer's last purchase $(T - t_x)$ grows much larger than their typical inter-purchase interval?",
+      "o": [
+        "It increases exponentially towards 1.0",
+        "It monotonically decays towards 0.0 as evidence of latent churn accumulates",
+        "It remains exactly constant",
+        "It oscillates as a sine wave"
+      ],
+      "a": 1,
+      "why": "The longer a customer remains silent relative to their historical purchasing rhythm, the higher the probability that they have permanently dropped out."
+    },
+    {
+      "q": "What is the fundamental business purpose of calculating Customer Lifetime Value (CLV)?",
+      "o": [
+        "To determine how much financial capital can be rationally spent to acquire a customer (CAC) and allocate retention resources",
+        "To replace accounting audits required by tax authorities",
+        "To automatically write code for website frontends",
+        "To normalise input features to zero mean"
+      ],
+      "a": 0,
+      "why": "CLV establishes the economic upper bound for Customer Acquisition Cost (CAC) and dictates optimal budget allocation for customer loyalty and VIP services."
+    }
+  ],
+  "related": [
+    "customer-segmentation-with-rfm",
+    "churn-and-retention-modelling",
+    "cohort-and-funnel-analysis"
+  ],
+  "keywords": "customer lifetime value, clv, ltv, buy til you die, bg-nbd, pareto-nbd, gamma-gamma, non-contractual churn, net present value",
+  "usedBy": []
+},
+
+{
+  "id": "uplift-modelling",
+  "short": "Uplift modelling",
+  "title": "Uplift Modelling and Causal Machine Learning: Persuasion and Treatment Effects",
+  "task": "concepts",
+  "level": 3,
+  "minutes": 17,
+  "noLab": true,
+  "summary": "Estimating Individual Treatment Effects (ITE) and Conditional Average Treatment Effects (CATE) using meta-learners (S-learner, T-learner, X-learner).",
+  "lead": "Standard predictive models predict customer outcomes: who will renew their subscription or who will buy a product. However, targeting customers with the highest propensity to buy often wastes marketing budget on \"Sure Things\" who would have purchased anyway, while bothering \"Sleeping Dogs\" who cancel when contacted. Uplift modelling estimates the incremental causal impact of an intervention, identifying the persuadable segment where treatment changes behaviour.",
+  "analogy": "Imagine a medical triage team administering a vaccine during an epidemic. Some patients will recover naturally on their own (Sure Things), some patients are unfortunately incurable regardless of treatment (Lost Causes), and some will experience dangerous allergic reactions if vaccinated (Sleeping Dogs). The vaccine should be reserved strictly for the Persuadables—the group whose recovery depends directly on receiving the medication.",
+  "intuition": [
+    "In causal inference, each individual $i$ has two potential outcomes: $Y_i(1)$ under treatment $W=1$ (e.g. receiving a marketing discount) and $Y_i(0)$ under control $W=0$. The Individual Treatment Effect is $\\tau_i = Y_i(1) - Y_i(0)$.",
+    "Because an individual cannot simultaneously be treated and untreated (the Fundamental Problem of Causal Inference), we cannot observe both outcomes for the same person. Uplift modelling estimates the Conditional Average Treatment Effect (CATE) $\\tau(x) = \\mathbb{E}[Y(1) - Y(0) \\mid X = x]$.",
+    "Meta-learners frame CATE estimation using standard supervised regression algorithms: The S-Learner (Single learner) includes the treatment indicator $W$ as a feature alongside $X$. However, if $X$ is high-dimensional, regularisation often shrinks the treatment effect towards zero.",
+    "The T-Learner (Two learners) trains two independent models: $\\mu_1(x)$ on treated units and $\\mu_0(x)$ on control units, computing $\\hat{\\tau}(x) = \\hat{\\mu}_1(x) - \\hat{\\mu}_0(x)$. The X-Learner (Künzel et al.) uses imputed counterfactual residuals to dramatically outperform T-learners when treatment and control sample sizes are severely imbalanced.",
+    "Uplift models are evaluated using Qini curves and Cumulative Gain charts, measuring the area under the incremental uplift curve (AUUC)."
+  ],
+  "steps": [
+    "Collect randomised experiment data: Ensure training data derives from an A/B test where treatment assignment $W \\in \\{0, 1\\}$ is completely unconfounded ($W \\perp \\{Y(1), Y(0)\\} \\mid X$).",
+    "Segment customers conceptually: Identify the four archetypes: Persuadables (uplift $> 0$), Sure Things (outcome $1$ regardless), Lost Causes (outcome $0$ regardless), and Sleeping Dogs (uplift $< 0$).",
+    "Select meta-learner architecture: Use S-Learner for tiny datasets, T-Learner for balanced sample sizes, or X-Learner / Causal Forests for complex heterogeneous treatment effects.",
+    "Estimate individual uplift scores: Compute $\\hat{\\tau}(x_i)$ for every candidate customer.",
+    "Evaluate via Qini / Cumulative Gain curves: Rank holdout customers descending by uplift score and compute the cumulative incremental uplift over a random targeting baseline.",
+    "Target positive uplift threshold: Deploy interventions exclusively to customers with $\\hat{\\tau}(x) > \\text{cost of treatment}$."
+  ],
+  "math": [
+    {
+      "h": "Conditional Average Treatment Effect (CATE)",
+      "tex": "\\tau(x) = \\mathbb{E}[Y(1) - Y(0) \\mid X = x] = \\mathbb{E}[Y \\mid X = x, W = 1] - \\mathbb{E}[Y \\mid X = x, W = 0]",
+      "p": "Under unconfoundedness, CATE is identified as the difference between conditional regression surfaces in the treated and control populations."
+    },
+    {
+      "h": "T-Learner Uplift Estimator",
+      "tex": "\\hat{\\tau}_{T}(x) = \\hat{\\mu}_1(x) - \\hat{\\mu}_0(x), \\quad \\hat{\\mu}_1 = \\operatorname{Fit}(X_{\\mathrm{treat}}, Y_{\\mathrm{treat}}), \\; \\hat{\\mu}_0 = \\operatorname{Fit}(X_{\\mathrm{ctrl}}, Y_{\\mathrm{ctrl}})",
+      "p": "Fits two independent supervised models and evaluates their difference, eliminating the risk of treatment feature shrinkage."
+    },
+    {
+      "h": "Qini Metric for Causal Evaluation",
+      "tex": "Q(n) = Y_1(n) - Y_0(n) \\cdot \\frac{N_1(n)}{N_0(n)}",
+      "p": "Measures cumulative incremental conversions among the top $n$ ranked customers, scaling control responses by the treatment-to-control ratio."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.ensemble import GradientBoostingRegressor\n\n# Simulate A/B test data with heterogeneous treatment effects\nnp.random.seed(42)\nN = 1000\n# Features: x0 (baseline loyalty), x1 (price sensitivity)\nX = np.random.uniform(0, 1, size=(N, 2))\n# Randomised treatment assignment (50% treated)\nW = np.random.binomial(1, 0.5, size=N)\n\n# Baseline conversion without discount: high loyalty x0 buys naturally\ny0 = (X[:, 0] > 0.6).astype(float)\n# True treatment effect: discount only persuades price-sensitive users with high x1\ntrue_tau = 0.4 * X[:, 1] - 0.1 * X[:, 0]\n# Observed outcome\ny = np.clip(y0 + W * true_tau + np.random.normal(0, 0.05, N), 0, 1)\n\n# Fit T-Learner: two independent models\nidx_treat = (W == 1)\nidx_ctrl = (W == 0)\n\nmodel_treat = GradientBoostingRegressor(max_depth=3, random_state=42).fit(X[idx_treat], y[idx_treat])\nmodel_ctrl = GradientBoostingRegressor(max_depth=3, random_state=42).fit(X[idx_ctrl], y[idx_ctrl])\n\n# Predict Conditional Average Treatment Effect (CATE)\nX_test = np.array([\n    [0.9, 0.1],  # Sure Thing (high loyalty, low price sensitivity): tau ~ -0.05\n    [0.2, 0.9]   # Persuadable (low loyalty, high price sensitivity): tau ~ +0.34\n])\ncate_pred = model_treat.predict(X_test) - model_ctrl.predict(X_test)\n\nprint(f\"Customer 1 (Sure Thing) predicted uplift:   {cate_pred[0]:+.3f} (Do not send promo!)\")\nprint(f\"Customer 2 (Persuadable) predicted uplift:  {cate_pred[1]:+.3f} (Send promo!)\")",
+  "keyPoints": [
+    "Uplift modelling estimates the incremental causal effect of an intervention rather than baseline response propensity.",
+    "Separates customers into Persuadables, Sure Things, Lost Causes, and Sleeping Dogs.",
+    "T-learners fit independent models on treated and control cohorts to avoid regularising away treatment effects.",
+    "Models are evaluated using Qini curves and Area Under the Uplift Curve (AUUC)."
+  ],
+  "pitfalls": [
+    "Training on observational data with unmeasured confounders: If discounts were given only to high-spending users historically, models learn confounding bias rather than true causal uplift.",
+    "Targeting high-propensity users: Relying on standard churn/conversion propensity scores causes companies to subsidise customers who would have converted anyway.",
+    "S-Learner bias: In high-dimensional settings, an S-Learner tree model may never split on the treatment indicator $W$, predicting zero treatment effect everywhere."
+  ],
+  "quiz": [
+    {
+      "q": "Why is targeting customers based on standard response propensity (propensity to buy) often suboptimal compared to uplift modelling?",
+      "o": [
+        "Propensity models require non-linear neural networks",
+        "High propensity customers are often \"Sure Things\" who would have purchased without any expensive promotional discount",
+        "Propensity models cannot be evaluated with cross-validation",
+        "Uplift models run ten times faster than propensity models"
+      ],
+      "a": 1,
+      "why": "Propensity models identify who will buy, not who was caused to buy by the intervention. Marketing to Sure Things wastes budget with zero incremental revenue."
+    },
+    {
+      "q": "In uplift segmentation terminology, who are the \"Sleeping Dogs\"?",
+      "o": [
+        "Customers who churn immediately after signup",
+        "Customers who would remain positive or active if left alone, but react negatively (e.g. unsubscribe or cancel) when contacted",
+        "Inactive accounts with zero transactions",
+        "Bots and scrapers crawling the website"
+      ],
+      "a": 1,
+      "why": "Sleeping Dogs have negative treatment effects: reminding them of a subscription reminds them to cancel, making the intervention actively destructive."
+    },
+    {
+      "q": "What is the primary vulnerability of the single-model S-Learner when estimating treatment effects?",
+      "o": [
+        "It cannot process continuous outcomes",
+        "Regularisation algorithms (like Lasso or tree depth penalties) can easily shrink or ignore the single treatment indicator column, falsely estimating zero uplift",
+        "It requires two separate databases to run",
+        "It divides by zero on unlabelled data"
+      ],
+      "a": 1,
+      "why": "Because the treatment flag is just one feature among many, decision trees and regularised models frequently drop it, causing treatment effect estimates to vanish."
+    }
+  ],
+  "related": [
+    "churn-and-retention-modelling",
+    "cohort-and-funnel-analysis",
+    "a-b-testing-end-to-end"
+  ],
+  "keywords": "uplift modelling, causal inference, cate, treatment effects, t-learner, s-learner, x-learner, qini curve, sleeping dogs, persuadables",
+  "usedBy": []
+},
+
+{
+  "id": "dashboards-and-storytelling",
+  "short": "Dashboards & storytelling",
+  "title": "Dashboards and Storytelling: Translating Analytical Insights into Executive Decisions",
+  "task": "concepts",
+  "level": 1,
+  "minutes": 14,
+  "noLab": true,
+  "summary": "Structuring diagnostic dashboards, executive narrative hierarchies, cognitive load reduction, and action-oriented analytical storytelling.",
+  "lead": "The most technically sophisticated machine learning model or analytical model is worthless if stakeholders cannot understand its findings or trust its recommendations. Dashboards and data storytelling bridge the gap between technical data science and business leadership. Crafting clear visual hierarchies, minimising cognitive clutter, and structuring narratives around actionable business decisions transforms raw metrics into operational impact.",
+  "analogy": "Imagine an airplane cockpit versus an automobile speedometer. An aeronautical engineer might desire 80 dials showing fuel pump temperatures and hydraulic pressures, but an airline pilot navigating turbulence needs immediate, unmistakable indicators: airspeed, altitude, and artificial horizon. A great executive dashboard is not a data junkyard—it is a clear heads-up display designed for fast, accurate decisions.",
+  "intuition": [
+    "Data dashboards fail primarily due to three architectural errors: cognitive overload (stuffing every possible metric onto one screen), lack of narrative context (showing a number without showing whether it is good, bad, or expected), and lack of actionability (displaying metrics that business users cannot influence).",
+    "Effective dashboard design adheres to the Five-Second Rule: within five seconds of opening the view, an executive should understand the current state of business performance (red/amber/green) and know where attention is required.",
+    "Visual hierarchies follow the Inverted Pyramid narrative structure: high-level KPI scorecards at the top (What happened?), diagnostic breakdown charts in the middle (Why did it happen?), and granular tabular drill-downs at the bottom (What specific actions should be taken?).",
+    "Storytelling with data structures insights around the classic narrative arc: Context (baseline performance) $\\to$ Conflict (an unexpected metric deviation or emerging bottleneck) $\\to$ Resolution (data-backed recommendations for corrective action)."
+  ],
+  "steps": [
+    "Define core audience and decision mandate: Determine whether the dashboard serves C-level executives (strategic KPI tracking), managers (operational diagnosis), or frontline analysts (granular drill-down).",
+    "Establish primary KPI scorecard: Place 3 to 5 core outcome metrics at the top with explicit baseline comparisons (vs prior week, vs budget, vs forecast).",
+    "Design diagnostic breakdowns: Use bar charts, waterfall charts, or cohort heatmaps to explain variance by geography, customer segment, or product line.",
+    "Minimise non-data ink: Strip away decorative 3D effects, heavy gridlines, dark borders, and saturated rainbow palettes (Edward Tufte's data-to-ink ratio).",
+    "Enforce visual consistency: Ensure colours carry uniform semantic meaning throughout (e.g. green strictly indicates positive performance, amber indicates warning, blue indicates neutral categories).",
+    "Frame insights as actionable recommendations: Accompany visual charts with concise narrative callouts summarising the primary takeaway and recommended next step."
+  ],
+  "math": [
+    {
+      "h": "Data-to-Ink Ratio (Tufte Formulation)",
+      "tex": "\\mathrm{DIR} = \\frac{\\text{Data-Ink}}{\\text{Total Ink Used to Produce Graphic}} = 1.0 - \\text{Proportion of Decorative Clutter}",
+      "p": "Maximising the data-to-ink ratio eliminates non-informational visual noise, reducing viewer cognitive load."
+    },
+    {
+      "h": "Period-over-Period Variance Attribution",
+      "tex": "\\Delta Y = Y_t - Y_{t-1} = \\sum_{k=1}^K \\left( w_{k,t} y_{k,t} - w_{k,t-1} y_{k,t-1} \\right)",
+      "p": "Decomposes aggregate KPI shifts into component volume effects ($w_k$) and rate effects ($y_k$) across business segments in waterfall charts."
+    },
+    {
+      "h": "Cognitive Chunking Capacity (Miller's Law)",
+      "tex": "N_{\\mathrm{metrics}} \\le 7 \\pm 2 \\implies \\text{Target } 3 \\text{ to } 5 \\text{ Primary KPIs per Screen}",
+      "p": "Human working memory processes at most 5–9 distinct visual elements simultaneously without experiencing comprehension degradation."
+    }
+  ],
+  "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\n# Executive waterfall chart: Explaining revenue variance from Budget to Actual\ncategories = ['Budget', 'Volume (+)', 'Price (+)', 'Churn (-)', 'FX Drift (-)', 'Actual']\ndeltas = [100.0, 15.0, 8.0, -12.0, -5.0, 0.0]  # Final value calculated as sum\n\n# Calculate cumulative waterfall positions\nbottoms = [0.0]\nrunning = 100.0\nfor d in deltas[1:-1]:\n    if d > 0:\n        bottoms.append(running)\n        running += d\n    else:\n        running += d\n        bottoms.append(running)\nbottoms.append(0.0)  # Actual starts from ground\ndeltas[-1] = running  # Actual total\n\ncolours = ['#334155', '#10B981', '#10B981', '#EF4444', '#EF4444', '#1E40AF']\n\nfig, ax = plt.subplots(figsize=(8, 4.5))\nbars = ax.bar(categories, [abs(d) for d in deltas], bottom=bottoms, colour=colours, width=0.55)\n\n# Formatting: Clean typography, high data-to-ink ratio\nax.spines['top'].set_visible(False)\nax.spines['right'].set_visible(False)\nax.yaxis.grid(True, linestyle='--', alpha=0.3)\nax.set_ylabel('Revenue (£M)', fontsize=11, fontweight='bold')\nax.set_title('Executive Revenue Walk: Budget vs Actuals (£106M vs £100M)', fontsize=12, pad=15)\n\nprint(\"Executive Story: Revenue exceeded budget by £6M due to strong enterprise volume, despite £12M churn.\")",
+  "keyPoints": [
+    "Effective dashboards focus on actionable decisions rather than exhaustive data dumps.",
+    "The inverted pyramid organizes views: top-level KPIs $\\to$ diagnostic breakdowns $\\to$ detailed records.",
+    "Maximise the data-to-ink ratio by stripping away non-essential gridlines, 3D effects, and decorative colours.",
+    "Analytical storytelling pairs visual charts with clear narrative context: Baseline $\\to$ Deviation $\\to$ Action."
+  ],
+  "pitfalls": [
+    "Rainbow colour schemes: Using distinct bright colours for 15 categories forces users to constantly refer back and forth to legends, overwhelming working memory.",
+    "Metrics without baselines: Displaying \"Weekly Revenue: £450,000\" provides zero value unless accompanied by context (e.g. \"-12% vs target\").",
+    "Overloading a single dashboard: Attempting to build one monolithic dashboard that satisfies executives, engineers, and financial auditors simultaneously pleases nobody."
+  ],
+  "quiz": [
+    {
+      "q": "What does Edward Tufte's \"Data-to-Ink Ratio\" advocate in dashboard and chart design?",
+      "o": [
+        "Using as much colourful ink as possible to make reports vibrant",
+        "Maximising the proportion of ink devoted strictly to communicating actual data while eliminating decorative clutter and non-informative borders",
+        "Printing physical paper reports rather than viewing dashboards on monitors",
+        "Using dark mode themes exclusively"
+      ],
+      "a": 1,
+      "why": "The data-to-ink ratio states that the majority of ink should represent data. Non-data ink (heavy gridlines, borders, decorative ornaments) should be pruned."
+    },
+    {
+      "q": "What is the \"Five-Second Rule\" in executive dashboard design?",
+      "o": [
+        "Dashboards must automatically refresh their database connections every five seconds",
+        "A user should be able to discern the overall status of performance and identify primary problem areas within five seconds of viewing",
+        "Visual animations must last at least five seconds to engage users",
+        "Dashboards should be permanently deleted if not visited every five seconds"
+      ],
+      "a": 1,
+      "why": "Executive dashboards must provide instant clarity. If an executive cannot grasp current status and anomalies within five seconds, the dashboard is overly complex."
+    },
+    {
+      "q": "Which chart type is most effective for explaining how several positive and negative factors caused an outcome to deviate from its target budget?",
+      "o": [
+        "A 3D pie chart with 20 slices",
+        "A waterfall chart (bridge chart) showing sequential positive and negative step contributions",
+        "A radar chart with overlapping polygons",
+        "A word cloud"
+      ],
+      "a": 1,
+      "why": "Waterfall charts illustrate how an initial value increases or decreases through a series of intermediate steps to reach a final total, making variance attribution immediately obvious."
+    }
+  ],
+  "related": [
+    "data-visualisation-principles",
+    "metric-design-and-north-star-metrics",
+    "communicating-uncertainty"
+  ],
+  "keywords": "dashboards, data storytelling, data-to-ink ratio, tufte, waterfall chart, executive reporting, visual hierarchy, kpi scorecard, cognitive load",
+  "usedBy": []
+},
+
+{
+  "id": "communicating-uncertainty",
+  "short": "Communicating uncertainty",
+  "title": "Communicating Uncertainty: Error Bars, Fan Charts, and Decision Risks",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Presenting probabilistic estimates, prediction intervals, and risk bounds to non-technical stakeholders without creating decision paralysis.",
+  "lead": "Machine learning engineers naturally think in terms of distributions, confidence intervals, and standard deviations. Non-technical decision makers, however, crave binary certainty: \"Will our revenue meet target or not?\" When technical teams conceal uncertainty by delivering single point estimates, businesses fail to build risk buffers and are blindsided when reality fluctuates. Communicating uncertainty effectively requires intuitive visual representations that convey risk without causing decision paralysis.",
+  "analogy": "Imagine a weather app forecasting tomorrow's commute. If it says \"it will rain 3.2 mm\", you might leave your umbrella at home thinking 3.2 mm is negligible, only to get soaked by a torrential storm. If it shows \"80% chance of rain with potential downpours between 4 PM and 6 PM\", you immediately know to pack a raincoat and plan travel around the high-risk window.",
+  "intuition": [
+    "Concealing uncertainty produces the \"Flaw of Averages\": plans based on average assumptions fail on average because real-world costs and capacities are non-linear (e.g. a warehouse designed for average shipments overflows during peak days).",
+    "Presenting uncertainty through raw technical jargon ($p$-values, standard errors, confidence vs prediction intervals) confuses stakeholders. Business leaders interpret a \"95% confidence interval\" as \"there is a 95% chance the true future value falls here\", conflating parameter estimation with future outcome spread.",
+    "Visual metaphors matter: Standard error bars are frequently misread as \"the full range of possible values\". Gradient fan charts (shaded opacity ribbons), probability density strips, and hypothetical outcome plots (HOPs) visually reinforce that values near the centre are substantially more probable than extreme edges.",
+    "Frame uncertainty in terms of operational decisions and risk thresholds rather than abstract probabilities. Instead of saying \"there is a 12% probability of stockout\", state: \"under this ordering policy, we expect a stockout once every 8 quarters, risking £45,000 in lost revenue.\""
+  ],
+  "steps": [
+    "Distinguish confidence vs prediction intervals: Ensure communication explicitly differentiates uncertainty about an average model parameter from uncertainty about a single future customer outcome.",
+    "Select visual metaphor: Use gradient fan charts for time series forecasts and violin / density strips for cross-sectional predictions, avoiding thin error bars.",
+    "Present discrete scenarios alongside continuous bands: Pair probability intervals with concrete \"Bear / Base / Bull\" narrative scenario descriptions.",
+    "Translate probabilities to frequencies and expected losses: Convert abstract percentiles into natural frequencies (e.g. \"1 in 10 chance\") and financial impact bounds.",
+    "Highlight decision thresholds: Overlay the operational break-even or capacity limit line directly onto the probability distribution.",
+    "Provide interactive sensitivity controls: Allow decision makers to adjust risk tolerance sliders (e.g. toggling from p50 median to p90 conservative risk posture)."
+  ],
+  "math": [
+    {
+      "h": "Prediction Interval vs Confidence Interval Width",
+      "tex": "\\mathrm{Var}(\\hat{y}_{\\mathrm{pred}}) = \\underbrace{\\sigma^2}_{\\text{Irreducible Noise}} + \\underbrace{\\mathbf{x}_0^T (\\mathbf{X}^T \\mathbf{X})^{-1} \\mathbf{x}_0 \\sigma^2}_{\\text{Parameter Estimation Uncertainty}}",
+      "p": "Prediction intervals for individual future instances are substantially wider than confidence intervals for the mean response because they incorporate irreducible observation variance $\\sigma^2$."
+    },
+    {
+      "h": "Expected Value Under Uncertainty (Decision Rule)",
+      "tex": "\\mathbb{E}[U(a)] = \\int_{-\\infty}^\\infty U(a, y) \\cdot p(y \\mid x) \\, dy",
+      "p": "Optimal decision $a^*$ maximises expected utility by integrating payoff function $U(a, y)$ across the full predicted probability density $p(y \\mid x)$."
+    },
+    {
+      "h": "Value at Risk (VaR) and Tail Risk",
+      "tex": "P(L > \\mathrm{VaR}_\\alpha) = 1 - \\alpha, \\quad \\mathrm{CVaR}_\\alpha = \\mathbb{E}[L \\mid L > \\mathrm{VaR}_\\alpha]",
+      "p": "Communicates financial downside risk by quantifying the threshold loss $\\mathrm{VaR}_\\alpha$ and the expected loss in the worst $(1 - \\alpha)$ tail."
+    }
+  ],
+  "code": "import numpy as np\n\ndef explain_forecast_risk(p10: float, p50: float, p90: float, budget_target: float):\n    \"\"\"Translate quantile forecasts into actionable executive risk narrative.\"\"\"\n    iqr_spread = p90 - p10\n    skewness = \"symmetric\"\n    if (p90 - p50) > 1.3 * (p50 - p10):\n        skewness = \"skewed upside (high breakout potential)\"\n    elif (p50 - p10) > 1.3 * (p90 - p50):\n        skewness = \"skewed downside (vulnerable to severe drops)\"\n        \n    print(f\"=== Executive Uncertainty Briefing ===\")\n    print(f\"Base Case (Median):     £{p50:,.0f}\")\n    print(f\"80% Plausible Range:    £{p10:,.0f} to £{p90:,.0f} (Spread: £{iqr_spread:,.0f})\")\n    print(f\"Distribution Shape:     {skewness}\")\n    \n    if budget_target < p10:\n        print(f\"Target £{budget_target:,.0f} Assessment: Very Low Risk (>90% probability of meeting target).\")\n    elif budget_target <= p50:\n        print(f\"Target £{budget_target:,.0f} Assessment: Moderate Risk (~50-80% probability of meeting target).\")\n    elif budget_target <= p90:\n        print(f\"Target £{budget_target:,.0f} Assessment: High Risk (~10-50% probability; requires contingency).\")\n    else:\n        print(f\"Target £{budget_target:,.0f} Assessment: Critical Risk (<10% probability; budget unrealistic).\")\n\n# Scenario: Forecasting next quarter sales with downside volatility\nexplain_forecast_risk(p10=82000, p50=105000, p90=112000, budget_target=100000)",
+  "keyPoints": [
+    "Point forecasts conceal risk, leading to the \"Flaw of Averages\" in operations and budgeting.",
+    "Prediction intervals model single future outcomes and are always wider than confidence intervals for the mean.",
+    "Shaded fan charts and density strips communicate probability density far more intuitively than thin error bars.",
+    "Translate probabilities into natural frequencies (\"1 in 5 years\") and clear financial loss boundaries."
+  ],
+  "pitfalls": [
+    "Conflating confidence intervals with prediction intervals: Reporting a narrow 95% confidence interval for the average as if it represented individual customer outcomes severely understates real-world variance.",
+    "Paralysing the audience with technical jargon: Spending meeting time debating heteroscedasticity rather than discussing operational risk buffers causes decision makers to ignore the model entirely.",
+    "Presenting false symmetry: Applying $\\pm 10\\%$ symmetrically when real risk is heavily skewed towards catastrophic downside."
+  ],
+  "quiz": [
+    {
+      "q": "What is the \"Flaw of Averages\" in business decision making?",
+      "o": [
+        "Calculators fail when dividing by large integers",
+        "Plans based on average assumptions fail on average because real-world costs and operational capacities respond non-linearly to fluctuations",
+        "Averages are mathematically harder to compute than medians",
+        "Every customer has an average lifetime value of zero"
+      ],
+      "a": 1,
+      "why": "Because revenue, capacity limits, and stockout costs are non-linear, planning around a single average number fails whenever real-world demand swings above or below average."
+    },
+    {
+      "q": "Why are prediction intervals substantially wider than confidence intervals for the regression mean?",
+      "o": [
+        "Prediction intervals include irreducible random noise $\\sigma^2$ inherent to an individual observation, whereas confidence intervals only reflect parameter estimation variance",
+        "Prediction intervals are always calculated at the 99.9% level",
+        "Confidence intervals ignore sample size",
+        "Prediction intervals can only be computed with deep neural networks"
+      ],
+      "a": 0,
+      "why": "A confidence interval bounds the mean of the population $\\mathbb{E}[y|x]$, which shrinks towards zero with large $N$. A prediction interval predicts a single individual outcome $y = \\hat{y} + \\epsilon$, which retains irreducible error $\\sigma^2$."
+    },
+    {
+      "q": "What is the most effective way to communicate a 10% risk of system failure to non-technical operational managers?",
+      "o": [
+        "State that $p = 0.1000$ with 3 degrees of freedom",
+        "Translate the probability into natural frequency: \"This system is expected to fail once every 10 quarters, with an estimated downtime cost of £50,000\"",
+        "Refuse to share the number because 10% is statistically insignificant",
+        "Tell them the failure is impossible because 90% is high"
+      ],
+      "a": 1,
+      "why": "Cognitive research shows that natural frequencies (\"1 in 10\") paired with concrete operational impacts are understood far more accurately than raw decimal probabilities."
+    }
+  ],
+  "related": [
+    "probabilistic-forecasts-and-quantile-loss",
+    "dashboards-and-storytelling",
+    "confidence-intervals"
+  ],
+  "keywords": "communicating uncertainty, prediction intervals, error bars, fan charts, flaw of averages, risk communication, decision analysis, value at risk",
+  "usedBy": []
+},
+
+{
+  "id": "ci-cd-for-ml",
+  "short": "CI/CD for ML",
+  "title": "CI/CD for Machine Learning: Continuous Integration, Testing, and Automated Delivery",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Automating ML test suites, data pipeline regression tests, model quality gates, and containerised delivery using GitHub Actions and modern MLOps.",
+  "lead": "Continuous Integration and Continuous Delivery (CI/CD) revolutionized traditional software engineering by automating testing and deployment. In machine learning, however, traditional code unit tests are fundamentally insufficient: code can be 100% bug-free and pass every linting check, while the resulting model is completely dysfunctional due to data leakage, silent feature corruption, or performance degradation. CI/CD for ML (CT/CD) expands automation to test code, data, and models.",
+  "analogy": "Imagine an automated rocket assembly line. Standard software CI tests whether the robotic welding arms move correctly and screws fit into their sockets. ML CI goes a giant step further: it tests the purity of the rocket fuel in the tanks, tests that the payload weight matches physics calculations, and conducts a simulated static engine test fire in a wind tunnel before granting the rocket clearance for launch.",
+  "intuition": [
+    "Traditional CI verifies code syntax, unit tests, and integration tests. ML CI/CD introduces two new testing dimensions: Data Validation (testing data schemas, distributions, and null ratios) and Model Quality Testing (testing model accuracy, inference latency, bias, and adversarial robustness).",
+    "Continuous Training (CT) is a unique ML capability: when new data arrives or model decay alerts trigger, an automated pipeline re-executes data prep, hyperparameter tuning, model training, and evaluation without manual human intervention.",
+    "A robust ML CI pipeline executes tiered test gates: Fast pull request tests (code linting, unit tests on synthetic micro-datasets, schema validation), Nightly integration tests (end-to-end pipeline execution on sampled data), and Release qualification gates (evaluating trained candidate models against production champions on golden benchmark sets).",
+    "Continuous Delivery packages validated models into reproducible container images (Docker), registers them in an immutable model registry (MLflow / Vertex AI), and deploys them to staging environments for shadow testing and canary rollouts."
+  ],
+  "steps": [
+    "Fast PR gate: Run linters (Ruff, Flake8), type checks (Mypy), and unit tests on mock data fixtures using lightweight runners (GitHub Actions).",
+    "Data pipeline validation: Run automated data regression tests asserting that preprocessing functions preserve row counts, prevent lookahead leakage, and handle missing values.",
+    "Automated training & qualification: Train candidate model on staging data and evaluate performance against golden regression test suites and safety baselines.",
+    "Model card & metadata logging: Generate automated model performance cards documenting accuracy across demographic slices, latency benchmarks, and carbon footprint.",
+    "Containerisation & registry push: Build Docker image embedding dependencies and model weights; register with semantic versioning tag (`v2.4.0-rc1`).",
+    "Canary deployment & telemetry monitoring: Deploy container to production cluster with progressive traffic routing (5% $\\to$ 25% $\\to$ 100%) governed by automated error-budget alerts."
+  ],
+  "math": [
+    {
+      "h": "Non-Regression Quality Gate Assertion",
+      "tex": "\\mathcal{M}_{\\mathrm{cand}}(\\mathcal{D}_{\\mathrm{test}}) \\ge \\mathcal{M}_{\\mathrm{prod}}(\\mathcal{D}_{\\mathrm{test}}) - \\epsilon_{\\mathrm{tolerance}} \\;\\land\\; \\mathrm{Latency}_{\\mathrm{p99}} \\le L_{\\max}",
+      "p": "A candidate model passes the deployment gate only if its metric $\\mathcal{M}$ meets parity with the production model within tolerance $\\epsilon$, and its 99th percentile inference latency is below threshold $L_{\\max}$."
+    },
+    {
+      "h": "Slicing Invariance Fairness Constraint",
+      "tex": "\\max_{s \\in \\mathcal{S}} \\left| \\mathcal{M}_{\\mathrm{cand}}(\\mathcal{D}_s) - \\mathcal{M}_{\\mathrm{cand}}(\\mathcal{D}_{\\mathrm{test}}) \\right| \\le \\delta_{\\mathrm{slice}}",
+      "p": "Ensures model performance does not severely degrade on critical sub-populations or demographic slices $s \\in \\mathcal{S}$."
+    },
+    {
+      "h": "Canary Traffic Shift Transition",
+      "tex": "w_{\\mathrm{cand}}(t) = \\min\\left( 1.0, \\; w_{\\mathrm{cand}}(0) + \\alpha \\cdot t \\right) \\;\\text{if } \\operatorname{Errors}(t) < \\tau_{\\mathrm{error}}",
+      "p": "Canary traffic weight $w_{\\mathrm{cand}}$ expands linearly over time $t$ provided production operational error rates remain below threshold $\\tau_{\\mathrm{error}}$."
+    }
+  ],
+  "code": "import pytest\nimport numpy as np\n\n# Example: Production ML Unit & Integration Tests (pytest style)\n\ndef test_feature_pipeline_zero_leakage():\n    \"\"\"Assert feature scaling does not leak mean across train and test partitions.\"\"\"\n    train_data = np.array([10.0, 20.0, 30.0])\n    test_data = np.array([100.0, 200.0])\n    \n    train_mean = np.mean(train_data)\n    # Scaled test data must use train_mean, NOT test_mean!\n    scaled_test = test_data - train_mean\n    assert np.allclose(scaled_test, [80.0, 180.0]), \"Test scaling leaked out-of-fold statistics!\"\n\ndef test_model_inference_latency_benchmark():\n    \"\"\"Assert candidate model satisfies SLA under 20 milliseconds per sample.\"\"\"\n    import time\n    # Simulate forward pass on batch\n    start = time.perf_counter()\n    _ = np.dot(np.random.randn(1, 50), np.random.randn(50, 1))\n    elapsed_ms = (time.perf_counter() - start) * 1000.0\n    assert elapsed_ms < 20.0, f\"Inference latency breached SLA: {elapsed_ms:.2f}ms\"\n\ndef test_model_non_negative_predictions():\n    \"\"\"Domain assertion: Model predicting house prices must never output negative numbers.\"\"\"\n    dummy_preds = np.array([250000.0, 180000.0, 420000.0])\n    assert np.all(dummy_preds >= 0.0), \"Model generated invalid negative prices!\"\n\nprint(\"CI/CD Test Suite Passed: Zero leakage, latency within SLA, valid prediction bounds.\")",
+  "keyPoints": [
+    "CI/CD for ML expands standard software CI to test code, data, and models.",
+    "Automated qualification gates evaluate candidate models against incumbent production champions.",
+    "Data regression tests verify that preprocessing logic prevents lookahead data leakage.",
+    "Continuous Delivery packages models into reproducible Docker images deployed via canary rollouts."
+  ],
+  "pitfalls": [
+    "Testing only model accuracy: Deploying a model that achieves 92% AUC but has a 400ms inference latency crashes user-facing web services under live load.",
+    "Testing on dynamic unpinned test sets: If the CI test dataset changes constantly, tests become flaky and pass or fail due to data shifts rather than model changes.",
+    "Running 8-hour deep learning training inside pull request CI: PR test runs should use small synthetic fixtures; full retraining should run in separate nightly CT pipelines."
+  ],
+  "quiz": [
+    {
+      "q": "Why are traditional software unit tests insufficient for validating machine learning systems?",
+      "o": [
+        "Because Python does not support unit testing",
+        "Because ML code can compile and run with 100% test coverage while the resulting model is completely corrupted due to data leakage or metric degradation",
+        "Because unit tests cannot run on Linux servers",
+        "Because ML algorithms only work in Jupyter Notebooks"
+      ],
+      "a": 1,
+      "why": "Traditional unit tests verify software syntax and logic execution, but cannot detect data distribution shifts, subtle lookahead leakage, or degraded statistical predictive performance."
+    },
+    {
+      "q": "What is the role of a \"golden evaluation dataset\" in an ML CI/CD pipeline?",
+      "o": [
+        "It is a dataset that costs millions of pounds to store in cloud storage",
+        "A curated, immutable benchmark dataset used to evaluate every candidate model under identical conditions before production deployment",
+        "A dataset containing only positive conversion labels",
+        "A dataset encrypted with blockchain technology"
+      ],
+      "a": 1,
+      "why": "An immutable golden test set ensures that candidate models are judged objectively against the exact same test cases as the incumbent model, preventing regressions."
+    },
+    {
+      "q": "What is \"Continuous Training\" (CT) in the context of MLOps pipelines?",
+      "o": [
+        "Requiring data scientists to take weekly machine learning examinations",
+        "An automated pipeline that retrains, tests, and validates models automatically whenever new data arrives or performance decay triggers fire",
+        "Running a model continuously without ever turning off the server",
+        "A neural network that never converges to a loss minimum"
+      ],
+      "a": 1,
+      "why": "CT automates the training and validation lifecycle, triggering retraining automatically in response to data updates or performance drift."
+    }
+  ],
+  "related": [
+    "docker-and-reproducible-environments",
+    "serving-models-with-fastapi",
+    "data-quality-checks"
+  ],
+  "keywords": "ci/cd for ml, mlops, continuous integration, continuous delivery, continuous training, model qualification gates, golden evaluation set, automated testing",
+  "usedBy": []
+}
 ];
