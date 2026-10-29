@@ -3863,5 +3863,1649 @@ print(f"  F1-Score:  {bs_f1:.4f}")
     keywords: 'evaluation bleu rouge rouge-l bertscore llm-as-a-judge position bias verbosity bias nlg metrics spearman correlation',
   },
 
-  // ------------------------------------------------------------------ 3. Intelligent agents and environments (ai)
+  // ------------------------------------------------------------------ 3. Intelligent agents and environments (ai),
+  {
+    "id": "phonetic-matching-soundex",
+    "short": "Phonetic Matching & Soundex",
+    "title": "Phonetic Matching: Soundex, Metaphone, and String Distance",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Phonetic algorithms encode words based on phonetic pronunciation patterns, ignoring minor spelling variations and silent letters. The classic Soundex algorithm retains the first letter and encodes subsequent consonants into six acoustic phonetic classes, producing a fixed 4-character code. Metaphone and Double Metaphone incorporate English pronunciation rules, diphthongs, and non-English spelling nuances for superior precision. Hybrid deduplication pipelines combine phonetic hashing with string edit distance (Levenshtein, Jaro-Winkler) for scalable entity matching.",
+    "lead": "Phonetic matching indexes words and names by pronunciation rather than literal spelling, resolving orthographic errors and acoustic ambiguities. Algorithmic approaches such as Soundex, Metaphone, and Double Metaphone map phonemes into discrete acoustic hash buckets, enabling robust entity resolution and fuzzy retrieval.",
+    "analogy": "Imagine a busy airport check-in desk where a gate agent shouts passenger names across a noisy terminal. Regardless of whether a traveller's boarding pass spells their surname as \"Mayer\", \"Meyer\", or \"Meier\", the acoustic signature arriving at the passenger's ear is identical. Phonetic algorithms formalise this acoustic listening filter into deterministic mathematical rules.",
+    "intuition": [
+      "Names and common terms in natural language are frequently misspelt due to acoustic similarity: \"Smith\", \"Smyth\", and \"Smithe\" are spelled differently but spoken identically in English. Standard string search or Levenshtein distance treats \"Smith\" and \"Smyth\" as distinct strings with edit distance 1, which becomes expensive when querying millions of database records. Phonetic algorithms like Soundex solve this by collapsing acoustically equivalent phonemes into the same hash code (e.g. all three map to \"S530\"). By transforming strings into phonetic representations upfront, databases can match phonetically identical entities using constant-time hash lookups or index scans, reserving expensive fuzzy edit distance comparisons only for ambiguous secondary ranking."
+    ],
+    "steps": [
+      "Normalise text: convert strings to uppercase and strip non-alphabetical punctuation and whitespace.",
+      "Record initial anchor: retain the very first character of the word as the leading character of the phonetic key.",
+      "Encode remaining characters: map letters to their acoustic category digits (1 through 6) while flagging vowels and silent consonants as 0.",
+      "Deduplicate adjacent codes: collapse consecutive identical code digits into a single occurrence.",
+      "Remove vowels and non-consonant markers: strip all zeros from the encoded digit sequence.",
+      "Format fixed-length output: pad with trailing zeros or truncate to produce the standardised 4-character identifier."
+    ],
+    "math": [
+      {
+        "h": "Phonetic Matching: Soundex, Metaphone, and String Distance formulation (Part 1)",
+        "tex": "f(c) = \\begin{cases} 1 & c \\in \\{B, F, P, V\\} \\\\ 2 & c \\in \\{C, G, J, K, Q, S, X, Z\\} \\\\ 3 & c \\in \\{D, T\\} \\\\ 4 & c \\in \\{L\\} \\\\ 5 & c \\in \\{M, N\\} \\\\ 6 & c \\in \\{R\\} \\\\ 0 & c \\in \\{A, E, I, O, U, H, W, Y\\} \\end{cases}",
+        "p": "Rule constraints apply: 1. Adjacent consonants with the identical digit code are collapsed into one single digit. 2. Vowels and ${H, W, Y}$ (code 0) are dropped after the initial letter. 3. The res..."
+      },
+      {
+        "h": "Phonetic Matching: Soundex, Metaphone, and String Distance formulation (Part 2)",
+        "tex": "D(i, j) = \\begin{cases} \\max(i, j) & \\min(i, j) = 0 \\\\ \\min \\begin{cases} D(i-1, j) + 1 \\\\ D(i, j-1) + 1 \\\\ D(i-1, j-1) + \\mathbb{I}(s_i \\ne t_j) \\end{cases} & \\text{otherwise} \\end{cases}",
+        "p": "Rule constraints apply: 1. Adjacent consonants with the identical digit code are collapsed into one single digit. 2. Vowels and ${H, W, Y}$ (code 0) are dropped after the initial letter. 3. The res..."
+      }
+    ],
+    "code": "def soundex(word):\n    \"\"\"Computes the classic American Soundex code for an input word.\"\"\"\n    if not word or not isinstance(word, str):\n        return \"\"\n    \n    # 1. Clean and capitalise\n    cleaned = \"\".join([c.upper() for c in word if c.isalpha()])\n    if not cleaned:\n        return \"\"\n    \n    first_letter = cleaned[0]\n    \n    # Mapping table\n    mapping = {\n        'B': '1', 'F': '1', 'P': '1', 'V': '1',\n        'C': '2', 'G': '2', 'J': '2', 'K': '2', 'Q': '2', 'S': '2', 'X': '2', 'Z': '2',\n        'D': '3', 'T': '3',\n        'L': '4',\n        'M': '5', 'N': '5',\n        'R': '6'\n    }\n    \n    # 2. Encode characters\n    digits = []\n    prev_code = mapping.get(first_letter, '0')\n    \n    for char in cleaned[1:]:\n        code = mapping.get(char, '0')\n        if code != '0':\n            if code != prev_code:\n                digits.append(code)\n            prev_code = code\n        else:\n            prev_code = '0'  # Vowel or H/W/Y resets adjacent collapse\n            \n    # 3. Truncate or pad to exactly 3 digits\n    digits_str = \"\".join(digits)[:3]\n    return (first_letter + digits_str).ljust(4, '0')\n\n# Demonstrate phonetic matching across variant spellings\nnames = [\"Smith\", \"Smyth\", \"Smithe\", \"Schmidt\", \"Robert\", \"Rupert\"]\nencoded = {name: soundex(name) for name in names}\n\nprint(\"Phonetic Soundex Codes:\")\nfor name, code in encoded.items():\n    print(f\"  {name:10} -> {code}\")\n\n# Verification of matching clusters\nassert soundex(\"Smith\") == soundex(\"Smyth\") == soundex(\"Smithe\")\nassert soundex(\"Robert\") == soundex(\"Rupert\")\nprint(\"\\nEquivalence verified: ('Smith', 'Smyth', 'Smithe') all map to S530.\")\nprint(\"Equivalence verified: ('Robert', 'Rupert') both map to R163.\")",
+    "keyPoints": [
+      "Phonetic matching indexes words by acoustic consonant signatures, bypassing superficial orthographic and typographical discrepancies.",
+      "Soundex produces deterministic 4-character acoustic buckets, facilitating $O(1)$ initial candidate filtering in entity resolution pipelines.",
+      "Combining coarse phonetic blocking with fine-grained Levenshtein or Jaro-Winkler distance yields accurate, scalable fuzzy matching systems."
+    ],
+    "pitfalls": [
+      "Relying on Soundex for cross-lingual phonetic search; Soundex was developed strictly for English phonetic morphology and fails on Slavic, Asian, or Arabic phonology.",
+      "Ignoring first-letter orthographic shifts (such as \"Schmidt\" mapping to S253 while \"Smith\" maps to S530 despite similar auditory pronunciations).",
+      "Over-collapsing distinct names into identical buckets due to Soundex's crude 4-character truncation; modern systems use Metaphone or Double Metaphone to preserve fine distinctions."
+    ],
+    "quiz": [
+      {
+        "q": "Under standard Soundex, which group of characters are mapped to code digit 1?",
+        "o": [
+          "Labial consonants: B, F, P, V",
+          "Sibilants and velars: C, G, J, K, Q, S, X, Z",
+          "Dental stops: D, T",
+          "Liquid consonants: L, R"
+        ],
+        "a": 0,
+        "why": "In the Soundex mapping system, the labial and labiodental consonants {B, F, P, V} share code digit 1."
+      },
+      {
+        "q": "Why are vowels (A, E, I, O, U) assigned code 0 and dropped after the first letter in Soundex?",
+        "o": [
+          "Vowels are completely silent in spoken English phonology",
+          "Vowels exhibit high variance and instability across dialects, while consonants carry primary lexical identity",
+          "Vowels cannot be mapped into numerical integers without floating point division",
+          "Vowels would exceed the 4-character byte limit of early storage systems"
+        ],
+        "a": 1,
+        "why": "In English phonetic classification, vowel sounds shift dramatically across regional dialects and accents, whereas the consonant skeleton provides the most reliable acoustic signature."
+      },
+      {
+        "q": "How does Double Metaphone improve upon classic Soundex for practical entity resolution?",
+        "o": [
+          "It encodes audio spectrograms using neural convolutions",
+          "It returns primary and secondary phonetic keys accounting for non-English linguistic origins and silent consonants",
+          "It converts all text to phonemic IPA symbols without string truncation",
+          "It requires no predefined character mapping tables"
+        ],
+        "a": 1,
+        "why": "Double Metaphone generates both a primary and an alternate pronunciation code, capturing phonetic variations across Germanic, Romance, and Slavic names."
+      }
+    ],
+    "related": [
+      "stemming-vs-lemmatisation",
+      "bm25-and-search-ranking"
+    ],
+    "keywords": "phonetic matching soundex, phonetic matching: soundex, metaphone, and string distance, natural language processing, deep learning"
+  },
+  {
+    "id": "collocations-and-pmi",
+    "short": "Collocations & PMI",
+    "title": "Collocations and Pointwise Mutual Information (PMI)",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Collocations (e.g. \"heavy rain\", \"pay attention\", \"machine learning\") are multi-word expressions with non-random semantic cohesion. Pointwise Mutual Information (PMI) measures the log ratio of joint co-occurrence probability against independent marginal probabilities. Positive PMI (PPMI) truncates negative values to zero, mitigating noise and uninformative negative correlations for low-frequency events. Statistical significance filtering using t-tests or Pearson's chi-squared test prevents rare pairs from dominating PMI rankings.",
+    "lead": "Collocations are habitual word co-occurrences whose combined meaning exceeds or differs from the sum of their individual parts. Pointwise Mutual Information (PMI) and statistical hypothesis tests quantify whether words appear together significantly more often than expected by random chance, forming the mathematical foundation for phrase extraction, idiom detection, and distributional embeddings.",
+    "analogy": "Imagine monitoring people entering a coffee shop. If two patrons frequently walk through the door within seconds of each other far more often than their individual visit rates would suggest, you conclude they are friends or colleagues who travel together, rather than two unrelated strangers who happened to arrive at the exact same moment.",
+    "intuition": [
+      "If you see the word \"heavy\", what words follow? You often say \"heavy rain\" or \"heavy smoker\", but rarely \"heavy wind\" or \"heavy worker\" (we say \"strong wind\" and \"hard worker\" instead). Grammatically, all these pairings are valid adjective-noun combinations, yet native speakers naturally favour specific pairings. These established pairings are called collocations. If two words are completely independent, the probability of seeing them together $P(x, y)$ equals the product of their individual occurrences $P(x)P(y)$. Pointwise Mutual Information (PMI) mathematically measures how many times more often words co-occur compared to pure independent chance. A high PMI indicates strong linguistic affinity, whereas a PMI near zero indicates random coincidence."
+    ],
+    "steps": [
+      "Define a sliding context window of size $k$ across the tokenised corpus (or treat immediate bigram sequences as candidate pairs).",
+      "Compute unigram counts $C(w)$ for all vocabulary words and total token count $N$.",
+      "Compute co-occurrence counts $C(u, v)$ for all word pairs appearing within the context window.",
+      "Filter rare candidates: discard pairs with co-occurrence counts below a minimum frequency threshold (e.g. $C(u, v) < 5$).",
+      "Calculate PMI and PPMI values for all surviving candidate pairs.",
+      "Rank pairs by PPMI score to extract meaningful collocations, multi-word terminology, or construct term-context association matrices."
+    ],
+    "math": [
+      {
+        "h": "Collocations and Pointwise Mutual Information (PMI) formulation (Part 1)",
+        "tex": "\\text{PMI}(x, y) = \\log_2 \\frac{P(x, y)}{P(x) P(y)} = \\log_2 \\frac{C(x, y) \\cdot N}{C(x) \\cdot C(y)}",
+        "p": "where $C(x, y)$ is the co-occurrence count within a sliding context window, $C(x)$ and $C(y)$ are individual word counts, and $N$ is the total number of observed tokens. Because unobserved or extre..."
+      },
+      {
+        "h": "Collocations and Pointwise Mutual Information (PMI) formulation (Part 2)",
+        "tex": "\\text{PPMI}(x, y) = \\max(0, \\text{PMI}(x, y))",
+        "p": "To counter the tendency of raw PMI to overvalue rare words (e.g. two words occurring once each together yielding huge PMI), frequency-weighted $\\text{PMI}_\\alpha$ raises context probability to powe..."
+      },
+      {
+        "h": "Collocations and Pointwise Mutual Information (PMI) formulation (Part 3)",
+        "tex": "\\text{PMI}_\\alpha(x, y) = \\log_2 \\frac{P(x, y)}{P(x) P_\\alpha(y)}, \\quad P_\\alpha(y) = \\frac{C(y)^\\alpha}{\\sum_w C(w)^\\alpha}",
+        "p": "To counter the tendency of raw PMI to overvalue rare words (e.g. two words occurring once each together yielding huge PMI), frequency-weighted $\\text{PMI}_\\alpha$ raises context probability to powe..."
+      }
+    ],
+    "code": "import numpy as np\nfrom collections import Counter\n\ndef extract_collocations(corpus, window_size=2, min_count=2):\n    \"\"\"Computes PPMI scores for word pairs in a sliding window.\"\"\"\n    tokens = [t.lower() for doc in corpus for t in doc.split()]\n    N = len(tokens)\n    \n    unigram_counts = Counter(tokens)\n    cooccur_counts = Counter()\n    \n    # 1. Tally co-occurrences within sliding window\n    for i in range(len(tokens)):\n        target = tokens[i]\n        start = max(0, i - window_size)\n        end = min(len(tokens), i + window_size + 1)\n        for j in range(start, end):\n            if i != j:\n                context = tokens[j]\n                cooccur_counts[(target, context)] += 1\n                \n    # 2. Compute PPMI\n    ppmi_scores = {}\n    for (w1, w2), count in cooccur_counts.items():\n        if count < min_count:\n            continue\n        # Joint and marginal probabilities\n        p_joint = count / (N * 2 * window_size)\n        p_w1 = unigram_counts[w1] / N\n        p_w2 = unigram_counts[w2] / N\n        \n        pmi = np.log2(p_joint / (p_w1 * p_w2))\n        ppmi = max(0.0, pmi)\n        ppmi_scores[(w1, w2)] = (ppmi, count)\n        \n    return ppmi_scores\n\n# Synthetic domain corpus\ncorpus = [\n    \"natural language processing models natural language understanding\",\n    \"deep learning and natural language processing techniques\",\n    \"machine learning models process natural language text\",\n    \"deep learning algorithms power modern language processing\"\n]\n\nresults = extract_collocations(corpus, window_size=2, min_count=2)\n# Sort by PPMI descending\nsorted_collocations = sorted(results.items(), key=lambda x: x[1][0], reverse=True)\n\nprint(\"Top Discovered Collocations by PPMI:\")\nfor (w1, w2), (score, count) in sorted_collocations[:6]:\n    print(f\"  ({w1:8}, {w2:10}) -> PPMI: {score:.3f} (Count: {count})\")",
+    "keyPoints": [
+      "Collocations represent multi-word phrases whose co-occurrence reflects semantic and idiomatic association beyond random syntactic assembly.",
+      "PMI contrasts empirical joint occurrence with independent marginal probability, identifying statistically cohesive expressions.",
+      "Clipping to PPMI and applying smoothing exponents (such as $\\alpha = 0.75$) mitigates frequency bias towards rare vocabulary items."
+    ],
+    "pitfalls": [
+      "Applying unregularised PMI to small corpora without frequency thresholds; rare words appearing together once can achieve artificially massive PMI scores.",
+      "Treating PMI as an absolute probability metric rather than a scale-sensitive relative co-occurrence ratio.",
+      "Confusing grammatical constituency with collocation; non-collocated common stopwords like \"of the\" have high co-occurrence counts but low PMI because their marginal frequencies are enormous."
+    ],
+    "quiz": [
+      {
+        "q": "What does a Pointwise Mutual Information (PMI) value of zero signify between two words?",
+        "o": [
+          "The words never appear in the same document",
+          "The words co-occur at exactly the rate expected if their distributions were completely independent",
+          "The words are strict antonyms with mutually exclusive meanings",
+          "One of the words is an out-of-vocabulary token"
+        ],
+        "a": 1,
+        "why": "When $P(x, y) = P(x)P(y)$, their ratio is 1, and $\\log_2(1) = 0$. This indicates that co-occurrence occurs at random baseline chance."
+      },
+      {
+        "q": "Why does standard PMI tend to over-rank rare word pairings over common phrases?",
+        "o": [
+          "Because rare words have near-zero marginal probabilities $P(x)$ and $P(y)$ in the denominator",
+          "Because logarithm functions cannot handle floating point decimals below 0.1",
+          "Because rare words are automatically filtered out by tokenisers",
+          "Because common words always receive negative PMI scores"
+        ],
+        "a": 0,
+        "why": "If two rare words occur only once in the entire corpus, but happen to appear in the same window, $P(x,y) = 1/N$ while $P(x)P(y) = 1/N^2$, producing an inflated PMI of $\\log_2(N)$."
+      },
+      {
+        "q": "Why is Positive PMI (PPMI) used instead of raw PMI when building term-context embedding matrices?",
+        "o": [
+          "Negative PMI scores require imaginary numbers to compute",
+          "Negative PMI values are uninformative and noisy, indicating negative correlation that is unreliable on finite corpora",
+          "PPMI guarantees that the resulting matrix is diagonal",
+          "PPMI normalises matrix values strictly between 0 and 1"
+        ],
+        "a": 1,
+        "why": "Negative PMI indicates that two words occur together less often than chance, which is noisy and difficult to estimate accurately on finite text corpora. Clipping to zero stabilizes downstream representations."
+      }
+    ],
+    "related": [
+      "distributional-semantics",
+      "bm25-and-search-ranking"
+    ],
+    "keywords": "collocations and pmi, collocations and pointwise mutual information (pmi), natural language processing, deep learning"
+  },
+  {
+    "id": "multilingual-text-scripts-and-the-tokenisation-tax",
+    "short": "Multilingual Text & Token Tax",
+    "title": "Multilingual Text: Scripts, Normalisation, and the Tokenisation Tax",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Scripts vary fundamentally: alphabetic (phonemic), syllabic (Japanese Kana), logographic/ideographic (Chinese Hanzi), and abjads (consonantal, right-to-left). Unicode standardisation encompasses multiple normalisation forms (NFC, NFD, NFKC, NFKD) to resolve equivalent canonical and compatibility representations. The \"tokenisation tax\" occurs when tokeniser vocabularies over-index on English words, fracturing non-Latin or morphologically rich text into byte fragments. Mitigation strategies include script-balanced vocabulary allocation, byte-level fallback encodings, and morphology-aware segmentation.",
+    "lead": "Modern NLP systems process text across diverse writing systems, from Latin and Cyrillic alphabets to logographic scripts (Chinese) and abjads (Arabic, Hebrew). Variations in Unicode normalisation forms (NFC vs NFD) and vocabulary budget allocations impose a \"tokenisation tax\" on non-English languages, inflating sequence lengths, inference latencies, and API serving costs.",
+    "analogy": "Imagine an international telegraph service where English words have single-character Morse shorthand codes, but messages in Spanish, Japanese, or Arabic must be spelt out character by character in binary Morse pulses. Senders of non-English messages pay quadrupled line fees and wait four times as long for transmissions to finish, purely because the telegraph codebook was compiled in London.",
+    "intuition": [
+      "Subword tokenisers like Byte-Pair Encoding (BPE) or WordPiece construct fixed vocabularies (e.g. 32,000 to 128,000 tokens) based on training text frequencies. Because the internet is predominantly English, vocabulary budgets are dominated by common English words and morphemes. In contrast, languages written in non-Latin scripts (such as Hindi, Arabic, Bengali, or Burmese) or morphologically agglutinative languages (like Turkish, Finnish, or Swahili) receive very few dedicated vocabulary entries. Consequently, a single sentence expressing identical semantic meaning might take 8 tokens in English, but require 35 to 45 tokens in Hindi or Amharic because characters are fragmented into individual bytes or punctuation tokens. This discrepancy—known as the tokenisation tax—means non-English speakers suffer higher monetary costs per query, shorter effective context windows, and slower generation speeds."
+    ],
+    "steps": [
+      "Normalise incoming Unicode streams into a consistent canonical form (such as NFC) before tokenisation to avoid diacritic duplication.",
+      "Examine script characteristics: handle right-to-left bidirectional flow for Arabic and Hebrew, and apply morphological segmenters for non-spaced logographic scripts (e.g. Jieba for Chinese).",
+      "Analyse token fragmentation: measure average bytes per token across target language corpora to calculate the empirical tokenisation tax.",
+      "Balance vocabulary allocation: use temperature-sampled multinomial data mixing during tokeniser vocabulary generation to allocate dedicated tokens to low-resource languages.",
+      "Implement byte-fallback tokenisation (e.g. BBPE) to handle out-of-vocabulary characters gracefully without injecting uninformative `<unk>` unknown tokens."
+    ],
+    "math": [
+      {
+        "h": "Multilingual Text: Scripts, Normalisation, and the Tokenisation Tax Objective Function",
+        "tex": "\\mathcal{L}_{\\text{total}} = \\sum_{i=1}^N \\ell(f(x_i), y_i)",
+        "p": "Optimisation objective and loss formulation for multilingual text: scripts, normalisation, and the tokenisation tax."
+      }
+    ],
+    "code": "import unicodedata\n\ndef compute_tokenisation_tax(sample_texts, mock_vocab):\n    \"\"\"Calculates token fragmentation across different language scripts.\"\"\"\n    results = {}\n    for lang, text in sample_texts.items():\n        # Canonical Normalisation (NFC)\n        norm_text = unicodedata.normalise('NFC', text)\n        words = norm_text.split()\n        \n        # Greedy longest subword tokenisation simulation\n        tokens = []\n        for word in words:\n            i = 0\n            while i < len(word):\n                matched = False\n                for j in range(len(word), i, -1):\n                    sub = word[i:j]\n                    if sub in mock_vocab:\n                        tokens.append(sub)\n                        i = j\n                        matched = True\n                        break\n                if not matched:\n                    # Fallback to UTF-8 byte tokens\n                    byte_tokens = [f\"<byte_{b}>\" for b in word[i].encode('utf-8')]\n                    tokens.extend(byte_tokens)\n                    i += 1\n                    \n        tax_ratio = len(tokens) / max(1, len(words))\n        results[lang] = {\n            'char_count': len(norm_text),\n            'word_count': len(words),\n            'token_count': len(tokens),\n            'tokens_per_word': tax_ratio,\n            'tokens': tokens[:6]  # First few tokens\n        }\n    return results\n\n# English-centric vocabulary (typical of earlier web-crawled models)\nmock_vocab = {\n    \"Artificial\", \"intelligence\", \"transforms\", \"modern\", \"technology\",\n    \"La\", \"intelligence\", \"artificielle\", \"moderne\"\n}\n\nsample_corpora = {\n    \"English\": \"Artificial intelligence transforms modern technology\",\n    \"French\": \"La intelligence artificielle transforme la technologie moderne\",\n    \"Hindi (Devanagari)\": \"कृत्रिम बुद्धिमत्ता आधुनिक तकनीक को बदल रही है\"\n}\n\nanalysis = compute_tokenisation_tax(sample_corpora, mock_vocab)\n\nprint(\"Multilingual Tokenisation Tax Comparison:\")\nfor lang, stats in analysis.items():\n    print(f\"\\n[{lang}]\")\n    print(f\"  Words: {stats['word_count']} | Generated Tokens: {stats['token_count']}\")\n    print(f\"  Tokens per Word: {stats['tokens_per_word']:.2f}\")\n    print(f\"  Sample Tokens: {stats['tokens']}\")",
+    "keyPoints": [
+      "Unicode standardisation through NFC normalisation is essential before tokenising multilingual text.",
+      "The tokenisation tax leads to longer sequence lengths, reduced context windows, and inflated operational costs for non-English users.",
+      "Byte-level subword tokenisers with balanced vocabulary sampling help equalise cross-lingual representation efficiency."
+    ],
+    "pitfalls": [
+      "Neglecting Unicode normalisation (NFC vs NFD); identical looking characters like \"é\" (U+00E9) and \"e + ́\" (U+0065 U+0301) produce entirely different subword token sequences.",
+      "Assuming word-level whitespace splitting works for languages without spaces between words (such as Chinese, Japanese, or Thai).",
+      "Evaluating multilingual model latency solely on word or character counts, masking massive token count inflation for non-Latin scripts."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary cause of the \"tokenisation tax\" in multilingual language models?",
+        "o": [
+          "Non-Latin alphabets require more memory bits per letter in CPU cache",
+          "Tokeniser vocabularies are heavily biased towards English and Latin subwords, forcing non-Latin text into fragmented single-byte tokens",
+          "Non-English grammar requires recurrent neural networks instead of transformers",
+          "Unicode consortium charges licensing fees for displaying non-Latin glyphs"
+        ],
+        "a": 1,
+        "why": "Because pretraining data is predominantly English, subword merge operations allocate vocabulary entries to English words, while non-Latin scripts are fragmented into small byte sequences."
+      },
+      {
+        "q": "Which Unicode normalisation form composes characters with their diacritical marks into precomposed code points wherever possible?",
+        "o": [
+          "NFD (Canonical Decomposition)",
+          "NFC (Canonical Decomposition followed by Canonical Composition)",
+          "NFKD (Compatibility Decomposition)",
+          "ASCII-7 Strict Encoding"
+        ],
+        "a": 1,
+        "why": "NFC decomposes characters canonically and then recomposes them into standard precomposed glyphs, ensuring consistent single-character representations."
+      },
+      {
+        "q": "In a transformer architecture with standard quadratic attention, how does a 3x tokenisation tax impact attention computation FLOPs?",
+        "o": [
+          "Attention FLOPs remain unchanged",
+          "Attention FLOPs increase by approximately 3x",
+          "Attention FLOPs increase by approximately 9x ($3^2$)",
+          "Attention FLOPs decrease due to higher sparsity"
+        ],
+        "a": 2,
+        "why": "Standard self-attention computes an $N \\times N$ affinity matrix. Tripling the sequence length ($3N$) increases attention dot-products and memory by a factor of $3^2 = 9\\times$."
+      }
+    ],
+    "related": [
+      "stemming-vs-lemmatisation",
+      "bert-and-masked-language-models"
+    ],
+    "keywords": "multilingual text scripts and the tokenisation tax, multilingual text: scripts, normalisation, and the tokenisation tax, natural language processing, deep learning"
+  },
+  {
+    "id": "conditional-random-fields",
+    "short": "Conditional Random Fields (CRF)",
+    "title": "Conditional Random Fields (CRF): Sequence Labelling and the Forward-Backward Algorithm",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Sequence labelling tasks (NER, POS tagging, chunking) require predicting structured sequences of discrete tags for input token sequences. Linear-chain CRFs model the conditional distribution $P(Y|X)$ globally, scoring both emission potentials (token-tag compatibility) and transition potentials (tag-tag continuity). The forward-backward dynamic programming algorithm efficiently computes sequence normalisation factors (partition function $Z(X)$) and state marginal probabilities. The Viterbi algorithm identifies the single highest-scoring global sequence in $\\mathcal{O}(T \\cdot K^2)$ time during inference.",
+    "lead": "Conditional Random Fields (CRFs) are discriminative probabilistic graphical models for structured sequence labelling tasks such as Named Entity Recognition and Part-of-Speech tagging. By modelling joint transition dependencies across tag sequences rather than making independent per-token decisions, CRFs eliminate label bias and enforce globally optimal label assignments.",
+    "analogy": "Imagine booking a multi-leg flight itinerary. An independent decision model would choose the cheapest flight for each individual leg, leaving you with an impossible 15-minute layover in a sprawling airport. A CRF acts like an experienced travel booking engine: it evaluates the total trip cost while strictly enforcing valid connection windows between consecutive flights.",
+    "intuition": [
+      "Consider tagging named entities using an IOB scheme (e.g. B-PER for beginning of a person name, I-PER for inside a person name, and O for outside). A local classifier predicting each word's tag independently might predict \"I-PER\" immediately following \"O\", which is grammatically invalid according to IOB syntax (an \"I-PER\" must follow either a \"B-PER\" or another \"I-PER\"). This vulnerability—treating interdependent sequential decisions as independent—is called the label bias problem. A Conditional Random Field solves this by scoring the entire sequence of tags simultaneously. It combines local feature emission scores (how well a word matches a tag) with a learned transition matrix (which tags can follow which). When attached as the final decoding layer of a neural network (e.g. BiLSTM-CRF or BERT-CRF), it guarantees that the decoded sequence is both globally optimal and syntactically valid."
+    ],
+    "steps": [
+      "Extract emission representations: compute per-token feature vectors using classical n-gram features or deep neural encodings (BiLSTM or Transformer).",
+      "Initialise transition matrix: define a $K \\times K$ trainable parameter matrix $A$, initialising impossible transitions (e.g. `O -> I-PER`) with large negative values.",
+      "Execute forward algorithm: compute forward potentials $\\alpha_t(j)$ in log-space using `logsumexp` to evaluate partition function $Z(\\mathbf{x})$.",
+      "Calculate sequence score: compute the scalar sum of gold emission scores and gold transition scores for the true target sequence.",
+      "Minimise negative log-likelihood: backpropagate gradients from loss $\\mathcal{L} = \\log Z(\\mathbf{x}) - \\text{Score}(\\mathbf{x}, \\mathbf{y}^*)$ through transitions and feature encoders.",
+      "Decode optimal sequence: at test time, use the Viterbi dynamic programming algorithm to retrieve the highest-scoring tag sequence $\\hat{\\mathbf{y}}$."
+    ],
+    "math": [
+      {
+        "h": "Conditional Random Fields (CRF): Sequence Labelling and the Forward-Backward Algorithm Objective Function",
+        "tex": "\\mathcal{L}_{\\text{total}} = \\sum_{i=1}^N \\ell(f(x_i), y_i)",
+        "p": "Optimisation objective and loss formulation for conditional random fields (crf): sequence labelling and the forward-backward algorithm."
+      }
+    ],
+    "code": "import numpy as np\n\ndef log_sum_exp(x, axis=-1):\n    \"\"\"Numerically stable log-sum-exp trick.\"\"\"\n    max_val = np.max(x, axis=axis, keepdims=True)\n    return np.squeeze(max_val, axis=axis) + np.log(np.sum(np.exp(x - max_val), axis=axis))\n\ndef viterbi_decode(emissions, transitions):\n    \"\"\"Computes globally optimal tag sequence via Viterbi decoding.\n    \n    emissions: shape (T, K) - token-tag emission potentials\n    transitions: shape (K, K) - tag_t to tag_{t+1} transition matrix\n    \"\"\"\n    T, K = emissions.shape\n    viterbi = np.zeros((T, K))\n    backpointers = np.zeros((T, K), dtype=int)\n    \n    # Initialise t = 0\n    viterbi[0] = emissions[0]\n    \n    # Forward recursion\n    for t in range(1, T):\n        for j in range(K):\n            # Prior scores + transition to j + current emission\n            scores = viterbi[t - 1] + transitions[:, j] + emissions[t, j]\n            best_prev = np.argmax(scores)\n            viterbi[t, j] = scores[best_prev]\n            backpointers[t, j] = best_prev\n            \n    # Backtrack best path\n    best_path = [np.argmax(viterbi[-1])]\n    for t in range(T - 1, 0, -1):\n        prev = backpointers[t, best_path[-1]]\n        best_path.append(prev)\n        \n    best_path.reverse()\n    return best_path, np.max(viterbi[-1])\n\n# Simulation: Tagging a 4-token sentence with 3 tags: [0: 'O', 1: 'B-PER', 2: 'I-PER']\n# Sentence: \"Alan Turing visited London\"\ntags = ['O', 'B-PER', 'I-PER']\nT, K = 4, 3\n\n# Simulated emissions (logits from an encoder)\nemissions = np.array([\n    [0.1,  3.5,  0.2],   # \"Alan\"   -> strong B-PER\n    [0.2,  1.1,  3.0],   # \"Turing\" -> strong I-PER\n    [2.8,  0.1, -1.0],   # \"visited\"-> strong O\n    [0.5,  2.2,  0.1]    # \"London\" -> candidate B-LOC / entity\n])\n\n# Transition matrix A[i, j] representing tag i -> tag j\ntransitions = np.array([\n    [ 1.5,  1.0, -10.0],  # O -> O (good), O -> B-PER (ok), O -> I-PER (INVALID!)\n    [ 0.8, -0.5,   2.5],  # B-PER -> O (ok), B-PER -> B-PER, B-PER -> I-PER (strong)\n    [ 1.2,  0.2,   1.8]   # I-PER -> O (ok), I-PER -> B-PER, I-PER -> I-PER (ok)\n])\n\nbest_sequence, total_score = viterbi_decode(emissions, transitions)\ndecoded_tags = [tags[i] for i in best_sequence]\n\nprint(\"Viterbi Globally Decoded Sequence:\")\ntokens = [\"Alan\", \"Turing\", \"visited\", \"London\"]\nfor token, tag in zip(tokens, decoded_tags):\n    print(f\"  {token:8} -> {tag}\")\nprint(f\"Global Path Score: {total_score:.2f}\")",
+    "keyPoints": [
+      "CRFs model the global conditional probability of entire label sequences, eliminating local label bias in structured prediction.",
+      "The forward algorithm computes the normalisation partition function $Z(\\mathbf{x})$ efficiently in $\\mathcal{O}(T \\cdot K^2)$ time.",
+      "Combining neural feature encoders with CRF sequence decoding layers ensures valid entity tagging sequences in NLP pipelines."
+    ],
+    "pitfalls": [
+      "Computing the partition function $Z(\\mathbf{x})$ directly with standard exponential sums, causing arithmetic overflow; always perform calculations in log-space using `logsumexp`.",
+      "Forgetting to penalise or mask invalid transitions (e.g. padding tokens or grammatically impossible tag sequences like `O -> I-ORG`), allowing illicit tag transitions.",
+      "Applying CRFs to tasks where adjacent label transitions are independent, adding quadratic computational overhead $\\mathcal{O}(K^2)$ with no performance gain."
+    ],
+    "quiz": [
+      {
+        "q": "What is the \"label bias problem\" that CRFs resolve over per-token local classifiers?",
+        "o": [
+          "Local classifiers make isolated decisions per token, unable to enforce valid sequential constraints or account for future context",
+          "Local classifiers can only predict binary labels rather than multi-class labels",
+          "Local classifiers require hand-crafted features instead of neural networks",
+          "Local classifiers suffer from exploding gradients during backpropagation"
+        ],
+        "a": 0,
+        "why": "Local classifiers normalise probabilities per token, which biases predictions toward states with fewer outgoing transitions and permits syntactically invalid sequences like `O -> I-PER`."
+      },
+      {
+        "q": "What is the time complexity of the Viterbi algorithm for decoding a sequence of length $T$ across $K$ tag classes?",
+        "o": [
+          "$\\mathcal{O}(T \\cdot K)$",
+          "$\\mathcal{O}(T \\cdot K^2)$",
+          "$\\mathcal{O}(K^T)$",
+          "$\\mathcal{O}(T^2 \\cdot K)$"
+        ],
+        "a": 1,
+        "why": "At each of the $T$ time steps, the algorithm considers all $K$ current tags and checks transitions from all $K$ previous tags, resulting in $\\mathcal{O}(T \\cdot K^2)$ complexity."
+      },
+      {
+        "q": "What role does the partition function $Z(\\mathbf{x})$ play in a linear-chain CRF?",
+        "o": [
+          "It sets the learning rate dynamically during gradient descent",
+          "It normalises exponentiated sequence scores into a valid probability distribution summing to 1 across all possible paths",
+          "It initialises the weights of the neural feature extractor",
+          "It calculates the precision and recall of the predicted tags"
+        ],
+        "a": 1,
+        "why": "$Z(\\mathbf{x})$ sums the potentials over all possible label sequences, acting as the global normalisation constant so $P(\\mathbf{y}|\\mathbf{x})$ sums to 1."
+      }
+    ],
+    "related": [
+      "decision_tree_classifier",
+      "logistic_regression"
+    ],
+    "keywords": "conditional random fields, conditional random fields (crf): sequence labelling and the forward-backward algorithm, natural language processing, deep learning"
+  },
+  {
+    "id": "contextual-embeddings-elmo-to-bert",
+    "short": "Contextual Embeddings: ELMo to BERT",
+    "title": "Contextual Embeddings: From Word2Vec and ELMo to Modern Transformer Encoders",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Static embeddings (Word2Vec, GloVe, FastText) collapse multiple meanings of polysemous words (e.g. financial \"bank\" vs river \"bank\") into a single vector. ELMo (Embeddings from Language Models) extracts deep representations by training bidirectional LSTMs and linearly weighting all intermediate layer states. BERT (Bidirectional Encoder Representations from Transformers) leverages multi-head self-attention to condition tokens jointly across left and right contexts. Modern encoder embeddings capture lexical syntax in early layers, syntactic relationships in middle layers, and semantic task nuances in upper layers.",
+    "lead": "Static word embeddings assign a single static vector to each word regardless of context, failing on polysemy and homonymy. Contextual representations—pioneered by ELMo and revolutionized by BERT—generate dynamic, context-dependent embeddings by conditioning on the entire surrounding sentence using bidirectional recurrent or transformer architectures.",
+    "analogy": "A static word embedding is like an actor wearing the exact same costume and speaking in the exact same monotone voice, whether performing in a Shakespearean tragedy, a children's cartoon, or a courtroom drama. A contextual embedding is an improvisational actor whose costume, accent, and emotional delivery adapt dynamically to whoever else is on stage and whatever line was just spoken.",
+    "intuition": [
+      "If you look up the word \"apple\" in a static Word2Vec dictionary, you get one 300-dimensional vector. Whether that word appears in \"I ate a crisp green apple\" or \"Apple released the new iPhone\", the input vector to your downstream model is identical. This is a fundamental limitation: natural language is deeply polysemous, where a word's actual meaning is determined by its context. ELMo solved this by running forward and backward LSTMs across the sentence, concatenating hidden states so the representation of \"apple\" reflected its grammatical and topical role. BERT took this further: instead of stitching two separate left-to-right and right-to-left streams, BERT uses self-attention to look simultaneously at every other token in the sentence at every layer. As a result, the contextual embedding for \"apple\" in a technology article occupies a completely different subspace than \"apple\" in an orchard."
+    ],
+    "steps": [
+      "Encode lexical inputs: map subwords to initial token embeddings summed with segment embeddings and positional encodings.",
+      "Propagate through contextual layers: pass vectors through bidirectional encoders (biLSTM in ELMo, stacked Transformer blocks in BERT).",
+      "Compute all-to-all attention: allow every token position to dynamically attend to all other token positions simultaneously.",
+      "Extract intermediate activations: inspect lower layers for syntactic/POS representations and upper layers for task-specific semantic context.",
+      "Fine-tune or pool: extract the `[CLS]` token embedding for sentence-level tasks, or token-level contextual vectors for sequence labelling."
+    ],
+    "math": [
+      {
+        "h": "Contextual Embeddings: From Word2Vec and ELMo to Modern Transformer Encoders Objective Function",
+        "tex": "\\mathcal{L}_{\\text{total}} = \\sum_{i=1}^N \\ell(f(x_i), y_i)",
+        "p": "Optimisation objective and loss formulation for contextual embeddings: from word2vec and elmo to modern transformer encoders."
+      }
+    ],
+    "code": "import numpy as np\n\ndef cosine_similarity(v1, v2):\n    \"\"\"Computes cosine similarity between two vectors.\"\"\"\n    dot = np.dot(v1, v2)\n    norm = np.linalg.norm(v1) * np.linalg.norm(v2)\n    return dot / max(norm, 1e-8)\n\ndef mock_bidirectional_context_layer(static_embeddings, context_weights):\n    \"\"\"Simulates a 1-layer bidirectional contextualisation pass.\n    \n    static_embeddings: (T, d)\n    context_weights: (T, T) attention affinity matrix\n    \"\"\"\n    # Contextual embedding = combination of self + attended neighbours\n    contextual = np.matmul(context_weights, static_embeddings)\n    # Layer normalisation simulation\n    mean = np.mean(contextual, axis=-1, keepdims=True)\n    std = np.std(contextual, axis=-1, keepdims=True) + 1e-6\n    return (contextual - mean) / std\n\nnp.random.seed(42)\nd = 8  # Embedding dimension\n\n# Static vectors for words\nv_bank = np.random.randn(d)\nv_river = np.array([2.5, 1.2, -0.5, 0.8, -1.0, 0.2, 1.5, -0.4])\nv_money = np.array([-1.2, -0.8, 2.8, -1.5, 2.0, -0.9, -1.1, 2.2])\n\n# Sentence 1: \"river bank water\"\nsent1 = np.stack([v_river, v_bank, v_river * 0.8])\n# Sentence 2: \"money bank finance\"\nsent2 = np.stack([v_money, v_bank, v_money * 0.9])\n\n# Simulated attention matrices where words strongly attend to neighbours\nattn1 = np.array([[0.6, 0.2, 0.2], [0.45, 0.1, 0.45], [0.3, 0.2, 0.5]])\nattn2 = np.array([[0.6, 0.2, 0.2], [0.45, 0.1, 0.45], [0.3, 0.2, 0.5]])\n\n# Generate dynamic contextual representations\ncontext1 = mock_bidirectional_context_layer(sent1, attn1)\ncontext2 = mock_bidirectional_context_layer(sent2, attn2)\n\nbank_in_river = context1[1]\nbank_in_finance = context2[1]\n\nsim_cross_context = cosine_similarity(bank_in_river, bank_in_finance)\nsim_river_context = cosine_similarity(bank_in_river, context1[0])\nsim_finance_context = cosine_similarity(bank_in_finance, context2[0])\n\nprint(\"Contextual Embedding Disambiguation Demo:\")\nprint(f\"  Similarity between 'bank' (river) and 'bank' (finance): {sim_cross_context:.3f}\")\nprint(f\"  Similarity between 'bank' and 'river' in Sentence 1:    {sim_river_context:.3f}\")\nprint(f\"  Similarity between 'bank' and 'money' in Sentence 2:    {sim_finance_context:.3f}\")",
+    "keyPoints": [
+      "Contextual embeddings dynamically adapt token representations to the surrounding syntax, semantics, and topical tone of the sentence.",
+      "ELMo demonstrated the value of deep multi-layer representations; BERT established all-to-all bidirectional attention as the standard.",
+      "Downstream performance benefits from layer-specific feature extraction, where syntactic nuances reside in early layers and task semantics in deeper layers."
+    ],
+    "pitfalls": [
+      "Averaging BERT token embeddings naively to produce sentence embeddings; raw BERT embeddings exhibit anisotropy (occupying a narrow cone in vector space), requiring fine-tuned pooling like SBERT.",
+      "Assuming all layers of a deep transformer contain identical contextual information; early layers capture morphology, while deeper layers encode complex semantic and relational patterns.",
+      "Treating contextual embeddings as static lookup tables; contextual embeddings require running the full encoder forward pass on the surrounding sentence."
+    ],
+    "quiz": [
+      {
+        "q": "What was the primary conceptual limitation of static word embeddings like Word2Vec and GloVe?",
+        "o": [
+          "They were unable to be trained on large text corpora",
+          "They collapsed all senses of polysemous words into a single unchanging vector representation",
+          "They could only be calculated using 16-bit floating point arithmetic",
+          "They did not support cosine similarity comparisons"
+        ],
+        "a": 1,
+        "why": "Static embeddings assign exactly one vector per dictionary entry, meaning words like \"apple\" (fruit vs tech company) or \"bank\" share identical representations regardless of syntax or context."
+      },
+      {
+        "q": "How did ELMo combine information from its multi-layer bidirectional LSTMs?",
+        "o": [
+          "It discarded all intermediate states and only kept the final backward hidden vector",
+          "It computed a learned, task-specific softmax-weighted sum over all intermediate layer representations",
+          "It multiplied the token representations by random orthogonal projection matrices",
+          "It replaced recurrent units with convolutional kernels at test time"
+        ],
+        "a": 1,
+        "why": "ELMo learns task-specific scalar mixing weights $s_j$ across the input embedding and both intermediate BiLSTM layer states, letting downstream classifiers select optimal representations."
+      },
+      {
+        "q": "Why does BERT's self-attention mechanism provide richer context than ELMo's bidirectional LSTMs?",
+        "o": [
+          "BERT processes words one at a time from left to right only",
+          "BERT conditions each word jointly on both left and right contexts simultaneously at every layer, rather than concatenating two independent unidirectional models",
+          "BERT eliminates the need for training data",
+          "BERT relies exclusively on convolutional kernels"
+        ],
+        "a": 1,
+        "why": "ELMo concatenated outputs from two separate unidirectional LSTMs (left-to-right and right-to-left), whereas BERT's cross-token self-attention enables deep bidirectional interaction at every layer."
+      }
+    ],
+    "related": [
+      "bert-and-masked-language-models",
+      "sentence-embeddings-and-sbert"
+    ],
+    "keywords": "contextual embeddings elmo to bert, contextual embeddings: from word2vec and elmo to modern transformer encoders, natural language processing, deep learning"
+  },
+  {
+    "id": "word-sense-disambiguation-and-lesk",
+    "short": "Word Sense Disambiguation & Lesk",
+    "title": "Word Sense Disambiguation: Lesk Algorithm, WordNet, and Supervised Disambiguation",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Polysemy (related meanings, e.g. \"mole\" as skin spot vs underground animal) and homonymy (unrelated identical words, e.g. financial vs river \"bank\") require computational sense selection. WordNet organizes English lexicon into synsets (sets of cognitive synonyms) linked by semantic relations such as hypernyms, hyponyms, and meronyms. The Simplified Lesk algorithm scores candidate synsets by counting lexical overlap between synset definitions/examples and context words in the target sentence. Supervised WSD treats sense selection as classification using sense-annotated corpora (e.g. SemCor) or cross-encoder similarity over synset glosses.",
+    "lead": "Word Sense Disambiguation (WSD) identifies which specific semantic meaning of a polysemous word is active in a given text snippet. Grounded in lexical knowledge bases like WordNet, foundational approaches such as the Lesk algorithm exploit overlap between dictionary definitions and surrounding context words, leading to modern supervised cross-encoder classification.",
+    "analogy": "Imagine a detective holding several identity profiles for suspects sharing the same alias. To find out which suspect committed a crime at a marina, the detective compares words found at the crime scene (tackle, dock, bait) with each suspect's resume. The suspect whose resume mentions boats and fish is identified as the person in question.",
+    "intuition": [
+      "When humans read \"The bass was delicious with butter and garlic\", we instantly know \"bass\" refers to a fish, not a low-frequency musical instrument or a singing voice. We do this by cross-referencing surrounding context clues (\"delicious\", \"butter\", \"garlic\") with our internal mental encyclopaedia. Word Sense Disambiguation (WSD) is the computational task of picking the correct dictionary definition (or \"sense\") from a set of candidates. The classic Lesk algorithm mimics this process using dictionary definitions: it looks up all definitions of \"bass\" in a dictionary (like WordNet) and compares them against the surrounding words in the sentence. The sense whose definition and example sentences share the highest word overlap with the context is selected as the winning meaning."
+    ],
+    "steps": [
+      "Extract candidate senses: query WordNet or a lexical database for all candidate synsets of the ambiguous target word.",
+      "Preprocess context sentence: tokenise, strip common stopwords, and lemmatise surrounding words to their base forms.",
+      "Retrieve glosses and examples: compile the text definitions and usage examples for each candidate sense.",
+      "Compute lexical overlap: calculate the token intersection count between the lemmatised context and each sense's gloss.",
+      "Select maximum overlap sense: pick the sense with the highest count, falling back to WordNet's most frequent sense (MFS) in case of a tie."
+    ],
+    "math": [
+      {
+        "h": "Word Sense Disambiguation: Lesk Algorithm, WordNet, and Supervised Disambiguation formulation (Part 1)",
+        "tex": "\\text{Score}_{\\text{Lesk}}(s_k, C) = | \\text{Words}(C) \\cap \\left( \\text{Words}(G(s_k)) \\cup \\text{Words}(E(s_k)) \\right) |",
+        "p": "Stop words are stripped, and words are lemmatised before taking the intersection. To resolve ties and sparsity, the Extended Gloss Overlap computes overlap across hypernym synsets $\\text{Hyp}(s_k)$:"
+      },
+      {
+        "h": "Word Sense Disambiguation: Lesk Algorithm, WordNet, and Supervised Disambiguation formulation (Part 2)",
+        "tex": "\\text{Score}_{\\text{Extended}}(s_k, C) = \\sum_{r \\in \\text{Relations}} w_r \\cdot | \\text{Words}(C) \\cap \\text{Words}(r(s_k)) |",
+        "p": "In modern neural WSD (GlossBERT), target sentence $C$ containing marked target word $[\\text{TGT}] w [/\\text{TGT}]$ is concatenated with gloss $G(s_k)$, and scored via cross-encoder binary classific..."
+      },
+      {
+        "h": "Word Sense Disambiguation: Lesk Algorithm, WordNet, and Supervised Disambiguation formulation (Part 3)",
+        "tex": "P(\\text{sense } k \\mid C) = \\sigma\\left( \\mathbf{W} \\cdot \\text{BERT}_{\\text{CLS}}( [\\text{CLS}] C [\\text{SEP}] G(s_k) [\\text{SEP}] ) \\right)",
+        "p": "In modern neural WSD (GlossBERT), target sentence $C$ containing marked target word $[\\text{TGT}] w [/\\text{TGT}]$ is concatenated with gloss $G(s_k)$, and scored via cross-encoder binary classific..."
+      }
+    ],
+    "code": "def simplified_lesk(word, sentence, sense_dict):\n    \"\"\"Performs Word Sense Disambiguation using the Simplified Lesk algorithm.\n    \n    sense_dict: dictionary mapping sense_id to {'definition': str, 'examples': list}\n    \"\"\"\n    stopwords = {\"the\", \"a\", \"an\", \"is\", \"was\", \"with\", \"and\", \"in\", \"on\", \"at\", \"to\", \"for\", \"of\"}\n    \n    # 1. Clean context words\n    context_tokens = set([\n        t.lower().strip(\".,!?\") for t in sentence.split() \n        if t.lower().strip(\".,!?\") not in stopwords and t.lower() != word.lower()\n    ])\n    \n    best_sense = None\n    max_overlap = -1\n    overlap_words = []\n    \n    # 2. Iterate through candidate senses\n    for sense_id, data in sense_dict.items():\n        gloss_text = data['definition'] + \" \" + \" \".join(data.get('examples', []))\n        gloss_tokens = set([\n            t.lower().strip(\".,!?\") for t in gloss_text.split()\n            if t.lower().strip(\".,!?\") not in stopwords\n        ])\n        \n        # Calculate set intersection\n        shared = context_tokens.intersection(gloss_tokens)\n        overlap_count = len(shared)\n        \n        if overlap_count > max_overlap:\n            max_overlap = overlap_count\n            best_sense = sense_id\n            overlap_words = list(shared)\n            \n    return best_sense, max_overlap, overlap_words\n\n# Candidate senses for the ambiguous noun 'bass'\nbass_senses = {\n    \"bass.n.01 (fish)\": {\n        \"definition\": \"the lean flesh of a saltwater or freshwater fish used for food\",\n        \"examples\": [\"grilled bass with fresh herbs and lemon\"]\n    },\n    \"bass.n.02 (music)\": {\n        \"definition\": \"an adult male singing voice or low pitch musical instrument like bass guitar\",\n        \"examples\": [\"he played the bass guitar in a rock rhythm band\"]\n    }\n}\n\ntarget_sentence = \"The grilled bass served with lemon and garlic was fresh and delicious\"\nchosen_sense, overlap, words = simplified_lesk(\"bass\", target_sentence, bass_senses)\n\nprint(f\"Target Sentence: '{target_sentence}'\")\nprint(f\"Ambiguous Word: 'bass'\")\nprint(f\"Selected Sense:  {chosen_sense}\")\nprint(f\"Overlap Score:   {overlap} (Shared tokens: {words})\")",
+    "keyPoints": [
+      "Word Sense Disambiguation resolves polysemy by assigning ambiguous tokens to discrete, structured sense definitions.",
+      "The Lesk algorithm provides an intuitive overlap heuristic using dictionary definitions, expandable via hypernym and relational graph traversal.",
+      "Modern supervised systems combine cross-encoders with synset glosses to achieve high disambiguation accuracy on complex natural text."
+    ],
+    "pitfalls": [
+      "Relying strictly on exact word matches in dictionary definitions; if a gloss uses \"marine animal\" and the sentence says \"saltwater fish\", standard Lesk produces zero overlap without semantic similarity.",
+      "Failing to handle the \"Most Frequent Sense\" (MFS) baseline; in many domains, the top WordNet sense accounts for over 60% of all occurrences, making it hard to beat without robust supervised training.",
+      "Attempting all-words WSD using brute-force combinatorial search; evaluating combinations of senses across all words in a paragraph leads to exponential complexity $\\mathcal{O}(K^N)$."
+    ],
+    "quiz": [
+      {
+        "q": "What is the core mechanism of the classic Simplified Lesk algorithm for Word Sense Disambiguation?",
+        "o": [
+          "It fine-tunes a deep transformer on supervised parallel corpora",
+          "It counts the word overlap between the target sentence context and the dictionary definition (gloss) of each candidate sense",
+          "It calculates acoustic pitch frequencies using phonetic hashing",
+          "It inverts the n-gram transition matrix using singular value decomposition"
+        ],
+        "a": 1,
+        "why": "Simplified Lesk identifies the correct sense by calculating the number of shared words between the surrounding context and the textual definitions (glosses) of the candidate senses."
+      },
+      {
+        "q": "What is a \"synset\" in the WordNet lexical database?",
+        "o": [
+          "A set of cognitive synonyms that represent a single distinct lexical concept",
+          "A syntactic tree generated by a dependency parser",
+          "A list of misspelled words mapped to their phonetic Soundex code",
+          "A cluster of documents sharing high TF-IDF similarity"
+        ],
+        "a": 0,
+        "why": "In WordNet, words that express the same meaning are grouped into a synset (synonym set), representing a specific conceptual node in a semantic graph."
+      },
+      {
+        "q": "Why is the \"Most Frequent Sense\" (MFS) considered such a formidable baseline in WSD evaluation?",
+        "o": [
+          "WordNet definitions are sorted randomly, so the first sense is always optimal",
+          "Natural language sense distributions are heavily skewed, with dominant senses accounting for a large majority of real-world usage",
+          "MFS uses deep neural cross-attention to rank senses",
+          "MFS eliminates all polysemy from the English language"
+        ],
+        "a": 1,
+        "why": "Lexical frequency distributions follow Zipfian dynamics where one primary meaning often accounts for 60-80% of occurrences, making the majority-class heuristic difficult for unsupervised methods to surpass."
+      }
+    ],
+    "related": [
+      "glove-and-fasttext",
+      "semantic-search-and-dense-retrieval"
+    ],
+    "keywords": "word sense disambiguation and lesk, word sense disambiguation: lesk algorithm, wordnet, and supervised disambiguation, natural language processing, deep learning"
+  },
+  {
+    "id": "semantic-role-labelling",
+    "short": "Semantic Role Labelling (SRL)",
+    "title": "Semantic Role Labelling: PropBank, FrameNet, and the Predicate-Argument Structure",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "SRL abstracts surface syntax into predicate-argument structures answering core semantic questions. PropBank defines predicate-specific core semantic roles (ARG0 for agent/causer, ARG1 for patient/theme) and general adjunct modifiers (ARGM-TMP for time, ARGM-LOC for location). FrameNet organizes language into conceptual semantic frames (e.g. `Commerce_buy`) evoked by lexical targets with specific frame elements. Modern neural SRL casts argument extraction as BIO sequence tagging or span-based classification conditioned on identified predicate tokens.",
+    "lead": "Semantic Role Labelling (SRL) identifies \"who did what to whom, when, where, and why\" by parsing sentences into predicates and their semantic arguments. Grounded in computational formalisms like PropBank and FrameNet, SRL abstracts away surface syntactic variations to uncover invariant underlying event semantics.",
+    "analogy": "Imagine a theatre play script. Regardless of whether an actor enters from stage left or stage right, or speaks in active or passive voice, the cast list remains fixed: Actor A is the protagonist (Agent), Actor B is the target (Patient), and the clock on the wall sets the time (Temporal modifier). SRL identifies the cast list and assigns theatrical roles for every scene in a text.",
+    "intuition": [
+      "Consider the three sentences: \"The dog bit the postman\", \"The postman was bitten by the dog\", and \"The postman suffered a bite from the dog\". Syntactically, these sentences look very different: \"the dog\" is a subject in the first sentence, an object of a preposition in the second, and absent as a direct verb subject in the third. Yet semantically, the underlying event is identical: the dog is the attacker (Agent / ARG0) and the postman is the victim (Patient / ARG1). Standard syntactic parsing stops at grammatical relations (subject, object). Semantic Role Labelling takes the crucial next step: given a predicate (verb or event noun), it labels each phrase with its semantic role, enabling information extraction, question answering, and dialogue systems to understand the core participants of any event."
+    ],
+    "steps": [
+      "Identify predicate tokens: scan the sentence for verbal or nominal event anchors (e.g. \"acquired\", \"sold\", \"demolished\").",
+      "Generate contextual token encodings: pass the sentence through a bidirectional transformer encoder along with a binary predicate indicator feature.",
+      "Extract candidate argument spans: enumerate valid candidate phrases or use BIO token tagging over the sequence.",
+      "Score span-role assignments: evaluate compatibility between the predicate embedding and candidate argument representations.",
+      "Enforce structural constraints: apply dynamic programming or integer linear programming to ensure spans do not overlap and grammatical constraints are satisfied."
+    ],
+    "math": [
+      {
+        "h": "Semantic Role Labelling: PropBank, FrameNet, and the Predicate-Argument Structure formulation (Part 1)",
+        "tex": "\\mathbf{g}_{i, j} = [\\mathbf{h}_i \\,;\\, \\mathbf{h}_j \\,;\\, \\mathbf{h}_p \\,;\\, \\mathbf{w}_{j-i}]",
+        "p": "Argument classification score for semantic role $r \\in \\mathcal{R}$ is computed via multi-layer perceptron:"
+      },
+      {
+        "h": "Semantic Role Labelling: PropBank, FrameNet, and the Predicate-Argument Structure formulation (Part 2)",
+        "tex": "\\text{Score}(i, j, r) = \\mathbf{W}_r \\cdot \\text{ReLU}(\\mathbf{W}_g \\mathbf{g}_{i, j} + \\mathbf{b}_g) + b_r",
+        "p": "Global span consistency enforces that arguments cannot overlap and each core role (ARG0, ARG1) typically appears at most once per predicate:"
+      },
+      {
+        "h": "Semantic Role Labelling: PropBank, FrameNet, and the Predicate-Argument Structure formulation (Part 3)",
+        "tex": "\\hat{\\mathcal{Y}} = \\arg\\max_{\\mathcal{Y} \\in \\text{ValidSpans}} \\sum_{(i, j, r) \\in \\mathcal{Y}} \\text{Score}(i, j, r)",
+        "p": "Global span consistency enforces that arguments cannot overlap and each core role (ARG0, ARG1) typically appears at most once per predicate:"
+      }
+    ],
+    "code": "import numpy as np\n\ndef score_semantic_roles(tokens, predicate_idx, candidate_spans, role_weights):\n    \"\"\"Simulates scoring semantic arguments for a designated predicate.\"\"\"\n    pred_token = tokens[predicate_idx]\n    scored_arguments = []\n    \n    for (start, end), span_type in candidate_spans:\n        span_text = \" \".join(tokens[start:end])\n        # Simple simulated affinity based on grammatical role heuristics\n        if span_type == 'subject' and predicate_idx > start:\n            role = 'ARG0 (Agent/Doer)'\n            confidence = 0.94\n        elif span_type == 'object' and predicate_idx < start:\n            role = 'ARG1 (Patient/Theme)'\n            confidence = 0.91\n        elif span_type == 'prep_phrase':\n            role = 'ARGM-LOC (Location)'\n            confidence = 0.88\n        else:\n            role = 'O (None)'\n            confidence = 0.50\n            \n        scored_arguments.append({\n            'span': span_text,\n            'range': (start, end),\n            'role': role,\n            'confidence': confidence\n        })\n        \n    return scored_arguments\n\n# Sentence: \"Google acquired DeepMind in London\"\nsentence = \"Google acquired DeepMind in London\"\ntokens = sentence.split()\npredicate_idx = 1  # \"acquired\"\n\n# Candidate syntactic constituents\ncandidate_spans = [\n    ((0, 1), 'subject'),       # \"Google\"\n    ((2, 3), 'object'),        # \"DeepMind\"\n    ((3, 5), 'prep_phrase')    # \"in London\"\n]\n\nresults = score_semantic_roles(tokens, predicate_idx, candidate_spans, {})\n\nprint(f\"Sentence: '{sentence}'\")\nprint(f\"Target Predicate: '{tokens[predicate_idx]}'\")\nprint(\"Extracted Semantic Roles:\")\nfor r in results:\n    print(f\"  [{r['span']:12}] -> {r['role']} (conf: {r['confidence']:.2f})\")",
+    "keyPoints": [
+      "Semantic Role Labelling identifies predicate-argument relationships, capturing who did what to whom across varied surface syntax.",
+      "PropBank standardises numbered core roles (ARG0–ARG5) and adjunct modifiers (ARGM-TMP, ARGM-LOC) per predicate sense.",
+      "Conditioning bidirectional contextual representations on predicate tokens allows models to extract clean, non-overlapping semantic argument spans."
+    ],
+    "pitfalls": [
+      "Assuming ARG0 always equals grammatical subject; in passive voice (\"The suspect was arrested by the officer\"), the subject is ARG1 while the prepositional agent is ARG0.",
+      "Failing to condition the argument extraction on specific predicate indicators; sentences with multiple verbs have distinct role assignments for each verb.",
+      "Treating semantic frames across languages as identical without adjusting for language-specific valence patterns and case-marking structures."
+    ],
+    "quiz": [
+      {
+        "q": "In the PropBank annotation standard, what semantic entity is typically denoted by ARG0?",
+        "o": [
+          "The location where the event took place",
+          "The agent, causer, or primary instigator of the action",
+          "The patient, theme, or entity affected by the action",
+          "The timestamp indicating when the action occurred"
+        ],
+        "a": 1,
+        "why": "PropBank designates ARG0 as the external argument or prototype agent/causer, whereas ARG1 represents the prototype patient or theme."
+      },
+      {
+        "q": "Why does Semantic Role Labelling provide more consistent semantic representation than pure dependency parsing across active and passive voices?",
+        "o": [
+          "Dependency parsing cannot be run on passive sentences",
+          "SRL assigns the same underlying roles (ARG0/ARG1) regardless of surface subject/object position shifts",
+          "SRL eliminates the need for tokenisation",
+          "SRL only functions on nouns rather than verbs"
+        ],
+        "a": 1,
+        "why": "Active (\"A bit B\") and passive (\"B was bitten by A\") have reversed grammatical subjects and objects, but SRL consistently maps A to ARG0 and B to ARG1."
+      },
+      {
+        "q": "What distinguishes FrameNet from PropBank in lexical semantic modelling?",
+        "o": [
+          "FrameNet organizes words into conceptual semantic frames with domain-specific frame elements rather than numbered arguments",
+          "FrameNet only supports numerical database queries",
+          "PropBank does not support English verbs",
+          "FrameNet is restricted exclusively to acoustic audio analysis"
+        ],
+        "a": 0,
+        "why": "FrameNet groups words into conceptual frames (e.g. `Commerce_buy`, with elements `Buyer`, `Seller`, `Goods`) reflecting frame semantics, whereas PropBank uses general numbered arguments."
+      }
+    ],
+    "related": [
+      "conditional-random-fields",
+      "bert-and-masked-language-models"
+    ],
+    "keywords": "semantic role labelling, semantic role labelling: propbank, framenet, and the predicate-argument structure, natural language processing, deep learning"
+  },
+  {
+    "id": "evaluating-embeddings-similarity-analogy-bias",
+    "short": "Evaluating Embeddings & Bias",
+    "title": "Evaluating Embeddings: Similarity, Analogy, and Cultural Bias",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Intrinsic evaluation tests geometrical consistency (word similarity datasets, analogy arithmetic), whereas extrinsic evaluation measures downstream task metrics (NER, classification). Word similarity tasks (WordSim-353, SimLex-999) evaluate Spearman rank correlation $\\rho$ between human ratings and vector cosine distances. Analogy completion ($\\\\mathbf{v}_{\\\\text{king}} - \\\\mathbf{v}_{\\\\text{man}} + \\\\mathbf{v}_{\\\\text{woman}} \\\\approx \\\\mathbf{v}_{\\\\text{queen}}$) tests linear relational substructures. Bias audits (WEAT, SEAT) quantify cultural, racial, and gender stereotypical associations reflected in cosine geometry.",
+    "lead": "Evaluating representation quality in vector spaces requires balancing intrinsic geometric benchmarks and extrinsic downstream performance. Intrinsic metrics like word similarity correlation and vector analogies assess semantic structure, while quantitative audits—such as the Word Embedding Association Test (WEAT)—uncover harmful societal biases encoded within distributional geometries.",
+    "analogy": "Evaluating a vector space is like testing a newly forged optical lens. Intrinsic evaluation tests the lens in a laboratory for chromatic aberration, focal sharpness, and distortion. Extrinsic evaluation puts the lens on an actual satellite camera to see if it takes crisp photos of the earth. Bias evaluation checks if the lens has an unwanted colour tint that distorts the true hues of the landscape.",
+    "intuition": [
+      "When you train word or sentence embeddings, how do you know if the resulting vector space is good? There are two primary evaluation philosophies: intrinsic and extrinsic. Extrinsic evaluation measures how well the embeddings perform as features in an actual end-to-end task, such as document classification or entity recognition. Intrinsic evaluation, on the other hand, probes the geometric properties of the vector space directly: do synonyms sit near each other (similarity)? Can vector arithmetic solve relationships like \"Paris is to France as Tokyo is to Japan\" (analogy)? Crucially, because embeddings learn from human web text, they also internalize human prejudices. Bias testing evaluates whether neutral professions (e.g. \"doctor\", \"nurse\") exhibit illicit geometric proximity to specific demographic terms (\"he\", \"she\"), enabling debiasing before deployment."
+    ],
+    "steps": [
+      "Select intrinsic benchmark datasets: choose semantic similarity datasets (SimLex-999, MEN) and relational analogy datasets (Google Analogy Test).",
+      "Compute cosine similarities: calculate pairwise cosine similarities for all word pairs in the benchmark.",
+      "Evaluate Spearman correlation: rank model scores against human annotator ratings and compute rank-order correlation $\\rho$.",
+      "Evaluate analogy accuracy: solve 3CosAdd vector equations and measure top-1 retrieval accuracy.",
+      "Execute WEAT bias audit: define target concept sets and demographic attribute sets to compute effect size $d$ and permutation p-values."
+    ],
+    "math": [
+      {
+        "h": "Evaluating Embeddings: Similarity, Analogy, and Cultural Bias Objective Function",
+        "tex": "\\mathcal{L}_{\\text{total}} = \\sum_{i=1}^N \\ell(f(x_i), y_i)",
+        "p": "Optimisation objective and loss formulation for evaluating embeddings: similarity, analogy, and cultural bias."
+      }
+    ],
+    "code": "import numpy as np\n\ndef cosine_similarity(u, v):\n    \"\"\"Computes cosine similarity between two vectors.\"\"\"\n    norm = np.linalg.norm(u) * np.linalg.norm(v)\n    return np.dot(u, v) / max(norm, 1e-8)\n\ndef evaluate_analogy(vectors, a, b, c):\n    \"\"\"Computes 3CosAdd analogy: b - a + c ~ d.\"\"\"\n    target = vectors[b] - vectors[a] + vectors[c]\n    best_word = None\n    best_sim = -float('inf')\n    \n    for word, vec in vectors.items():\n        if word in (a, b, c):\n            continue\n        sim = cosine_similarity(target, vec)\n        if sim > best_sim:\n            best_sim = sim\n            best_word = word\n            \n    return best_word, best_sim\n\ndef weat_effect_size(vectors, X, Y, A, B):\n    \"\"\"Calculates WEAT effect size d between targets X, Y and attributes A, B.\"\"\"\n    def s(w):\n        sim_A = np.mean([cosine_similarity(vectors[w], vectors[a]) for a in A])\n        sim_B = np.mean([cosine_similarity(vectors[w], vectors[b]) for b in B])\n        return sim_A - sim_B\n        \n    scores_X = [s(x) for x in X]\n    scores_Y = [s(y) for y in Y]\n    all_scores = scores_X + scores_Y\n    \n    diff = np.mean(scores_X) - np.mean(scores_Y)\n    pooled_std = np.std(all_scores) + 1e-8\n    return diff / pooled_std\n\n# Simulated 4D embedding space\nnp.random.seed(42)\nembeddings = {\n    \"king\": np.array([1.0, 0.8, 0.1, 0.2]),\n    \"man\": np.array([0.9, 0.1, 0.1, 0.1]),\n    \"woman\": np.array([0.1, 0.9, 0.1, 0.1]),\n    \"queen\": np.array([0.2, 1.6, 0.1, 0.2]),\n    \"programmer\": np.array([0.8, 0.2, 0.9, 0.1]),\n    \"homemaker\": np.array([0.1, 0.8, 0.1, 0.8])\n}\n\n# 1. Analogy completion\nd_pred, score = evaluate_analogy(embeddings, \"man\", \"king\", \"woman\")\nprint(f\"Analogy: 'man' is to 'king' as 'woman' is to -> '{d_pred}' (sim: {score:.3f})\")\n\n# 2. WEAT Bias Audit (Target: Career vs Family, Attributes: Male vs Female)\nX = [\"programmer\"]\nY = [\"homemaker\"]\nA = [\"man\"]\nB = [\"woman\"]\n\nd = weat_effect_size(embeddings, X, Y, A, B)\nprint(f\"WEAT Effect Size (Gender Bias in Occupations): d = {d:.3f}\")",
+    "keyPoints": [
+      "Intrinsic evaluation probes semantic geometry via word similarity rankings and linear relational vector analogies.",
+      "SimLex-999 separates genuine semantic similarity from loose topical association, offering a more rigorous test than older relatedness datasets.",
+      "Auditing vector geometries with tests like WEAT is critical for detecting and mitigating societal bias prior to real-world deployment."
+    ],
+    "pitfalls": [
+      "Overfitting embeddings to intrinsic word similarity benchmarks that do not correlate well with downstream application performance.",
+      "Confusing semantic relatedness (e.g. \"coffee\" and \"cup\") with true semantic similarity (e.g. \"coffee\" and \"tea\"); datasets like SimLex-999 strictly test similarity.",
+      "Assuming that applying linear projection debiasing completely eliminates societal bias; non-linear probe classifiers often readily reconstruct latent protected attributes."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary distinction between intrinsic and extrinsic evaluation of word embeddings?",
+        "o": [
+          "Intrinsic evaluation tests geometric properties directly (similarity/analogy), while extrinsic evaluation tests performance on a downstream NLP task",
+          "Intrinsic evaluation requires GPU clusters, while extrinsic evaluation runs on CPUs",
+          "Intrinsic evaluation only measures inference latency in milliseconds",
+          "Extrinsic evaluation tests character spellings, while intrinsic evaluation evaluates grammar"
+        ],
+        "a": 0,
+        "why": "Intrinsic evaluation tests vector space properties (word similarity correlations, analogy arithmetic), whereas extrinsic evaluation measures utility in downstream tasks like sentiment classification."
+      },
+      {
+        "q": "What does the Word Embedding Association Test (WEAT) measure?",
+        "o": [
+          "The floating-point compression ratio of quantized embeddings",
+          "The differential semantic association between target concepts and demographic attribute words, quantifying stereotypical bias",
+          "The number of out-of-vocabulary words in a corpus",
+          "The optimal learning rate for AdamW optimisers"
+        ],
+        "a": 1,
+        "why": "WEAT adapts the Implicit Association Test to word embeddings, measuring whether neutral concept words show differential geometric proximity to specific demographic or gender words."
+      },
+      {
+        "q": "Which correlation coefficient is standardly used to evaluate model word similarity against human rankings?",
+        "o": [
+          "Pearson linear correlation $r$",
+          "Spearman rank-order correlation $\\rho$",
+          "Gini coefficient",
+          "Dice overlap coefficient"
+        ],
+        "a": 1,
+        "why": "Spearman's rank-order correlation evaluates monotonic relationship between human rankings and model cosine similarities, making it robust to non-linear rating scales."
+      }
+    ],
+    "related": [
+      "distributional-semantics",
+      "sentence-embeddings-and-sbert"
+    ],
+    "keywords": "evaluating embeddings similarity analogy bias, evaluating embeddings: similarity, analogy, and cultural bias, natural language processing, deep learning"
+  },
+  {
+    "id": "neural-language-models",
+    "short": "Neural Language Models: NNLM",
+    "title": "Neural Language Models: From Bengio's N-gram NNLM to Recurrent Language Models",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Classical n-gram models struggle with zero-probability counts on unseen test sequences, necessitating complex backoff and smoothing (Kneser-Ney). The Bengio NNLM (2003) maps preceding context words to distributed continuous vectors, concatenating them into a hidden feedforward layer. Distributed representations enable automatic generalisation: learning about \"cat walks on a mat\" naturally transfers predictive probability to \"dog walks on a rug\". Computational bottlenecks in computing full vocabulary softmaxes prompted historical innovations like hierarchical softmax and negative sampling.",
+    "lead": "Classical n-gram language models suffer from severe curse of dimensionality and sparsity, unable to share statistical strength across semantically similar words. Bengio's 2003 Neural Network Language Model (NNLM) introduced distributed word embeddings and continuous hidden layers, revolutionizing statistical language modelling and laying the groundwork for recurrent and transformer architectures.",
+    "analogy": "Imagine a library catalogue that files every book in completely isolated, unindexed steel lockers. If you find a recipe for chocolate cake in Locker #104, you have no way to find a recipe for vanilla cake except by rummaging through every other locker at random. A neural language model organizes the library along a continuous thematic map where all dessert cookbooks sit on adjacent shelves.",
+    "intuition": [
+      "In classical statistical NLP, an n-gram model predicts the next word by looking up how many times that exact sequence of $n-1$ words appeared in the training library. If the training corpus contains \"The cat sat on the rug\", but never contains \"The dog sat on the carpet\", an n-gram model has zero probability for \"carpet\" following \"The dog sat on the\". It treats \"cat\" and \"dog\", and \"rug\" and \"carpet\", as completely unrelated discrete symbols. Bengio's breakthrough was to represent every word as a continuous coordinate in a dense embedding space. In this continuous space, \"dog\" is near \"cat\", and \"carpet\" is near \"rug\". When the neural network learns parameters that assign high probability to \"rug\" following \"cat\", that smooth mathematical function automatically assigns high probability to \"carpet\" following \"dog\". This continuous representation conquered the curse of dimensionality."
+    ],
+    "steps": [
+      "Extract sliding n-gram windows: construct fixed-length historical context tuples $(w_{t-n+1}, \\dots, w_{t-1})$ and target token $w_t$.",
+      "Look up distributed embeddings: project discrete token indices into continuous $d$-dimensional embedding vectors.",
+      "Concatenate context representations: flatten individual word vectors into a single contiguous context vector.",
+      "Compute hidden layer activations: apply linear transformation and non-linear activation (tanh) to model non-linear word interactions.",
+      "Project to vocabulary logits: transform hidden representations into $|V|$-dimensional output scores.",
+      "Normalise via softmax and optimise: compute cross-entropy loss against the true token and backpropagate gradients into both weights and embeddings."
+    ],
+    "math": [
+      {
+        "h": "Neural Language Models: From Bengio's N-gram NNLM to Recurrent Language Models formulation (Part 1)",
+        "tex": "\\mathbf{x} = [\\mathbf{c}(w_{t-n+1}) \\,;\\, \\dots \\,;\\, \\mathbf{c}(w_{t-1})] \\in \\mathbb{R}^{(n-1)d}",
+        "p": "The concatenated context vector passes through a non-linear hidden layer with weight matrix $\\mathbf{H}$ and bias $\\mathbf{d}$:"
+      },
+      {
+        "h": "Neural Language Models: From Bengio's N-gram NNLM to Recurrent Language Models formulation (Part 2)",
+        "tex": "\\mathbf{a} = \\tanh(\\mathbf{d} + \\mathbf{H}\\mathbf{x})",
+        "p": "Output unnormalised logits $\\mathbf{y} \\in \\mathbb{R}^{|V|}$ combine hidden activations with direct skip connections:"
+      },
+      {
+        "h": "Neural Language Models: From Bengio's N-gram NNLM to Recurrent Language Models formulation (Part 3)",
+        "tex": "\\mathbf{y} = \\mathbf{b} + \\mathbf{W}\\mathbf{x} + \\mathbf{U}\\mathbf{a}",
+        "p": "Predictive probability distribution over the vocabulary is calculated using the softmax function:"
+      },
+      {
+        "h": "Neural Language Models: From Bengio's N-gram NNLM to Recurrent Language Models formulation (Part 4)",
+        "tex": "P(w_t = i \\mid w_{t-n+1}, \\dots, w_{t-1}) = \\frac{\\exp(y_i)}{\\sum_{j=1}^{|V|} \\exp(y_j)}",
+        "p": "Cross-entropy loss for true next token $w_t^*$ is formulated as:"
+      },
+      {
+        "h": "Neural Language Models: From Bengio's N-gram NNLM to Recurrent Language Models formulation (Part 5)",
+        "tex": "\\mathcal{L} = -\\log P(w_t^* \\mid w_{t-n+1}, \\dots, w_{t-1})",
+        "p": "Cross-entropy loss for true next token $w_t^*$ is formulated as:"
+      }
+    ],
+    "code": "import numpy as np\n\ndef softmax(z):\n    \"\"\"Numerically stable softmax.\"\"\"\n    shift_z = z - np.max(z)\n    exp_z = np.exp(shift_z)\n    return exp_z / np.sum(exp_z)\n\nclass BengioNNLM:\n    \"\"\"Simplified 3-gram Neural Network Language Model.\"\"\"\n    def __init__(self, vocab_size, embedding_dim, hidden_dim):\n        np.random.seed(42)\n        # Word embedding matrix C\n        self.C = np.random.randn(vocab_size, embedding_dim) * 0.1\n        # Hidden layer weights (context size = 2 for 3-gram)\n        self.H = np.random.randn(hidden_dim, 2 * embedding_dim) * 0.1\n        self.d = np.zeros(hidden_dim)\n        # Output vocabulary projection\n        self.U = np.random.randn(vocab_size, hidden_dim) * 0.1\n        self.b = np.zeros(vocab_size)\n        \n    def forward(self, w1_idx, w2_idx):\n        # 1. Lookup and concatenate embeddings\n        c1 = self.C[w1_idx]\n        c2 = self.C[w2_idx]\n        x = np.concatenate([c1, c2])\n        \n        # 2. Hidden layer with tanh activation\n        a = np.tanh(self.d + np.dot(self.H, x))\n        \n        # 3. Logits and softmax\n        logits = self.b + np.dot(self.U, a)\n        probs = softmax(logits)\n        return probs\n\n# Vocabulary setup\nvocab = {\"the\": 0, \"cat\": 1, \"dog\": 2, \"sat\": 3, \"on\": 4, \"rug\": 5, \"mat\": 6}\ninv_vocab = {v: k for k, v in vocab.items()}\n\nmodel = BengioNNLM(vocab_size=len(vocab), embedding_dim=4, hidden_dim=8)\n\n# Predict next word after context (\"the\", \"cat\")\nw1, w2 = vocab[\"the\"], vocab[\"cat\"]\nprobs = model.forward(w1, w2)\n\nprint(\"Predicted Next Word Probabilities for context: ['the', 'cat'] -> ?\")\nfor idx, p in enumerate(probs):\n    print(f\"  {inv_vocab[idx]:5} -> {p:.4f}\")\n\ntop_token = inv_vocab[np.argmax(probs)]\nprint(f\"\\nMost likely continuation: '{top_token}'\")",
+    "keyPoints": [
+      "Bengio's NNLM pioneered continuous distributed word embeddings to conquer the combinatorial sparsity of classical n-grams.",
+      "Projecting discrete words into continuous vector space allows models to generalise seamlessly across synonymous expressions.",
+      "Softmax vocabulary bottlenecks motivated historical innovations including hierarchical softmax, noise-contrastive estimation, and modern subword tokenisation."
+    ],
+    "pitfalls": [
+      "Suffering extreme training latency due to full vocabulary softmax computation; when $|V| > 100,000$, standard softmax backpropagation becomes prohibitively slow.",
+      "Treating context as a fixed window; like n-gram models, early NNLMs cannot access dependencies beyond their predetermined input window size $n-1$.",
+      "Over-parameterising output projection matrix $\\mathbf{U}$, causing models to overfit rapidly on small text corpora."
+    ],
+    "quiz": [
+      {
+        "q": "What fundamental limitation of classical n-gram models did Bengio's NNLM solve?",
+        "o": [
+          "The inability to compute token probabilities on GPUs",
+          "The inability to share statistical strength across semantically similar words due to discrete symbol representations",
+          "The inability to parse punctuation marks in Latin scripts",
+          "The inability to calculate cross-entropy loss"
+        ],
+        "a": 1,
+        "why": "Classical n-grams treat words as discrete, independent symbols. Bengio's continuous word embeddings allow statistical learning from one phrase to generalise smoothly to synonymous phrases."
+      },
+      {
+        "q": "Where did the primary computational bottleneck lie in Bengio's original 2003 NNLM architecture?",
+        "o": [
+          "Inverting the Hessian matrix during gradient updates",
+          "Computing the normalising denominator of the softmax function across the full vocabulary size $|V|$",
+          "Looking up vectors in the embedding matrix",
+          "Calculating the hyperbolic tangent tanh activation"
+        ],
+        "a": 1,
+        "why": "Evaluating the softmax denominator requires computing dot products across all $|V|$ words in the vocabulary for every single token prediction, scaling linearly with dictionary size."
+      },
+      {
+        "q": "How did Bengio's NNLM handle a context of $n-1$ words in its input layer?",
+        "o": [
+          "By averaging all sentence words using bag-of-words",
+          "By looking up each word's embedding vector and concatenating them into a single continuous vector",
+          "By running an autoregressive transformer with causal masking",
+          "By sorting the words into alphabetical order"
+        ],
+        "a": 1,
+        "why": "The NNLM looked up the continuous embedding for each context word and concatenated them into a fixed-length vector $\\mathbf{x} \\in \\mathbb{R}^{(n-1)d}$."
+      }
+    ],
+    "related": [
+      "lstm_networks",
+      "transformer_networks"
+    ],
+    "keywords": "neural language models, neural language models: from bengio's n-gram nnlm to recurrent language models, natural language processing, deep learning"
+  },
+  {
+    "id": "instruction-tuning-rlhf-and-dpo",
+    "short": "Instruction Tuning, RLHF & DPO",
+    "title": "Instruction Tuning, RLHF, and Direct Preference Optimisation (DPO)",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Base language models optimise next-token prediction, frequently producing toxic, repetitive, or unhelpful completions when prompted with instructions. Supervised Fine-Tuning (SFT) trains models on curated instruction-response dialogues, teaching conversational format and task execution. RLHF trains a reward model on pairwise human comparisons, optimising the policy using PPO while constraining policy drift via KL divergence penalties. Direct Preference Optimisation (DPO) derives an exact closed-form algebraic substitution that optimises preference loss directly on policy weights without a separate reward model or RL loop.",
+    "lead": "Pretrained base language models are raw sequence completers that mimic internet text rather than helpful assistants. Transforming base models into aligned, instruction-following assistants requires supervised fine-tuning (SFT), Reinforcement Learning from Human Feedback (RLHF) with reward modelling, and modern reference-model-implicit formulations such as Direct Preference Optimisation (DPO).",
+    "analogy": "Teaching an LLM is like training an apprentice chef. Pretraining is reading every recipe book in the national archives. SFT is culinary school, where the apprentice cooks exact dishes following instructor demonstrations. RLHF is having a food critic taste two dishes side-by-side and give critique scores. DPO is giving the apprentice a clear side-by-side photo journal of delicious dishes versus burnt dishes, allowing them to adjust their seasoning directly without needing the critic present in the kitchen.",
+    "intuition": [
+      "If you give a base, un-tuned LLM the prompt \"Write a poem about the ocean\", it might complete the text with \"and explain its metre. Chapter 3: Poetry Analysis\" because it treats your prompt as an excerpt from a high school textbook. It lacks the concept of being an assistant that obeys instructions. Supervised Fine-Tuning (SFT) fixes this by training the model on hundreds of thousands of instruction-answer pairs. However, SFT alone struggles when there are multiple valid answers or nuanced trade-offs between conciseness, tone, and correctness. RLHF solves this by asking humans to rank multiple candidate answers (e.g. \"Response A is better than Response B\"). A reward model learns this human preference function, and the LLM is updated using reinforcement learning. DPO achieves the exact same mathematical objective as RLHF, but eliminates the complex reinforcement learning machinery by proving that the optimal policy can be trained directly on preferred vs dispreferred pairs using simple binary cross-entropy."
+    ],
+    "steps": [
+      "Pretrain base foundation model: train autoregressive transformer on trillion-token web corpora for raw next-token prediction.",
+      "Perform Supervised Fine-Tuning (SFT): fine-tune base weights on high-quality demonstration datasets of user instructions and ideal responses.",
+      "Collect preference data: sample multiple candidate completions $(y_1, y_2)$ for prompt $x$ and collect human or AI annotator rankings $(y_w \\succ y_l)$.",
+      "Train reward model (in classical RLHF): train scalar regression model $r_\\psi(x, y)$ using pairwise ranking loss.",
+      "Optimise policy via PPO (classical RLHF): update policy network with actor-critic reinforcement learning and KL divergence penalty.",
+      "Alternatively, apply DPO directly: compute implicit reward margins using policy $\\pi_\\theta$ and frozen reference model $\\pi_{\\text{ref}}$, updating $\\theta$ via standard gradient backpropagation."
+    ],
+    "math": [
+      {
+        "h": "Instruction Tuning, RLHF, and Direct Preference Optimisation (DPO) formulation (Part 1)",
+        "tex": "\\max_\\pi \\mathbb{E}_{x \\sim \\mathcal{D}, y \\sim \\pi(y|x)} \\left[ r_\\psi(x, y) \\right] - \\beta \\mathbb{D}_{\\text{KL}}\\left( \\pi(y|x) \\,\\|\\, \\pi_{\\text{ref}}(y|x) \\right)",
+        "p": "The closed-form theoretical optimum policy $\\pi^*(y|x)$ satisfies:"
+      },
+      {
+        "h": "Instruction Tuning, RLHF, and Direct Preference Optimisation (DPO) formulation (Part 2)",
+        "tex": "\\pi^*(y|x) = \\frac{1}{Z(x)} \\pi_{\\text{ref}}(y|x) \\exp\\left( \\frac{1}{\\beta} r(x, y) \\right)",
+        "p": "Direct Preference Optimisation (DPO) inverts this relationship to express ground-truth reward strictly in terms of policy log-probabilities:"
+      },
+      {
+        "h": "Instruction Tuning, RLHF, and Direct Preference Optimisation (DPO) formulation (Part 3)",
+        "tex": "r(x, y) = \\beta \\log \\frac{\\pi(y|x)}{\\pi_{\\text{ref}}(y|x)} + \\beta \\log Z(x)",
+        "p": "Substituting this into the Bradley-Terry preference model $P(y_w \\succ y_l \\mid x) = \\sigma(r(x, y_w) - r(x, y_l))$ eliminates $Z(x)$ and yields the DPO objective:"
+      },
+      {
+        "h": "Instruction Tuning, RLHF, and Direct Preference Optimisation (DPO) formulation (Part 4)",
+        "tex": "\\mathcal{L}_{\\text{DPO}}(\\pi_\\theta; \\pi_{\\text{ref}}) = - \\mathbb{E}_{(x, y_w, y_l)} \\left[ \\log \\sigma \\left( \\beta \\log \\frac{\\pi_\\theta(y_w|x)}{\\pi_{\\text{ref}}(y_w|x)} - \\beta \\log \\frac{\\pi_\\theta(y_l|x)}{\\pi_{\\text{ref}}(y_l|x)} \\right) \\right]",
+        "p": "Substituting this into the Bradley-Terry preference model $P(y_w \\succ y_l \\mid x) = \\sigma(r(x, y_w) - r(x, y_l))$ eliminates $Z(x)$ and yields the DPO objective:"
+      }
+    ],
+    "code": "import numpy as np\n\ndef sigmoid(z):\n    \"\"\"Numerically stable sigmoid function.\"\"\"\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))\n\ndef dpo_loss(pi_logps_win, pi_logps_lose, ref_logps_win, ref_logps_lose, beta=0.1):\n    \"\"\"Computes Direct Preference Optimisation (DPO) loss and implicit rewards.\n    \n    pi_logps: sum of token log-probabilities under policy network pi_theta\n    ref_logps: sum of token log-probabilities under frozen reference network pi_ref\n    \"\"\"\n    # Compute log-ratios for winning and losing responses\n    pi_diff = pi_logps_win - pi_logps_lose\n    ref_diff = ref_logps_win - ref_logps_lose\n    \n    # Margin: beta * [log(pi_w / ref_w) - log(pi_l / ref_l)]\n    logits = beta * (pi_diff - ref_diff)\n    \n    # DPO Loss = -log(sigmoid(logits))\n    loss = -np.log(sigmoid(logits) + 1e-12)\n    \n    # Implicit reward scores\n    reward_win = beta * (pi_logps_win - ref_logps_win)\n    reward_lose = beta * (pi_logps_lose - ref_logps_lose)\n    \n    return loss, reward_win, reward_lose\n\n# Simulation: Prompt = \"Explain why the sky is blue\"\n# Response Winner (clear, helpful): y_w\n# Response Loser (toxic, incorrect): y_l\n\n# Initial reference log-probabilities (frozen SFT model)\nref_win = -12.4\nref_lose = -13.1\n\n# Policy before alignment (similar likelihoods)\npi_win_initial = -12.3\npi_lose_initial = -13.0\n\nloss_initial, r_w_init, r_l_init = dpo_loss(\n    pi_win_initial, pi_lose_initial, ref_win, ref_lose, beta=0.1\n)\n\n# Policy after DPO training (increased probability on winner, decreased on loser)\npi_win_trained = -10.5\npi_lose_trained = -16.2\n\nloss_trained, r_w_opt, r_l_opt = dpo_loss(\n    pi_win_trained, pi_lose_trained, ref_win, ref_lose, beta=0.1\n)\n\nprint(f\"Initial DPO Loss: {loss_initial:.4f} | Margin: {(r_w_init - r_l_init):.3f}\")\nprint(f\"Trained DPO Loss: {loss_trained:.4f} | Margin: {(r_w_opt - r_l_opt):.3f}\")\nprint(f\"Implicit Reward (Winner): {r_w_opt:.3f} | Implicit Reward (Loser): {r_l_opt:.3f}\")",
+    "keyPoints": [
+      "Alignment bridges the gap between raw web completion and reliable, helpful assistant behaviour.",
+      "RLHF combines human preference ranking, reward modelling, and KL-regularised PPO policy optimisation.",
+      "DPO achieves equivalent mathematical alignment using a stable, closed-form binary cross-entropy loss directly on the policy network."
+    ],
+    "pitfalls": [
+      "Allowing policy drift without KL divergence regularisation; the model exploits imperfections in the reward model (reward hacking), producing nonsensical repetitive prose.",
+      "Applying DPO without an initial Supervised Fine-Tuning (SFT) phase; DPO assumes the reference policy is already in-distribution for the prompt format.",
+      "Using noisy, inconsistent preference annotations where annotators disagree on subjective quality, creating conflicting gradient signals."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary role of the KL divergence penalty $\\beta \\mathbb{D}_{\\text{KL}}(\\pi \\,\\|\\, \\pi_{\\text{ref}})$ during RLHF training?",
+        "o": [
+          "To force the model to output shorter sentences",
+          "To prevent the policy model from drifting too far from the initial SFT model and exploiting reward model loopholes",
+          "To increase the generation temperature during decoding",
+          "To quantise weights into 8-bit integers"
+        ],
+        "a": 1,
+        "why": "Without the KL constraint, the reinforcement learning policy exploits imperfections in the learned reward model (reward hacking), collapsing text coherence."
+      },
+      {
+        "q": "How does Direct Preference Optimisation (DPO) simplify the alignment pipeline compared to standard PPO-based RLHF?",
+        "o": [
+          "DPO requires no training data whatsoever",
+          "DPO replaces neural networks with decision trees",
+          "DPO reparameterises the reward model directly into the policy log-probabilities, eliminating the need to train a separate reward model or run RL sampling loops",
+          "DPO eliminates the need for reference models"
+        ],
+        "a": 2,
+        "why": "DPO shows that the reward function can be analytically substituted with policy log-ratios, transforming preference alignment into a straightforward supervised binary classification loss."
+      },
+      {
+        "q": "What is the purpose of the initial Supervised Fine-Tuning (SFT) stage before preference alignment?",
+        "o": [
+          "To train the subword tokeniser vocabulary",
+          "To adapt the raw foundation model to follow conversational prompt formats and generate coherent initial responses",
+          "To compute validation perplexity on Wikipedia articles",
+          "To evaluate hardware cache memory usage"
+        ],
+        "a": 1,
+        "why": "Base models are pre-trained for raw web text completion; SFT teaches the model the basic instruction-following and question-answering dialogue format."
+      }
+    ],
+    "related": [
+      "prompting-and-in-context-learning",
+      "evaluating-llms-benchmarks-and-judges"
+    ],
+    "keywords": "instruction tuning rlhf and dpo, instruction tuning, rlhf, and direct preference optimisation (dpo), natural language processing, deep learning"
+  },
+  {
+    "id": "long-context-and-efficient-attention",
+    "short": "Long Context & FlashAttention",
+    "title": "Long Context and Efficient Attention: FlashAttention, RoPE Scaling, and Sparse Mechanisms",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Standard attention requires materializing an $N \\times N$ affinity matrix in high-bandwidth memory (HBM), causing GPU memory bandwidth bottlenecks. FlashAttention restructures computation via online softmax tiling and kernel fusion, executing full exact attention in SRAM with $\\mathcal{O}(N)$ memory footprint. Rotary Position Embedding (RoPE) encodes relative positional distances into complex plane rotations; RoPE scaling (YaRN, NTK-aware) extends context beyond pretraining lengths. Sparse attention (local sliding windows, global landmarks, BigBird, Longformer) and linear attention mechanisms offer sub-quadratic scaling alternatives.",
+    "lead": "Standard self-attention scales quadratically with sequence length ($\\mathcal{O}(N^2)$), creating prohibitive memory and computational bottlenecks for long-context language modelling. Breakthroughs including FlashAttention (tiling IO awareness), Rotary Position Embedding (RoPE) frequency scaling, and sparse linear approximations unlock hundred-thousand-token context windows.",
+    "analogy": "Imagine an accountant reconciling a 1,000-page bank ledger. Standard attention requires laying out a million comparison cards across a massive football field, forcing the accountant to spend hours jogging between cards just to read them. FlashAttention is an accountant who sits at a small desk with a pocket notepad, checking transactions in small bundles of 50 and updating a running subtotal without ever needing the football field.",
+    "intuition": [
+      "If you double the length of a book given to a standard transformer from 2,000 words to 4,000 words, the self-attention memory does not double: it quadruples ($2^2 = 4$). At 32,000 or 128,000 tokens, standard GPUs run out of memory simply allocating the attention matrix $\\mathbf{Q}\\mathbf{K}^T$, even though the final output is just another $N \\times d$ matrix! FlashAttention recognized that modern GPUs are memory-bound rather than compute-bound: reading and writing intermediate $N \\times N$ attention scores to GPU High Bandwidth Memory (HBM) is vastly slower than computing mathematical operations in on-chip SRAM cache. By breaking $\\mathbf{Q}, \\mathbf{K}, \\mathbf{V}$ into small tiles and incrementally updating the softmax denominator on the fly (online softmax), FlashAttention computes exact attention entirely inside fast SRAM without ever writing the massive $N \\times N$ matrix to main memory."
+    ],
+    "steps": [
+      "Partition input matrices: divide $\\mathbf{Q}, \\mathbf{K}, \\mathbf{V}$ into small contiguous blocks (tiles) sized to fit inside GPU on-chip SRAM cache.",
+      "Execute outer loop over key-value blocks: load $\\mathbf{K}_j, \\mathbf{V}_j$ into SRAM.",
+      "Execute inner loop over query blocks: load $\\mathbf{Q}_i$ and compute block affinity scores $\\mathbf{S}_{ij} = \\mathbf{Q}_i \\mathbf{K}_j^T / \\sqrt{d}$.",
+      "Compute online softmax update: maintain running maximum $m_i$ and running sum $\\ell_i$, rescaling prior accumulated output $\\mathbf{O}_i$ before adding new partial products.",
+      "Write final outputs to HBM: transfer completed block $\\mathbf{O}_i$ to main memory once all key-value tiles have been processed.",
+      "Scale positional encodings: adjust RoPE frequencies via YaRN or NTK interpolation to preserve relative angular distances over expanded sequence lengths."
+    ],
+    "math": [
+      {
+        "h": "Long Context and Efficient Attention: FlashAttention, RoPE Scaling, and Sparse Mechanisms Objective Function",
+        "tex": "\\mathcal{L}_{\\text{total}} = \\sum_{i=1}^N \\ell(f(x_i), y_i)",
+        "p": "Optimisation objective and loss formulation for long context and efficient attention: flashattention, rope scaling, and sparse mechanisms."
+      }
+    ],
+    "code": "import numpy as np\n\ndef standard_attention(Q, K, V):\n    \"\"\"Standard attention materialising full N x N matrix in memory.\"\"\"\n    d_k = Q.shape[-1]\n    scores = np.matmul(Q, K.T) / np.sqrt(d_k)\n    # Full N x N softmax\n    exp_scores = np.exp(scores - np.max(scores, axis=-1, keepdims=True))\n    weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)\n    return np.matmul(weights, V), weights\n\ndef tiled_online_attention(Q, K, V, block_size=4):\n    \"\"\"Simulates FlashAttention's tiled online softmax algorithm.\"\"\"\n    N, d = Q.shape\n    O = np.zeros((N, d))\n    ell = np.zeros(N)\n    m = np.full(N, -np.inf)\n    \n    # Process in tiles (blocks)\n    for j_start in range(0, N, block_size):\n        K_block = K[j_start:j_start + block_size]\n        V_block = V[j_start:j_start + block_size]\n        \n        for i_start in range(0, N, block_size):\n            Q_block = Q[i_start:i_start + block_size]\n            \n            # Tile affinity: shape (block_size, block_size)\n            S_ij = np.matmul(Q_block, K_block.T) / np.sqrt(d)\n            \n            # Online softmax update per row\n            for row in range(S_ij.shape[0]):\n                global_row = i_start + row\n                m_prev = m[global_row]\n                m_curr = np.max(S_ij[row])\n                m_new = max(m_prev, m_curr)\n                \n                exp_old = np.exp(m_prev - m_new) if m_prev != -np.inf else 0.0\n                exp_new = np.exp(S_ij[row] - m_new)\n                \n                ell_new = exp_old * ell[global_row] + np.sum(exp_new)\n                \n                # Rescale prior accumulator and add new contribution\n                O[global_row] = (exp_old * ell[global_row] * O[global_row] + \n                                np.dot(exp_new, V_block)) / ell_new\n                \n                m[global_row] = m_new\n                ell[global_row] = ell_new\n                \n    return O\n\n# Test numerical equivalence\nnp.random.seed(42)\nN, d = 16, 8\nQ = np.random.randn(N, d)\nK = np.random.randn(N, d)\nV = np.random.randn(N, d)\n\nO_standard, P = standard_attention(Q, K, V)\nO_tiled = tiled_online_attention(Q, K, V, block_size=4)\n\nmax_diff = np.max(np.abs(O_standard - O_tiled))\nprint(f\"Standard Attention Output Shape: {O_standard.shape}\")\nprint(f\"Tiled Attention Output Shape:    {O_tiled.shape}\")\nprint(f\"Maximum Numerical Difference:    {max_diff:.8e}\")\nassert max_diff < 1e-6\nprint(\"Verification successful: Tiled online attention matches exact softmax!\")",
+    "keyPoints": [
+      "Memory IO bandwidth—not compute FLOPs—is the primary bottleneck in long-context attention.",
+      "FlashAttention achieves exact attention with $\\mathcal{O}(N)$ memory footprint through kernel fusion and online softmax tiling.",
+      "Rotary Position Embedding combined with frequency scaling allows models to expand effective context windows seamlessly."
+    ],
+    "pitfalls": [
+      "Assuming FlashAttention is an approximation; FlashAttention is mathematically exact and computes the identical output as standard softmax attention.",
+      "Extrapolating context length with naive linear RoPE position interpolation without adjusting high-frequency dimensions, destroying local grammatical representations.",
+      "Ignoring KV-cache memory during long-context autoregressive generation; serving a 128k context model requires tens of gigabytes of VRAM purely for cached keys and values."
+    ],
+    "quiz": [
+      {
+        "q": "Why is FlashAttention substantially faster than standard self-attention on modern GPUs?",
+        "o": [
+          "It replaces floating-point math with integer lookup tables",
+          "It tiles computation to compute exact softmax within fast on-chip SRAM, eliminating slow reads and writes of the $N \\times N$ matrix to HBM",
+          "It drops 50% of attention heads at random",
+          "It changes the transformer to an RNN architecture"
+        ],
+        "a": 1,
+        "why": "FlashAttention is IO-aware: it fuses the attention computation into a single kernel and computes online softmax updates within fast on-chip SRAM, bypassing memory bandwidth bottlenecks."
+      },
+      {
+        "q": "What is the primary mechanism of Rotary Position Embedding (RoPE)?",
+        "o": [
+          "Adding static sinusoidal vectors directly to input word embeddings",
+          "Rotating 2D pairs of query and key vector dimensions by angles proportional to their absolute token index",
+          "Replacing self-attention with causal convolutional filters",
+          "Hashing token positions into prime modulo buckets"
+        ],
+        "a": 1,
+        "why": "RoPE applies 2D rotation matrices to pairs of coordinates in $\\mathbf{q}$ and $\\mathbf{k}$, ensuring that their inner product $\\mathbf{q}_m^T \\mathbf{k}_n$ naturally reflects relative distance $m-n$."
+      },
+      {
+        "q": "What mathematical property allows online softmax to evaluate attention across tiled blocks incrementally?",
+        "o": [
+          "Softmax can be rescaled dynamically by tracking running maximums $m$ and normalisation denominators $\\ell$",
+          "Softmax is completely linear",
+          "Softmax does not require exponentials",
+          "Softmax ignores numbers below 0"
+        ],
+        "a": 0,
+        "why": "By maintaining running maximum values and scaling denominators, intermediate exponentiated terms can be rescaled and accumulated across streaming blocks without loss of mathematical precision."
+      }
+    ],
+    "related": [
+      "gpt-and-decoder-only-models",
+      "serving-latency-and-cost"
+    ],
+    "keywords": "long context and efficient attention, long context and efficient attention: flashattention, rope scaling, and sparse mechanisms, natural language processing, deep learning"
+  },
+  {
+    "id": "hallucination-and-factuality",
+    "short": "Hallucination & Factuality",
+    "title": "Hallucination and Factuality in LLMs: Detection, Calibration, and Grounding",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Hallucinations divide into closed-domain unfaithfulness (contradicting provided source context) and open-domain factual fabrication (violating external world knowledge). Root causes include knowledge boundary deficits in pretraining corpora, exposure bias, out-of-distribution prompts, and sycophantic alignment incentives. Detection frameworks leverage self-consistency sampling, internal hidden-state probes, and automated LLM-as-a-judge fact verification (FactScore). Mitigation techniques combine external retrieval augmentation (RAG), verifiable citations, calibrated decoding temperatures, and constrained generation.",
+    "lead": "Large language models are probabilistic sequence generators optimised for grammatical fluency rather than factual truth, frequently producing confident but fabricated assertions known as hallucinations. Quantifying factuality requires taxonomy separation (faithfulness vs factual correctness), uncertainty calibration, self-consistency probes, and retrieval grounding.",
+    "analogy": "Imagine a charismatic student taking an oral exam who has memorized thousands of textbook phrases but never actually conducted an experiment. When asked a difficult question about a subject they do not know, their instinct is to improvise a polished, impressive-sounding answer rather than admit ignorance. Grounding is requiring the student to point to an open textbook page for every single claim they make.",
+    "intuition": [
+      "When an LLM produces text, it does not query an internal database of certified facts; it samples the next token according to conditional likelihood $P(w_t \\mid w_{<t})$. A sentence like \"Neil Armstrong walked on Mars in 1973\" has high syntactic plausibility and uses familiar space-exploration terminology, so the model may assign it high conditional probability if conditioned on ambiguous context. Because the model has no built-in distinction between true historical events and plausible-sounding fiction, it asserts falsehoods with the exact same fluent, authoritative tone as verifiable facts. Measuring and mitigating hallucination requires grounding outputs in retrieved evidence documents and testing whether the model's internal token probabilities reflect true calibration uncertainty."
+    ],
+    "steps": [
+      "Extract atomic claims: parse complex generated answers into independent, testable proposition statements (atomic facts).",
+      "Retrieve reference evidence: perform dense or hybrid search across authoritative knowledge corpora for each atomic proposition.",
+      "Verify entailment: use a fine-tuned NLI model or cross-encoder to classify whether the retrieved text entails, contradicts, or is neutral toward the claim.",
+      "Probe generation confidence: measure token-level predictive entropy and logit margins along with semantic self-consistency across diverse decoding paths.",
+      "Enforce grounding constraints: instruct the model to produce verifiable citations and refuse generation when retrieval confidence falls below threshold."
+    ],
+    "math": [
+      {
+        "h": "Hallucination and Factuality in LLMs: Detection, Calibration, and Grounding formulation (Part 1)",
+        "tex": "P(\\text{Faithful} \\mid D, C) = P(\\text{Entailment} \\mid D, C)",
+        "p": "FactScore decomposes a generated response $Y$ into a list of atomic factual claims $\\{c_1, \\dots, c_K\\}$, scoring overall precision against knowledge source $\\mathcal{K}$:"
+      },
+      {
+        "h": "Hallucination and Factuality in LLMs: Detection, Calibration, and Grounding formulation (Part 2)",
+        "tex": "\\text{FactScore}(Y, \\mathcal{K}) = \\frac{1}{K} \\sum_{k=1}^K \\mathbb{I}(c_k \\text{ is supported by } \\mathcal{K})",
+        "p": "Expected Calibration Error (ECE) evaluates whether model confidence $p_i$ matches true accuracy across $M$ probability bins $B_m$:"
+      },
+      {
+        "h": "Hallucination and Factuality in LLMs: Detection, Calibration, and Grounding formulation (Part 3)",
+        "tex": "\\text{ECE} = \\sum_{m=1}^M \\frac{|B_m|}{N} \\left| \\text{acc}(B_m) - \\text{conf}(B_m) \\right|",
+        "p": "Self-consistency entropy measures uncertainty across $S$ sampled completions $\\{y_1, \\dots, y_S\\}$:"
+      },
+      {
+        "h": "Hallucination and Factuality in LLMs: Detection, Calibration, and Grounding formulation (Part 4)",
+        "tex": "\\mathcal{H}(Y \\mid X) = - \\sum_{u \\in \\text{Unique}(Y)} P(u \\mid X) \\log_2 P(u \\mid X)",
+        "p": "Self-consistency entropy measures uncertainty across $S$ sampled completions $\\{y_1, \\dots, y_S\\}$:"
+      }
+    ],
+    "code": "import numpy as np\n\ndef evaluate_factscore(atomic_claims, knowledge_base):\n    \"\"\"Evaluates factual precision of extracted claims against verified knowledge.\"\"\"\n    supported_flags = []\n    \n    for claim in atomic_claims:\n        subject, predicate, obj = claim\n        # Check if relation exists in verified knowledge tuples\n        is_supported = any(\n            k_sub == subject and k_pred == predicate and k_obj == obj\n            for (k_sub, k_pred, k_obj) in knowledge_base\n        )\n        supported_flags.append(is_supported)\n        \n    precision = np.mean(supported_flags)\n    return precision, supported_flags\n\ndef self_consistency_entropy(sampled_answers):\n    \"\"\"Computes semantic agreement entropy across multiple stochastic generations.\"\"\"\n    unique_answers, counts = np.unique(sampled_answers, return_counts=True)\n    probs = counts / np.sum(counts)\n    entropy = -np.sum(probs * np.log2(probs + 1e-12))\n    return entropy, unique_answers[np.argmax(counts)]\n\n# Verified Knowledge Base (Subject, Predicate, Object)\nkb = [\n    (\"Alan Turing\", \"born_in\", \"London\"),\n    (\"Alan Turing\", \"died_in\", \"Wilmslow\"),\n    (\"Alan Turing\", \"invented\", \"Turing Machine\")\n]\n\n# Model output decomposed into atomic claims\nclaims_to_audit = [\n    (\"Alan Turing\", \"born_in\", \"London\"),      # Factually correct\n    (\"Alan Turing\", \"invented\", \"Turing Machine\"), # Factually correct\n    (\"Alan Turing\", \"born_in\", \"Cambridge\")     # Hallucinated contradiction!\n]\n\nfact_score, flags = evaluate_factscore(claims_to_audit, kb)\n\n# Self-consistency sampling across 5 runs\nsamples = [\"London\", \"London\", \"London\", \"Cambridge\", \"London\"]\nentropy, consensus = self_consistency_entropy(samples)\n\nprint(f\"FactScore Precision: {fact_score * 100:.1f}%\")\nfor claim, passed in zip(claims_to_audit, flags):\n    status = \"VERIFIED\" if passed else \"HALLUCINATION\"\n    print(f\"  {claim} -> [{status}]\")\n\nprint(f\"\\nSelf-Consistency Consensus Answer: '{consensus}'\")\nprint(f\"Sampling Uncertainty Entropy: {entropy:.3f} bits\")",
+    "keyPoints": [
+      "LLMs generate syntactically plausible sequences without intrinsic awareness of empirical truth.",
+      "FactScore provides a granular evaluation framework by decomposing responses into testable atomic claims.",
+      "Grounding generation in external retrieval systems and measuring semantic consistency dramatically reduces hallucination rates."
+    ],
+    "pitfalls": [
+      "Confusing linguistic fluency with factual veracity; models are frequently most eloquent when delivering complete fabrications.",
+      "Relying solely on perplexity or generation loss to identify hallucinations; incorrect statements often have low perplexity because they use common words.",
+      "Evaluating factuality using an LLM judge without providing ground-truth reference material, causing the judge model to hallucinate its own evaluation."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary difference between faithfulness and factual correctness in language generation?",
+        "o": [
+          "Faithfulness evaluates consistency with provided input context; factual correctness evaluates truthfulness against real-world knowledge",
+          "Faithfulness measures grammar, while factual correctness measures spelling",
+          "Faithfulness is only relevant in translation tasks",
+          "There is no distinction; both terms denote identical concepts"
+        ],
+        "a": 0,
+        "why": "Faithfulness assesses whether the model remains true to the specific reference document provided in the prompt, whereas factual correctness evaluates consistency with external world facts."
+      },
+      {
+        "q": "How does the FactScore metric measure the factuality of long-form biographical text?",
+        "o": [
+          "By counting the total character count of the document",
+          "By breaking down generated text into atomic propositions and computing the percentage supported by a trusted reference source",
+          "By calculating the BLEU score against Wikipedia articles",
+          "By measuring the GPU inference time"
+        ],
+        "a": 1,
+        "why": "FactScore decomposes complex paragraphs into discrete atomic claims and verifies what fraction of those individual facts are corroborated by reference texts."
+      },
+      {
+        "q": "Why does self-consistency sampling help identify potential hallucinations in reasoning tasks?",
+        "o": [
+          "Hallucinated responses typically show high variance and low agreement across diverse random seeds, while robust facts show high consensus",
+          "Sampling multiple times eliminates all GPU memory overhead",
+          "It forces the model to generate shorter answers",
+          "It replaces temperature sampling with greedy argmax decoding"
+        ],
+        "a": 0,
+        "why": "When a model lacks genuine certainty, diverse temperature-sampled generations diverge wildly into different fabrications, producing high entropy and signalling potential hallucinations."
+      }
+    ],
+    "related": [
+      "semantic-search-and-dense-retrieval",
+      "instruction-tuning-rlhf-and-dpo"
+    ],
+    "keywords": "hallucination and factuality, hallucination and factuality in llms: detection, calibration, and grounding, natural language processing, deep learning"
+  },
+  {
+    "id": "summarisation",
+    "short": "Text Summarisation & ROUGE",
+    "title": "Text Summarisation: Extractive vs Abstractive, ROUGE Metrics, and Faithfulness",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Extractive summarisation identifies and stitches together verbatim representative sentences from the original source. Abstractive summarisation generates novel paraphrased sentences, synthesizing ideas much like human writers. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) metrics (ROUGE-1, ROUGE-2, ROUGE-L) evaluate n-gram and longest common subsequence recall against human references. Modern abstractive models suffer from faithfulness errors (introducing unsupported entities or relations), requiring NLI-based consistency auditing.",
+    "lead": "Text summarisation condenses long documents into concise, salient overviews while preserving key information. The paradigm has evolved from extractive sentence selection (TextRank) to abstractive sequence-to-sequence synthesis (BART, T5, LLMs), evaluated by lexical overlap (ROUGE) and factual faithfulness metrics (FactCC, QAGS).",
+    "analogy": "Extractive summarisation is like assembling a photo collage using scissors to cut out original faces and buildings from existing photographs. Abstractive summarisation is hiring an artist to paint a new canvas portrait based on looking at the scene. The painting is smoother and more artistic, but the painter might accidentally paint blue eyes instead of brown eyes.",
+    "intuition": [
+      "If you want to summarise a 10-page research paper, you could highlight the 5 most important sentences with a marker and copy them into a bulleted list. That is extractive summarisation: it is factually safe because it never invents new wording, but it can be disjointed and redundant. Alternatively, you could read the paper, digest the concepts, and write a fresh 2-paragraph summary in your own words. That is abstractive summarisation: it is fluent, coherent, and synthesizes concepts, but it introduces the risk of accidentally misattributing quotes or hallucinating claims. Evaluation requires checking both coverage (did you capture the main ideas, measured by ROUGE) and faithfulness (is everything in the summary actually true according to the source text)."
+    ],
+    "steps": [
+      "Determine summarisation paradigm: select extractive selection for safety-critical domains (legal, medical) or abstractive generation for consumer readability.",
+      "Preprocess source document: clean whitespace, segment sentences, and truncate to maximum context window limits.",
+      "Encode document context: process source tokens through an encoder-decoder architecture (e.g. BART) or decoder-only prompt harness.",
+      "Generate summary: decode target tokens autoregressively using beam search with repetition penalties and length normalisation.",
+      "Evaluate lexical overlap: calculate ROUGE-1, ROUGE-2, and ROUGE-L scores against reference summaries.",
+      "Verify factual faithfulness: run automated natural language inference (NLI) to flag any hallucinated entities or unsupported causal claims."
+    ],
+    "math": [
+      {
+        "h": "Text Summarisation: Extractive vs Abstractive, ROUGE Metrics, and Faithfulness formulation (Part 1)",
+        "tex": "\\text{ROUGE-N} = \\frac{\\sum_{S \\in \\{R\\}} \\sum_{\\text{gram}_n \\in S} \\text{Count}_{\\text{match}}(\\text{gram}_n)}{\\sum_{S \\in \\{R\\}} \\sum_{\\text{gram}_n \\in S} \\text{Count}(\\text{gram}_n)}",
+        "p": "ROUGE-L uses the Longest Common Subsequence (LCS) to capture sentence-level word order without requiring consecutive n-grams:"
+      },
+      {
+        "h": "Text Summarisation: Extractive vs Abstractive, ROUGE Metrics, and Faithfulness formulation (Part 2)",
+        "tex": "R_{\\text{LCS}} = \\frac{\\text{LCS}(R, C)}{m}, \\quad P_{\\text{LCS}} = \\frac{\\text{LCS}(R, C)}{n}, \\quad F_{\\text{LCS}} = \\frac{(1 + \\beta^2) R_{\\text{LCS}} P_{\\text{LCS}}}{R_{\\text{LCS}} + \\beta^2 P_{\\text{LCS}}}",
+        "p": "where $m$ and $n$ are lengths of reference $R$ and candidate $C$. In extractive graph-based ranking (TextRank), sentence node centrality $S(V_i)$ is solved iteratively with damping factor $d$:"
+      },
+      {
+        "h": "Text Summarisation: Extractive vs Abstractive, ROUGE Metrics, and Faithfulness formulation (Part 3)",
+        "tex": "S(V_i) = (1 - d) + d \\sum_{V_j \\in \\text{In}(V_i)} \\frac{w_{ji}}{\\sum_{V_k \\in \\text{Out}(V_j)} w_{jk}} S(V_j)",
+        "p": "where $m$ and $n$ are lengths of reference $R$ and candidate $C$. In extractive graph-based ranking (TextRank), sentence node centrality $S(V_i)$ is solved iteratively with damping factor $d$:"
+      }
+    ],
+    "code": "def compute_rouge_n(candidate, reference, n=1):\n    \"\"\"Computes ROUGE-N precision, recall, and F1 score.\"\"\"\n    def get_ngrams(text, n):\n        words = text.lower().split()\n        return [tuple(words[i:i+n]) for i in range(len(words) - n + 1)]\n    \n    cand_ngrams = get_ngrams(candidate, n)\n    ref_ngrams = get_ngrams(reference, n)\n    \n    if not ref_ngrams or not cand_ngrams:\n        return 0.0, 0.0, 0.0\n    \n    # Count matching n-grams\n    ref_counts = {}\n    for g in ref_ngrams:\n        ref_counts[g] = ref_counts.get(g, 0) + 1\n        \n    overlap = 0\n    cand_counts = {}\n    for g in cand_ngrams:\n        cand_counts[g] = cand_counts.get(g, 0) + 1\n        \n    for g, count in cand_counts.items():\n        if g in ref_counts:\n            overlap += min(count, ref_counts[g])\n            \n    recall = overlap / len(ref_ngrams)\n    precision = overlap / len(cand_ngrams)\n    f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0\n    return precision, recall, f1\n\n# Example Reference and Model Candidate Summaries\nreference = \"the company reported record profits driven by strong cloud sales in europe\"\ncandidate = \"strong cloud sales helped the company report record profits across european markets\"\n\np1, r1, f1_1 = compute_rouge_n(candidate, reference, n=1)\np2, r2, f1_2 = compute_rouge_n(candidate, reference, n=2)\n\nprint(f\"Candidate Summary: '{candidate}'\")\nprint(f\"Reference Summary: '{reference}'\")\nprint(f\"ROUGE-1 -> Precision: {p1:.3f} | Recall: {r1:.3f} | F1: {f1_1:.3f}\")\nprint(f\"ROUGE-2 -> Precision: {p2:.3f} | Recall: {r2:.3f} | F1: {f1_2:.3f}\")",
+    "keyPoints": [
+      "Extractive summarisation guarantees verbatim fidelity, whereas abstractive summarisation provides fluency and concise synthesis.",
+      "ROUGE-1, ROUGE-2, and ROUGE-L quantify n-gram and longest common subsequence recall against human reference summaries.",
+      "Evaluating factual faithfulness via NLI models is essential to prevent hallucinated claims in abstractive summaries."
+    ],
+    "pitfalls": [
+      "Relying exclusively on ROUGE scores; a summary can achieve high ROUGE overlap while introducing factual contradictions that negate the source meaning.",
+      "Generating summaries that suffer from the \"lead bias\" of news corpora, where models simply copy the first three sentences because journalists write inverted pyramids.",
+      "Extractive summarisation producing dangling pronouns (e.g. including a sentence starting with \"However, he refused...\" without the preceding entity definition)."
+    ],
+    "quiz": [
+      {
+        "q": "What is the key functional difference between extractive and abstractive summarisation?",
+        "o": [
+          "Extractive selects sentences directly from the source; abstractive generates new paraphrased text",
+          "Extractive only runs on English; abstractive runs on all languages",
+          "Extractive creates longer summaries than abstractive",
+          "Abstractive summarisation does not require neural networks"
+        ],
+        "a": 0,
+        "why": "Extractive methods extract and arrange verbatim snippets directly from the original document; abstractive methods compose novel sentences that paraphrase the concepts."
+      },
+      {
+        "q": "Why is ROUGE recall-oriented, in contrast to BLEU which is precision-oriented?",
+        "o": [
+          "Because summarisation evaluates whether all key source concepts in the human reference were successfully captured in the output",
+          "Because ROUGE was designed to evaluate neural speech recognition",
+          "Because precision cannot be computed on sentences shorter than 20 words",
+          "Because recall requires less floating-point arithmetic"
+        ],
+        "a": 0,
+        "why": "In summarisation, ensuring the summary covers the necessary points found in the reference is paramount, making recall against reference concepts the primary objective."
+      },
+      {
+        "q": "What does ROUGE-L measure between two summary texts?",
+        "o": [
+          "Character-level Levenshtein edit distance",
+          "The length of the Longest Common Subsequence (LCS) of words, reflecting flexible sentence-level order",
+          "Latent Dirichlet allocation topic overlap",
+          "Audio spectrogram correlation"
+        ],
+        "a": 1,
+        "why": "ROUGE-L evaluates the Longest Common Subsequence of tokens, rewarding summaries that preserve grammatical word order without requiring exact consecutive n-gram matches."
+      }
+    ],
+    "related": [
+      "hallucination-and-factuality",
+      "bert-and-masked-language-models"
+    ],
+    "keywords": "summarisation, text summarisation: extractive vs abstractive, rouge metrics, and faithfulness, natural language processing, deep learning"
+  },
+  {
+    "id": "question-answering",
+    "short": "Question Answering & SQuAD",
+    "title": "Question Answering: Extractive SQuAD, Multi-Hop Reasoning, and Open-Domain QA",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Extractive QA (SQuAD) identifies continuous start and end token indices within a provided reference passage that answer the question. Open-Domain QA (ODQA) decouples into a retriever that scans millions of passages and a reader that extracts or synthesizes the final answer. Multi-hop QA (HotpotQA) requires gathering disjoint clues across multiple disparate documents to deduce the correct conclusion. Evaluation benchmarks evaluate exact match (EM) and token-level macro-averaged F1 score against ground-truth answer strings.",
+    "lead": "Question Answering (QA) tests a system's ability to retrieve, understand, and synthesize answers to natural language inquiries. Architectures range from span-extractive reading comprehension on benchmark datasets like SQuAD to complex multi-hop reasoning over knowledge graphs and retriever-reader open-domain pipelines.",
+    "analogy": "Extractive QA is like using an index finger to point directly at a single sentence in a brochure handed to you. Open-Domain QA is walking into a multi-storey library, finding the correct aisle, pulling down the right book, and pointing at the page. Multi-Hop QA is following a scavenger hunt where Clue #1 inside an envelope in the attic directs you to open a safe in the basement to find the prize.",
+    "intuition": [
+      "When you take an open-book reading comprehension test, you read a paragraph and answer a question by underlining the exact phrase that gives the answer. This is Extractive QA (popularised by SQuAD). For instance, given the text \"Marie Curie was awarded the Nobel Prize in Chemistry in 1911\", and the question \"When did Curie win her Chemistry Nobel?\", an extractive model predicts start index 9 and end index 9 to extract \"1911\". In Open-Domain QA, no passage is provided: the system must first act as a search engine to retrieve the right articles from Wikipedia, then read them to find the answer. In Multi-Hop QA, answering the question requires connecting separate clues: e.g. \"What team does the quarterback who won the 2021 Super Bowl play for?\" requires first discovering who won in 2021, and second finding that player's team."
+    ],
+    "steps": [
+      "Format input pair: concatenate the question tokens and context paragraph tokens separated by a `[SEP]` delimiter.",
+      "Encode joint sequence: process the concatenated tokens through a bidirectional transformer encoder.",
+      "Predict span boundaries: compute linear projections of each token embedding to yield start and end probability distributions.",
+      "Filter candidate spans: apply dynamic programming to select the span $(i, j)$ maximising $P_{\\text{start}}(i) \\times P_{\\text{end}}(j)$ where $j \\ge i$ and span length $\\le L_{\\max}$.",
+      "Handle unanswerable questions: if the `[CLS]` token score exceeds valid span scores, predict that the question cannot be answered from the text.",
+      "Evaluate metrics: compare extracted string against reference spans using Exact Match (EM) binary score and token-overlap F1 score."
+    ],
+    "math": [
+      {
+        "h": "Question Answering: Extractive SQuAD, Multi-Hop Reasoning, and Open-Domain QA formulation (Part 1)",
+        "tex": "\\mathbf{x} = [\\text{CLS}] \\, q_1, \\dots, q_M \\, [\\text{SEP}] \\, p_1, \\dots, p_N \\, [\\text{SEP}]",
+        "p": "Contextual token representations $\\mathbf{H} \\in \\mathbb{R}^{(M+N+3) \\times d}$ are projected to start and end token logits via parameter vectors $\\mathbf{w}_s, \\mathbf{w}_e$:"
+      },
+      {
+        "h": "Question Answering: Extractive SQuAD, Multi-Hop Reasoning, and Open-Domain QA formulation (Part 2)",
+        "tex": "s_i = \\mathbf{w}_s^T \\mathbf{h}_i, \\quad e_j = \\mathbf{w}_e^T \\mathbf{h}_j",
+        "p": "Probability distributions for start index $i$ and end index $j$ are calculated using softmax:"
+      },
+      {
+        "h": "Question Answering: Extractive SQuAD, Multi-Hop Reasoning, and Open-Domain QA formulation (Part 3)",
+        "tex": "P_{\\text{start}}(i) = \\frac{\\exp(s_i)}{\\sum_{k} \\exp(s_k)}, \\quad P_{\\text{end}}(j) = \\frac{\\exp(e_j)}{\\sum_{k} \\exp(e_k)}",
+        "p": "The predicted span $(i^*, j^*)$ maximises joint score subject to constraint $i \\le j \\le i + L_{\\max}$:"
+      },
+      {
+        "h": "Question Answering: Extractive SQuAD, Multi-Hop Reasoning, and Open-Domain QA formulation (Part 4)",
+        "tex": "(i^*, j^*) = \\arg\\max_{i \\le j \\le i + L_{\\max}} \\left( s_i + e_j \\right)",
+        "p": "Loss for true span $(y_s, y_e)$ is formulated as:"
+      },
+      {
+        "h": "Question Answering: Extractive SQuAD, Multi-Hop Reasoning, and Open-Domain QA formulation (Part 5)",
+        "tex": "\\mathcal{L}_{\\text{QA}} = - \\log P_{\\text{start}}(y_s) - \\log P_{\\text{end}}(y_e)",
+        "p": "Loss for true span $(y_s, y_e)$ is formulated as:"
+      }
+    ],
+    "code": "import numpy as np\n\ndef score_extractive_span(start_logits, end_logits, max_answer_len=5):\n    \"\"\"Finds optimal start and end span maximising joint probability.\"\"\"\n    # Convert logits to probabilities\n    def softmax(z):\n        exp_z = np.exp(z - np.max(z))\n        return exp_z / np.sum(exp_z)\n        \n    p_start = softmax(start_logits)\n    p_end = softmax(end_logits)\n    \n    best_score = -1.0\n    best_span = (0, 0)\n    N = len(start_logits)\n    \n    for i in range(N):\n        for j in range(i, min(N, i + max_answer_len)):\n            score = p_start[i] * p_end[j]\n            if score > best_score:\n                best_score = score\n                best_span = (i, j)\n                \n    return best_span, best_score\n\ndef compute_qa_f1(pred_tokens, gold_tokens):\n    \"\"\"Computes token-level F1 overlap score.\"\"\"\n    common = set(pred_tokens) & set(gold_tokens)\n    if not common:\n        return 0.0\n    p = len(common) / len(pred_tokens)\n    r = len(common) / len(gold_tokens)\n    return (2 * p * r) / (p + r)\n\n# Simulation: \"Marie Curie received the Nobel Prize in 1911\"\n# Tokens: [CLS] When did Curie win ? [SEP] Marie Curie received the Nobel Prize in 1911 [SEP]\ntokens = [\"[CLS]\", \"When\", \"did\", \"Curie\", \"win\", \"?\", \"[SEP]\", \n          \"Marie\", \"Curie\", \"received\", \"the\", \"Nobel\", \"Prize\", \"in\", \"1911\", \"[SEP]\"]\n\n# Simulated logits from model head\nstart_logits = np.array([-5, -5, -5, -5, -5, -5, -5,  0.1, 0.2, 0.1, 0.0, 0.1, 0.2, 0.1, 8.5, -5])\nend_logits   = np.array([-5, -5, -5, -5, -5, -5, -5,  0.1, 0.1, 0.0, 0.1, 0.1, 0.2, 0.1, 8.9, -5])\n\nspan, conf = score_extractive_span(start_logits, end_logits)\nextracted_answer = tokens[span[0]:span[1] + 1]\n\nprint(f\"Extracted Span Indices: {span}\")\nprint(f\"Extracted Answer:       '{' '.join(extracted_answer)}' (Confidence: {conf:.4f})\")\n\nf1 = compute_qa_f1(extracted_answer, [\"1911\"])\nprint(f\"Token-Level F1 Score:   {f1:.2f}\")",
+    "keyPoints": [
+      "Extractive reading comprehension predicts start and end token indices of answer spans within source paragraphs.",
+      "Open-domain QA combines an information retriever with a reader model to locate answers across millions of documents.",
+      "Evaluation benchmarks evaluate Exact Match (strict binary) and token-level F1 overlap to quantify comprehension accuracy."
+    ],
+    "pitfalls": [
+      "Assuming all questions are answerable from the passage; SQuAD 2.0 requires systems to abstain when the text does not contain the answer.",
+      "Extracting grammatically invalid spans by omitting the constraint $i \\le j$, causing negative length predictions.",
+      "Evaluating extractive QA models on generative responses without accounting for semantic equivalence (e.g. marking \"two\" incorrect when gold is \"2\")."
+    ],
+    "quiz": [
+      {
+        "q": "How does an extractive QA model like BERT-SQuAD predict an answer from a context paragraph?",
+        "o": [
+          "It generates answer tokens word-by-word from an internal autoregressive decoder",
+          "It computes start and end token classification logits over the input passage, identifying the boundaries of the answer span",
+          "It maps questions to SQL queries",
+          "It searches an inverted index on disk"
+        ],
+        "a": 1,
+        "why": "Extractive QA identifies the answer as a continuous span within the context document by predicting the start token index and end token index."
+      },
+      {
+        "q": "What defines a \"multi-hop\" question answering task (such as HotpotQA)?",
+        "o": [
+          "The question must be translated into multiple languages before answering",
+          "The answer requires reasoning across and combining information from two or more separate documents or paragraphs",
+          "The model must query multiple internet search engines simultaneously",
+          "The system requires multiple GPUs to compute forward passes"
+        ],
+        "a": 1,
+        "why": "Multi-hop QA requires connecting intermediate reasoning steps across distinct texts where no single document contains all necessary information to answer the question."
+      },
+      {
+        "q": "In SQuAD evaluation, what is the difference between Exact Match (EM) and F1 score?",
+        "o": [
+          "EM is a strict binary check (1 if prediction matches gold exactly, 0 otherwise), while F1 measures token-level precision and recall overlap",
+          "F1 is only calculated on unanswerable questions",
+          "EM measures character count, while F1 measures word count",
+          "EM evaluates latency, while F1 evaluates accuracy"
+        ],
+        "a": 0,
+        "why": "Exact Match requires character-for-character agreement with the reference answer, whereas F1 treats predicted and ground-truth answers as bags of tokens and calculates their harmonic mean overlap."
+      }
+    ],
+    "related": [
+      "semantic-search-and-dense-retrieval",
+      "summarisation"
+    ],
+    "keywords": "question answering, question answering: extractive squad, multi-hop reasoning, and open-domain qa, natural language processing, deep learning"
+  },
+  {
+    "id": "information-and-relation-extraction",
+    "short": "Relation Extraction & OpenIE",
+    "title": "Information and Relation Extraction: OpenIE, Distant Supervision, and Knowledge Graph Construction",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Relation Extraction classifies semantic relationships existing between marked entity mentions within a sentence or document. Open Information Extraction (OpenIE) extracts arbitrary relational triples $(s, r, o)$ directly from text without a predefined schema or target relation ontology. Distant supervision aligns existing knowledge bases (e.g. Wikidata) with raw text corpora to automatically create massive, weakly labelled training datasets. Graph construction merges extracted triples into persistent knowledge graphs, resolving entity aliases through link prediction and graph embeddings.",
+    "lead": "Information Extraction (IE) transforms unstructured natural language text into structured knowledge tuples (subject, relation, object). From open information extraction (OpenIE) to distant supervision and modern relation classification, IE powers enterprise search, automated knowledge graph construction, and biomedical entity discovery.",
+    "analogy": "Imagine reading through thousands of historical letters and filing index cards in a library card catalogue. Instead of keeping the entire letter, you write a concise index card with three boxes: Subject: \"Napoleon\", Relation: \"Exiled to\", Object: \"Saint Helena\". Anyone visiting the library can now search the index cards instantly without reading through centuries of personal correspondence.",
+    "intuition": [
+      "If you want a computer to answer questions like \"Which tech companies were founded in California?\", an AI cannot afford to read 100 million web pages every time a user asks a question. Instead, it needs a structured database: a Knowledge Graph. Information Extraction (IE) is the automated factory that builds this graph from raw prose. Given a sentence like \"Steve Jobs co-founded Apple in Cupertino\", IE first runs Named Entity Recognition to find \"Steve Jobs\" (Person), \"Apple\" (Organization), and \"Cupertino\" (Location). Next, Relation Extraction identifies the links between them: `(Steve Jobs, Founded, Apple)` and `(Apple, HeadquarteredIn, Cupertino)`. By storing these triples in a graph, computers can instantly query relationships, trace corporate ownership, or discover drug-disease interactions across millions of biomedical papers."
+    ],
+    "steps": [
+      "Detect named entities: tag person, organization, location, and domain-specific entities using NER models.",
+      "Insert special entity markers: delimit candidate entity pairs in the sentence using tags like `[E1]`, `[/E1]`, `[E2]`, and `[/E2]`.",
+      "Encode marked sequence: pass the augmented sequence through a bidirectional transformer encoder.",
+      "Extract entity pair representations: extract and concatenate the hidden states corresponding to the entity markers.",
+      "Classify candidate relation: project concatenated embeddings through an MLP classifier to predict relation labels or output `no_relation`.",
+      "Link entities to knowledge base: resolve surface strings to canonical entity IDs (e.g. Q312 for Apple Inc.) and insert the triple into the knowledge graph."
+    ],
+    "math": [
+      {
+        "h": "Information and Relation Extraction: OpenIE, Distant Supervision, and Knowledge Graph Construction formulation (Part 1)",
+        "tex": "P(r \\mid \\mathbf{x}, e_1, e_2) = \\text{softmax}\\left( \\mathbf{W}_r \\mathbf{h}_{\\text{rel}} + \\mathbf{b}_r \\right)",
+        "p": "In entity marker architectures, input tokens are augmented with typed entity boundary markers:"
+      },
+      {
+        "h": "Information and Relation Extraction: OpenIE, Distant Supervision, and Knowledge Graph Construction formulation (Part 2)",
+        "tex": "\\mathbf{x}' = \\dots [\\text{E1}] e_1 [\\text{/E1}] \\dots [\\text{E2}] e_2 [\\text{/E2}] \\dots",
+        "p": "Composite relation vector $\\mathbf{h}_{\\text{rel}}$ concatenates contextual hidden states of opening entity markers:"
+      },
+      {
+        "h": "Information and Relation Extraction: OpenIE, Distant Supervision, and Knowledge Graph Construction formulation (Part 3)",
+        "tex": "\\mathbf{h}_{\\text{rel}} = [\\mathbf{h}_{[\\text{E1}]} \\,;\\, \\mathbf{h}_{[\\text{E2}]}]",
+        "p": "In distant supervision, under the at-least-one assumption (multi-instance learning), bags of sentences $B = \\{s_1, \\dots, s_M\\}$ containing pair $(e_1, e_2)$ are aggregated via attention weights $\\..."
+      },
+      {
+        "h": "Information and Relation Extraction: OpenIE, Distant Supervision, and Knowledge Graph Construction formulation (Part 4)",
+        "tex": "\\mathbf{s}_B = \\sum_{i=1}^M \\alpha_i \\mathbf{s}_i, \\quad \\alpha_i = \\frac{\\exp(\\mathbf{s}_i^T \\mathbf{A} \\mathbf{r})}{\\sum_{j=1}^M \\exp(\\mathbf{s}_j^T \\mathbf{A} \\mathbf{r})}",
+        "p": "In distant supervision, under the at-least-one assumption (multi-instance learning), bags of sentences $B = \\{s_1, \\dots, s_M\\}$ containing pair $(e_1, e_2)$ are aggregated via attention weights $\\..."
+      }
+    ],
+    "code": "import numpy as np\n\ndef score_relation_candidates(entity1, entity2, sentence_features, relation_matrix):\n    \"\"\"Simulates classifying relations between marked entities.\"\"\"\n    # Concatenate entity representation vectors\n    pair_repr = np.concatenate([entity1, entity2, sentence_features])\n    \n    # Linear projection to relation logits\n    logits = np.dot(relation_matrix, pair_repr)\n    \n    # Softmax probabilities\n    exp_logits = np.exp(logits - np.max(logits))\n    probs = exp_logits / np.sum(exp_logits)\n    return probs\n\n# Setup simulated relation classes\nrelations = [\"no_relation\", \"founded_by\", \"headquartered_in\", \"subsidiary_of\"]\n\nnp.random.seed(42)\nd = 4\ne_org = np.array([1.2, 0.8, -0.2, 0.5])      # \"Apple\"\ne_person = np.array([0.9, -0.4, 1.1, 0.3])   # \"Steve Jobs\"\nfeat_founded = np.array([0.8, 1.5, 0.2, -0.1]) # \"co-founded with\"\n\n# Synthetic classifier weights\nW = np.random.randn(len(relations), 3 * d) * 0.5\n# Bias founded_by row to respond to founder feature combinations\nW[1, :d] = 0.8\nW[1, d:2*d] = 0.9\n\nprobs = score_relation_candidates(e_org, e_person, feat_founded, W)\nbest_rel_idx = np.argmax(probs)\n\nprint(\"Relation Extraction Simulation:\")\nprint(f\"  Entity 1: 'Apple' (ORG)\")\nprint(f\"  Entity 2: 'Steve Jobs' (PERSON)\")\nprint(\"Predicted Relation Probabilities:\")\nfor rel, p in zip(relations, probs):\n    print(f\"  {rel:18} -> {p * 100:.2f}%\")\n\nprint(f\"\\nExtracted Triple: (Apple, {relations[best_rel_idx]}, Steve Jobs)\")",
+    "keyPoints": [
+      "Relation extraction converts unstructured sentences into factual $(s, r, o)$ triples to populate structured knowledge graphs.",
+      "Distant supervision scales dataset creation using existing knowledge bases, managed via multi-instance learning to filter label noise.",
+      "Entity marker insertion provides modern transformer encoders with precise span boundaries for highly accurate relation classification."
+    ],
+    "pitfalls": [
+      "Assuming distant supervision yields clean labels; distant supervision generates significant false positives when sentences mention two entities without expressing the relation.",
+      "Ignoring directionality in asymmetric relations (e.g. confusing `founded_by(A, B)` with `founded_by(B, A)`).",
+      "Failing to predict a `no_relation` class, forcing the model to hallucinate relations for unrelated entities co-occurring in the same paragraph."
+    ],
+    "quiz": [
+      {
+        "q": "What is the core premise of distant supervision in relation extraction?",
+        "o": [
+          "Human linguists annotate every sentence in real-time",
+          "If two entities have a relationship in a known database, any sentence containing both entities is assumed to express that relationship",
+          "Relations are extracted solely using optical character recognition",
+          "Sentences are translated into Latin to remove syntax noise"
+        ],
+        "a": 1,
+        "why": "Distant supervision heuristically labels text by assuming that if knowledge base triple $(e_1, r, e_2)$ exists, sentences mentioning both $e_1$ and $e_2$ likely express relation $r$."
+      },
+      {
+        "q": "Why do modern relation extractors insert special marker tokens (e.g. `[E1]`, `[E2]`) into input text?",
+        "o": [
+          "To encrypt the sentence for privacy compliance",
+          "To explicitly signal entity spans and boundaries to the self-attention mechanism without altering surrounding token semantics",
+          "To reduce sequence length by 50%",
+          "To replace word embeddings with punctuation embeddings"
+        ],
+        "a": 1,
+        "why": "Entity markers tell the transformer encoder exactly which tokens comprise entity 1 and entity 2, allowing the network to focus attention on their relational interaction."
+      },
+      {
+        "q": "How does Open Information Extraction (OpenIE) differ from traditional Relation Extraction?",
+        "o": [
+          "OpenIE only works on open-source code",
+          "OpenIE extracts arbitrary relation phrases directly from text without requiring a predefined schema or fixed relation ontology",
+          "OpenIE does not extract subjects or objects",
+          "OpenIE requires 64-bit integer labels"
+        ],
+        "a": 1,
+        "why": "Traditional relation extraction classifies pairs into a fixed ontology (e.g. 50 predefined relations), whereas OpenIE extracts open-vocabulary relational verbs directly from sentence text."
+      }
+    ],
+    "related": [
+      "semantic-role-labelling",
+      "semantic-search-and-dense-retrieval"
+    ],
+    "keywords": "information and relation extraction, information and relation extraction: openie, distant supervision, and knowledge graph construction, natural language processing, deep learning"
+  },
+  {
+    "id": "dialogue-systems",
+    "short": "Dialogue Systems & DST",
+    "title": "Dialogue Systems: Task-Oriented Dialogue, Slot Filling, and Conversational State Tracking",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Dialogue systems bifurcate into open-domain chit-chat (conversational engagement) and task-oriented dialogue (goal completion). Traditional TOD pipelines operate as modular pipelines: NLU (intent classification and slot filling), DST (dialogue state tracking), DP (dialogue policy), and NLG (natural language generation). Dialogue State Tracking (DST) maintains an accumulated belief state across multi-turn exchanges, tracking active domain constraints (slots and values). End-to-end neural dialogue models combine pipeline stages into single autoregressive models conditioned on dialogue history and database query results.",
+    "lead": "Dialogue systems enable multi-turn natural interactions between humans and computers. Task-Oriented Dialogue (TOD) architectures coordinate Natural Language Understanding (intent detection and slot filling), Dialogue State Tracking (DST), and policy optimisation to help users accomplish concrete goals such as flight reservations and technical support.",
+    "analogy": "Imagine ordering food at a busy diner counter. You say \"Give me a burger\", then \"Make it medium rare\", and finally \"Add cheddar on that\". The server does not throw away their order pad after each sentence. They hold a clipboard (the Dialogue State) where they check off burger, write \"medium rare\", and add \"cheddar\". Once all necessary fields are filled, they hand the slip to the kitchen.",
+    "intuition": [
+      "When you chat with a flight booking assistant, the conversation happens across multiple turns: \"I need a flight to Paris\" (Turn 1), \"Sure, when do you want to depart?\" (Turn 2), \"Next Friday morning\" (Turn 3). To book the flight, the assistant cannot treat Turn 3 in isolation—saying \"Next Friday morning\" without context means nothing. The assistant must remember the destination (\"Paris\") from Turn 1, combine it with the departure time (\"next Friday morning\") from Turn 3, check the airline database, and offer flight choices. This memory tracking mechanism is called Dialogue State Tracking (DST). It maps free-form conversational utterances into a structured \"belief state\" (e.g. `destination: Paris`, `departure_date: 2026-11-06`) that a computer database can execute."
+    ],
+    "steps": [
+      "Parse incoming user utterance: run intent classification (e.g. `inform_booking`) and slot filling (BIO tagging for parameters).",
+      "Update dialogue belief state: combine new extracted slots with prior history, resolving anaphoric references (e.g. \"there\" -> Paris).",
+      "Query backend database: execute API calls or database lookups using the constraints stored in the updated dialogue state.",
+      "Select dialogue action: evaluate the dialogue policy to decide system response strategy (e.g. request missing slot, present options, confirm booking).",
+      "Generate response: synthesize natural language response reflecting the chosen action and database query results."
+    ],
+    "math": [
+      {
+        "h": "Dialogue Systems: Task-Oriented Dialogue, Slot Filling, and Conversational State Tracking formulation (Part 1)",
+        "tex": "P(S_t \\mid H_t) = \\prod_{k=1}^K P(w_k \\mid w_{<k}, H_t)",
+        "p": "In discriminative slot filling, slot labels are predicted using sequence tagging:"
+      },
+      {
+        "h": "Dialogue Systems: Task-Oriented Dialogue, Slot Filling, and Conversational State Tracking formulation (Part 2)",
+        "tex": "y_i = \\arg\\max_{c \\in \\mathcal{C}} P(y_i = c \\mid x_1, \\dots, x_N)",
+        "p": "Dialogue policy selection maps state $S_t$ and database return $D_t$ to system action $a_t \\in \\mathcal{A}$:"
+      },
+      {
+        "h": "Dialogue Systems: Task-Oriented Dialogue, Slot Filling, and Conversational State Tracking formulation (Part 3)",
+        "tex": "a_t = \\pi(S_t, D_t)",
+        "p": "Turn-level Joint Goal Accuracy (JGA) evaluates whether all slot-value pairs match the ground-truth state exactly:"
+      },
+      {
+        "h": "Dialogue Systems: Task-Oriented Dialogue, Slot Filling, and Conversational State Tracking formulation (Part 4)",
+        "tex": "\\text{JGA} = \\frac{1}{T} \\sum_{t=1}^T \\mathbb{I}(\\hat{S}_t = S_t^*)",
+        "p": "Turn-level Joint Goal Accuracy (JGA) evaluates whether all slot-value pairs match the ground-truth state exactly:"
+      }
+    ],
+    "code": "class DialogueStateTracker:\n    \"\"\"Maintains belief state across multi-turn task-oriented dialogue.\"\"\"\n    def __init__(self):\n        self.state = {}\n        \n    def update(self, user_slots):\n        \"\"\"Updates internal slot-value memory with newly detected slots.\"\"\"\n        for slot, value in user_slots.items():\n            if value is not None:\n                self.state[slot] = value\n        return self.state\n        \n    def get_missing_slots(self, required_slots):\n        \"\"\"Identifies which essential slots have not yet been provided.\"\"\"\n        return [s for s in required_slots if s not in self.state]\n\n# Simulate a 3-turn hotel booking exchange\ntracker = DialogueStateTracker()\nrequired_slots = [\"destination\", \"check_in_date\", \"room_type\"]\n\n# Turn 1: \"I'd like to book a luxury room in Berlin\"\nturn1_extracted = {\"destination\": \"Berlin\", \"room_type\": \"luxury\"}\nstate1 = tracker.update(turn1_extracted)\nmissing1 = tracker.get_missing_slots(required_slots)\n\nprint(\"Turn 1 Dialogue State:\")\nprint(f\"  State: {state1}\")\nprint(f\"  System Action: Request missing slot -> '{missing1[0]}'\")\n\n# Turn 2: User responds: \"Arriving on 12th December\"\nturn2_extracted = {\"check_in_date\": \"2026-12-12\"}\nstate2 = tracker.update(turn2_extracted)\nmissing2 = tracker.get_missing_slots(required_slots)\n\nprint(\"\\nTurn 2 Dialogue State:\")\nprint(f\"  State: {state2}\")\nif not missing2:\n    print(\"  System Action: All slots satisfied! Executing database search API call...\")\n    print(f\"  API Query: SEARCH_HOTELS(city='{state2['destination']}', date='{state2['check_in_date']}', type='{state2['room_type']}')\")",
+    "keyPoints": [
+      "Task-oriented dialogue systems guide users to goal completion by coordinating NLU, state tracking, and backend API actions.",
+      "Dialogue State Tracking maintains structured belief states across multi-turn exchanges, overcoming context fragmentation.",
+      "Joint Goal Accuracy provides a rigorous benchmark for evaluating multi-turn conversational understanding."
+    ],
+    "pitfalls": [
+      "Failing to handle user slot correction; if a user says \"Actually, make that London instead\", the system must overwrite the destination slot rather than appending to it.",
+      "Evaluating dialogue systems solely on turn-level accuracy rather than end-to-end task success rate.",
+      "Exposing database schemas directly to free-form generation models without validation filters, enabling prompt injections through dialogue parameters."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary function of Dialogue State Tracking (DST) in a task-oriented conversational agent?",
+        "o": [
+          "To generate audio waveforms for speech synthesizers",
+          "To maintain an accurate, structured record of user goals, slot values, and constraints across multi-turn interactions",
+          "To compress conversation history into single-character tokens",
+          "To assign parts of speech to individual words"
+        ],
+        "a": 1,
+        "why": "DST tracks user intent and constraints across turns into an updated belief state, which acts as the parameter set for backend API queries."
+      },
+      {
+        "q": "What is Joint Goal Accuracy (JGA) in dialogue system evaluation?",
+        "o": [
+          "The percentage of turns where every single predicted slot-value pair in the dialogue state matches ground truth exactly",
+          "The average speed of user typing in the chat interface",
+          "The BLEU score between system response and user prompt",
+          "The total number of conversation turns before termination"
+        ],
+        "a": 0,
+        "why": "JGA is a strict metric: a turn is scored as 1 only if all slot values in the dialogue state are completely correct; if even one slot is wrong or missing, the turn score is 0."
+      },
+      {
+        "q": "What distinguishes Task-Oriented Dialogue (TOD) from Open-Domain Chit-Chat?",
+        "o": [
+          "TOD runs on neural networks while chit-chat uses rule-based templates",
+          "TOD focuses on helping users accomplish specific transactional tasks via APIs, while chit-chat focuses on engaging conversation without explicit task goals",
+          "TOD only supports English",
+          "Chit-chat systems cannot process multi-turn input"
+        ],
+        "a": 1,
+        "why": "Task-oriented dialogue systems are designed to complete specific goals (booking travel, customer support) through structured APIs, whereas chit-chat systems focus on conversational engagement."
+      }
+    ],
+    "related": [
+      "the-agent-loop-react",
+      "prompting-and-in-context-learning"
+    ],
+    "keywords": "dialogue systems, dialogue systems: task-oriented dialogue, slot filling, and conversational state tracking, natural language processing, deep learning"
+  },
+  {
+    "id": "coreference-resolution",
+    "short": "Coreference Resolution",
+    "title": "Coreference Resolution: Mention Detection, Pairwise Scoring, and SpanBERT",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Coreference resolution identifies mentions (spans of text) and partitions them into clusters referring to identical entities. Coreference encompasses diverse linguistic phenomena: anaphora (pronoun referring back to antecedent), cataphora (pronoun preceding referent), and apposition. Classic approaches rely on mention-pair classification or mention-ranking models evaluated across MUC, $B^3$, and CEAF metrics. Modern end-to-end neural systems (e.g. SpanBERT coref) jointly extract candidate spans and predict antecedent link probabilities without pipelined syntactic parsers.",
+    "lead": "Coreference Resolution groups all mentions in a text that refer to the same real-world entity into coherent equivalence clusters. Resolving pronouns (\"she\", \"it\"), noun phrases (\"the company\"), and proper names (\"Alphabet\") is vital for document comprehension, question answering, and automated summarisation.",
+    "analogy": "Imagine reading a detective novel where a character is referred to variably as \"the inspector\", \"John\", \"he\", \"the veteran detective\", and \"the man in the raincoat\". As a reader, your brain maintains a single mental dossier for this character, pinning each moniker onto the same bulletin board profile. Coreference resolution builds and maintains these entity dossiers computationally.",
+    "intuition": [
+      "Consider the sentence: \"Dr Marie Curie visited Paris. She conducted research there because the city offered excellent laboratories.\" Who does \"She\" refer to? Marie Curie. What does \"the city\" and \"there\" refer to? Paris. Humans resolve these referential connections effortlessly. For a computer, however, \"Marie Curie\", \"She\", \"Paris\", \"there\", and \"the city\" are distinct strings of characters. If a question answering system is asked \"Where did Marie Curie conduct research?\", it cannot answer unless it connects \"there\" and \"the city\" back to \"Paris\". Coreference resolution solves this problem: it scans the document, identifies all noun phrases and pronouns (mentions), and links them into clusters that refer to the exact same underlying real-world entity."
+    ],
+    "steps": [
+      "Extract candidate text spans: enumerate all contiguous word sequences up to a maximum span width (e.g. 10 tokens).",
+      "Encode span representations: compute contextual token embeddings (SpanBERT) and apply self-attention pooling over internal span words.",
+      "Prune candidate mentions: compute unary mention scores $s_m(i)$ and prune top spans to maintain $\\lambda T$ candidates, discarding non-entity phrases.",
+      "Score candidate antecedent pairs: compute relational pairwise compatibility scores $s(i, j)$ between surviving spans.",
+      "Decode coreference clusters: assign each span to its highest scoring antecedent, linking spans into directed trees and taking transitive closures to form final entity clusters.",
+      "Evaluate CoNLL metric: compute the unweighted average of MUC, $B^3$, and $\\text{CEAF}_{\\phi_4}$ F1 scores."
+    ],
+    "math": [
+      {
+        "h": "Coreference Resolution: Mention Detection, Pairwise Scoring, and SpanBERT formulation (Part 1)",
+        "tex": "\\mathbf{g}_i = [\\mathbf{x}_{\\text{START}(i)} \\,;\\, \\mathbf{x}_{\\text{END}(i)} \\,;\\, \\mathbf{x}_i^* \\,;\\, \\mathbf{\\phi}(i)]",
+        "p": "Pairwise coreference score $s(i, j)$ between span $i$ and candidate antecedent $j$ is formulated as:"
+      },
+      {
+        "h": "Coreference Resolution: Mention Detection, Pairwise Scoring, and SpanBERT formulation (Part 2)",
+        "tex": "s(i, j) = \\begin{cases} 0 & j = \\epsilon \\\\ s_m(i) + s_m(j) + s_a(i, j) & j \\ne \\epsilon \\end{cases}",
+        "p": "where $s_m(i) = \\mathbf{w}_m^T \\text{FFNN}_m(\\mathbf{g}_i)$ measures mention score and $s_a(i, j) = \\mathbf{w}_a^T \\text{FFNN}_a([\\mathbf{g}_i, \\mathbf{g}_j, \\mathbf{g}_i \\odot \\mathbf{g}_j, \\mathb..."
+      },
+      {
+        "h": "Coreference Resolution: Mention Detection, Pairwise Scoring, and SpanBERT formulation (Part 3)",
+        "tex": "P(a_i = j) = \\frac{\\exp(s(i, j))}{\\sum_{j' \\in \\mathcal{Y}(i)} \\exp(s(i, j'))}",
+        "p": "Training maximises marginal log-likelihood of gold cluster antecedents $\\mathcal{C}(i)$:"
+      },
+      {
+        "h": "Coreference Resolution: Mention Detection, Pairwise Scoring, and SpanBERT formulation (Part 4)",
+        "tex": "\\mathcal{L} = \\sum_{i=1}^N \\log \\sum_{j \\in \\mathcal{Y}(i) \\cap \\mathcal{C}(i)} P(a_i = j)",
+        "p": "Training maximises marginal log-likelihood of gold cluster antecedents $\\mathcal{C}(i)$:"
+      }
+    ],
+    "code": "import numpy as np\n\ndef resolve_coreference_toy(mentions, pairwise_matrix):\n    \"\"\"Clusters mentions into entities using antecedent link argmax.\"\"\"\n    N = len(mentions)\n    clusters = {i: [i] for i in range(N)}\n    parent = list(range(N))\n    \n    def find(i):\n        if parent[i] == i:\n            return i\n        parent[i] = find(parent[i])\n        return parent[i]\n        \n    def union(i, j):\n        root_i = find(i)\n        root_j = find(j)\n        if root_i != root_j:\n            parent[root_i] = root_j\n            \n    # For each mention i > 0, find best antecedent j < i\n    for i in range(1, N):\n        scores = pairwise_matrix[i, :i]\n        best_j = np.argmax(scores)\n        # Threshold for linking\n        if scores[best_j] > 0.0:\n            union(i, best_j)\n            \n    # Aggregate into clusters\n    final_clusters = {}\n    for i in range(N):\n        root = find(i)\n        if root not in final_clusters:\n            final_clusters[root] = []\n        final_clusters[root].append(mentions[i])\n        \n    return list(final_clusters.values())\n\n# Mentions extracted from: \"Marie Curie arrived in Paris. She loved the capital city.\"\nmentions = [\n    \"Marie Curie\",     # 0\n    \"Paris\",           # 1\n    \"She\",             # 2\n    \"the capital city\" # 3\n]\n\n# Simulated pairwise affinity matrix (row = mention i, col = candidate antecedent j)\npairwise_scores = np.array([\n    [ 0.0,  0.0,  0.0,  0.0],\n    [-2.0,  0.0,  0.0,  0.0],\n    [ 4.5, -3.0,  0.0,  0.0],  # \"She\" -> strong link to \"Marie Curie\"\n    [-3.0,  5.2, -2.5,  0.0]   # \"the capital city\" -> strong link to \"Paris\"\n])\n\nclusters = resolve_coreference_toy(mentions, pairwise_scores)\n\nprint(\"Discovered Coreference Entity Clusters:\")\nfor idx, cluster in enumerate(clusters, 1):\n    print(f\"  Cluster {idx}: {cluster}\")",
+    "keyPoints": [
+      "Coreference resolution connects pronouns and variant noun phrases to their canonical real-world entity referents.",
+      "End-to-end models jointly score mention spans and pairwise antecedent links via contextual transformer encoders.",
+      "The standard CoNLL metric combines MUC, $B^3$, and CEAF scores to evaluate clustering fidelity across diverse entity types."
+    ],
+    "pitfalls": [
+      "Conflating apposition or predicative nominals (\"Barack Obama, the president\") as separate entities rather than coreferent mentions of the same individual.",
+      "Evaluating models solely on pronoun resolution (Winograd schemas), ignoring complex nominal coreference chains involving lexical variation.",
+      "Suffering cubic computational complexity $\\mathcal{O}(N^3)$ without span pruning; unrestricted pairwise comparison over all text spans explodes on long documents."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary objective of coreference resolution?",
+        "o": [
+          "To translate pronouns into grammatical case markers",
+          "To identify all text mentions that refer to the same real-world entity and group them into equivalence clusters",
+          "To detect spelling errors in proper nouns",
+          "To compute syntactic dependency trees for sentences"
+        ],
+        "a": 1,
+        "why": "Coreference resolution clusters mentions (names, pronouns, definite noun phrases) across a text that refer to the identical underlying entity."
+      },
+      {
+        "q": "What is the official CoNLL evaluation score for coreference resolution systems?",
+        "o": [
+          "BLEU score averaged over 4-grams",
+          "The unweighted arithmetic mean of MUC, $B^3$, and $\\text{CEAF}_{\\phi_4}$ F1 scores",
+          "The exact match accuracy of pronouns",
+          "The Spearman correlation with human glosses"
+        ],
+        "a": 1,
+        "why": "The standard CoNLL metric averages the F1 scores of three complementary clustering metrics: MUC (link-based), $B^3$ (mention-based), and $\\text{CEAF}_{\\phi_4}$ (entity-based)."
+      },
+      {
+        "q": "Why does SpanBERT achieve superior performance over standard BERT on coreference resolution tasks?",
+        "o": [
+          "SpanBERT replaces transformers with convolutional networks",
+          "SpanBERT is pretrained using span boundary objective and mask contiguous spans, creating richer representations of complete phrases",
+          "SpanBERT removes all subword tokenisation",
+          "SpanBERT only processes sentences containing pronouns"
+        ],
+        "a": 1,
+        "why": "SpanBERT masks contiguous spans of tokens and introduces a span boundary objective (SBO), training representations to summarise full multi-word mentions from their boundary tokens."
+      }
+    ],
+    "related": [
+      "bert-and-masked-language-models",
+      "semantic-role-labelling"
+    ],
+    "keywords": "coreference resolution, coreference resolution: mention detection, pairwise scoring, and spanbert, natural language processing, deep learning"
+  },
+  {
+    "id": "bias-and-fairness-in-nlp",
+    "short": "Bias & Fairness in NLP",
+    "title": "Bias and Fairness in NLP: Demographic Disparities, Toxicity, and Mitigation Strategies",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Harms of NLP systems partition into representational harms (stereotyping, erasure, toxic association) and allocational harms (denial of resources or opportunities). Evaluation benchmarks evaluate demographic parity, equalized odds, and performance disparities across dialects (e.g. African American Vernacular English). Mitigation techniques span pre-processing (counterfactual data augmentation), in-processing (adversarial debiasing, fairness-constrained losses), and post-processing (toxicity classifiers and safety guardrails). The alignment-tax trade-off requires balancing aggressive safety filtering against model utility and knowledge retention.",
+    "lead": "Language models ingest vast uncurated web corpora, inadvertently learning and amplifying societal prejudices, demographic disparities, and toxic stereotypes. Identifying, measuring, and mitigating algorithmic harm requires quantitative fairness metrics, counterfactual data augmentation, representation debiasing, and robust safety guardrails.",
+    "analogy": "Imagine a sound recording studio with an acoustic echo chamber. If the city outside has constant traffic rumble, the recording equipment captures and magnifies that rumble into every musical track. Bias in NLP is that acoustic rumble: the training text echoes centuries of societal prejudices, which the neural network dutifully amplifies unless soundproofing acoustic filters (fairness interventions) are deliberately installed.",
+    "intuition": [
+      "If you train a commercial resume screening model on historical hiring data, and historical hiring predominantly favoured male engineers over female engineers, the model will discover that words like \"women's rugby\" or names like \"Sarah\" correlate with lower hiring rates. Even if you explicitly remove gender columns, the model infers gender through subtle proxies in hobbies, colleges, and language style. In natural language generation, LLMs frequently associate neutral sentences about minority groups with higher toxicity scores, or complete prompts about female doctors with \"the nurse said\". Fairness in NLP is about systematically uncovering these hidden biases, defining rigorous metrics to quantify disparities, and applying algorithmic interventions so automated language systems treat all demographic groups with equal dignity and accuracy."
+    ],
+    "steps": [
+      "Identify potential harms: classify whether the model application poses representational harms (stereotypes) or allocational harms (credit or hiring decisions).",
+      "Audit training data: measure demographic representation ratios and word-co-occurrence disparities across protected categories.",
+      "Apply Counterfactual Data Augmentation (CDA): create symmetric paired examples by swapping demographic keywords (e.g. gender pronouns, cultural names).",
+      "Implement fairness-aware objective: train models with adversarial gradient reversal or demographic parity regularisers.",
+      "Evaluate subgroup performance: disaggregate validation metrics across demographic groups, dialects (e.g. AAVE vs standard English), and intersectional identities.",
+      "Deploy inference safety guardrails: apply post-generation toxicity filtering and safety calibration before surfacing responses to end users."
+    ],
+    "math": [
+      {
+        "h": "Bias and Fairness in NLP: Demographic Disparities, Toxicity, and Mitigation Strategies formulation (Part 1)",
+        "tex": "P(\\hat{Y} = 1 \\mid A = 0) = P(\\hat{Y} = 1 \\mid A = 1)",
+        "p": "Equalised Odds requires both False Positive Rates and True Positive Rates to be equal across groups given ground-truth label $Y$:"
+      },
+      {
+        "h": "Bias and Fairness in NLP: Demographic Disparities, Toxicity, and Mitigation Strategies formulation (Part 2)",
+        "tex": "P(\\hat{Y} = 1 \\mid A = 0, Y = y) = P(\\hat{Y} = 1 \\mid A = 1, Y = y), \\quad \\forall y \\in \\{0, 1\\}",
+        "p": "In generative language models, Counterfactual Token Perturbation measures the variation in probability when swapping demographic terms $(t_A, t_B)$ (e.g. \"he\" vs \"she\"):"
+      },
+      {
+        "h": "Bias and Fairness in NLP: Demographic Disparities, Toxicity, and Mitigation Strategies formulation (Part 3)",
+        "tex": "\\Delta_{\\text{counterfactual}} = \\mathbb{E}_{x} \\left| \\log P(Y \\mid x[t_A]) - \\log P(Y \\mid x[t_B]) \\right|",
+        "p": "Adversarial debiasing trains the main task predictor $\\mathbf{W}_p$ to minimise task loss $\\mathcal{L}_{\\text{task}}$ while maximising the loss of an adversary $\\mathbf{W}_{\\text{adv}}$ predicting ..."
+      },
+      {
+        "h": "Bias and Fairness in NLP: Demographic Disparities, Toxicity, and Mitigation Strategies formulation (Part 4)",
+        "tex": "\\min_{\\theta} \\max_{\\phi} \\mathcal{L}_{\\text{task}}(\\theta) - \\lambda \\mathcal{L}_{\\text{adv}}(\\theta, \\phi)",
+        "p": "Adversarial debiasing trains the main task predictor $\\mathbf{W}_p$ to minimise task loss $\\mathcal{L}_{\\text{task}}$ while maximising the loss of an adversary $\\mathbf{W}_{\\text{adv}}$ predicting ..."
+      }
+    ],
+    "code": "import numpy as np\n\ndef evaluate_subgroup_metrics(y_true, y_pred, sensitive_attr):\n    \"\"\"Computes demographic parity and equalised odds metrics across groups.\"\"\"\n    groups = np.unique(sensitive_attr)\n    metrics = {}\n    \n    for g in groups:\n        mask = (sensitive_attr == g)\n        n_g = np.sum(mask)\n        positive_rate = np.mean(y_pred[mask])\n        \n        # True Positive Rate (TPR) and False Positive Rate (FPR)\n        pos_mask = mask & (y_true == 1)\n        neg_mask = mask & (y_true == 0)\n        \n        tpr = np.mean(y_pred[pos_mask]) if np.sum(pos_mask) > 0 else 0.0\n        fpr = np.mean(y_pred[neg_mask]) if np.sum(neg_mask) > 0 else 0.0\n        \n        metrics[f\"Group_{g}\"] = {\n            'count': int(n_g),\n            'selection_rate': positive_rate,\n            'TPR': tpr,\n            'FPR': fpr\n        }\n        \n    # Demographic Parity Difference\n    rates = [m['selection_rate'] for m in metrics.values()]\n    dp_diff = np.max(rates) - np.min(rates)\n    \n    # Equalised Odds Max Disparity\n    tprs = [m['TPR'] for m in metrics.values()]\n    fprs = [m['FPR'] for m in metrics.values()]\n    eq_odds_diff = max(np.max(tprs) - np.min(tprs), np.max(fprs) - np.min(fprs))\n    \n    return metrics, dp_diff, eq_odds_diff\n\n# Simulation: Resume screening classifier on Group 0 (baseline) vs Group 1 (minority)\nnp.random.seed(42)\nN = 1000\nsensitive = np.random.binomial(1, 0.4, size=N)  # 40% minority group\ny_true = np.random.binomial(1, 0.5, size=N)     # True qualified status\n\n# Simulate biased model predictions (biased toward Group 0)\nlogits = y_true * 2.0 - 1.0 - (sensitive * 0.8) + np.random.randn(N) * 0.5\ny_pred = (logits > 0).astype(int)\n\nsubgroups, dp_gap, eq_gap = evaluate_subgroup_metrics(y_true, y_pred, sensitive)\n\nprint(\"Algorithmic Fairness Audit Report:\")\nfor g, data in subgroups.items():\n    print(f\"  {g}: Selection Rate={data['selection_rate']*100:.1f}%, TPR={data['TPR']:.3f}, FPR={data['FPR']:.3f}\")\n    \nprint(f\"\\nDemographic Parity Gap:   {dp_gap * 100:.2f}% (Ideal: 0.0%)\")\nprint(f\"Equalised Odds Disparity: {eq_gap * 100:.2f}% (Ideal: 0.0%)\")",
+    "keyPoints": [
+      "Unchecked NLP models amplify historical societal prejudices present within web-scale pretraining text.",
+      "Fairness auditing requires disaggregating error metrics across demographic groups, dialects, and intersectional identities.",
+      "Combining counterfactual data augmentation, adversarial debiasing, and post-generation safety guardrails establishes comprehensive harm mitigation."
+    ],
+    "pitfalls": [
+      "Blindly pursuing Demographic Parity when ground truth base rates vary legitimately across non-protected criteria, which can unintentionally harm performance.",
+      "Failing to evaluate intersectionality; a system might appear fair toward women and toward racial minorities individually, while exhibiting extreme bias against minority women.",
+      "Relying solely on keyword blocklists to filter toxicity, which frequently penalizes reclamation of reclaimed terms within marginalized speech communities."
+    ],
+    "quiz": [
+      {
+        "q": "What is the key distinction between representational harms and allocational harms in NLP systems?",
+        "o": [
+          "Representational harms demean or stereotype groups in text; allocational harms unfairly withhold tangible resources or opportunities",
+          "Representational harms only affect images; allocational harms affect text",
+          "Allocational harms are intentional; representational harms are always accidental",
+          "Representational harms can only occur on cloud servers"
+        ],
+        "a": 0,
+        "why": "Representational harms affect how groups are depicted (stereotypes, toxic language, erasure), while allocational harms directly impact access to resources, jobs, loans, or justice."
+      },
+      {
+        "q": "Which fairness metric requires equal False Positive Rates and True Positive Rates across all demographic groups?",
+        "o": [
+          "Demographic Parity",
+          "Equalised Odds",
+          "Perplexity",
+          "Dice Similarity"
+        ],
+        "a": 1,
+        "why": "Equalised Odds requires that both the true positive rate (sensitivity) and the false positive rate are equal across protected demographic groups."
+      },
+      {
+        "q": "How does Counterfactual Data Augmentation (CDA) help mitigate gender bias in training corpora?",
+        "o": [
+          "By deleting all sentences that mention women",
+          "By creating duplicate training examples with demographic terms swapped (e.g. \"he\" replaced with \"she\"), breaking spurious statistical correlations",
+          "By encrypting training documents using SHA-256",
+          "By forcing the model to generate only gender-neutral pronouns"
+        ],
+        "a": 1,
+        "why": "CDA generates counterfactual pairs where gendered words and names are inverted, ensuring that demographic tokens provide zero predictive correlation with task labels."
+      }
+    ],
+    "related": [
+      "instruction-tuning-rlhf-and-dpo",
+      "guardrails-and-red-teaming"
+    ],
+    "keywords": "bias and fairness in nlp, bias and fairness in nlp: demographic disparities, toxicity, and mitigation strategies, natural language processing, deep learning"
+  }
 ];

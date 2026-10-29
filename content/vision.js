@@ -4694,5 +4694,192 @@ print("Verified: CTC greedy best-path decoding executed successfully!")`,
       "geometric-transforms-and-homography"
     ],
     "keywords": "nerf, neural radiance fields, 3d gaussian splatting, novel view synthesis, volume rendering, positional encoding, radiance, colmap"
+  },
+  {
+    "id": "medical-imaging",
+    "short": "Medical Imaging & 3D Seg",
+    "title": "Medical Imaging: Modalities, DICOM, Windowing, and 3D Segmentation",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Clinical modalities span X-ray/CT (radiodensity in Hounsfield units), MRI (soft-tissue contrasts via magnetic resonance), ultrasound, and digital pathology. DICOM files store multidimensional volumetric scans alongside physical voxel spacing, slice thickness, patient coordinates, and radiometric window centres and widths. Radiometric windowing maps wide dynamic range CT data (e.g. -1000 to +3000 HU) into 8-bit perceptual ranges for soft tissue, bone, or lung parenchyma. 3D volumetric segmentation demands specialised handling of anisotropic slice spacing, volumetric patch-based inference, and loss functions robust to severe class imbalance like Dice and boundary loss.",
+    "lead": "Medical imaging bridges physical diagnostics and computer vision across CT, MRI, ultrasound, and histopathology. Clinically accurate processing requires handling calibrated physical units (Hounsfield units), radiometric windowing, anisotropic 3D voxels, and specialised volumetric architectures such as 3D U-Net and nnU-Net.",
+    "analogy": "Imagine an architect surveying a multi-storey skyscraper using ground-penetrating radar. Instead of taking colour snapshots of exterior walls, the radar generates a continuous 3D block of density readings. To inspect rebar within the concrete, the surveyor tunes the screen to filter out hollow drywall and focus entirely on high-density steel. Slicing the block at irregular floor intervals requires spatial interpolation to ensure internal columns align seamlessly across levels.",
+    "intuition": [
+      "Standard consumer photography captures reflected visible light from 2D surfaces in RGB channels. In medical imaging, radiological instruments scan through anatomical volumes, producing 3D scalar fields where each voxel represents an intrinsic physical property. In computed tomography (CT), voxels measure radiodensity in calibrated Hounsfield Units (HU), where air is -1000 HU, pure water is 0 HU, soft tissues range from +20 to +80 HU, and dense cortical bone exceeds +1000 HU. Because human vision and display systems handle 256 grey levels, radiologists apply radiometric \"windowing\" to inspect narrow density bands (such as brain parenchyma or pulmonary vessels) without losing contrast. Segmenting anatomical lesions requires models to operate across spatial depth (Z-axis), accounting for non-isotropic voxel spacing where slices may be separated by 3 mm while within-plane resolution is 0.7 mm."
+    ],
+    "steps": [
+      "Parse DICOM metadata: extract Rescale Slope and Rescale Intercept to convert stored raw pixel values to Hounsfield Units ($HU = \\text{pixel} \\times \\text{slope} + \\text{intercept}$).",
+      "Inspect physical metadata: extract `PixelSpacing` (dy, dx in mm) and `SliceThickness` (dz in mm) to compute spatial anisotropy.",
+      "Resample volumetric grids: interpolate 3D volumes into isotropic spacing (e.g. 1.0 mm x 1.0 mm x 1.0 mm) using spline interpolation for CT images and nearest-neighbour for ground-truth masks.",
+      "Apply radiometric windowing: clip and normalise density values according to the target clinical task (e.g. lung window: $WC=-600, WW=1500$; soft tissue: $WC=40, WW=400$).",
+      "Train volumetric 3D architectures (e.g. 3D U-Net) using sliding volumetric patches and compound loss functions combining soft Dice loss and binary cross-entropy."
+    ],
+    "math": [
+      {
+        "h": "Medical Imaging: Modalities, DICOM, Windowing, and 3D Segmentation formulation (Part 1)",
+        "tex": "HU = 1000 \\times \\frac{\\mu_x - \\mu_{\\text{water}}}{\\mu_{\\text{water}} - \\mu_{\\text{air}}}",
+        "p": "Radiometric windowing maps raw attenuation $x$ to displayed greyscale $[0, 255]$ given Window Centre ($WC$) and Window Width ($WW$):"
+      },
+      {
+        "h": "Medical Imaging: Modalities, DICOM, Windowing, and 3D Segmentation formulation (Part 2)",
+        "tex": "I_{\\text{disp}}(x) = \\begin{cases} 0 & x \\le WC - \\frac{WW}{2} \\\\ 255 & x > WC + \\frac{WW}{2} \\\\ \\left( \\frac{x - (WC - WW/2)}{WW} \\right) \\times 255 & \\text{otherwise} \\end{cases}",
+        "p": "For volumetric segmentation evaluation, the soft Dice coefficient evaluates overlap between predicted voxel probabilities $\\hat{y}_i \\in [0, 1]$ and binary ground-truth voxels $y_i \\in \\{0, 1\\}$ ac..."
+      },
+      {
+        "h": "Medical Imaging: Modalities, DICOM, Windowing, and 3D Segmentation formulation (Part 3)",
+        "tex": "\\mathcal{L}_{\\text{Dice}} = 1 - \\frac{2 \\sum_{i=1}^N \\hat{y}_i y_i + \\epsilon}{\\sum_{i=1}^N \\hat{y}_i + \\sum_{i=1}^N y_i + \\epsilon}",
+        "p": "For volumetric segmentation evaluation, the soft Dice coefficient evaluates overlap between predicted voxel probabilities $\\hat{y}_i \\in [0, 1]$ and binary ground-truth voxels $y_i \\in \\{0, 1\\}$ ac..."
+      }
+    ],
+    "code": "import numpy as np\n\ndef dicom_to_hounsfield(raw_array, slope, intercept):\n    \"\"\"Converts raw sensor integers to physical Hounsfield units (HU).\"\"\"\n    return raw_array.astype(np.float32) * slope + intercept\n\ndef apply_windowing(hu_image, window_centre, window_width):\n    \"\"\"Maps Hounsfield units to normalised [0, 1] range using radiometric window.\"\"\"\n    lower = window_centre - window_width / 2.0\n    upper = window_centre + window_width / 2.0\n    clipped = np.clip(hu_image, lower, upper)\n    return (clipped - lower) / (upper - lower)\n\ndef soft_dice_loss(pred_probs, true_masks, eps=1e-6):\n    \"\"\"Computes soft Dice loss for volumetric binary segmentation.\"\"\"\n    intersection = np.sum(pred_probs * true_masks)\n    cardinality = np.sum(pred_probs) + np.sum(true_masks)\n    dice_coef = (2.0 * intersection + eps) / (cardinality + eps)\n    return 1.0 - dice_coef\n\n# Simulate a 3D chest CT volume (slices, height, width)\nnp.random.seed(42)\nslices, h, w = 16, 64, 64\nraw_ct = np.random.randint(0, 4096, size=(slices, h, w), dtype=np.uint16)\nslope, intercept = 1.0, -1024.0\n\n# 1. Convert to calibrated Hounsfield Units\nhu_volume = dicom_to_hounsfield(raw_ct, slope, intercept)\n\n# 2. Apply Soft-Tissue Window (Centre: 40 HU, Width: 400 HU)\nsoft_tissue = apply_windowing(hu_volume, window_centre=40, window_width=400)\n\n# 3. Simulate ground truth lesion mask and model prediction\ntrue_lesion = np.zeros((slices, h, w), dtype=np.float32)\ntrue_lesion[6:10, 24:40, 24:40] = 1.0  # Synthetic nodule\n\n# Model prediction with realistic soft probabilities\npred_probs = np.zeros_like(true_lesion)\npred_probs[6:10, 26:38, 26:38] = 0.85\npred_probs[5:11, 22:42, 22:42] += 0.05  # Surrounding uncertainty\n\nloss = soft_dice_loss(pred_probs, true_lesion)\nprint(f\"Calibrated HU Range: [{hu_volume.min():.1f}, {hu_volume.max():.1f}]\")\nprint(f\"Normalised Window Range: [{soft_tissue.min():.2f}, {soft_tissue.max():.2f}]\")\nprint(f\"Volumetric Soft Dice Loss: {loss:.4f} (Dice Score: {1.0 - loss:.4f})\")",
+    "keyPoints": [
+      "Hounsfield units provide physically calibrated radiodensity metrics, making radiometric windowing essential for visualising specific tissue bands.",
+      "Anisotropic voxel dimensions require volumetric resampling to isotropic grids before standard 3D convolutional architectures can process them effectively.",
+      "Dice loss and boundary loss counteract severe class imbalance inherent to small anatomical targets within large volumetric background scans."
+    ],
+    "pitfalls": [
+      "Normalising CT scans with zero-mean unit-variance instead of applying modality-appropriate Hounsfield windowing destroys critical tissue attenuation baselines.",
+      "Ignoring anisotropic voxel spacing (e.g. 5 mm slice spacing vs 0.5 mm in-plane resolution) leads to distorted spherical convolutional filters across depth.",
+      "Using standard cross-entropy loss without class balancing when lesions occupy less than 0.1% of the total 3D scan volume, driving the network to predict empty masks."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary physical quantity represented by Hounsfield Units (HU) in a computed tomography (CT) scan?",
+        "o": [
+          "Linear X-ray attenuation calibrated relative to distilled water and air",
+          "Proton magnetic resonance relaxation speed (T1 and T2)",
+          "Acoustic impedance of sound waves travelling across organ boundaries",
+          "Standardised RGB light reflectance of biological tissue surfaces"
+        ],
+        "a": 0,
+        "why": "CT scans measure linear X-ray attenuation coefficients, normalised and scaled into Hounsfield Units where water is 0 HU and air is -1000 HU."
+      },
+      {
+        "q": "Why must 3D volumetric CT scans frequently be resampled before 3D convolution?",
+        "o": [
+          "Because 3D convolutions require images to have exactly 3 colour channels",
+          "To correct for anisotropic voxel spacing where slice thickness differs from in-plane resolution",
+          "Because DICOM files cannot be loaded into GPU memory without Fourier inversion",
+          "To invert negative Hounsfield units into positive integers"
+        ],
+        "a": 1,
+        "why": "Medical scans often have high in-plane resolution (e.g. 0.7 mm) but larger inter-slice spacing (e.g. 3-5 mm). Resampling to isotropic spacing ensures spatial kernel consistency in all 3 dimensions."
+      },
+      {
+        "q": "Why is soft Dice loss widely preferred over standard binary cross-entropy in medical lesion segmentation?",
+        "o": [
+          "Dice loss is computationally faster to calculate on CPU hardware",
+          "Dice loss eliminates the need for activation functions in convolutional layers",
+          "Dice loss directly optimises region overlap and remains robust to extreme foreground-background class imbalance",
+          "Dice loss enforces strict convexity in gradient descent optimisation"
+        ],
+        "a": 2,
+        "why": "In clinical scans, tumours or lesions often occupy a minute fraction (<1%) of voxels. Binary cross-entropy is overwhelmed by background voxels, whereas Dice loss directly optimises set overlap."
+      }
+    ],
+    "related": [
+      "segment-anything",
+      "iou-nms-and-map"
+    ],
+    "keywords": "medical imaging, medical imaging: modalities, dicom, windowing, and 3d segmentation, natural language processing, deep learning"
+  },
+  {
+    "id": "edge-deployment-of-vision-models",
+    "short": "Edge Vision: Quant & TensorRT",
+    "title": "Edge Deployment of Vision Models: Quantisation, Pruning, ONNX, and TensorRT",
+    "task": "concepts",
+    "level": 2,
+    "minutes": 16,
+    "noLab": true,
+    "usedBy": [],
+    "summary": "Edge deployment balances a tripartite trade-off among latency (frames per second), memory footprint (SRAM and DRAM), and task accuracy. Quantisation maps continuous 32-bit floating-point weights and activations to 8-bit integers (INT8) using symmetric or affine scaling. Post-Training Quantisation (PTQ) calibrates scale and zero-point offsets using representative data; Quantisation-Aware Training (QAT) simulates rounding errors during backpropagation. Graph optimisations (operator fusion, constant folding) and runtime engines (TensorRT, ONNX Runtime, OpenVINO) maximise hardware throughput.",
+    "lead": "Deploying high-accuracy vision models to resource-constrained edge hardware requires rigorous model compression and compilation. Post-training quantisation (PTQ), quantisation-aware training (QAT), structured pruning, and hardware-optimised compilation via ONNX and TensorRT reduce memory footprint, latency, and power consumption while preserving perceptual fidelity.",
+    "analogy": "Imagine shipping a sprawling encyclopaedia set across town on a bicycle courier. Sending 30 massive hardbound volumes (FP32) requires multiple heavy trips and slow reading. Quantisation is like re-typesetting the text into compact paperback digests using a clear, simplified vocabulary (INT8) that fits into a single backpack with virtually zero loss of practical meaning.",
+    "intuition": [
+      "Research vision models are typically developed using 32-bit floating-point arithmetic (FP32) on high-power desktop GPUs. Moving those models to mobile processors, drones, or embedded automotive microcontrollers faces strict constraints: limited thermal envelopes (5–15 Watts), low memory bandwidth, and strict millisecond deadlines. Converting FP32 tensors to 8-bit integers (INT8) immediately reduces memory storage and bandwidth by 4x. Moreover, modern integer arithmetic logic units (ALUs) and Tensor Cores compute INT8 matrix multiplies up to 4x faster than FP32. Combined with layer fusion—such as merging a 2D convolution, batch normalisation, and ReLU into a single GPU kernel invocation—compiled execution engines minimise memory roundtrips and maximise throughput."
+    ],
+    "steps": [
+      "Select architecture suited for edge execution: prefer depthwise-separable blocks, inverted residuals, or linear bottlenecks over heavy standard convolutions.",
+      "Perform operator and layer fusion: fold batch normalisation parameters directly into convolutional weights and fuse consecutive activation functions.",
+      "Quantise weights and activations: apply symmetric INT8 quantisation for stationary weights and calibrated affine quantisation for dynamic activation distributions.",
+      "Export to intermediate representation: serialize the model graph to ONNX format, verifying operator support and static vs dynamic input shapes.",
+      "Compile with target runtime engine: build an execution engine using TensorRT, OpenVINO, or TFLite, enabling kernel autotuning for target edge hardware."
+    ],
+    "math": [
+      {
+        "h": "Edge Deployment of Vision Models: Quantisation, Pruning, ONNX, and TensorRT formulation (Part 1)",
+        "tex": "S = \\frac{x_{\\max} - x_{\\min}}{2^b - 1}, \\quad Z = \\text{round}\\left(-\\frac{x_{\\min}}{S}\\right)",
+        "p": "Quantisation and dequantisation operations are formulated as:"
+      },
+      {
+        "h": "Edge Deployment of Vision Models: Quantisation, Pruning, ONNX, and TensorRT formulation (Part 2)",
+        "tex": "q = \\text{clip}\\left(\\text{round}\\left(\\frac{x}{S}\\right) + Z, 0, 2^b - 1\\right), \\quad \\hat{x} = S(q - Z)",
+        "p": "For symmetric quantisation (widely used in weights where $Z=0$ and $q \\in [-2^{b-1}, 2^{b-1}-1]$):"
+      },
+      {
+        "h": "Edge Deployment of Vision Models: Quantisation, Pruning, ONNX, and TensorRT formulation (Part 3)",
+        "tex": "S = \\frac{\\max(|x|)}{2^{b-1} - 1}, \\quad q = \\text{clip}\\left(\\text{round}\\left(\\frac{x}{S}\\right), -2^{b-1}, 2^{b-1}-1\\right)",
+        "p": "In layer fusion, a convolution layer with weights $W$, bias $b$, followed by batch normalisation parameters $(\\mu, \\sigma^2, \\gamma, \\beta)$ is algebraically folded into a single equivalent weight ..."
+      },
+      {
+        "h": "Edge Deployment of Vision Models: Quantisation, Pruning, ONNX, and TensorRT formulation (Part 4)",
+        "tex": "\\hat{W} = \\frac{\\gamma}{\\sqrt{\\sigma^2 + \\epsilon}} W, \\quad \\hat{b} = \\frac{\\gamma}{\\sqrt{\\sigma^2 + \\epsilon}} (b - \\mu) + \\beta",
+        "p": "In layer fusion, a convolution layer with weights $W$, bias $b$, followed by batch normalisation parameters $(\\mu, \\sigma^2, \\gamma, \\beta)$ is algebraically folded into a single equivalent weight ..."
+      }
+    ],
+    "code": "import numpy as np\n\ndef quantise_symmetric_int8(tensor):\n    \"\"\"Performs symmetric INT8 quantisation on continuous weights.\"\"\"\n    max_val = np.max(np.abs(tensor))\n    scale = max_val / 127.0\n    # Quantise and clamp to INT8 range [-127, 127]\n    quantised = np.clip(np.round(tensor / scale), -127, 127).astype(np.int8)\n    return quantised, scale\n\ndef dequantise_symmetric_int8(quantised, scale):\n    \"\"\"Reconstructs approximate FP32 tensor from INT8 and scale.\"\"\"\n    return quantised.astype(np.float32) * scale\n\ndef fold_conv_bn(conv_w, conv_b, bn_mean, bn_var, bn_gamma, bn_beta, eps=1e-5):\n    \"\"\"Folds Batch Normalisation into Conv2D weights and biases.\"\"\"\n    scale = bn_gamma / np.sqrt(bn_var + eps)\n    fused_w = conv_w * scale[:, None, None, None]\n    fused_b = (conv_b - bn_mean) * scale + bn_beta\n    return fused_w, fused_b\n\n# 1. Simulate Conv2D weights: (out_channels, in_channels, kh, kw)\nnp.random.seed(42)\nconv_w = np.random.randn(8, 4, 3, 3).astype(np.float32) * 0.5\nconv_b = np.zeros(8, dtype=np.float32)\n\n# Simulate Batch Normalisation parameters\nbn_mean = np.random.randn(8).astype(np.float32) * 0.1\nbn_var = np.abs(np.random.randn(8).astype(np.float32)) + 0.5\nbn_gamma = np.random.uniform(0.8, 1.2, size=8).astype(np.float32)\nbn_beta = np.random.randn(8).astype(np.float32) * 0.05\n\n# 2. Fuse Conv + BN layers into single parameter set\nfused_w, fused_b = fold_conv_bn(conv_w, conv_b, bn_mean, bn_var, bn_gamma, bn_beta)\n\n# 3. Apply Symmetric INT8 Quantisation to fused weights\nq_w, scale = quantise_symmetric_int8(fused_w)\nreconstructed_w = dequantise_symmetric_int8(q_w, scale)\n\nmae = np.mean(np.abs(fused_w - reconstructed_w))\nmemory_fp32 = fused_w.nbytes\nmemory_int8 = q_w.nbytes\n\nprint(f\"FP32 Weights Size: {memory_fp32} bytes\")\nprint(f\"INT8 Weights Size: {memory_int8} bytes (Compression: {memory_fp32 / memory_int8:.1f}x)\")\nprint(f\"Quantisation Mean Absolute Error: {mae:.6f}\")",
+    "keyPoints": [
+      "Edge deployment demands aggressive memory bandwidth reduction; converting FP32 to INT8 yields immediate 4x storage and throughput gains.",
+      "Layer fusion algebraically incorporates batch normalisation into preceding convolutional weights, eliminating wasteful memory roundtrips.",
+      "Hardware compilation engines like TensorRT leverage hardware-specific kernel autotuning to match targeted GPU architectures."
+    ],
+    "pitfalls": [
+      "Applying post-training quantisation without a representative calibration dataset causes outlier clipping that severely degrades detection accuracy.",
+      "Leaving batch normalisation as separate standalone layers during inference wastes execution memory bandwidth with redundant global memory reads and writes.",
+      "Quantising sensitive layers (such as the initial convolutional stem or final detection classification heads) to INT8 without selective mixed-precision FP16 fallback."
+    ],
+    "quiz": [
+      {
+        "q": "What is the primary operational advantage of layer fusion (e.g. folding Conv + BatchNorm + ReLU)?",
+        "o": [
+          "It reduces the overall number of trainable parameters during backpropagation",
+          "It executes operations within a single GPU kernel, eliminating roundtrip DRAM read/write latency",
+          "It enables convolutional filters to support variable channel dimensions dynamically",
+          "It replaces floating point calculations with stochastic sampling"
+        ],
+        "a": 1,
+        "why": "Layer fusion executes consecutive elementwise operations within fast on-chip registers and shared SRAM, avoiding costly off-chip DRAM memory bandwidth bottlenecks."
+      },
+      {
+        "q": "How does Quantisation-Aware Training (QAT) differ from Post-Training Quantisation (PTQ)?",
+        "o": [
+          "QAT only quantises input images, leaving weights in 64-bit precision",
+          "PTQ requires gradient descent training on millions of labelled samples",
+          "QAT inserts simulated fake-quantisation nodes during fine-tuning so weights adjust to rounding noise",
+          "PTQ completely replaces integer arithmetic with binary logic gates"
+        ],
+        "a": 2,
+        "why": "QAT models the rounding and clamping error of INT8 arithmetic during forward passes while computing gradients via straight-through estimators, allowing the network to adapt to quantisation noise."
+      },
+      {
+        "q": "Why is symmetric quantisation ($Z=0$) commonly chosen for neural network weight matrices?",
+        "o": [
+          "It simplifies matrix multiplication hardware by eliminating zero-point cross-term corrections",
+          "It guarantees zero numerical loss compared to 32-bit floating point",
+          "It allows networks to be run without requiring scale factors",
+          "It ensures that negative weights are automatically converted to positive values"
+        ],
+        "a": 0,
+        "why": "Symmetric quantisation centres the integer range around zero, meaning the hardware does not need to compute and accumulate zero-point cross-terms during high-speed matrix multiplications."
+      }
+    ],
+    "related": [
+      "inference-kv-cache-batching-paged-attention",
+      "serving-latency-and-cost"
+    ],
+    "keywords": "edge deployment of vision models, edge deployment of vision models: quantisation, pruning, onnx, and tensorrt, natural language processing, deep learning"
   }
 ];
