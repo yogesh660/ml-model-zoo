@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -137,6 +137,61 @@ ms = <span class="f">MeanShift</span>(bandwidth=bw, bin_seeding=<span class="k">
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Finds more clusters</span></button><button class="opt" type="button"><b>B</b><span>Finds fewer, broader clusters</span></button><button class="opt" type="button"><b>C</b><span>Has no effect</span></button><button class="opt" type="button"><b>D</b><span>Increases noise points</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A wider kernel smooths away small density peaks.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q2</span>What statistical feature of the data distribution does each cluster centre represent in mean shift clustering?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The medoid that minimises total Manhattan distance</span></button><button class="opt" type="button"><b>B</b><span>The arithmetic mean of all points assigned to a Voronoi cell</span></button><button class="opt" type="button"><b>C</b><span>A local mode (density peak) of the underlying probability density function</span></button><button class="opt" type="button"><b>D</b><span>An eigenvector of the normalised graph Laplacian</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Mean shift is a mode-seeking algorithm: points climb the gradient of a kernel density estimate, and cluster centres correspond to local density peaks (modes).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>Why does mean shift clustering not require the user to specify the number of clusters $k$ in advance?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the number of clusters is determined automatically by how many distinct density modes are discovered</span></button><button class="opt" type="button"><b>B</b><span>Because it always creates exactly one cluster per feature</span></button><button class="opt" type="button"><b>C</b><span>Because it runs a deep neural network that optimises $k$ using backpropagation</span></button><button class="opt" type="button"><b>D</b><span>Because it forces $k = \log_2(n)$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In mean shift, each point flows to a stationary density mode. The number of unique modes after merging nearby peaks automatically becomes the number of clusters.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q4</span>What role does the <code>bin_seeding=True</code> parameter play in scikit-learn's <code>MeanShift</code>?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It initialises points using k-means++</span></button><button class="opt" type="button"><b>B</b><span>It rounds feature values to the nearest integer</span></button><button class="opt" type="button"><b>C</b><span>It removes 50% of the features randomly</span></button><button class="opt" type="button"><b>D</b><span>It seeds search windows from a coarse grid rather than from every single data point, substantially accelerating convergence on large datasets</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By default, mean shift starts a hill-climbing trajectory from every single data point ($n$ searches). <code>bin_seeding=True</code> quantises points onto a coarse grid and only seeds from occupied bins, drastically speeding up computation.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>What does the mean shift vector $m(x) - x$ represent geometrically at any location $x$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A vector perpendicular to the decision boundary</span></button><button class="opt" type="button"><b>B</b><span>A vector pointing directly along the normalised gradient of the kernel density estimate toward higher density</span></button><button class="opt" type="button"><b>C</b><span>The error residual between true and predicted labels</span></button><button class="opt" type="button"><b>D</b><span>The second derivative (curvature) of the density surface</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Comaniciu and Meer proved that the mean shift vector $m(x) - x$ is proportional to the normalised gradient of the kernel density estimate, guaranteeing that moving along it climbs toward the nearest density mode.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>How does scikit-learn's <code>estimate_bandwidth(X, quantile=0.2)</code> select a suggested bandwidth parameter?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It computes pairwise distances to neighbours and takes the specified quantile of nearest-neighbour distances</span></button><button class="opt" type="button"><b>B</b><span>It tests every bandwidth from 0.1 to 10.0 and picks the one with highest silhouette score</span></button><button class="opt" type="button"><b>C</b><span>It calculates the variance of the first principal component</span></button><button class="opt" type="button"><b>D</b><span>It fits a linear regression and takes the residual standard deviation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> <code>estimate_bandwidth</code> uses a nearest-neighbour graph to calculate the distance distribution between sample points, returning the distance corresponding to the requested quantile (e.g. the 20th percentile).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>What occurs during the post-processing phase of mean shift after all hill-climbing paths have stopped moving?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>All clusters are split in two using 2-means</span></button><button class="opt" type="button"><b>B</b><span>Centres are re-projected onto the unit sphere</span></button><button class="opt" type="button"><b>C</b><span>Points with negative coordinates are removed</span></button><button class="opt" type="button"><b>D</b><span>Modes situated closer to each other than the bandwidth threshold are merged into a single cluster centre</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Multiple points climbing the same broad peak may terminate at slightly different floating-point coordinates. The algorithm merges candidate modes that lie within distance $h$ of each other into a single consolidated mode.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>What happens if an engineer sets <code>cluster_all=False</code> in <code>MeanShift</code>?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The algorithm converts into spectral clustering</span></button><button class="opt" type="button"><b>B</b><span>The model fails to fit and raises an exception</span></button><button class="opt" type="button"><b>C</b><span>Points that do not converge close enough to any valid mode (or lie in low-density valleys) are labelled as noise ($-1$) rather than being forced into the nearest cluster</span></button><button class="opt" type="button"><b>D</b><span>All points are assigned to cluster 0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When <code>cluster_all=True</code> (default), every point is assigned to a cluster, even isolated outliers. Setting <code>cluster_all=False</code> allows sparse orphan points to be marked with label <code>-1</code> (noise).</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>Why does mean shift become computationally prohibitive on high-dimensional datasets with many thousands of samples?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because kernel density estimation is only defined in 1D</span></button><button class="opt" type="button"><b>B</b><span>Because mean shift cannot compute matrices with more than 3 columns</span></button><button class="opt" type="button"><b>C</b><span>Because each iteration evaluates distances to all points ($O(n^2)$), and the curse of dimensionality causes density to disperse thinly, requiring massive bandwidths that blur all modes</span></button><button class="opt" type="button"><b>D</b><span>Because the algorithm requires computing matrix inverses of shape $(n \times n)$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Mean shift scales quadratically $O(T \cdot n^2)$ with sample size. In high dimensions, data sparsity (the curse of dimensionality) flattens density gradients, meaning nearly all points become isolated local modes unless the bandwidth is inflated so large that all structure is obliterated.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>Consider 3 points in 1D: $x_1 = 2$, $x_2 = 4$, and $x_3 = 10$. A mean shift window uses a flat (uniform) kernel with bandwidth $h = 3$ centred at current position $x = 3$. What is the updated mean position $m(x)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$m(x) = 5.33$ (mean of all 3 points)</span></button><button class="opt" type="button"><b>B</b><span>$m(x) = 3.00$</span></button><button class="opt" type="button"><b>C</b><span>$m(x) = 4.00$</span></button><button class="opt" type="button"><b>D</b><span>$m(x) = 2.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The window $[3 - 3, 3 + 3] = [0, 6]$ captures only $x_1 = 2$ and $x_2 = 4$ ($x_3 = 10$ is outside). With a flat kernel, the updated position is the arithmetic mean of points inside the window: $(2 + 4) / 2 = 3.00$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q11</span>Suppose two points $x_1 = 0$ and $x_2 = 2$ have weights $K_1 = 0.75$ and $K_2 = 0.25$ under a Gaussian kernel centred at $x = 0.5$. What is the kernel-weighted mean shift update $m(x) = \frac{\sum K_i x_i}{\sum K_i}$, and what is the mean shift vector $m(x) - x$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$m(x) = 1.00$, shift vector $= +0.50$</span></button><button class="opt" type="button"><b>B</b><span>$m(x) = 1.50$, shift vector $= +1.00$</span></button><button class="opt" type="button"><b>C</b><span>$m(x) = 0.25$, shift vector $= -0.25$</span></button><button class="opt" type="button"><b>D</b><span>$m(x) = 0.50$, shift vector $= 0.00$ (stationary point)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The weighted mean is $m(x) = (0.75 \times 0 + 0.25 \times 2) / (0.75 + 0.25) = 0.50 / 1.00 = 0.50$. The mean shift vector is $m(x) - x = 0.50 - 0.50 = 0.00$, indicating this location is an equilibrium point.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>In a 2D image segmentation task with $n = 100,000$ pixels, an engineer runs raw <code>MeanShift</code> with <code>bin_seeding=False</code>. If each hill-climbing trajectory takes an average of $T = 15$ iterations and evaluates all $n$ pixels, approximately how many distance calculations are performed?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1.5 \times 10^{11}$ (150 billion)</span></button><button class="opt" type="button"><b>B</b><span>$1.5 \times 10^8$ (150 million)</span></button><button class="opt" type="button"><b>C</b><span>$1.5 \times 10^6$ (1.5 million)</span></button><button class="opt" type="button"><b>D</b><span>$3.0 \times 10^5$ (300 thousand)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Initiating trajectories from all $10^5$ points with 15 iterations each, where each iteration compares against all $10^5$ data points, requires $10^5 \times 15 \times 10^5 = 1.5 \times 10^{11}$ (150 billion) distance evaluations. This quadratic scaling is why bin seeding or downsampling is essential.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -172,11 +227,11 @@ ms = <span class="f">MeanShift</span>(bandwidth=bw, bin_seeding=<span class="k">
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

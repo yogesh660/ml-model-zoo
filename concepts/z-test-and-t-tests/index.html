@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -137,6 +137,51 @@ mean_improvement = <span class="f">float</span>(np.<span class="f">mean</span>(p
             <div class="opts"><button class="opt" type="button"><b>A</b><span>A uniform distribution $\text{Uniform}(-1, 1)$</span></button><button class="opt" type="button"><b>B</b><span>A chi-square distribution $\chi^2(1)$</span></button><button class="opt" type="button"><b>C</b><span>The standard normal distribution $\mathcal{N}(0, 1)$</span></button><button class="opt" type="button"><b>D</b><span>A Cauchy distribution</span></button></div>
             <div class="why" hidden><strong>Why:</strong> As $n \to \infty$, the sample standard deviation $s$ converges in probability to the true population standard deviation $\sigma$ by the law of large numbers, so $t(\nu)$ converges to $\mathcal{N}(0, 1)$.</div>
           </div>
+          <div class="q" data-answer="3">
+            <p><span>Q5</span>A network engineer benchmarks a new caching layer across $n = 25$ requests, finding a sample mean response time of $\bar{x} = 88.0\text{ ms}$ with sample standard deviation $s = 10.0\text{ ms}$. If the baseline target latency is $\mu_0 = 92.0\text{ ms}$, what is the value of the one-sample $t$-statistic?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>-0.40</span></button><button class="opt" type="button"><b>B</b><span>+2.00</span></button><button class="opt" type="button"><b>C</b><span>-4.00</span></button><button class="opt" type="button"><b>D</b><span>-2.00</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The standard error is $\operatorname{SE} = s / \sqrt{n} = 10.0 / \sqrt{25} = 2.0\text{ ms}$. The $t$-statistic is $(\bar{x} - \mu_0) / \operatorname{SE} = (88.0 - 92.0) / 2.0 = -4.0 / 2.0 = -2.00$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>In a study evaluating model compression, 30 deep neural networks are each evaluated before and after pruning, yielding 30 pair-wise differences in inference latency. How many degrees of freedom does the paired $t$-test have?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>58</span></button><button class="opt" type="button"><b>B</b><span>29</span></button><button class="opt" type="button"><b>C</b><span>30</span></button><button class="opt" type="button"><b>D</b><span>60</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A paired $t$-test computes differences for each of the $n$ pairs and runs a one-sample test on those differences. With $n = 30$ pairs, the degrees of freedom are $\nu = n - 1 = 30 - 1 = 29$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>Under what condition is Student's $t$-test robust to moderate departures from normality in the underlying population?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Only when the population variance is known with zero error</span></button><button class="opt" type="button"><b>B</b><span>Only when all data values are strictly non-negative integers</span></button><button class="opt" type="button"><b>C</b><span>When the data follows a Cauchy distribution</span></button><button class="opt" type="button"><b>D</b><span>When sample sizes are reasonably large (e.g. $n \ge 30$) so that the central limit theorem ensures the sample mean is approximately normally distributed</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The $t$-statistic relies on the distribution of the sample mean $\bar{X}$. By the central limit theorem, sample means of independent observations converge to normality as $n$ increases (typically $n \ge 30$), rendering the $t$-test robust to non-normal data without severe outliers.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>Consider this Python function call to compare two independent groups:
+<code>stat, p_val = stats.ttest_ind(group_a, group_b, equal_var=False)</code>
+What test does setting <code>equal_var=False</code> execute?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Welch's t-test, which does not assume equal variances between groups</span></button><button class="opt" type="button"><b>B</b><span>Mann-Whitney U non-parametric test</span></button><button class="opt" type="button"><b>C</b><span>Paired two-sample t-test</span></button><button class="opt" type="button"><b>D</b><span>Student's pooled two-sample t-test</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In SciPy, <code>stats.ttest_ind</code> defaults to Student's pooled $t$-test (<code>equal_var=True</code>). Setting <code>equal_var=False</code> instructs SciPy to perform Welch's $t$-test using the Welch–Satterthwaite approximation for degrees of freedom.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>In which of the following scenarios is a normal $z$-test formally valid instead of a Student's $t$-test?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Whenever the sample mean is greater than zero</span></button><button class="opt" type="button"><b>B</b><span>When sample size is $n = 12$ and population variance $\sigma^2$ is estimated using $s^2$</span></button><button class="opt" type="button"><b>C</b><span>When the sample is drawn without replacement from a finite population</span></button><button class="opt" type="button"><b>D</b><span>When the population variance $\sigma^2$ is known exactly from extensive historical census data</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A $z$-test requires known population standard deviation $\sigma$. When $\sigma$ is unknown and estimated by the sample standard deviation $s$, Gosset proved the ratio follows a $t$-distribution, not a standard normal distribution.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>Two independent groups have sample statistics:
+Group 1: $n_1 = 10$, $s_1^2 = 9$ (so $s_1^2/n_1 = 0.90$)
+Group 2: $n_2 = 10$, $s_2^2 = 81$ (so $s_2^2/n_2 = 8.10$)
+Using the Welch–Satterthwaite formula $\nu \approx \frac{(v_1 + v_2)^2}{\frac{v_1^2}{n_1 - 1} + \frac{v_2^2}{n_2 - 1}}$ where $v_1 = s_1^2/n_1$ and $v_2 = s_2^2/n_2$, what is the approximate effective degrees of freedom $\nu$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>18.0</span></button><button class="opt" type="button"><b>B</b><span>11.0</span></button><button class="opt" type="button"><b>C</b><span>9.0</span></button><button class="opt" type="button"><b>D</b><span>14.5</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $v_1 = 9/10 = 0.9$, $v_2 = 81/10 = 8.1$. The numerator is $(0.9 + 8.1)^2 = 9^2 = 81.0$. The denominator is $(0.9^2 / 9) + (8.1^2 / 9) = 0.09 + 7.29 = 7.38$. Thus $\nu \approx 81.0 / 7.38 \approx 10.98$ (or approximately 11.0), substantially lower than the pooled df of 18.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>In repeated-measures data, the variance of the difference between paired measurements is $\operatorname{Var}(X_1 - X_2) = \sigma_1^2 + \sigma_2^2 - 2\operatorname{Cov}(X_1, X_2)$. If two measurements have variances $\sigma_1^2 = 25$ and $\sigma_2^2 = 25$ with positive correlation $\rho = 0.80$, how does the variance of the difference $\operatorname{Var}(X_1 - X_2)$ compare to the variance under an independent two-sample design?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It is identical: $\operatorname{Var} = 50$ in both designs</span></button><button class="opt" type="button"><b>B</b><span>It is increased from $50$ to $90$ due to double counting</span></button><button class="opt" type="button"><b>C</b><span>It is reduced fivefold from $50$ to $10$, dramatically shrinking the standard error and boosting power</span></button><button class="opt" type="button"><b>D</b><span>It reduces the degrees of freedom to zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With covariance $\operatorname{Cov}(X_1, X_2) = 0.80 \times 5 \times 5 = 20$, the paired variance is $25 + 25 - 2(20) = 10$, compared to $25 + 25 = 50$ for independent samples. By subtracting out the strong shared variance between matched pairs, the standard error shrinks by $\sqrt{5} \approx 2.24\times$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>A researcher tests whether there is a difference in mean latency among 4 different model variants. Instead of running a one-way ANOVA, the researcher conducts all possible pair-wise two-sample $t$-tests at $\alpha = 0.05$. How many pair-wise tests are performed, and what is the approximate upper bound on the family-wise error rate if the tests were independent?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>6 tests, family-wise error rate $\approx 26.5\%$</span></button><button class="opt" type="button"><b>B</b><span>12 tests, family-wise error rate $\approx 60.0\%$</span></button><button class="opt" type="button"><b>C</b><span>6 tests, family-wise error rate $\approx 5.0\%$</span></button><button class="opt" type="button"><b>D</b><span>4 tests, family-wise error rate $\approx 5.0\%$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $k = 4$ groups, there are $\binom{4}{2} = 6$ distinct pairwise comparisons. Performing 6 independent tests at $\alpha = 0.05$ yields a family-wise false positive risk of $1 - (0.95)^6 \approx 26.5\%$. This severe inflation is why ANOVA omnibus tests and post-hoc corrections (like Tukey HSD) are required.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -172,11 +217,11 @@ mean_improvement = <span class="f">float</span>(np.<span class="f">mean</span>(p
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

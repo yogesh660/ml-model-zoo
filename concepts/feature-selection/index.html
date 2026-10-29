@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -121,6 +121,56 @@ rfe = <span class="f">RFECV</span>(<span class="f">LinearRegression</span>(), st
             <div class="opts"><button class="opt" type="button"><b>A</b><span>A filter method</span></button><button class="opt" type="button"><b>B</b><span>A wrapper method</span></button><button class="opt" type="button"><b>C</b><span>An embedded method</span></button><button class="opt" type="button"><b>D</b><span>Dimensionality reduction</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Selection happens inside training via the L1 penalty.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>What is the main advantage of filter methods compared to wrapper methods?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Filter methods are computationally fast and model-agnostic because they evaluate statistical properties of features without repeatedly training machine learning models</span></button><button class="opt" type="button"><b>B</b><span>Filter methods always achieve higher test accuracy than wrapper methods</span></button><button class="opt" type="button"><b>C</b><span>Filter methods capture complex multi-feature non-linear interactions automatically</span></button><button class="opt" type="button"><b>D</b><span>Filter methods eliminate the need for cross-validation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Filters rank features using statistical metrics (such as mutual information or Pearson correlation) directly against the target. They require zero model training iterations, making them scalable to tens of thousands of features.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q4</span>What does Mutual Information $I(X; Y) = 0$ between a feature $X$ and target $Y$ indicate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$X$ is a constant column with zero variance</span></button><button class="opt" type="button"><b>B</b><span>$X$ and $Y$ have a negative linear correlation of $-1.0$</span></button><button class="opt" type="button"><b>C</b><span>$X$ and $Y$ have identical probability distributions</span></button><button class="opt" type="button"><b>D</b><span>$X$ and $Y$ are strictly independent random variables: knowing $X$ provides zero information about $Y$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Mutual information is non-negative and equals zero if and only if $p(x, y) = p(x)p(y)$, meaning $X$ and $Y$ share no statistical dependence, linear or non-linear.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>Why can filtering features purely by Pearson correlation with the target cause you to discard critical predictive features?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Pearson correlation only measures linear associations; a feature with a non-linear relationship (such as $y = x^2$) or a feature that operates strictly through an interaction with another variable can have zero linear correlation with the target</span></button><button class="opt" type="button"><b>B</b><span>Pearson correlation can only be computed when features have zero missing values</span></button><button class="opt" type="button"><b>C</b><span>Pearson correlation is strictly bounded between 0 and 1</span></button><button class="opt" type="button"><b>D</b><span>Pearson correlation always drops features with high variance</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> If $y = x^2$ for $x \in [-1, 1]$, the Pearson correlation $r \approx 0$ despite a deterministic relationship. Similarly, XOR interactions have zero marginal correlation with the outcome.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q6</span>What is the critical danger of performing feature selection on the complete dataset before splitting into cross-validation folds?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The cross-validation code will throw a dimension mismatch error</span></button><button class="opt" type="button"><b>B</b><span>It forces the model to use L1 regularisation instead of L2</span></button><button class="opt" type="button"><b>C</b><span>It increases model training time by a factor of 10</span></button><button class="opt" type="button"><b>D</b><span>It causes selection leakage: the chosen features were selected because they correlated with target labels across the entire dataset (including validation folds), leading to severely optimistic cross-validation scores</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> If features are selected using the entire dataset, validation fold targets have already influenced the feature set. To obtain an honest out-of-sample estimate, feature selection must be fitted solely inside the training fold of each CV split.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q7</span>Why is mean decrease in impurity (Gini importance) unreliable when evaluating feature importance in decision trees and random forests?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It can only be computed on binary classification trees</span></button><button class="opt" type="button"><b>B</b><span>It systematically inflates the importance of continuous or high-cardinality categorical features (such as user IDs or zip codes) because they offer many split points to overfit training samples</span></button><button class="opt" type="button"><b>C</b><span>It is calculated on held-out test data rather than training splits</span></button><button class="opt" type="button"><b>D</b><span>It requires inverting the covariance matrix of the features</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In decision trees, features with many distinct levels provide exponentially more split opportunities, allowing the tree to reduce impurity on noise. Permutation importance on validation data corrects this bias.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>Two input features $X_1$ and $X_2$ are almost perfectly collinear ($r = 0.99$) and both are strongly predictive of the target. When evaluated by permutation importance in a Random Forest, what typically happens?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both features will have negative importance scores</span></button><button class="opt" type="button"><b>B</b><span>The model crashes due to a singular matrix error</span></button><button class="opt" type="button"><b>C</b><span>Both features may show unexpectedly low importance scores because when one feature is permuted, the tree can still retrieve nearly identical information from the other intact feature</span></button><button class="opt" type="button"><b>D</b><span>The sum of their importances will exceed 100% of all feature importances combined</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When correlated features are present, permuting $X_1$ does not severely hurt performance because the tree splits on $X_2$ to compensate. Dropping one of the collinear pair often causes the remaining feature's permutation importance to surge.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>How does Recursive Feature Elimination (RFE) select features?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It tests all $2^p$ possible feature subsets using brute-force search</span></button><button class="opt" type="button"><b>B</b><span>It computes the pairwise Pearson correlation between every feature pair and drops the highest correlation</span></button><button class="opt" type="button"><b>C</b><span>It applies an L1 penalty to shrink all non-linear weights to zero in a single step</span></button><button class="opt" type="button"><b>D</b><span>It fits a model on all features, ranks them by weight or importance, prunes the weakest feature(s), and repeats this process iteratively until the desired number of features remains</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> RFE is a greedy backward-selection wrapper: it trains the estimator, removes the feature with the smallest coefficient or feature importance, and refits on the remaining set until the target subset size is reached.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q10</span>For a dataset with $p = 10$ features, how many total non-empty feature subsets would an exhaustive, brute-force search have to train and evaluate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1{,}023$</span></button><button class="opt" type="button"><b>B</b><span>$100$</span></button><button class="opt" type="button"><b>C</b><span>$45$</span></button><button class="opt" type="button"><b>D</b><span>$3{,}628{,}800$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The number of possible non-empty subsets of $p$ items is $2^p - 1$. For $p = 10$, $2^{10} - 1 = 1{,}024 - 1 = 1{,}023$ candidate models. For large $p$, exhaustive search becomes computationally intractable, necessitating wrappers (greedy RFE) or embedded methods (Lasso).</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>In a permutation importance test on a validation set of 1,000 samples, the baseline model achieves an $R^2$ of $0.82$. When column $X_3$ is randomly shuffled, the model's $R^2$ drops to $0.74$. What is the permutation importance $\mathrm{PI}_3$ of feature $X_3$, and how is it interpreted?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{PI}_3 = 0.82 / 0.74 \approx 1.11$; $X_3$ increases model variance by 11%</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{PI}_3 = -0.08$; $X_3$ is a noisy feature that hurts validation performance</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{PI}_3 = 0.82 - 0.74 = 0.08$; shuffling $X_3$ causes an average drop of 0.08 in validation $R^2$, confirming $X_3$ contains substantial predictive signal</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{PI}_3 = 0.74$; $X_3$ explains 74% of target variance alone</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Permutation importance is defined as $\mathrm{score}(X) - \mathrm{score}(X^{\pi_j})$. Here, $\mathrm{PI}_3 = 0.82 - 0.74 = 0.08$. A positive drop of $0.08$ indicates that the model relies meaningfully on $X_3$ for generalisation.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>Suppose discrete variables $X \in \{0, 1\}$ and $Y \in \{0, 1\}$ have joint distribution: $P(X=0, Y=0) = 0.50$, $P(X=1, Y=1) = 0.50$, and $P(X=0, Y=1) = P(X=1, Y=0) = 0$. What is the mutual information $I(X; Y)$ in nats? (Recall $\ln(2) \approx 0.693$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.000$</span></button><button class="opt" type="button"><b>B</b><span>$0.693$</span></button><button class="opt" type="button"><b>C</b><span>$0.347$</span></button><button class="opt" type="button"><b>D</b><span>$1.000$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Marginals: $P(X=0) = 0.5$, $P(X=1) = 0.5$, and $P(Y=0) = 0.5$, $P(Y=1) = 0.5$. $I(X; Y) = \sum_{x,y} P(x,y)\ln\frac{P(x,y)}{P(x)P(y)}$. For $(0,0)$: $0.5 \ln\frac{0.5}{0.5 \times 0.5} = 0.5 \ln(2) \approx 0.5(0.693) = 0.3466$. For $(1,1)$: $0.5 \ln\frac{0.5}{0.5 \times 0.5} = 0.5 \ln(2) \approx 0.3466$. Total $I(X; Y) = 2 \times 0.3466 = 0.693$ nats. Since $X = Y$ perfectly, $I(X; Y) = H(X) = \ln(2) \approx 0.693$ nats.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -156,11 +206,11 @@ rfe = <span class="f">RFECV</span>(<span class="f">LinearRegression</span>(), st
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

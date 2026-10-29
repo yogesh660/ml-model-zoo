@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -119,6 +119,56 @@ log_loss, hinge = np.<span class="f">log1p</span>(np.<span class="f">exp</span>(
             <div class="opts"><button class="opt" type="button"><b>A</b><span>2</span></button><button class="opt" type="button"><b>B</b><span>1</span></button><button class="opt" type="button"><b>C</b><span>0</span></button><button class="opt" type="button"><b>D</b><span>−1</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\max(0, 1 - 2) = 0$: points beyond the margin contribute nothing.</div>
           </div>
+          <div class="q" data-answer="3">
+            <p><span>Q3</span>Which parameter value is chosen by minimising the Mean Squared Error (MSE) loss on a univariate continuous variable?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The mode</span></button><button class="opt" type="button"><b>B</b><span>The median</span></button><button class="opt" type="button"><b>C</b><span>The 75th percentile</span></button><button class="opt" type="button"><b>D</b><span>The mean</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Differentiating $\sum (y_i - c)^2$ with respect to $c$ yields $-2\sum(y_i - c) = 0 \implies c = \frac{1}{n}\sum y_i$, which is the sample mean.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>Why is the Huber loss function preferred over pure MSE in regression problems where outliers are present?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It behaves quadratically like MSE for small errors ($|e| \le \delta$) but grows linearly like MAE for large errors ($|e| &gt; \delta$), preventing extreme outliers from exerting unbounded leverage on the model</span></button><button class="opt" type="button"><b>B</b><span>It eliminates the need for gradient descent by solving the regression analytically</span></button><button class="opt" type="button"><b>C</b><span>It restricts all model predictions to fall strictly between 0 and 1</span></button><button class="opt" type="button"><b>D</b><span>It transforms regression into a classification problem</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> MSE squares large errors, so an outlier with $e = 100$ produces a loss of $10{,}000$ and huge gradients. Huber loss caps the gradient at $\pm \delta$ for $|e| &gt; \delta$, giving robustness while remaining smooth at zero.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q5</span>What is the quantile (pinball) loss function used for in machine learning?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Clustering high-dimensional data into $k$ quantiles</span></button><button class="opt" type="button"><b>B</b><span>Classifying imbalanced classes by weighting errors proportionally to class frequencies</span></button><button class="opt" type="button"><b>C</b><span>Estimating conditional quantiles (such as the 10th or 90th percentile) to construct prediction intervals rather than predicting only the conditional mean</span></button><button class="opt" type="button"><b>D</b><span>Pruning neural network weights whose magnitudes fall in the lowest quantile</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Quantile (pinball) loss $\ell_\tau(e) = \max(\tau e, (\tau - 1)e)$ is minimised by the $\tau$-th quantile of the conditional distribution $P(y \mid x)$, enabling asymmetric interval forecasting.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>For a binary classification instance with true label $y = +1$ and raw model score $f(x) = -2.0$ (giving margin $m = y f(x) = -2.0$), what is the hinge loss $\ell_{\text{hinge}} = \max(0, 1 - m)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.0$</span></button><button class="opt" type="button"><b>B</b><span>$3.0$</span></button><button class="opt" type="button"><b>C</b><span>$2.0$</span></button><button class="opt" type="button"><b>D</b><span>$1.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\ell_{\text{hinge}} = \max(0, 1 - m) = \max(0, 1 - (-2.0)) = \max(0, 3.0) = 3.0$. Because the prediction is on the wrong side of the decision boundary, the loss penalises both the margin violation and the classification error.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>What is the gradient of the Absolute Error loss $\ell(y, \hat{y}) = |y - \hat{y}|$ with respect to error $e = y - \hat{y}$ for $e \ne 0$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0$ everywhere</span></button><button class="opt" type="button"><b>B</b><span>$2e$, which scales proportionally with error size</span></button><button class="opt" type="button"><b>C</b><span>$e^2 / 2$</span></button><button class="opt" type="button"><b>D</b><span>$\operatorname{sign}(e)$ (either $+1$ for $e &gt; 0$ or $-1$ for $e &lt; 0$), which remains constant regardless of the magnitude of the error</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The derivative of $|e|$ is $+1$ for $e &gt; 0$ and $-1$ for $e &lt; 0$. Unlike MSE whose gradient $2e$ explodes for large errors, MAE exerts a constant push of $\pm 1$ on parameters, providing outlier resistance.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>Why does training a neural network using hinge loss rather than log-loss (cross-entropy) fail to produce well-calibrated posterior probabilities $P(y=1 \mid x)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Hinge loss is completely insensitive to how far a correct prediction is beyond the margin ($m \ge 1$), whereas log-loss continuously rewards higher confidence and maps outputs to Bernoulli likelihoods</span></button><button class="opt" type="button"><b>B</b><span>Hinge loss requires all features to be strictly binary</span></button><button class="opt" type="button"><b>C</b><span>Hinge loss produces non-convex objectives that cannot be differentiated</span></button><button class="opt" type="button"><b>D</b><span>Hinge loss is always negative for correct predictions</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Once a sample satisfies $y f(x) \ge 1$, hinge loss is exactly zero whether $f(x) = 1.0$ or $f(x) = 100.0$. It cares only about finding a separating margin, not about calibrated probability scores.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>A regression model is trained on a dataset containing 1,000 clean observations and 5 severe recording errors (outliers 100 times larger than normal). Why does an MSE-trained model perform poorly on the 1,000 clean observations?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because MSE loss becomes non-convex when outliers are introduced</span></button><button class="opt" type="button"><b>B</b><span>Because squaring errors causes the 5 outliers to dominate the total loss and gradient updates, pulling the regression line away from the bulk of clean data to accommodate the extremes</span></button><button class="opt" type="button"><b>C</b><span>Because scikit-learn disables regularisation when outliers exceed 3 standard deviations</span></button><button class="opt" type="button"><b>D</b><span>Because MSE causes the feature covariance matrix to become non-invertible</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> MSE penalises errors quadratically. The penalty for an error of 100 is $10{,}000$, whereas for an error of 1 it is only 1. To minimise total MSE, the optimiser drastically moves parameters to reduce the 5 giant errors, sacrificing fit on normal points.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>For a residual error $e = y - \hat{y} = 4.0$ with Huber loss threshold $\delta = 2.0$, what is the Huber loss $\ell_\delta(e) = \delta(|e| - \frac{1}{2}\delta)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$8.0$</span></button><button class="opt" type="button"><b>B</b><span>$14.0$</span></button><button class="opt" type="button"><b>C</b><span>$6.0$</span></button><button class="opt" type="button"><b>D</b><span>$16.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Since $|e| = 4.0 &gt; \delta = 2.0$, we use the linear tail formula: $\ell_\delta(e) = \delta(|e| - \frac{1}{2}\delta) = 2.0(4.0 - \frac{1}{2}(2.0)) = 2.0(4.0 - 1.0) = 2.0(3.0) = 6.0$. (In contrast, pure MSE would yield $e^2 = 16.0$).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q11</span>Under quantile loss $\ell_\tau(e) = \max(\tau e, (\tau - 1)e)$ with target quantile $\tau = 0.80$, what are the losses for an underprediction where $e = y - \hat{y} = +10.0$ and an overprediction where $e = -10.0$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both losses are equal to $8.0$</span></button><button class="opt" type="button"><b>B</b><span>For underprediction ($e = +10$): loss $= 2.0$; for overprediction ($e = -10$): loss $= 8.0$</span></button><button class="opt" type="button"><b>C</b><span>Both losses are equal to $10.0$</span></button><button class="opt" type="button"><b>D</b><span>For underprediction ($e = +10$): loss $= 8.0$; for overprediction ($e = -10$): loss $= 2.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $e = +10.0$: $\ell_{0.8}(10) = \max(0.8 \times 10, (0.8 - 1) \times 10) = \max(8.0, -2.0) = 8.0$. For $e = -10.0$: $\ell_{0.8}(-10) = \max(0.8 \times (-10), -0.2 \times (-10)) = \max(-8.0, 2.0) = 2.0$. Underpredicting the 80th percentile is penalised 4 times more heavily than overpredicting it ($0.80 / 0.20 = 4$).</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>For a binary classification example with true label $y = +1$ and model score $f(x) = 0$, what are the 0/1 loss $\ell_{0/1} = \mathbb{1}[y f(x) \le 0]$, the hinge loss $\ell_{\text{hinge}} = \max(0, 1 - y f(x))$, and the logistic loss $\ell_{\text{log}} = \ln(1 + e^{-y f(x)})$? (Recall $\ln(2) \approx 0.693$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\ell_{0/1} = 1$, $\ell_{\text{hinge}} = 1.0$, and $\ell_{\text{log}} \approx 0.693$</span></button><button class="opt" type="button"><b>B</b><span>$\ell_{0/1} = 0$, $\ell_{\text{hinge}} = 0$, and $\ell_{\text{log}} = 0$</span></button><button class="opt" type="button"><b>C</b><span>$\ell_{0/1} = 1$, $\ell_{\text{hinge}} = 0.5$, and $\ell_{\text{log}} \approx 0.500$</span></button><button class="opt" type="button"><b>D</b><span>$\ell_{0/1} = 0$, $\ell_{\text{hinge}} = 1.0$, and $\ell_{\text{log}} \approx 1.000$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Here margin $m = y f(x) = 1 \times 0 = 0$. $\ell_{0/1} = \mathbb{1}[0 \le 0] = 1$. $\ell_{\text{hinge}} = \max(0, 1 - 0) = 1.0$. $\ell_{\text{log}} = \ln(1 + e^0) = \ln(1 + 1) = \ln(2) \approx 0.693$. Both convex surrogates are continuous upper bounds that penalise this boundary-case uncertainty.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -154,11 +204,11 @@ log_loss, hinge = np.<span class="f">log1p</span>(np.<span class="f">exp</span>(
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

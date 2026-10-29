@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -140,6 +140,56 @@ gbr = <span class="f">GradientBoostingRegressor</span>(n_estimators=<span class=
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Underfits; you need more trees</span></button><button class="opt" type="button"><b>B</b><span>Overfits</span></button><button class="opt" type="button"><b>C</b><span>No change</span></button><button class="opt" type="button"><b>D</b><span>Trees get deeper</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each tree contributes less, so more rounds are needed to reach the same fit, though the final model usually generalises better.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What is the standard initial prediction $F_0(x)$ in Gradient Boosting for regression under squared-error loss?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A random vector drawn from a standard normal distribution</span></button><button class="opt" type="button"><b>B</b><span>A single linear regression line fitted with OLS</span></button><button class="opt" type="button"><b>C</b><span>The mean of the target values in the training set: $F_0(x) = \bar{y}$</span></button><button class="opt" type="button"><b>D</b><span>Zero for all observations: $F_0(x) = 0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Gradient boosting begins with the best constant prediction that minimises the chosen loss function. For squared-error loss, the constant that minimises $\sum (y_i - c)^2$ is the sample mean $\bar{y}$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q4</span>Why is Gradient Boosting called gradient descent in "function space"?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It only works on continuous differentiable polynomial functions</span></button><button class="opt" type="button"><b>B</b><span>It converts non-linear functions into trigonometric Fourier bases</span></button><button class="opt" type="button"><b>C</b><span>It inverts the Hessian matrix of functional derivatives in $O(n)$ time</span></button><button class="opt" type="button"><b>D</b><span>Instead of updating scalar parameter weights by their loss gradient, it updates the model function $F(x)$ by adding a new decision tree trained to match the negative gradient of the loss at every training point</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In parametric gradient descent, $\theta_{m} = \theta_{m-1} - \eta \nabla_\theta L$. In boosting, $F_m(x) = F_{m-1}(x) + \eta h_m(x)$, where $h_m(x)$ is a tree approximating the negative gradient vector $-\nabla_F L$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>Unlike Random Forests, why does Gradient Boosting require early stopping or careful tuning of n_estimators?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because gradient boosting memory usage increases exponentially with each round</span></button><button class="opt" type="button"><b>B</b><span>Because each successive tree explicitly targets the remaining errors of previous trees, allowing the model to eventually memorise noise and severe outliers if run for too many iterations</span></button><button class="opt" type="button"><b>C</b><span>Because the learning rate $\eta$ automatically doubles after 100 rounds</span></button><button class="opt" type="button"><b>D</b><span>Because tree depth automatically increases by 1 at every iteration</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Random forest trees are trained independently on bootstrap samples, so adding trees simply averages variance. Gradient boosting sequentially chases residuals; with enough iterations, it can overfit training noise down to zero error.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>What is "shrinkage" (learning rate $\eta$) in gradient boosting, and why is setting $\eta \le 0.1$ standard best practice?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\eta$ scales the contribution of each newly added tree ($F_m = F_{m-1} + \eta h_m$); smaller steps prevent individual trees from overreacting to residuals, leaving room for future trees to improve generalisation</span></button><button class="opt" type="button"><b>B</b><span>$\eta$ drops the learning rate to zero if validation error fails to improve</span></button><button class="opt" type="button"><b>C</b><span>$\eta$ scales down the target labels before computing residuals</span></button><button class="opt" type="button"><b>D</b><span>$\eta$ reduces the depth of each decision tree by a constant factor</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Friedman showed that shrinking each tree by $\eta \in [0.01, 0.1]$ significantly improves out-of-sample performance. Smaller steps require more trees, but the additive path explores the parameter space much more smoothly.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>When training GradientBoostingRegressor with loss='absolute_error' (MAE), what are the pseudo-residuals $r_i$ fitted by each tree?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The percentage errors $(y_i - F_{m-1}(x_i)) / y_i$</span></button><button class="opt" type="button"><b>B</b><span>The raw squared residuals $(y_i - F_{m-1}(x_i))^2$</span></button><button class="opt" type="button"><b>C</b><span>The signs of the errors: $r_i = \operatorname{sign}(y_i - F_{m-1}(x_i))$ (taking values $+1$ or $-1$)</span></button><button class="opt" type="button"><b>D</b><span>Zero for all observations with error less than 1.0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The loss is $L = |y - F|$. Its negative derivative with respect to $F$ is $-\frac{\partial |y - F|}{\partial F} = \operatorname{sign}(y - F)$. Thus each tree is trained to predict whether the current model under- or over-estimates each sample.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>What is "Stochastic Gradient Boosting" (setting subsample < 1.0 in GradientBoostingRegressor)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Training each tree on a random subset of 10 rows</span></button><button class="opt" type="button"><b>B</b><span>Using stochastic gradient descent instead of decision trees</span></button><button class="opt" type="button"><b>C</b><span>Adding Gaussian noise to the target labels at every step</span></button><button class="opt" type="button"><b>D</b><span>Drawing a random sub-sample of rows without replacement at each iteration to train the next tree, which introduces randomness that reduces correlation between trees and speeds up training</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Friedman's stochastic gradient boosting samples a fraction of rows (e.g. 0.8) without replacement for each round. This injects beneficial variance into tree generation and prevents the ensemble from over-relying on influential training rows.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>Why do practitioners typically use shallow trees (e.g. max_depth=3 to 5) as base learners in gradient boosting, rather than deep trees (depth 15+)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Shallow trees require zero regularisation parameters</span></button><button class="opt" type="button"><b>B</b><span>Gradient boosting algorithms crash if tree depth exceeds 6</span></button><button class="opt" type="button"><b>C</b><span>Deep trees cannot compute pseudo-residuals</span></button><button class="opt" type="button"><b>D</b><span>Shallow trees act as weak learners with high bias and low variance; boosting excels at sequentially reducing bias while keeping the overall model variance well-controlled</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A depth-3 tree captures up to 3-way feature interactions with low variance. Combining hundreds of low-variance weak learners allows boosting to build a flexible composite model without the explosive overfitting risk of deep trees.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q10</span>An observation has true target $y = 25.0$. The initial model prediction is $F_0 = 15.0$. In round 1, a regression tree is fitted to the residuals and predicts $h_1(x) = 8.0$. If the learning rate is $\eta = 0.20$, what are the updated prediction $F_1(x)$ and the new residual $r_2$ for round 2 under squared error?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$F_1(x) = 16.60$ and $r_2 = 8.40$</span></button><button class="opt" type="button"><b>B</b><span>$F_1(x) = 23.00$ and $r_2 = 2.00$</span></button><button class="opt" type="button"><b>C</b><span>$F_1(x) = 16.60$ and $r_2 = 1.60$</span></button><button class="opt" type="button"><b>D</b><span>$F_1(x) = 19.80$ and $r_2 = 5.20$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Round 1 residual: $r_1 = y - F_0 = 25.0 - 15.0 = 10.0$. Model update: $F_1(x) = F_0(x) + \eta h_1(x) = 15.0 + 0.20(8.0) = 15.0 + 1.60 = 16.60$. Round 2 residual: $r_2 = y - F_1(x) = 25.0 - 16.60 = 8.40$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Under Huber loss with threshold $\delta = 3.0$, the negative gradient pseudo-residual is $r_i = y_i - F(x_i)$ when $|y_i - F(x_i)| \le \delta$, and $r_i = \delta \operatorname{sign}(y_i - F(x_i))$ when $|y_i - F(x_i)| &gt; \delta$. For two points with errors $e_1 = +2.0$ and $e_2 = -10.0$, what are their pseudo-residuals?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$r_1 = +2.0$ and $r_2 = -10.0$</span></button><button class="opt" type="button"><b>B</b><span>$r_1 = +2.0$ and $r_2 = -3.0$</span></button><button class="opt" type="button"><b>C</b><span>$r_1 = +3.0$ and $r_2 = -3.0$</span></button><button class="opt" type="button"><b>D</b><span>$r_1 = +0.5$ and $r_2 = -2.5$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $e_1 = +2.0$: $|e_1| = 2.0 \le \delta = 3.0$, so $r_1 = e_1 = +2.0$. For $e_2 = -10.0$: $|e_2| = 10.0 &gt; 3.0$, so $r_2 = \delta \operatorname{sign}(-10.0) = 3.0 \times (-1) = -3.0$. Huber loss clips the pseudo-residual of the outlier at $-3.0$, protecting subsequent trees from extreme gradient swings.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>A gradient boosting model uses learning rate $\eta = 0.10$ and squared error loss. After initialising at $F_0 = 20.0$, three consecutive trees predict $h_1(x) = 10.0$, $h_2(x) = 8.0$, and $h_3(x) = 6.0$ for a test point $x$. What is the final prediction $F_3(x)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$F_3(x) = 44.00$</span></button><button class="opt" type="button"><b>B</b><span>$F_3(x) = 20.24$</span></button><button class="opt" type="button"><b>C</b><span>$F_3(x) = 22.40$</span></button><button class="opt" type="button"><b>D</b><span>$F_3(x) = 24.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Additive update: $F_3(x) = F_0(x) + \eta(h_1(x) + h_2(x) + h_3(x)) = 20.0 + 0.10(10.0 + 8.0 + 6.0) = 20.0 + 0.10(24.0) = 20.0 + 2.40 = 22.40$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -175,11 +225,11 @@ gbr = <span class="f">GradientBoostingRegressor</span>(n_estimators=<span class=
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -120,6 +120,56 @@ q1, q3 = df.<span class="f">quantile</span>(<span class="n">0.25</span>), df.<sp
             <div class="opts"><button class="opt" type="button"><b>A</b><span>To save time</span></button><button class="opt" type="button"><b>B</b><span>To avoid choices that are tuned, even unknowingly, to the test data</span></button><button class="opt" type="button"><b>C</b><span>Because EDA needs fewer rows</span></button><button class="opt" type="button"><b>D</b><span>It should not</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Decisions informed by test data make the final score optimistic.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>What is data leakage during exploratory data analysis and preprocessing?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A column that contains corrupted character encodings</span></button><button class="opt" type="button"><b>B</b><span>Compressing a dataset into a parquet file with lossy encoding</span></button><button class="opt" type="button"><b>C</b><span>Using information from outside the training dataset (such as target values or test set statistics) to inform model training or feature preparation</span></button><button class="opt" type="button"><b>D</b><span>A dataset where more than 50% of the entries are missing</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Data leakage occurs when a model has access to information during training that would not be legitimately available at test or deployment time, causing spuriously high offline evaluation scores.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q4</span>Why should an analyst NOT automatically delete all rows flagged as outliers by the $1.5 \times \mathrm{IQR}$ rule?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because the IQR formula only works for uniformly distributed data</span></button><button class="opt" type="button"><b>B</b><span>Because deleting rows changes the column data types in pandas</span></button><button class="opt" type="button"><b>C</b><span>Because machine learning algorithms require at least 5% of rows to be outliers</span></button><button class="opt" type="button"><b>D</b><span>Because genuine extreme values (such as rare financial fraud or industrial system failures) often represent the most critical phenomena the model needs to learn</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Outliers can be recording errors, but they can also be authentic, high-impact events like fraudulent transactions or engine failures. Deleting them blinds the model to reality.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>In tabular data, why might a high proportion of missing values in a column like "annual income" be valuable information rather than merely a data defect?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Missingness itself may be informative: customers with very high or very low incomes may systematically decline to report it, creating a strong predictive pattern</span></button><button class="opt" type="button"><b>B</b><span>Missing values automatically increase the variance explained by PCA</span></button><button class="opt" type="button"><b>C</b><span>A column with missing values reduces memory consumption in pandas</span></button><button class="opt" type="button"><b>D</b><span>Scikit-learn models always run faster when columns are half empty</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Data is often Not Missing At Random (NMAR). For example, applicants concealing income or employment status often have distinct risk profiles, making a "missing indicator" flag highly predictive.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>When inspecting a continuous regression target like "house price" or "insurance claim payout", you find a skewness of $g_1 = +2.4$. What transformation is most commonly applied before fitting a linear model?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>A log transformation $\log(y)$ or $\log(1 + y)$ to compress the long right tail and stabilise variance</span></button><button class="opt" type="button"><b>B</b><span>Squaring the target $y^2$ to make errors larger</span></button><button class="opt" type="button"><b>C</b><span>Replacing all values above the median with zero</span></button><button class="opt" type="button"><b>D</b><span>Multiplying the target by 100</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A skewness above $+1.0$ indicates a heavy right tail. Applying a log transform (or Box-Cox) pulls in extreme values, yielding a more symmetric distribution that aligns better with homoscedasticity assumptions in linear models.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>A junior data scientist computes the mean of the "age" column across the entire dataset of 100,000 rows and uses it to impute missing values before splitting into 80,000 train and 20,000 test rows. What is the fundamental problem with this approach?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Mean imputation cannot be performed on integer columns</span></button><button class="opt" type="button"><b>B</b><span>It causes the training set variance to increase to infinity</span></button><button class="opt" type="button"><b>C</b><span>It causes data leakage: the imputed values in the training set incorporate statistical information from the test set, giving an overly optimistic test evaluation</span></button><button class="opt" type="button"><b>D</b><span>The test set will fail to load in scikit-learn</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Any statistic (mean, median, scaling parameters) calculated using test set rows leaks test information into training. Imputation parameters must be computed strictly on the training set and applied to the test set.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>In a dataset predicting customer loan default, a feature named "account_collections_status" has an almost perfect correlation ($r = 0.98$) with the target. Investigation reveals this field is populated only after a customer has officially defaulted. What should you do?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Keep it as the primary feature because it yields a near-perfect ROC-AUC</span></button><button class="opt" type="button"><b>B</b><span>Standardise it with StandardScaler and add polynomial features</span></button><button class="opt" type="button"><b>C</b><span>Multiply it by the loan amount to create an interaction term</span></button><button class="opt" type="button"><b>D</b><span>Drop the feature immediately: it is a target leak recorded after the outcome that will not exist when predicting on new applicants</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Features created or populated downstream of the event being predicted are classic target leaks. While they produce artificially stellar cross-validation scores, they do not exist when scoring new loan applicants.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>When checking a binary classification target with 10,000 total observations, you discover 9,900 instances of Class 0 and 100 instances of Class 1. Which evaluation metric should you avoid using as your primary KPI?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Precision-Recall AUC (PR-AUC)</span></button><button class="opt" type="button"><b>B</b><span>Balanced accuracy</span></button><button class="opt" type="button"><b>C</b><span>F1-score</span></button><button class="opt" type="button"><b>D</b><span>Standard classification accuracy</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With a 99:1 class imbalance, a trivial dummy classifier that always predicts Class 0 achieves 99.0% accuracy despite completely failing to identify any positive cases. Accuracy is deeply misleading here.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>In a feature distribution, the first quartile is $Q_1 = 20$ and the third quartile is $Q_3 = 50$. Using Tukey's standard $1.5 \times \mathrm{IQR}$ rule, which of the following values would be flagged as an outlier?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$x = 0$</span></button><button class="opt" type="button"><b>B</b><span>$x = 98$</span></button><button class="opt" type="button"><b>C</b><span>$x = 95$</span></button><button class="opt" type="button"><b>D</b><span>$x = 85$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\mathrm{IQR} = Q_3 - Q_1 = 50 - 20 = 30$. Upper fence $= Q_3 + 1.5\,\mathrm{IQR} = 50 + 1.5(30) = 50 + 45 = 95$. Lower fence $= Q_1 - 1.5\,\mathrm{IQR} = 20 - 45 = -25$. Since $98 &gt; 95$, it falls outside the upper fence and is flagged as an outlier.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>When regressing a feature $x_1$ on the other features in a dataset, the resulting coefficient of determination is $R_1^2 = 0.80$. What is the Variance Inflation Factor ($\mathrm{VIF}_1$) for this feature, and does it exceed the standard caution threshold of 5?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\mathrm{VIF}_1 = 5.00$; it reaches the caution threshold of 5</span></button><button class="opt" type="button"><b>B</b><span>$\mathrm{VIF}_1 = 4.00$; it does not exceed the threshold</span></button><button class="opt" type="button"><b>C</b><span>$\mathrm{VIF}_1 = 1.25$; it does not exceed the threshold</span></button><button class="opt" type="button"><b>D</b><span>$\mathrm{VIF}_1 = 8.00$; it exceeds the threshold</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\mathrm{VIF}_1 = \frac{1}{1 - R_1^2} = \frac{1}{1 - 0.80} = \frac{1}{0.20} = 5.00$. A VIF of 5.0 indicates that 80% of the feature's variance is explained by other features, reaching the standard rule-of-thumb threshold (5 to 10) for problematic multicollinearity.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>A dataset of $n = 5$ values is $\{2, 4, 4, 4, 6\}$. What are the sample mean $\bar{x}$, the sample variance $s^2 = \frac{1}{n}\sum (x_i - \bar{x})^2$, and the skewness $g_1 = \frac{\frac{1}{n}\sum(x_i - \bar{x})^3}{s^3}$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\bar{x} = 4.0$, $s^2 = 1.6$, and $g_1 = -0.5$</span></button><button class="opt" type="button"><b>B</b><span>$\bar{x} = 4.0$, $s^2 = 2.0$, and $g_1 = +1.2$</span></button><button class="opt" type="button"><b>C</b><span>$\bar{x} = 4.0$, $s^2 = 1.6$, and $g_1 = 0.0$ (perfectly symmetric)</span></button><button class="opt" type="button"><b>D</b><span>$\bar{x} = 5.0$, $s^2 = 2.5$, and $g_1 = 0.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Mean: $\bar{x} = (2 + 4 + 4 + 4 + 6) / 5 = 20 / 5 = 4.0$. Deviations: $x_i - \bar{x} \in \{-2, 0, 0, 0, 2\}$. Squared deviations: $\{4, 0, 0, 0, 4\}$. Mean squared deviation $s^2 = (4 + 0 + 0 + 0 + 4) / 5 = 8 / 5 = 1.6$. Cubed deviations: $\{(-2)^3, 0, 0, 0, 2^3\} = \{-8, 0, 0, 0, 8\}$. Sum of cubed deviations is $-8 + 8 = 0$, so $g_1 = 0 / (1.6)^{1.5} = 0.0$. Because the distribution is symmetrically balanced around the mean, the skewness is exactly zero.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -155,11 +205,11 @@ q1, q3 = df.<span class="f">quantile</span>(<span class="n">0.25</span>), df.<sp
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

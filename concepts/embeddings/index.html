@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -160,6 +160,46 @@ cos = nn.functional.<span class="f">cosine_similarity</span>(tok_emb.weight[ids[
             <div class="opts"><button class="opt" type="button"><b>A</b><span>768</span></button><button class="opt" type="button"><b>B</b><span>50,257</span></button><button class="opt" type="button"><b>C</b><span>About 38.6 million</span></button><button class="opt" type="button"><b>D</b><span>About 124 million</span></button></div>
             <div class="why" hidden><strong>Why:</strong> One 768-number row per token: $50{,}257 \times 768$.</div>
           </div>
+          <div class="q" data-answer="3">
+            <p><span>Q5</span>What is the key difference between a token's input embedding and its representation after passing through several Transformer attention layers?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The input embedding only represents vowels</span></button><button class="opt" type="button"><b>B</b><span>The input embedding has 10 times more dimensions than the contextual representation</span></button><button class="opt" type="button"><b>C</b><span>The input embedding is non-differentiable, while the contextual representation is learned</span></button><button class="opt" type="button"><b>D</b><span>The input embedding is static (identical regardless of sentence context), while the representation after attention is contextual (tailored to surrounding words)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In the input lookup table $E$, "bank" has one fixed vector. Self-attention layers mix information across tokens, transforming it into a contextual embedding that distinguishes between a financial bank and a river bank.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>Why do many language model architectures (such as GPT-2) tie the weights of the input embedding matrix $E$ with the final output linear projection layer ($E^\top$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To save memory and parameters (about 31% of GPT-2 small's parameters) while enforcing that input and output token representations live in the same geometric space</span></button><button class="opt" type="button"><b>B</b><span>To prevent the model from learning non-linear functions</span></button><button class="opt" type="button"><b>C</b><span>To force output logits to sum to 1 without needing a softmax</span></button><button class="opt" type="button"><b>D</b><span>To make the model run without GPU memory</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The input embedding table and output projection matrix both have shape $|V| \times d$. Reusing $E^\top$ at the output eliminates nearly 38.6 million redundant parameters in GPT-2 small and links input and output semantic representations.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>Two token embedding vectors are $u = [3.0, 4.0]^\top$ and $v = [1.0, 0.0]^\top$. What is the cosine similarity $\cos(u, v) = \frac{u \cdot v}{\|u\| \|v\|}$ between these two embeddings?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.30$</span></button><button class="opt" type="button"><b>B</b><span>$0.50$</span></button><button class="opt" type="button"><b>C</b><span>$0.75$</span></button><button class="opt" type="button"><b>D</b><span>$0.60$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The dot product is $u \cdot v = (3 \times 1) + (4 \times 0) = 3.0$. The Euclidean norms are $\|u\| = \sqrt{3^2 + 4^2} = \sqrt{25} = 5.0$ and $\|v\| = 1.0$. Thus $\cos(u, v) = \frac{3.0}{5.0 \times 1.0} = 0.60$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>What is the main operational limitation of learned absolute positional embeddings (as in GPT-2 and BERT) compared with sinusoidal or relative positional encodings?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Learned positional embeddings have a fixed maximum length (e.g. 1024 tokens) and cannot easily generalise to sequence lengths longer than seen during training</span></button><button class="opt" type="button"><b>B</b><span>Learned positional embeddings cannot be stored in GPU memory</span></button><button class="opt" type="button"><b>C</b><span>Learned positional embeddings prevent the network from attending to the first token</span></button><button class="opt" type="button"><b>D</b><span>Learned positional embeddings make the attention matrix non-invertible</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A learned positional table has a hard capacity limit (e.g. nn.Embedding(1024, d)). Any sequence longer than 1024 has no allocated position vector to look up, whereas mathematical sinusoidal or rotary encodings can naturally extrapolate to arbitrary sequence lengths.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>During a training step on a batch of text containing 100 distinct token IDs from a vocabulary of 50,000 tokens, how many rows of the input embedding matrix $E$ receive non-zero gradient updates during backpropagation?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0 rows, because embeddings are fixed lookup tables</span></button><button class="opt" type="button"><b>B</b><span>All 50,000 rows</span></button><button class="opt" type="button"><b>C</b><span>Exactly the 100 rows corresponding to the tokens present in that batch</span></button><button class="opt" type="button"><b>D</b><span>Exactly half the vocabulary (25,000 rows)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because each token position looks up exactly one row $E[\text{id}]$, gradients only flow back to the rows that were indexed during the forward pass. The remaining 49,900 rows receive zero gradient, which is why optimisers often support sparse updates for embedding layers.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q10</span>In the original Transformer paper ("Attention Is All You Need"), what is the usual explanation for multiplying the token embeddings by $\sqrt{d_{\text{model}}}$ before adding the sinusoidal positional encodings ($x_t = \sqrt{d} \cdot E[\text{id}_t] + p_t$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>To ensure that the embedding vectors sum to 1.0 across the sequence</span></button><button class="opt" type="button"><b>B</b><span>To make the embedding matrix orthogonal</span></button><button class="opt" type="button"><b>C</b><span>To convert cosine distances into Euclidean distances</span></button><button class="opt" type="button"><b>D</b><span>Because embedding tables are typically initialised with variance $\sim 1/d$, giving vectors an expected L2 norm of $\sim 1.0$, whereas positional encodings have an L2 norm of $\sqrt{d/2}$; multiplying by $\sqrt{d}$ scales embedding magnitudes up so the semantic content is not overwhelmed by the positional signal</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> With standard initialisation, embedding vector entries have standard deviation $\approx 1/\sqrt{d}$, giving the vector norm $\mathcal{O}(1)$. Sinusoidal positional vectors, composed of sines and cosines, have an expected norm of $\sqrt{d/2}$. Multiplying embeddings by $\sqrt{d}$ boosts their norm to $\mathcal{O}(\sqrt{d})$, keeping semantic word identity and positional information balanced in magnitude.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>Under the standard sinusoidal positional encoding formulas $PE_{(t, 2i)} = \sin\left(\frac{t}{10000^{2i/d}}\right)$ and $PE_{(t, 2i+1)} = \cos\left(\frac{t}{10000^{2i/d}}\right)$, what are the values of the first two dimensions $(PE_{(0, 0)}, PE_{(0, 1)})$ for the very first token at position $t = 0$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$(0.0, \, 0.0)$</span></button><button class="opt" type="button"><b>B</b><span>$(1.0, \, 0.0)$</span></button><button class="opt" type="button"><b>C</b><span>$(0.0, \, 1.0)$</span></button><button class="opt" type="button"><b>D</b><span>$(1.0, \, 1.0)$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> At position $t = 0$, for index $i=0$: $PE_{(0, 0)} = \sin\left(\frac{0}{10000^0}\right) = \sin(0) = 0.0$. For the odd dimension $2i+1 = 1$: $PE_{(0, 1)} = \cos(0) = 1.0$. Thus the vector begins with $(0.0, 1.0)$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>A language model has a vocabulary of 64,000 tokens and an embedding dimension of $d_{\text{model}} = 1,024$. How many learnable parameters reside in the input embedding table alone?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Approximately 65.5 million</span></button><button class="opt" type="button"><b>B</b><span>Approximately 6.55 million</span></button><button class="opt" type="button"><b>C</b><span>65,536</span></button><button class="opt" type="button"><b>D</b><span>Approximately 131.1 million</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The embedding table is a matrix of size $|V| \times d = 64{,}000 \times 1{,}024 = 65{,}536{,}000 \approx 65.5$ million parameters. Untied embeddings would require a second table of identical size at the output head ($\approx 131.1$ million total).</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -195,14 +235,14 @@ cos = nn.functional.<span class="f">cosine_similarity</span>(tok_emb.weight[ids[
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/language.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/explainers.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/architecture.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/language.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/explainers.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/architecture.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

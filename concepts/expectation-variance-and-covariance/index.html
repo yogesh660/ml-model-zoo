@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -133,6 +133,46 @@ theoretical_sum = var_x + np.<span class="f">var</span>(y, ddof=<span class="n">
             <div class="opts"><button class="opt" type="button"><b>A</b><span>To correct for the degrees of freedom consumed when estimating the sample mean</span></button><button class="opt" type="button"><b>B</b><span>To make the variance larger on large datasets</span></button><button class="opt" type="button"><b>C</b><span>Because of the central limit theorem</span></button><button class="opt" type="button"><b>D</b><span>To match the formula for standard deviation</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Using the sample mean $\bar{x}$ instead of the true population mean $\mu$ slightly underestimates squared deviations; dividing by $n - 1$ (Bessel's correction) yields an unbiased estimator.</div>
           </div>
+          <div class="q" data-answer="3">
+            <p><span>Q5</span>Under what conditions does linearity of expectation, $\mathbb{E}[X + Y] = \mathbb{E}[X] + \mathbb{E}[Y]$, hold?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Only when $X$ and $Y$ are statistically independent</span></button><button class="opt" type="button"><b>B</b><span>Only when $X$ and $Y$ both follow a normal distribution</span></button><button class="opt" type="button"><b>C</b><span>Only when $\operatorname{Cov}(X, Y) = 0$</span></button><button class="opt" type="button"><b>D</b><span>For any random variables $X$ and $Y$, regardless of their dependence or joint distribution</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Linearity of expectation is an algebraic property of integrals and summations. It holds universally for all random variables with finite expectations, with zero assumptions about independence.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>What is the covariance of any random variable $X$ with itself, $\operatorname{Cov}(X, X)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\operatorname{Var}(X)$</span></button><button class="opt" type="button"><b>B</b><span>1</span></button><button class="opt" type="button"><b>C</b><span>0</span></button><button class="opt" type="button"><b>D</b><span>$\mathbb{E}[X]$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By definition, $\operatorname{Cov}(X, X) = \mathbb{E}[(X - \mu_X)(X - \mu_X)] = \mathbb{E}[(X - \mu_X)^2] = \operatorname{Var}(X)$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>A game pays £20 with probability 0.2, £10 with probability 0.3, and £0 with probability 0.5. If it costs £8 to play, what is the net expected profit or loss per game?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Expected gain of £1.00</span></button><button class="opt" type="button"><b>B</b><span>Break-even (£0.00)</span></button><button class="opt" type="button"><b>C</b><span>Expected loss of £2.50</span></button><button class="opt" type="button"><b>D</b><span>Expected loss of £1.00</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Expected payout is $\mathbb{E}[\text{payout}] = (20 \times 0.2) + (10 \times 0.3) + (0 \times 0.5) = 4 + 3 + 0 = £7.00$. Subtracting the £8.00 entry fee leaves a net expected loss of $£7 - £8 = -£1.00$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>If two independent random variables $X$ and $Y$ have variances $\operatorname{Var}(X) = 25$ and $\operatorname{Var}(Y) = 16$, what is the variance of their difference, $\operatorname{Var}(X - Y)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>9</span></button><button class="opt" type="button"><b>B</b><span>1</span></button><button class="opt" type="button"><b>C</b><span>41</span></button><button class="opt" type="button"><b>D</b><span>20</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Variances of independent variables always add, even when subtracting the variables: $\operatorname{Var}(X - Y) = \operatorname{Var}(X) + (-1)^2 \operatorname{Var}(Y) = 25 + 16 = 41$. Subtracting variances to get 9 is a classic pitfall.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q9</span>Evaluating <code>np.var(data)</code> and <code>np.var(data, ddof=1)</code> on <code>data = np.array([2, 4, 4, 4, 6])</code> yields:</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>1.6 and 1.6</span></button><button class="opt" type="button"><b>B</b><span>2.0 and 1.6</span></button><button class="opt" type="button"><b>C</b><span>8.0 and 2.0</span></button><button class="opt" type="button"><b>D</b><span>1.6 and 2.0</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The mean is 4. Sum of squared differences is $(-2)^2 + 0 + 0 + 0 + 2^2 = 8$. Default <code>np.var</code> divides by $n = 5$ (giving 1.6), whereas <code>ddof=1</code> applies Bessel's correction, dividing by $n - 1 = 4$ (giving 2.0).</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q10</span>Suppose $\operatorname{Var}(X) = 9$, $\operatorname{Var}(Y) = 16$, and $\operatorname{Cov}(X, Y) = -6$. What is the variance of the linear combination $Z = 2X - Y$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>28</span></button><button class="opt" type="button"><b>B</b><span>52</span></button><button class="opt" type="button"><b>C</b><span>76</span></button><button class="opt" type="button"><b>D</b><span>100</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $\operatorname{Var}(2X - Y) = 2^2\operatorname{Var}(X) + (-1)^2\operatorname{Var}(Y) + 2(2)(-1)\operatorname{Cov}(X, Y) = 4(9) + 16 - 4(-6) = 36 + 16 + 24 = 76$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>Two binary random variables $X, Y \in \{0, 1\}$ have joint distribution $P(0,0)=0.4, P(0,1)=0.1, P(1,0)=0.1, P(1,1)=0.4$. What is their covariance $\operatorname{Cov}(X, Y)$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.15</span></button><button class="opt" type="button"><b>B</b><span>0.05</span></button><button class="opt" type="button"><b>C</b><span>0.25</span></button><button class="opt" type="button"><b>D</b><span>0.40</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Marginal expectations are $\mathbb{E}[X] = 0.5$ and $\mathbb{E}[Y] = 0.5$. The product expectation is $\mathbb{E}[XY] = 1 \times P(1, 1) = 0.40$. Thus $\operatorname{Cov}(X, Y) = 0.40 - (0.50 \times 0.50) = 0.40 - 0.25 = 0.15$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>Let $X$ take values $\{-2, -1, 0, 1, 2\}$ each with probability $0.2$, and let $Y = X^2$. What is $\operatorname{Cov}(X, Y)$ and what does it reveal about independence?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\operatorname{Cov}(X, Y) &gt; 0$, confirming statistical dependence</span></button><button class="opt" type="button"><b>B</b><span>$\operatorname{Cov}(X, Y) = 0$, yet $X$ and $Y$ are strongly dependent</span></button><button class="opt" type="button"><b>C</b><span>$\operatorname{Cov}(X, Y) = 0$, confirming statistical independence</span></button><button class="opt" type="button"><b>D</b><span>$\operatorname{Cov}(X, Y) = 4$, confirming linear correlation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By symmetry, $\mathbb{E}[X] = 0$ and $\mathbb{E}[X^3] = 0$, so $\operatorname{Cov}(X, Y) = \mathbb{E}[X^3] - \mathbb{E}[X]\mathbb{E}[X^2] = 0$. However, $Y$ is completely determined by $X$, demonstrating that zero covariance does not imply statistical independence.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -168,11 +208,11 @@ theoretical_sum = var_x + np.<span class="f">var</span>(y, ddof=<span class="n">
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -149,6 +149,51 @@ search = <span class="f">GridSearchCV</span>(pipe, grid, cv=<span class="n">5</s
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Log-loss with L1 penalty</span></button><button class="opt" type="button"><b>B</b><span>Hinge loss with an L2 penalty</span></button><button class="opt" type="button"><b>C</b><span>Squared error</span></button><button class="opt" type="button"><b>D</b><span>Cross-entropy with no penalty</span></button></div>
             <div class="why" hidden><strong>Why:</strong> $\xi_i = \max(0, 1 - y_if(x_i))$ is the hinge loss.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>What is the geometric margin between two linearly separable classes with separating hyperplane $w^\top x + b = 0$ (normalised such that $y_i(w^\top x_i + b) \ge 1$)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\frac{1}{2C}$</span></button><button class="opt" type="button"><b>B</b><span>$\lVert w\rVert^2$</span></button><button class="opt" type="button"><b>C</b><span>$\frac{2}{\lVert w\rVert}$</span></button><button class="opt" type="button"><b>D</b><span>$\frac{1}{\sqrt{p}}$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The distance from the hyperplane to the closest points on either side is $\frac{1}{\lVert w\rVert}$, so the total width of the margin between the two support vector planes is $\frac{2}{\lVert w\rVert}$. Maximising $\frac{2}{\lVert w\rVert}$ is equivalent to minimising $\frac{1}{2}\lVert w\rVert^2$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>What does regularisation parameter $C$ control in a soft-margin Support Vector Classifier?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The tradeoff between maximising the margin and penalising margin violations (slack $\xi_i$)</span></button><button class="opt" type="button"><b>B</b><span>The degree of the polynomial kernel</span></button><button class="opt" type="button"><b>C</b><span>The kernel bandwidth</span></button><button class="opt" type="button"><b>D</b><span>The number of features selected</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In the primal objective $\frac{1}{2}\lVert w\rVert^2 + C \sum \xi_i$, $C$ determines how heavily margin violations are penalised. Large $C$ tolerates few misclassifications (narrow margin, risks overfitting); small $C$ tolerates violations in exchange for a wider margin.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q6</span>Why does the SVM dual formulation enable the kernel trick?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because kernels can only be computed in the frequency domain</span></button><button class="opt" type="button"><b>B</b><span>Because the dual problem converts classification into linear regression</span></button><button class="opt" type="button"><b>C</b><span>Because the dual problem eliminates all support vectors</span></button><button class="opt" type="button"><b>D</b><span>Because the dual objective and decision function depend on training data solely through pairwise inner products $x_i^\top x_j$, which can be replaced by a non-linear kernel function $K(x_i, x_j) = \phi(x_i)^\top \phi(x_j)$ without explicitly mapping features to high dimensions</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The dual problem depends strictly on $K(x_i, x_j) = \langle\phi(x_i), \phi(x_j)\rangle$. Mercer's theorem allows computing inner products in infinite-dimensional Hilbert spaces directly in input space in $\mathcal{O}(p)$ time.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>In the soft-margin SVM dual formulation with box constraint $0 \le \alpha_i \le C$, which points have dual coefficient $\alpha_i = C$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Points strictly on the margin boundary with zero slack ($\xi_i = 0$)</span></button><button class="opt" type="button"><b>B</b><span>Points that lie safely beyond the margin on the correct side</span></button><button class="opt" type="button"><b>C</b><span>Points that violate the margin or are misclassified ($\xi_i &gt; 0$), known as bounded support vectors</span></button><button class="opt" type="button"><b>D</b><span>All training points</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By KKT complementarity conditions: points correctly classified outside the margin have $\alpha_i = 0$. Points exactly on the margin boundary have $0 &lt; \alpha_i &lt; C$ and $\xi_i = 0$ (free support vectors). Points inside the margin or misclassified have positive slack $\xi_i &gt; 0$ and their weight hits the upper bound $\alpha_i = C$ (bounded support vectors).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>Why is feature standardisation (StandardScaler) critical before training an SVM with an RBF kernel?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Unscaled features force all dual variables $\alpha_i$ to zero</span></button><button class="opt" type="button"><b>B</b><span>Without scaling, the Gram matrix fails to be symmetric</span></button><button class="opt" type="button"><b>C</b><span>SVM convex solvers only accept numbers between $-1$ and $+1$</span></button><button class="opt" type="button"><b>D</b><span>The RBF kernel $K(x, x') = \exp(-\gamma \lVert x - x'\rVert^2)$ computes squared Euclidean distance; unscaled features with large ranges will dominate the norm, making distance along smaller-scale features negligible</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Euclidean distance treats coordinate differences identically. If one feature spans $[0, 1000]$ and another spans $[0, 1]$, the first completely dominates the RBF kernel distance, effectively blinding the model to the second feature.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q9</span>How does SVC in scikit-learn handle multiclass problems with $K &gt; 2$ classes by default?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>One-vs-One (OvO), training $\frac{K(K-1)}{2}$ binary classifiers for all pairs of classes and combining them by voting</span></button><button class="opt" type="button"><b>B</b><span>One-vs-Rest (OvR), training $K$ binary classifiers</span></button><button class="opt" type="button"><b>C</b><span>Directly solving a single multiclass quadratic program</span></button><button class="opt" type="button"><b>D</b><span>By converting all labels into continuous regression targets</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Scikit-learn's SVC wraps LIBSVM, which implements the One-vs-One (OvO) decision strategy, fitting $\binom{K}{2} = K(K-1)/2$ separate binary classifiers and taking a majority vote.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q10</span>A linear SVM separating hyperplane in 2D is given by $3 x_1 + 4 x_2 - 5 = 0$. The support vectors lie on $3 x_1 + 4 x_2 - 5 = \pm 1$. What is the geometric width of the margin between the two classes?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.20$</span></button><button class="opt" type="button"><b>B</b><span>$2.00$</span></button><button class="opt" type="button"><b>C</b><span>$0.50$</span></button><button class="opt" type="button"><b>D</b><span>$0.40$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The weight vector is $w = [3, 4]^\top$, so $\lVert w\rVert = \sqrt{3^2 + 4^2} = 5.0$. The margin width is $\frac{2}{\lVert w\rVert} = \frac{2}{5.0} = 0.40$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>An RBF SVM with $\gamma = 0.5$ and bias $b = 0.0$ has two support vectors: $x_1 = 0.0$ (Class $y_1 = +1$, $\alpha_1 = 2.0$), $x_2 = 2.0$ (Class $y_2 = -1$, $\alpha_2 = 1.0$). Using $K(x, x') = \exp(-\gamma(x - x')^2)$, what is the raw decision score $f(x_*) = \sum \alpha_i y_i K(x_i, x_*) + b$ at test point $x_* = 0.0$? (Note: $e^{-2.0} \approx 0.1353$).</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$f(x_*) = +1.865$</span></button><button class="opt" type="button"><b>B</b><span>$f(x_*) = +2.000$</span></button><button class="opt" type="button"><b>C</b><span>$f(x_*) = +0.865$</span></button><button class="opt" type="button"><b>D</b><span>$f(x_*) = -0.135$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> $K(0, 0) = 1.0$, and $K(2, 0) = \exp(-0.5 \times 4) = \exp(-2.0) \approx 0.1353$. Decision score: $f(0) = (2.0)(+1)(1.0) + (1.0)(-1)(0.1353) + 0 = 2.0 - 0.1353 = +1.8647 \approx +1.865$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>An SVM decision function produces raw score $f(x) = w^\top x + b = 0.40$. What is the hinge loss $L(y, f(x)) = \max(0, 1 - y f(x))$ if the true label is $y = +1$, and what is it if the true label is $y = -1$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>For $y = +1$, loss $= 0.60$; for $y = -1$, loss $= 0.40$</span></button><button class="opt" type="button"><b>B</b><span>For $y = +1$, loss $= 0.00$; for $y = -1$, loss $= 1.00$</span></button><button class="opt" type="button"><b>C</b><span>For $y = +1$, loss $= 0.60$; for $y = -1$, loss $= 1.40$</span></button><button class="opt" type="button"><b>D</b><span>For $y = +1$, loss $= 1.40$; for $y = -1$, loss $= 0.60$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $y = +1$: $1 - (1)(0.40) = 0.60 \implies$ loss is $0.60$ (inside the margin). For $y = -1$: $1 - (-1)(0.40) = 1 + 0.40 = 1.40 \implies$ loss is $1.40$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -184,11 +229,11 @@ search = <span class="f">GridSearchCV</span>(pipe, grid, cv=<span class="n">5</s
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

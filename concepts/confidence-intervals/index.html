@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -142,6 +142,51 @@ captured = <span class="n">0</span>
             <div class="opts"><button class="opt" type="button"><b>A</b><span>The interval becomes wider</span></button><button class="opt" type="button"><b>B</b><span>The interval becomes narrower</span></button><button class="opt" type="button"><b>C</b><span>The width remains unchanged</span></button><button class="opt" type="button"><b>D</b><span>The interval shifts to the right</span></button></div>
             <div class="why" hidden><strong>Why:</strong> A higher confidence level requires a larger critical value (e.g. $z = 2.576$ for 99% vs $z = 1.645$ for 90%), expanding the margin of error and widening the interval to guarantee higher coverage.</div>
           </div>
+          <div class="q" data-answer="1">
+            <p><span>Q5</span>A machine learning engineer measures model latency across $n = 100$ independent query runs, finding sample mean latency $\bar{x} = 45.0\text{ ms}$ and sample standard deviation $s = 15.0\text{ ms}$. Using standard normal approximation with $z_{0.975} = 1.96$, what is the margin of error for a 95% confidence interval for the mean latency?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$1.50\text{ ms}$</span></button><button class="opt" type="button"><b>B</b><span>$2.94\text{ ms}$</span></button><button class="opt" type="button"><b>C</b><span>$5.88\text{ ms}$</span></button><button class="opt" type="button"><b>D</b><span>$0.29\text{ ms}$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The standard error is $\operatorname{SE} = s / \sqrt{n} = 15.0 / \sqrt{100} = 1.50\text{ ms}$. The margin of error is $m = z_{0.975} \times \operatorname{SE} = 1.96 \times 1.50 = 2.94\text{ ms}$. The full width of the interval is $2m = 5.88\text{ ms}$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>When constructing a 95% confidence interval for the mean of a normally distributed feature from a sample of $n = 18$ observations with unknown population variance $\sigma^2$, which critical value must be used?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$t_{0.975, \, 17}$ from Student's $t$-distribution with 17 degrees of freedom</span></button><button class="opt" type="button"><b>B</b><span>$t_{0.975, \, 18}$ from Student's $t$-distribution with 18 degrees of freedom</span></button><button class="opt" type="button"><b>C</b><span>$z_{0.975} = 1.960$</span></button><button class="opt" type="button"><b>D</b><span>$\chi^2_{0.975, \, 17}$ from the chi-square distribution with 17 degrees of freedom</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When the population standard deviation $\sigma$ is unknown and estimated by the sample standard deviation $s$, the standardised mean follows Student's $t$-distribution with $n - 1$ degrees of freedom. For $n = 18$, $\nu = 18 - 1 = 17$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>When estimating a 95% confidence interval for a conversion rate where only 3 conversions occurred out of 200 visitors ($\hat{p} = 0.015$), why is the standard Wald interval $[\hat{p} \pm 1.96\sqrt{\hat{p}(1-\hat{p})/n}]$ problematic?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It fails because proportions cannot be modelled with random variables</span></button><button class="opt" type="button"><b>B</b><span>It requires knowing the true population variance $\sigma^2$ in advance</span></button><button class="opt" type="button"><b>C</b><span>It always produces an interval that is twice as wide as the true parameter range</span></button><button class="opt" type="button"><b>D</b><span>It tends to produce intervals with severe undercoverage and lower bounds that can extend below zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The Wald interval relies on a normal approximation to the binomial distribution. When $n\hat{p} &lt; 10$ (here $200 \times 0.015 = 3$), the distribution is highly skewed; the Wald interval gives poor actual coverage (often well below nominal 95%) and can yield negative lower limits. Wilson score or Agresti–Coull intervals are preferred.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q8</span>Consider the following Python snippet using SciPy to construct a 95% confidence interval for a sample mean:
+<code>data = np.array([12, 15, 14, 18, 16])
+mean = np.mean(data)
+se = stats.sem(data)
+ci = stats.t.interval(0.95, df=len(data) - 1, loc=mean, scale=se)</code>
+What does <code>stats.sem(data)</code> compute in this snippet?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The sample standard deviation $s$ of the data points</span></button><button class="opt" type="button"><b>B</b><span>The margin of error $t_{0.975, 4} \times (s / \sqrt{n})$</span></button><button class="opt" type="button"><b>C</b><span>The standard error of the mean, $s / \sqrt{n}$</span></button><button class="opt" type="button"><b>D</b><span>The 95% quantile of the Student's $t$-distribution</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> <code>stats.sem</code> computes the standard error of the mean, $\hat{\sigma} / \sqrt{n} = s / \sqrt{n}$. The <code>stats.t.interval</code> function multiplies this standard error by the two-tailed critical value and centres it around <code>loc</code>.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>In the standard notation of confidence intervals, if the desired confidence level is $99\%$, what is the significance level $\alpha$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>0.05</span></button><button class="opt" type="button"><b>B</b><span>0.01</span></button><button class="opt" type="button"><b>C</b><span>0.10</span></button><button class="opt" type="button"><b>D</b><span>0.001</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The confidence level is defined as $1 - \alpha$. For a $99\%$ confidence interval ($0.99$), the significance level is $\alpha = 1 - 0.99 = 0.01$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q10</span>An analytics team wants to estimate the mean response time of a web service to within a margin of error $m = 2.0\text{ ms}$ with $95\%$ confidence ($z_{0.975} = 1.96$). From past measurements, the standard deviation is known to be $\sigma = 20.0\text{ ms}$. What is the minimum sample size $n$ required?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>196</span></button><button class="opt" type="button"><b>B</b><span>98</span></button><button class="opt" type="button"><b>C</b><span>770</span></button><button class="opt" type="button"><b>D</b><span>385</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Using the sample size formula $n = (z_{1-\alpha/2} \cdot \sigma / m)^2 = (1.96 \times 20.0 / 2.0)^2 = (19.6)^2 = 384.16$. Rounding up to the next integer guarantees the desired precision: $n = 385$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q11</span>Suppose two independent models, Model 1 and Model 2, have estimated mean latencies whose 95% confidence intervals overlap slightly: Model 1 has $[10.0, 14.0]$ and Model 2 has $[13.0, 17.0]$. A colleague claims that because their individual 95% confidence intervals overlap, the difference between the two models cannot be statistically significant at $\alpha = 0.05$. Why is this claim incorrect?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because testing the difference requires the standard error of the difference $\sqrt{\operatorname{SE}_1^2 + \operatorname{SE}_2^2}$, which is smaller than the sum of the separate margins of error $\operatorname{SE}_1 + \operatorname{SE}_2$</span></button><button class="opt" type="button"><b>B</b><span>Because confidence intervals only apply to proportions, not continuous latencies</span></button><button class="opt" type="button"><b>C</b><span>Because overlapping intervals prove that the null hypothesis is true with 95% certainty</span></button><button class="opt" type="button"><b>D</b><span>Because Model 2 has a strictly higher upper bound than Model 1</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The margin of error for the difference $(m_{\text{diff}} = z \sqrt{\operatorname{SE}_1^2 + \operatorname{SE}_2^2})$ is strictly smaller than the sum of the individual margins of error $(m_1 + m_2 = z(\operatorname{SE}_1 + \operatorname{SE}_2))$ because $\sqrt{a^2 + b^2} &lt; a + b$. Two 95% confidence intervals can overlap by up to roughly 29% of their width while their difference remains statistically significant at $\alpha = 0.05$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q12</span>In an A/B test with $n = 100$ visitors, 50 users convert, giving sample proportion $\hat{p} = 0.50$. Using the Wald method with $z_{0.975} = 1.96$, what is the 95% confidence interval for the population conversion rate?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$[0.304, 0.696]$</span></button><button class="opt" type="button"><b>B</b><span>$[0.450, 0.550]$</span></button><button class="opt" type="button"><b>C</b><span>$[0.402, 0.598]$</span></button><button class="opt" type="button"><b>D</b><span>$[0.350, 0.650]$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The estimated standard error is $\operatorname{SE} = \sqrt{\hat{p}(1 - \hat{p}) / n} = \sqrt{0.50 \times 0.50 / 100} = \sqrt{0.0025} = 0.050$. The margin of error is $m = 1.96 \times 0.050 = 0.098$. The interval is $0.500 \pm 0.098 = [0.402, 0.598]$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -177,11 +222,11 @@ captured = <span class="n">0</span>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>

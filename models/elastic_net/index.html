@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvsiqfct">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvsiqfct">
+<link rel="stylesheet" href="../../assets/site.css?v=mvt0t8sl">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvt0t8sl">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -143,6 +143,56 @@ enet = model[-<span class="n">1</span>]
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Exact zeros</span></button><button class="opt" type="button"><b>B</b><span>Grouping: correlated features share weight instead of one being picked</span></button><button class="opt" type="button"><b>C</b><span>Faster prediction</span></button><button class="opt" type="button"><b>D</b><span>Non-linearity</span></button></div>
             <div class="why" hidden><strong>Why:</strong> The strictly convex L2 term rewards splitting weight evenly among similar features.</div>
           </div>
+          <div class="q" data-answer="3">
+            <p><span>Q3</span>What does setting l1_ratio = 0 correspond to in Elastic Net regression?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Lasso regression (pure L1 penalty)</span></button><button class="opt" type="button"><b>B</b><span>Ordinary least squares with no regularisation</span></button><button class="opt" type="button"><b>C</b><span>Principal component regression</span></button><button class="opt" type="button"><b>D</b><span>Ridge regression (pure L2 penalty)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Setting l1_ratio = 0 zeroes out the L1 regularisation component, leaving solely the quadratic $\frac{1}{2}\lVert\beta\rVert_2^2$ penalty, which is standard Ridge regression.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>In the mathematical formulation of Elastic Net, what is the role of the overall penalty strength $\lambda$ (called alpha in scikit-learn)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It specifies the degree of polynomial expansion applied to the inputs</span></button><button class="opt" type="button"><b>B</b><span>It determines the ratio between the number of training samples and features</span></button><button class="opt" type="button"><b>C</b><span>It controls the total regularisation penalty weight applied relative to the squared reconstruction loss</span></button><button class="opt" type="button"><b>D</b><span>It sets the convergence tolerance threshold for the coordinate descent solver</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The multiplier $\lambda$ dictates the overall penalty scale; setting $\lambda = 0$ reduces Elastic Net to unregularised OLS, while increasing $\lambda$ shrinks all coefficients towards zero.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q5</span>What limitation does standard Lasso encounter when features outnumber samples ($p &gt; n$), and how does Elastic Net resolve it?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Lasso cannot select more than $n$ non-zero features, whereas Elastic Net can select more than $n$ predictors due to its strictly convex L2 penalty</span></button><button class="opt" type="button"><b>B</b><span>Lasso diverges to infinity, whereas Elastic Net forces all coefficients strictly to zero</span></button><button class="opt" type="button"><b>C</b><span>Lasso requires matrix inversion of $X^\top X$, whereas Elastic Net uses stochastic gradient descent</span></button><button class="opt" type="button"><b>D</b><span>Lasso causes severe underfitting by selecting all $p$ features, whereas Elastic Net selects at most one</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Because of the geometry of the L1 ball, standard Lasso cannot select more than $n$ non-zero predictors when $p &gt; n$. The strictly convex L2 penalty in Elastic Net removes this rank constraint, allowing it to select all relevant correlated features.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q6</span>Why is feature standardisation essential before fitting an Elastic Net model?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Standardisation converts skewed target distributions into standard normal distributions</span></button><button class="opt" type="button"><b>B</b><span>Standardisation guarantees that all resulting regression coefficients are strictly positive</span></button><button class="opt" type="button"><b>C</b><span>Coordinate descent fails to converge mathematically unless all feature columns have zero variance</span></button><button class="opt" type="button"><b>D</b><span>Without standardisation, features with large numerical magnitudes receive disproportionate penalty shrinkage, distorting feature selection</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The regularisation penalty treats all coefficient magnitudes identically. An unscaled feature measured in large units will have artificially tiny coefficients that get penalised unfairly compared to features on smaller scales.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q7</span>In the coordinate descent update for Elastic Net, how does the soft-thresholding operator interact with the L2 regularisation term?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The L2 parameter multiplies the soft-threshold value by $(1 + \lambda(1-\alpha))$</span></button><button class="opt" type="button"><b>B</b><span>The L2 penalty completely bypasses the soft-thresholding operator and acts only on the intercept</span></button><button class="opt" type="button"><b>C</b><span>The soft-thresholded numerator is divided by the denominator term $(\frac{1}{n} x_j^\top x_j + \lambda(1 - \alpha))$</span></button><button class="opt" type="button"><b>D</b><span>The L2 penalty replaces the soft-thresholding operator with hard truncation</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In coordinate descent, L1 provides the soft-thresholding numerator $S(\frac{1}{n}x_j^\top r_{(j)}, \lambda\alpha)$, while the quadratic curvature from L2 adds $\lambda(1-\alpha)$ to the denominator, shrinking the non-zero updates smoothly.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q8</span>When tuning an Elastic Net model in scikit-learn using ElasticNetCV, why is it best practice to cross-validate l1_ratio and alpha jointly?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The optimal regularisation strength alpha depends intimately on l1_ratio, as L1 and L2 penalties operate on different effective shrinkage scales</span></button><button class="opt" type="button"><b>B</b><span>Sequential tuning always results in all feature coefficients collapsing to zero</span></button><button class="opt" type="button"><b>C</b><span>Joint tuning guarantees that the objective function becomes strictly non-convex</span></button><button class="opt" type="button"><b>D</b><span>Scikit-learn raises an error if alpha is tuned without fixing l1_ratio at 0.5</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The amount of shrinkage needed to balance bias and variance changes dramatically depending on whether the penalty is predominantly L1 or L2; tuning them on a 2D grid captures their strong mutual interaction.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>Suppose two features $x_1$ and $x_2$ are perfectly collinear ($x_1 = x_2$). How do pure Lasso ($\alpha = 1$) and Elastic Net ($\alpha = 0.5$) distribute their coefficients?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both models assign 0 to both features because the Gram matrix is singular</span></button><button class="opt" type="button"><b>B</b><span>Lasso arbitrarily assigns all weight to either $x_1$ or $x_2$ while setting the other to 0, whereas Elastic Net splits the weight equally ($\beta_1 = \beta_2$)</span></button><button class="opt" type="button"><b>C</b><span>Lasso drops both features, whereas Elastic Net retains both with opposite signs</span></button><button class="opt" type="button"><b>D</b><span>Lasso assigns identical weights $\beta_1 = \beta_2$, whereas Elastic Net arbitrarily zeroes one of them out</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Lasso's non-strictly-convex objective is indifferent to any split satisfying $\beta_1 + \beta_2 = c$, often assigning all weight to whichever feature appears first. The strictly convex L2 term in Elastic Net uniquely minimises $\beta_1^2 + \beta_2^2$ by splitting weight equally ($\beta_1 = \beta_2 = c/2$).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q10</span>Consider a standardised feature with $\frac{1}{n} x_1^\top x_1 = 1$ and correlation with the partial residual $\frac{1}{n} x_1^\top r_{(1)} = 3.0$. If Elastic Net is fitted with penalty $\lambda = 2.0$ and mixing ratio $\alpha = 0.5$, what is the updated coefficient $\beta_1$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\beta_1 = 2.0$</span></button><button class="opt" type="button"><b>B</b><span>$\beta_1 = 1.5$</span></button><button class="opt" type="button"><b>C</b><span>$\beta_1 = 0.5$</span></button><button class="opt" type="button"><b>D</b><span>$\beta_1 = 1.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The threshold is $\lambda\alpha = 2.0 \times 0.5 = 1.0$. The soft-thresholded numerator is $S(3.0, 1.0) = \operatorname{sign}(3.0)\max(|3.0| - 1.0, 0) = 2.0$. The denominator is $\frac{1}{n}x_1^\top x_1 + \lambda(1-\alpha) = 1.0 + 2.0(1 - 0.5) = 2.0$. Thus $\beta_1 = 2.0 / 2.0 = 1.0$.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q11</span>For a standardised feature with $\frac{1}{n} x_j^\top x_j = 1$ and inner product $\frac{1}{n} x_j^\top r_{(j)} = 1.2$, what is the minimum value of $\lambda$ under mixing parameter $\alpha = 0.8$ that forces coefficient $\beta_j$ to zero?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$\lambda = 0.96$</span></button><button class="opt" type="button"><b>B</b><span>$\lambda = 1.20$</span></button><button class="opt" type="button"><b>C</b><span>$\lambda = 1.50$</span></button><button class="opt" type="button"><b>D</b><span>$\lambda = 2.40$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The soft-thresholding condition sets $\beta_j = 0$ if and only if $|\frac{1}{n} x_j^\top r_{(j)}| \le \lambda\alpha$. Here $1.2 \le \lambda \times 0.8 \iff \lambda \ge 1.2 / 0.8 = 1.50$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>Why does naive Elastic Net suffer from double shrinkage, and how did Zou & Hastie (2005) correct this in the final Elastic Net estimator?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Both L1 thresholding and L2 curvature shrink coefficients, causing excessive prediction bias; coefficients are rescaled by multiplying by $(1 + \lambda(1 - \alpha))$</span></button><button class="opt" type="button"><b>B</b><span>Double shrinkage occurs because the intercept is regularised alongside slopes; it is corrected by centring the response variable</span></button><button class="opt" type="button"><b>C</b><span>Coefficients are squared before being thresholded; it is corrected by taking the square root of all predictions</span></button><button class="opt" type="button"><b>D</b><span>Double shrinkage means features are dropped twice during cross-validation; it is resolved by using bagging</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In naive Elastic Net, the L1 penalty shrinks estimates towards zero and the L2 denominator divides them further. To undo this excessive shrinkage and bias while keeping the grouping effect and sparsity, the solution is rescaled by $(1 + \lambda(1-\alpha))$.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -178,11 +228,11 @@ enet = model[-<span class="n">1</span>]
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/core.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/algos.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/models.js?v=mvsiqfct" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvsiqfct" defer></script>
-<script src="../../assets/learn.js?v=mvsiqfct" defer></script>
+<script src="../../assets/site.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/core.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/algos.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/models.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvt0t8sl" defer></script>
+<script src="../../assets/learn.js?v=mvt0t8sl" defer></script>
 </body>
 </html>
