@@ -180,8 +180,11 @@ function apiName(l) {
 
 // ------------------------------------------------------------------ shared shell
 function shell({ rootRel, title, description, bodyClass, lessonId, main, extraHead = '', extraScripts = '' }) {
+  // Same five links as the portfolio, so Work, Learn and Play read as one site. Root-relative,
+  // so page transitions stay same-origin whichever domain serves the user site.
+  const learnHome = rootRel || './';
   const nav = [
-    ['Paths', `${rootRel}#paths`], ['Curriculum', `${rootRel}#curriculum`], ['Datasets', `${rootRel}#datasets`], ['About', `${SITE}about/`],
+    ['Work', '/work/'], ['Learn', learnHome, true], ['Play', '/featured-games/'], ['About', '/about/'], ['Contact', '#contact'],
   ];
   return `<!doctype html>
 <html lang="en">
@@ -206,10 +209,10 @@ ${extraHead}<script>document.documentElement.classList.add('js')</script>
 <a class="skip" href="#main">Skip to content</a>
 
 <nav id="nav">
-  <div class="brand"><a class="mark" href="${SITE}" aria-label="${PROFILE.name}, home">YA<span>.</span></a><a class="brand-sub" href="${rootRel || './'}">Learn</a></div>
+  <div class="brand"><a class="mark" href="/" aria-label="${PROFILE.name}, home">YA<span>.</span></a><a class="brand-sub" href="${learnHome}">Learn</a></div>
   <div class="navlinks" id="navlinks">
-    ${nav.map(([t, h]) => `<a href="${h}">${t}</a>`).join('\n    ')}
-    <a class="pill" href="${SITE}">Portfolio ${icon('arrow')}</a>
+    ${nav.map(([t, h, on]) => `<a href="${h}"${on ? ' class="active" aria-current="page"' : ''}>${t}</a>`).join('\n    ')}
+    <a class="pill" href="mailto:${PROFILE.email}?subject=R%C3%A9sum%C3%A9%20request">Request résumé ${icon('arrow')}</a>
   </div>
   <button class="menu" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks">${icon('menu')}</button>
 </nav>
@@ -231,8 +234,8 @@ ${main}
 </section>
 
 <footer>
-  <a class="mark" href="${SITE}">YA<span>.</span></a>
-  <div class="footlinks"><a href="${rootRel || './'}">Learn</a><a href="${SITE}work/">Work</a><a href="${SITE}projects/">Open source</a><a href="${SITE}about/">About</a></div>
+  <a class="mark" href="/">YA<span>.</span></a>
+  <div class="footlinks"><a href="/work/">Work</a><a href="${learnHome}">Learn</a><a href="/featured-games/">Play</a><a href="/about/">About</a></div>
   <span>© ${YEAR} ${PROFILE.name.toUpperCase()}</span>
 </footer>
 
