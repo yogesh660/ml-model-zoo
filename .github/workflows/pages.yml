@@ -34,7 +34,8 @@ jobs:
           for f in ["index.html"] + glob.glob("models/*/index.html") + glob.glob("concepts/*/index.html"):
               base = os.path.dirname(f)
               for u in re.findall(r'(?:href|src)="([^"#:?]+)(?:[?#][^"]*)?"', open(f).read()):
-                  if u.startswith(("http", "mailto", "//")):
+                  # root-relative links (/work/, /featured-games/) belong to the user site, not this repo
+                  if u.startswith(("http", "mailto", "/")):
                       continue
                   p = os.path.normpath(os.path.join(base, u))
                   if u.endswith("/"):
