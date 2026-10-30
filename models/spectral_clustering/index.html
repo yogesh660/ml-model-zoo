@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/site.css?v=mvuog456">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvuog456">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -140,6 +140,56 @@ km = <span class="f">KMeans</span>(<span class="n">2</span>, n_init=<span class=
             <div class="opts"><button class="opt" type="button"><b>A</b><span>The number of connected components</span></button><button class="opt" type="button"><b>B</b><span>The rank of W</span></button><button class="opt" type="button"><b>C</b><span>k</span></button><button class="opt" type="button"><b>D</b><span>The number of nodes</span></button></div>
             <div class="why" hidden><strong>Why:</strong> Each component contributes one constant-on-component eigenvector with eigenvalue 0.</div>
           </div>
+          <div class="q" data-answer="2">
+            <p><span>Q3</span>At what stage of spectral clustering is the $k$-means algorithm actually executed?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>During the computation of the diagonal degree matrix $D$</span></button><button class="opt" type="button"><b>B</b><span>To compute the RBF kernel matrix $W$</span></button><button class="opt" type="button"><b>C</b><span>At the very end, applied to the low-dimensional spectral embedding formed by the Laplacian eigenvectors</span></button><button class="opt" type="button"><b>D</b><span>At the very beginning, to select initial cluster centroids before building the affinity graph</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Spectral clustering uses graph Laplacian eigenvectors as a non-linear dimensionality reduction step to project points into an embedding where manifolds become compact, linearly separable clusters. Standard $k$-means is then run on these low-dimensional eigenvector coordinates.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q4</span>Why does standard SpectralClustering in scikit-learn provide a fit_predict method but no predict method for new, unseen points?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Graph Laplacians can only process an even number of samples</span></button><button class="opt" type="button"><b>B</b><span>The model weights are discarded after fitting to save memory</span></button><button class="opt" type="button"><b>C</b><span>The spectral embedding is derived from the eigendecomposition of the specific $n \times n$ training affinity matrix; placing a new point into the embedding requires recomputing or approximating the graph eigenspace</span></button><button class="opt" type="button"><b>D</b><span>Spectral clustering uses randomised projection which is non-deterministic</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The Laplacian eigenvectors are defined over the $n$ discrete graph nodes. A new query point is not a node in the original graph, so its embedding coordinates cannot be computed without re-solving or extending the graph eigendecomposition (e.g. via the Nyström method).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q5</span>Three points form a simple linear graph with edge weights $W_{12} = 1.0$ and $W_{23} = 1.0$ (with $W_{13} = 0.0$ and zero diagonal). What is the second row of the unnormalised graph Laplacian $L = D - W$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$[0.0, \, 2.0, \, 0.0]$</span></button><button class="opt" type="button"><b>B</b><span>$[1.0, \, -2.0, \, 1.0]$</span></button><button class="opt" type="button"><b>C</b><span>$[-1.0, \, 1.0, \, -1.0]$</span></button><button class="opt" type="button"><b>D</b><span>$[-1.0, \, 2.0, \, -1.0]$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Node 2 connects to node 1 and node 3, giving degree $D_{22} = 1.0 + 1.0 = 2.0$. Row 2 of $W$ is $[1.0, 0.0, 1.0]$. Subtracting $W$ from $D$ gives $L_{2} = [-1.0, \, 2.0, \, -1.0]$. Note that every row of an unnormalised Laplacian sums to exactly zero.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q6</span>How does the "eigengap heuristic" help a practitioner choose the optimal number of clusters $k$ in spectral clustering?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It selects $k$ such that the difference between consecutive sorted eigenvalues $|\lambda_{k+1} - \lambda_k|$ is maximised, indicating that the first $k$ eigenvectors span stable cluster subspaces</span></button><button class="opt" type="button"><b>B</b><span>It counts the number of negative eigenvalues in the Laplacian</span></button><button class="opt" type="button"><b>C</b><span>It sets $k$ equal to the highest eigenvalue divided by the lowest eigenvalue</span></button><button class="opt" type="button"><b>D</b><span>It chooses $k$ where the trace of the degree matrix equals zero</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By spectral graph theory, a graph with $k$ completely disconnected components has exactly $k$ eigenvalues equal to 0, followed by a jump $\lambda_{k+1} &gt; 0$. In real-world graphs with weak inter-cluster connections, a prominent gap between $\lambda_k$ and $\lambda_{k+1}$ strongly suggests $k$ well-separated clusters.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>When using the RBF kernel affinity $W_{ij} = \exp(-\gamma \|x_i - x_j\|^2)$, what happens if the parameter $\gamma$ is chosen to be excessively large?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The graph Laplacian eigenvalues all become negative</span></button><button class="opt" type="button"><b>B</b><span>The affinity matrix becomes completely full with all entries equal to 1.0</span></button><button class="opt" type="button"><b>C</b><span>The algorithm degenerates into linear regression</span></button><button class="opt" type="button"><b>D</b><span>Every point connects only to itself ($W_{ij} \approx 0$ for all $i \neq j$), turning the graph into $n$ isolated singleton nodes with no meaningful community structure</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> When $\gamma$ is very large, the exponential decay is so steep that even close neighbours have distance squared scaled up, making $W_{ij} \approx 0$ for all distinct pairs. The graph fragments into disconnected individual vertices, destroying clustering signals.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>Why does standard spectral clustering with a dense affinity matrix scale poorly to large datasets with $n &gt; 50,000$ points?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The graph Laplacian is not positive semi-definite for $n &gt; 10,000$</span></button><button class="opt" type="button"><b>B</b><span>The eigenvalues of large matrices are non-deterministic</span></button><button class="opt" type="button"><b>C</b><span>$k$-means cannot run on more than 10,000 samples</span></button><button class="opt" type="button"><b>D</b><span>Dense graph construction and exact full eigendecomposition of the $n \times n$ Laplacian matrix scale as $O(n^2)$ memory and $O(n^3)$ compute time</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Storing an $n \times n$ pairwise affinity matrix requires $O(n^2)$ memory (several gigabytes at $n = 50{,}000$), while standard exact eigensolvers take $O(n^3)$ operations. For large datasets, practitioners must switch to sparse $k$-nearest-neighbour graphs and iterative eigensolvers (like Lanczos).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q9</span>Why does spectral clustering optimise the Normalised Cut (Ncut) objective rather than the simpler Minimum Cut (min-cut) objective?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Min-cut requires directed acyclic graphs</span></button><button class="opt" type="button"><b>B</b><span>Min-cut often isolates a single outlier point because cutting a single edge produces a tiny cut value, whereas Normalised Cut divides by cluster volume, enforcing balanced cluster sizes</span></button><button class="opt" type="button"><b>C</b><span>Normalised Cut eliminates the need for computing degrees</span></button><button class="opt" type="button"><b>D</b><span>Min-cut is mathematically impossible to formulate as a graph problem</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Min-cut only minimises the sum of cut edge weights $\text{cut}(A, \bar{A})$, which frequently cuts off a lone isolated vertex. Normalised Cut divides by the total volume $\text{vol}(A) = \sum_{i \in A} d_i$, heavily penalising lopsided partitions and encouraging balanced, meaningful communities.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>For any undirected graph with non-negative edge weights and unnormalised Laplacian $L = D - W$, what is the result of multiplying $L$ by the all-ones vector $\mathbf{1} = [1, 1, \dots, 1]^\top$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The vector of graph volumes</span></button><button class="opt" type="button"><b>B</b><span>The zero vector $\mathbf{0} = [0, 0, \dots, 0]^\top$, proving that $\lambda = 0$ is always an eigenvalue with eigenvector $\mathbf{1}$</span></button><button class="opt" type="button"><b>C</b><span>The degree vector $[d_1, d_2, \dots, d_n]^\top$</span></button><button class="opt" type="button"><b>D</b><span>A vector of negative edge weights</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For each row $i$, $(L\mathbf{1})_i = D_{ii} - \sum_j W_{ij}$. By definition, the degree is $D_{ii} = \sum_j W_{ij}$, so $(L\mathbf{1})_i = D_{ii} - D_{ii} = 0$. Thus $L\mathbf{1} = 0\cdot \mathbf{1}$, demonstrating that $\mathbf{1}$ is always an eigenvector associated with eigenvalue $\lambda = 0$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q11</span>Under the symmetric normalised Laplacian $L_{\text{sym}} = I - D^{-1/2} W D^{-1/2}$, two connected nodes have degrees $d_1 = 4.0$ and $d_2 = 9.0$, with edge weight $W_{12} = 3.0$. What is the off-diagonal matrix entry $(L_{\text{sym}})_{12}$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$-1.00$</span></button><button class="opt" type="button"><b>B</b><span>$-0.50$</span></button><button class="opt" type="button"><b>C</b><span>$-0.25$</span></button><button class="opt" type="button"><b>D</b><span>$+0.50$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For $i \neq j$, $I_{ij} = 0$, so $(L_{\text{sym}})_{ij} = -\frac{W_{ij}}{\sqrt{d_i d_j}}$. Substituting the values: $-\frac{3.0}{\sqrt{4.0 \times 9.0}} = -\frac{3.0}{\sqrt{36.0}} = -\frac{3.0}{6.0} = -0.50$.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q12</span>In spectral graph bisection ($k = 2$ using the unnormalised Laplacian $L$), what role does the eigenvector $v_2$ associated with the second smallest eigenvalue $\lambda_2$ (the Fiedler vector) play?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Its entries assign a continuous 1D coordinate to each node such that thresholding at 0 ($v_{2, i} \ge 0$ vs $v_{2, i} &lt; 0$) produces an approximate minimum-cut partition of the graph</span></button><button class="opt" type="button"><b>B</b><span>It contains the coordinates of the cluster centroids</span></button><button class="opt" type="button"><b>C</b><span>It represents the degree of each node in the graph</span></button><button class="opt" type="button"><b>D</b><span>It is always an all-ones vector</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> The smallest eigenvalue $\lambda_1 = 0$ corresponds to the trivial constant eigenvector $v_1 = \mathbf{1}$. The second eigenvector $v_2$ (the Fiedler vector) is orthogonal to $\mathbf{1}$ and solves the continuous relaxation of the graph bisection problem. Splitting nodes based on the sign of their component in $v_2$ yields the optimal relaxed cut.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -175,11 +225,11 @@ km = <span class="f">KMeans</span>(<span class="n">2</span>, n_init=<span class=
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
-<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
+<script src="../../assets/site.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/core.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/algos.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/models.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvuog456" defer></script>
+<script src="../../assets/learn.js?v=mvuog456" defer></script>
 </body>
 </html>

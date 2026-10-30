@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvtga7q7">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvtga7q7">
+<link rel="stylesheet" href="../../assets/site.css?v=mvuog456">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvuog456">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -146,6 +146,56 @@ gmm = <span class="f">GaussianMixture</span>(best_k, covariance_type=<span class
             <div class="opts"><button class="opt" type="button"><b>A</b><span>Diagonal covariances</span></button><button class="opt" type="button"><b>B</b><span>One component</span></button><button class="opt" type="button"><b>C</b><span>Equal spherical covariances shrinking to zero (hard assignments)</span></button><button class="opt" type="button"><b>D</b><span>Full covariances</span></button></div>
             <div class="why" hidden><strong>Why:</strong> As the shared variance goes to zero, responsibilities become 0/1 and the M-step becomes the mean update.</div>
           </div>
+          <div class="q" data-answer="0">
+            <p><span>Q3</span>In scikit-learn's GaussianMixture, which covariance_type setting allows each cluster to have its own independent oriented ellipse with arbitrary tilt and aspect ratio?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>full</span></button><button class="opt" type="button"><b>B</b><span>tied</span></button><button class="opt" type="button"><b>C</b><span>diag</span></button><button class="opt" type="button"><b>D</b><span>spherical</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> full allows each Gaussian component to estimate its own unconstrained covariance matrix $\Sigma_k$, accommodating tilted, elliptical clusters of differing orientations and widths.</div>
+          </div>
+          <div class="q" data-answer="0">
+            <p><span>Q4</span>Why is the Bayesian Information Criterion (BIC) or Akaike Information Criterion (AIC) preferred over raw training log-likelihood when choosing the number of components $K$ in a GMM?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Adding more components always increases (or maintains) the training log-likelihood, leading to severe overfitting without a complexity penalty</span></button><button class="opt" type="button"><b>B</b><span>BIC is required because GMMs cannot perform cross-validation</span></button><button class="opt" type="button"><b>C</b><span>Raw log-likelihood can never be evaluated on continuous data</span></button><button class="opt" type="button"><b>D</b><span>BIC automatically sets the learning rate for the EM algorithm</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Just like $R^2$ in regression or inertia in $k$-means, adding more parameters and Gaussian components monotonically increases the training log-likelihood. BIC penalises model complexity (number of free parameters), identifying the optimal trade-off where extra components cease to justify their parameter cost.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q5</span>A 2-component GMM has mixture weights $\pi_1 = 0.60$ and $\pi_2 = 0.40$. At a specific observation $x$, the Gaussian probability density evaluations are $\mathcal{N}(x; \mu_1, \Sigma_1) = 0.20$ and $\mathcal{N}(x; \mu_2, \Sigma_2) = 0.30$. In the E-step, what is the responsibility $\gamma_{1}(x)$ (the posterior probability that $x$ belongs to component 1)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$0.25$</span></button><button class="opt" type="button"><b>B</b><span>$0.60$</span></button><button class="opt" type="button"><b>C</b><span>$0.40$</span></button><button class="opt" type="button"><b>D</b><span>$0.50$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By Bayes' rule: $\gamma_1(x) = \frac{\pi_1 \mathcal{N}_1}{\pi_1 \mathcal{N}_1 + \pi_2 \mathcal{N}_2} = \frac{0.60 \times 0.20}{(0.60 \times 0.20) + (0.40 \times 0.30)} = \frac{0.12}{0.12 + 0.12} = \frac{0.12}{0.24} = 0.50$. Although component 2 has a higher local density ($0.30$ vs $0.20$), component 1's larger mixture weight ($0.60$ vs $0.40$) exactly balances the posterior responsibility to $0.50$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q6</span>In the M-step for component 1, three 1D points have values $x_1 = 2.0$, $x_2 = 6.0$, and $x_3 = 10.0$, with corresponding responsibilities $\gamma_{11} = 0.50$, $\gamma_{21} = 0.25$, and $\gamma_{31} = 0.25$. What is the updated mean $\mu_1$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$4.5$</span></button><button class="opt" type="button"><b>B</b><span>$5.0$</span></button><button class="opt" type="button"><b>C</b><span>$6.0$</span></button><button class="opt" type="button"><b>D</b><span>$7.0$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Total effective sample size is $N_1 = 0.50 + 0.25 + 0.25 = 1.00$. The weighted mean is $\mu_1 = \frac{(0.50 \times 2.0) + (0.25 \times 6.0) + (0.25 \times 10.0)}{1.00} = 1.0 + 1.5 + 2.5 = 5.0$. Notice how point $x_1$ pulls the mean towards itself due to its higher responsibility of $0.50$.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q7</span>What theoretical guarantee does the Expectation–Maximisation (EM) algorithm provide regarding the log-likelihood of the observed data at each iteration?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It guarantees convergence to the global maximum log-likelihood in $O(n)$ steps</span></button><button class="opt" type="button"><b>B</b><span>The variance of each component shrinks to zero</span></button><button class="opt" type="button"><b>C</b><span>The log-likelihood oscillates evenly around zero</span></button><button class="opt" type="button"><b>D</b><span>The observed data log-likelihood is guaranteed to never decrease from one iteration to the next ($\ln p(X \mid \theta^{(t+1)}) \ge \ln p(X \mid \theta^{(t)})$)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> By Jensen's inequality and the construction of the evidence lower bound (ELBO), each full E-step and M-step cycle is mathematically guaranteed to increase or keep constant the marginal log-likelihood, guaranteeing convergence to a local maximum (or saddle point).</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q8</span>What is the purpose of the reg_covar hyperparameter (default 1e-6 in scikit-learn's GaussianMixture)?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>It applies L1 regularisation to the cluster centroids</span></button><button class="opt" type="button"><b>B</b><span>It randomly prunes empty components during the E-step</span></button><button class="opt" type="button"><b>C</b><span>It sets the maximum number of EM iterations</span></button><button class="opt" type="button"><b>D</b><span>It adds a small positive constant to the diagonal of the covariance matrices to prevent them from collapsing to zero variance and becoming singular (non-invertible)</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> If a Gaussian component isolates a single point (or collinear points), its variance along that direction collapses to 0, causing the determinant $\det(\Sigma) \to 0$ and the likelihood to explode to infinity (a singularity). Adding reg_covar ensures all eigenvalues of $\Sigma_k$ remain strictly positive.</div>
+          </div>
+          <div class="q" data-answer="2">
+            <p><span>Q9</span>How can a fitted Gaussian Mixture Model be naturally deployed as an anomaly / novelty detector?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>By measuring the silhouette coefficient of every new point</span></button><button class="opt" type="button"><b>B</b><span>By verifying whether the point's coordinates are integers</span></button><button class="opt" type="button"><b>C</b><span>By evaluating the total mixture density $p(x) = \sum_{k=1}^K \pi_k \mathcal{N}(x; \mu_k, \Sigma_k)$ (or score samples) and flagging observations with log-likelihood below a chosen threshold</span></button><button class="opt" type="button"><b>D</b><span>By checking if a point has an equal responsibility of $1/K$ across all components</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A GMM is a generative probability density model. Normal points in dense cluster regions have high probability density $p(x)$, while anomalies falling in sparse, empty areas receive very low probability densities. Thresholding $\ln p(x)$ (via score_samples) directly scores anomaly severity.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q10</span>A GMM with $K = 4$ components is fitted to a dataset with $p = 10$ features. How many total covariance parameters must be estimated across all 4 components under covariance_type='full' compared with covariance_type='diag'?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>55 under full versus 10 under diag</span></button><button class="opt" type="button"><b>B</b><span>220 under full versus 40 under diag</span></button><button class="opt" type="button"><b>C</b><span>400 under full versus 40 under diag</span></button><button class="opt" type="button"><b>D</b><span>110 under full versus 20 under diag</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> For a $p$-dimensional full covariance matrix, symmetry means only the diagonal and lower triangle are independent, giving $\frac{p(p+1)}{2} = \frac{10 \times 11}{2} = 55$ parameters per component, or $4 \times 55 = 220$ across 4 components. Under diagonal covariance, each component only estimates its $p = 10$ diagonal variances, giving $4 \times 10 = 40$ parameters.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q11</span>In a 1D GMM, component $k$ has two training points: $x_1 = 2.0$ with responsibility $\gamma_{1k} = 0.75$, and $x_2 = 6.0$ with responsibility $\gamma_{2k} = 0.25$. Its updated mean was computed as $\mu_k = 3.0$. What is the updated variance $\sigma_k^2 = \frac{1}{N_k}\sum \gamma_{ik}(x_i - \mu_k)^2$ for this component?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>$5.00$</span></button><button class="opt" type="button"><b>B</b><span>$1.50$</span></button><button class="opt" type="button"><b>C</b><span>$2.00$</span></button><button class="opt" type="button"><b>D</b><span>$3.00$</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Total responsibility is $N_k = 0.75 + 0.25 = 1.00$. The squared deviations from $\mu_k = 3.0$ are $(2.0 - 3.0)^2 = 1.0$ and $(6.0 - 3.0)^2 = 9.0$. Weighting each deviation gives $\sigma_k^2 = \frac{(0.75 \times 1.0) + (0.25 \times 9.0)}{1.00} = 0.75 + 2.25 = 3.00$.</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q12</span>The Bayesian Information Criterion for a model with log-likelihood $\ln \hat L$, $p_{\text{params}}$ free parameters, and $n$ observations is $\text{BIC} = -2\ln \hat L + p_{\text{params}}\ln(n)$. Why does BIC penalise additional parameters more heavily than AIC ($\text{AIC} = -2\ln \hat L + 2p_{\text{params}}$) when $n \ge 8$?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because BIC evaluates the test set error rather than training likelihood</span></button><button class="opt" type="button"><b>B</b><span>Because $\ln(n) &gt; 2$ for all sample sizes $n \ge 8$ (since $e^2 \approx 7.39$), making BIC prefer simpler, more parsimonious models on moderate and large datasets</span></button><button class="opt" type="button"><b>C</b><span>Because BIC divides the log-likelihood by the number of components</span></button><button class="opt" type="button"><b>D</b><span>Because AIC cannot be computed when covariances are full</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> In AIC the penalty multiplier per parameter is always a constant 2. In BIC the multiplier is $\ln(n)$. Since $e^2 \approx 7.389$, whenever $n \ge 8$ we have $\ln(n) &gt; 2$, meaning BIC penalises complexity more strictly and tends to select fewer components than AIC.</div>
+          </div>
         </div>
         <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
       </section>
@@ -181,11 +231,11 @@ gmm = <span class="f">GaussianMixture</span>(best_k, covariance_type=<span class
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/core.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/algos.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/models.js?v=mvtga7q7" defer></script>
-<script src="../../assets/labs/sequences.js?v=mvtga7q7" defer></script>
-<script src="../../assets/learn.js?v=mvtga7q7" defer></script>
+<script src="../../assets/site.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/core.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/algos.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/models.js?v=mvuog456" defer></script>
+<script src="../../assets/labs/sequences.js?v=mvuog456" defer></script>
+<script src="../../assets/learn.js?v=mvuog456" defer></script>
 </body>
 </html>
