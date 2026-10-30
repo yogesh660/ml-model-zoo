@@ -2386,4 +2386,624 @@ What is the uncorrected Pearson chi-square statistic $\chi^2 = \sum (O - E)^2 / 
     related: ['type-i-ii-errors-power-and-sample-size', 'z-test-and-t-tests', 'confusion-matrix'],
     keywords: 'chi-square test contingency table goodness of fit independence pearsons test expected frequencies categorical',
   },
+  {
+    id: "joint-marginal-and-conditional-distributions",
+    short: "Joint & Conditional Dist.",
+    title: "Joint, marginal and conditional distributions",
+    task: "concepts",
+    module: "Probability",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Multivariate probability distributions formalise the simultaneous behaviour of multiple random variables. The joint distribution P(X=x, Y=y) captures all co-occurrence probabilities. Marginalisation collapses dimensions by integrating or summing out nuisance variables, while conditioning isolates the distribution of one variable given fixed observations of another via Bayes' rule P(X | Y) = P(X, Y) / P(Y). Understanding the decomposition of joint spaces into marginals and conditionals is fundamental to probabilistic graphical models, Markov decision processes, and multivariate density estimation.",
+    lead: "When working with tabular datasets, image channels, or sensor networks, variables rarely operate in isolation. How does knowing an applicant's credit score alter the probability distribution of their loan default risk, and how can we recover the standalone distribution of default risk across the entire population? Joint distributions capture complete multivariate reality, while marginalisation and conditioning allow us to slice and project high-dimensional uncertainty down to actionable inferences.",
+    intuition: [
+      "The 2D Table of Reality: Imagine a 2D contingency grid where columns represent education levels and rows represent income brackets. The joint distribution assigns a probability to every individual cell (x, y), such that all cell probabilities sum to 1.",
+      "Marginalisation (Collapsing Dimensions): If you only want to know the distribution of income regardless of education, you sum horizontally across all columns. You are projecting the 2D grid onto the vertical margin—hence the term \"marginal distribution\". Mathematically, marginalisation integrates out the unwanted variable: P(X) = sum_y P(X, y).",
+      "Conditioning (Slicing the Distribution): If you learn a specific candidate holds a PhD, you discard every column except the \"PhD\" column. You take that single column slice, but because its cells do not sum to 1, you normalise by dividing by the marginal probability of having a PhD. That renormalised slice is the conditional distribution P(Income | Education = PhD).",
+      "Independence and Covariance: Two variables are statistically independent if and only if knowing one yields zero information about the other: P(X, Y) = P(X)P(Y), which implies P(Y | X) = P(Y). When variables are dependent, conditioning reshapes the distribution, shifting both its conditional expectation and conditional variance."
+    ],
+    analogy: "Think of an aerial heat map of a crowded festival park where altitude represents the joint probability of finding a person at GPS coordinate (x, y). The marginal distribution of the east-west axis X is the silhouette of the crowd projected onto a northern wall: you look from the side and sum up everyone at that longitude regardless of latitude. The conditional distribution given latitude Y=y0 is like putting up a physical laser tape along latitude y0 and examining only the crowd profile walking along that exact east-west path, normalised so total presence sums to 100%.",
+    steps: [
+      {
+        "title": "Specify or estimate joint distribution",
+        "desc": "Construct the full joint probability mass function P(X, Y) or joint density f_{X,Y}(x, y).",
+        "detail": "Tabulate discrete co-occurrences or model continuous densities using multivariate parametric distributions (e.g. bivariate normal) or non-parametric kernel density estimators."
+      },
+      {
+        "title": "Compute marginal distributions via summation or integration",
+        "desc": "Collapse the joint distribution across the dimension of the unobserved variable.",
+        "detail": "Sum across columns to obtain row marginals P(X=x) = sum_y P(X=x, Y=y), or integrate continuous densities f_X(x) = int f_{X,Y}(x, y) dy. Check that the marginal distribution sums to 1."
+      },
+      {
+        "title": "Derive conditional distributions by slicing and normalising",
+        "desc": "Isolate the target variable's distribution conditioned on an observed evidence value.",
+        "detail": "Extract the slice where the conditioning variable equals the observed evidence, and divide by the marginal probability of that evidence: P(Y=y | X=x) = P(X=x, Y=y) / P(X=x)."
+      },
+      {
+        "title": "Evaluate conditional expectation and variance",
+        "desc": "Compute the expected value and dispersion of the conditioned variable.",
+        "detail": "Calculate E[Y | X=x] = sum_y y * P(Y=y | X=x) and Var(Y | X=x). Verify consistency using the Law of Total Expectation E[Y] = E[E[Y|X]] and Law of Total Variance."
+      },
+      {
+        "title": "Test for statistical independence",
+        "desc": "Check whether the joint distribution factorises into the product of its marginals.",
+        "detail": "Confirm if P(X=x, Y=y) = P(X=x)P(Y=y) holds for all (x, y) pairs. If it holds everywhere, X and Y are independent; otherwise, they are dependent."
+      }
+    ],
+    math: [
+      {
+        "h": "Joint, Marginal, and Conditional Probability Densities",
+        "tex": "f_X(x) = \\int_{-\\infty}^{\\infty} f_{X,Y}(x, y) \\, dy, \\qquad f_{Y \\mid X}(y \\mid x) = \\frac{f_{X,Y}(x, y)}{f_X(x)} \\quad \\text{for } f_X(x) > 0",
+        "p": "For continuous random variables, the marginal density f_X(x) integrates the joint density f_{X,Y}(x, y) across all possible values of y. The conditional density f_{Y \\mid X}(y \\mid x) represents the cross-sectional slice of the joint density at x, normalised so that \\int f_{Y \\mid X}(y \\mid x) \\, dy = 1."
+      },
+      {
+        "h": "Law of Total Expectation and Total Variance (Eve's Law)",
+        "tex": "\\mathbb{E}[Y] = \\mathbb{E}\\Big[\\mathbb{E}[Y \\mid X]\\Big], \\qquad \\text{Var}(Y) = \\mathbb{E}\\Big[\\text{Var}(Y \\mid X)\\Big] + \\text{Var}\\Big(\\mathbb{E}[Y \\mid X]\\Big)",
+        "p": "Eve's Law decomposes the total variance of Y into two orthogonal components: the expected value of the conditional variance (unexplained within-group variance or noise) plus the variance of the conditional expectation (explained between-group variance). This identity forms the foundational mathematics of ANOVA and decision tree split criteria."
+      },
+      {
+        "h": "Bivariate Gaussian Conditional Distribution",
+        "tex": "Y \\mid (X = x) \\sim \\mathcal{N}\\left( \\mu_Y + \\rho \\frac{\\sigma_Y}{\\sigma_X}(x - \\mu_X), \\; \\sigma_Y^2(1 - \\rho^2) \\right)",
+        "p": "When X and Y follow a joint bivariate normal distribution with correlation \\rho, the conditional distribution of Y given X=x remains strictly Gaussian. Its conditional mean shifts linearly with x, and its conditional variance shrinks by a factor of (1 - \\rho^2), demonstrating how conditioning reduces uncertainty."
+      }
+    ],
+    code: "\"\"\"\nJoint, Marginal, and Conditional Distributions\nDemonstrates discrete joint probability tables, marginal collapse,\nconditional slicing, and verification of Eve's Law of Total Variance.\n\"\"\"\n\nimport numpy as np\n\n# 1. Define a 2D discrete joint distribution table P(Income, Education)\n# Rows: Income Levels (Low, Medium, High)\n# Columns: Education Levels (HighSchool, Bachelors, Postgraduate)\njoint_table = np.array([\n    [0.18, 0.08, 0.02],  # Low Income\n    [0.12, 0.25, 0.13],  # Medium Income\n    [0.02, 0.07, 0.13]   # High Income\n])\n\nincome_levels = [\"Low\", \"Medium\", \"High\"]\nincome_values = np.array([25000, 60000, 120000])  # Representative numeric values in GBP\neducation_levels = [\"HighSchool\", \"Bachelors\", \"Postgraduate\"]\n\nprint(\"=== 1. Joint Probability Table P(Income, Education) ===\")\nprint(\"Total Joint Sum (must equal 1.0):\", round(np.sum(joint_table), 4))\nfor i, inc in enumerate(income_levels):\n    row_str = \"  \" + f\"{inc:6s} | \" + \" \".join(f\"{joint_table[i, j]:6.2f}\" for j in range(3))\n    print(row_str)\n\n# 2. Marginal Distributions\np_education = np.sum(joint_table, axis=0)  # Sum down rows (marginal education)\np_income = np.sum(joint_table, axis=1)     # Sum across columns (marginal income)\n\nprint(\"\\n=== 2. Marginal Distributions ===\")\nfor j, edu in enumerate(education_levels):\n    print(f\"  P(Education = {edu:12s}) = {p_education[j]:.3f}\")\n\nprint(\"\")\nfor i, inc in enumerate(income_levels):\n    print(f\"  P(Income = {inc:6s}) = {p_income[i]:.3f}\")\n\n# 3. Conditional Distributions P(Income | Education)\n# For each column j, divide cell by p_education[j]\ncond_income_given_edu = joint_table / p_education[np.newaxis, :]\n\nprint(\"\\n=== 3. Conditional Distributions P(Income | Education) ===\")\nfor j, edu in enumerate(education_levels):\n    print(f\"P(Income | Education = {edu}):\")\n    for i, inc in enumerate(income_levels):\n        print(f\"  P({inc:6s} | {edu}) = {cond_income_given_edu[i, j]:.3f}\")\n\n# 4. Conditional Expectations and Eve's Law Verification\ncond_means = np.sum(income_values[:, np.newaxis] * cond_income_given_edu, axis=0)\ncond_vars = np.sum(((income_values[:, np.newaxis] - cond_means)**2) * cond_income_given_edu, axis=0)\n\noverall_mean = np.sum(income_values * p_income)\noverall_var = np.sum(((income_values - overall_mean)**2) * p_income)\n\nexpected_cond_var = np.sum(cond_vars * p_education)     # E[Var(Y|X)]\nvar_of_cond_mean = np.sum(((cond_means - overall_mean)**2) * p_education)  # Var(E[Y|X])\n\nprint(\"\\n=== 4. Verification of Eve's Law of Total Variance ===\")\nprint(f\"Overall Marginal Mean Income: £{overall_mean:,.2f}\")\nfor j, edu in enumerate(education_levels):\n    print(f\"  E[Income | {edu:12s}] = £{cond_means[j]:,.2f} | Std = £{np.sqrt(cond_vars[j]):,.2f}\")\n\nprint(f\"\\nTotal Population Variance:          {overall_var:,.0f}\")\nprint(f\"E[Var(Income | Education)] (Within): {expected_cond_var:,.0f}\")\nprint(f\"Var(E[Income | Education]) (Between):{var_of_cond_mean:,.0f}\")\nprint(f\"Within + Between Sum:               {expected_cond_var + var_of_cond_mean:,.0f}\")\nprint(\"Eve's Law Holds Exactly:\", np.isclose(overall_var, expected_cond_var + var_of_cond_mean))\n",
+    keyPoints: [
+      "The joint distribution specifies the simultaneous probability of all variable configurations across the multidimensional state space.",
+      "Marginalisation collapses dimensions by integrating or summing out unobserved nuisance variables.",
+      "Conditioning takes a slice along an observed variable and renormalises it by dividing by that variable's marginal probability.",
+      "Eve's Law of Total Variance decomposes total variance into expected conditional variance (within-group noise) plus variance of conditional expectation (between-group signal)."
+    ],
+    pitfalls: [
+      "Confusing P(X | Y) with P(Y | X): Conditional probabilities are directional and asymmetric; inverting them requires Bayes' theorem.",
+      "Forgetting to renormalise conditional slices: A raw row or column of a joint table sums to the marginal probability, not 1; dividing by the marginal is mandatory.",
+      "Assuming zero covariance implies independence: Covariance measures only linear relationships; non-linear dependencies can have zero covariance while remaining strongly dependent."
+    ],
+    quiz: [
+      {
+        "q": "How is a marginal distribution P(X) obtained from a discrete joint distribution P(X, Y)?",
+        "o": [
+          "By summing the joint probabilities over all possible values of the unwanted variable Y: P(X=x) = sum_y P(X=x, Y=y)",
+          "By multiplying P(X, Y) by P(Y)",
+          "By differentiating P(X, Y) with respect to X",
+          "By setting all values of Y equal to zero"
+        ],
+        "a": 0,
+        "why": "Marginalisation integrates or sums over all states of the unobserved variable, collapsing the joint distribution onto the marginal axis."
+      },
+      {
+        "q": "According to Eve's Law of Total Variance, what two components comprise the total variance Var(Y)?",
+        "o": [
+          "The expected value of the conditional variance E[Var(Y|X)] plus the variance of the conditional expectation Var(E[Y|X])",
+          "The sum of the marginal variances Var(X) + Var(Y)",
+          "The square of the covariance Cov(X, Y)^2 plus the correlation coefficient",
+          "The mean of X multiplied by the variance of Y"
+        ],
+        "a": 0,
+        "why": "Eve's Law states Var(Y) = E[Var(Y|X)] + Var(E[Y|X]), decomposing overall variance into unexplained within-group dispersion and explained between-group variation."
+      },
+      {
+        "q": "Under a bivariate normal distribution, how does the conditional variance Var(Y | X=x) compare to the marginal variance Var(Y)?",
+        "o": [
+          "It shrinks by a factor of (1 - rho^2), reflecting reduced uncertainty due to the correlation rho with X",
+          "It is always strictly larger than Var(Y)",
+          "It changes depending on the specific numeric value of x",
+          "It is always identically equal to zero"
+        ],
+        "a": 0,
+        "why": "For bivariate Gaussians, Var(Y | X=x) = sigma_Y^2 * (1 - rho^2). Unless rho=0, observing X strictly reduces uncertainty about Y, independent of the value of x."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "probability-rules-and-bayes-theorem",
+      "random-variables-and-distributions"
+    ],
+    related: [
+      "probability-rules-and-bayes-theorem",
+      "expectation-variance-and-covariance",
+      "bayesian_linear_regression"
+    ],
+    keywords: "joint distribution marginal distribution conditional distribution bayes law of total expectation eves law bivariate normal covariance"
+  },
+  {
+    id: "map-and-bayesian-estimation",
+    short: "MAP & Bayesian Estimation",
+    title: "MAP and Bayesian estimation",
+    task: "concepts",
+    module: "Estimation",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Maximum A Posteriori (MAP) and full Bayesian estimation extend classical point estimation by incorporating prior probability distributions over model parameters. While Maximum Likelihood Estimation (MLE) seeks parameters that maximise data likelihood alone, MAP identifies the single mode of the posterior distribution, functioning as a Bayesian bridge to penalised regularisation (such as L2 ridge and L1 lasso). Full Bayesian estimation rejects single point estimates entirely, retaining the complete posterior probability distribution p(\\theta | D) to compute posterior predictive distributions with principled parameter uncertainty.",
+    lead: "What happens when you flip a coin 3 times and get 3 heads? Maximum Likelihood Estimation insists the coin has a 100% chance of landing heads on every flip. Intuitively, we know coins are usually fair; our prior belief anchors our judgment against extreme conclusions from small samples. How do we formalise prior domain knowledge into statistical estimators, and what is the crucial distinction between choosing a single \"best\" parameter (MAP) versus maintaining a full distribution over all possible parameters (Bayesian estimation)?",
+    intuition: [
+      "MLE vs MAP vs Full Bayes:\n- Maximum Likelihood Estimation (MLE): Seeks argmax_theta p(D | theta). It considers only the observed dataset. On small or sparse samples, it severely overfits, placing zero probability on unobserved events.\n- Maximum A Posteriori (MAP): Seeks argmax_theta p(theta | D) = argmax_theta [p(D | theta) p(theta)]. It combines data evidence with a prior belief distribution, yielding a single optimal point estimate (the posterior mode).\n- Full Bayesian Estimation: Rejects single point estimates entirely. It maintains the entire posterior distribution p(theta | D). When predicting a new outcome y*, it integrates over all possible values of theta, weighted by their posterior credibility.",
+      "The Secret Identity of Regularisation: In machine learning, L2 weight decay (Ridge regression) and L1 penalty (Lasso regression) are often presented as heuristic loss penalties. In reality, MAP estimation reveals their true origin: an L2 penalty is mathematically identical to assuming an independent zero-mean Gaussian prior on weights, while an L1 penalty is identical to assuming a Laplacian prior. Regularisation is literally MAP estimation in disguise!",
+      "Epistemic vs Aleatoric Uncertainty: Point estimators (both MLE and MAP) cannot express epistemic uncertainty (uncertainty stemming from lack of training data). Full Bayesian estimation explicitly tracks epistemic uncertainty: when data is scarce, the posterior distribution is wide, yielding broad prediction intervals that widen safely in uncharted feature space."
+    ],
+    analogy: "Imagine a jury deliberating on a criminal trial. An MLE juror considers only the physical evidence presented in the courtroom, ignoring whether the defendant has a pristine record or a history of identical crimes. A MAP juror combines the evidence with their background knowledge of human behaviour to pick the single verdict they feel is most probable. A full Bayesian deliberation does not pick a single juror's hunch; it polls all possible interpretations, weighting every plausible scenario by how well it fits both the evidence and prior reality to arrive at a calibrated distribution of reasonable doubt.",
+    steps: [
+      {
+        "title": "Define parametric likelihood function",
+        "desc": "Specify the probability distribution of observing data given parameters p(D | theta).",
+        "detail": "Formulate the generative likelihood model (e.g. Binomial for binary trials, Gaussian for continuous regression targets). Compute the log-likelihood function."
+      },
+      {
+        "title": "Specify prior probability distribution",
+        "desc": "Select a prior p(theta) reflecting prior knowledge or regularisation constraints.",
+        "detail": "Choose an uninformative prior, an empirical domain prior, or a conjugate prior (such as Beta for Binomial, or Normal-Inverse-Gamma for Linear Regression) to enable analytical tractability."
+      },
+      {
+        "title": "Compute unnormalised posterior distribution",
+        "desc": "Multiply likelihood by prior according to Bayes' rule: p(theta | D) proportional to p(D | theta) * p(theta).",
+        "detail": "Work in log-space: log p(theta | D) = log p(D | theta) + log p(theta) + constant. Identify the functional form of the posterior distribution."
+      },
+      {
+        "title": "Derive the MAP point estimate",
+        "desc": "Maximise the log-posterior with respect to model parameters.",
+        "detail": "Set gradient nabla_theta [log p(D | theta) + log p(theta)] = 0. Solve analytically or via numerical gradient ascent to obtain theta_MAP."
+      },
+      {
+        "title": "Compute full Bayesian posterior predictive distribution",
+        "desc": "Integrate likelihood predictions over the entire posterior parameter distribution.",
+        "detail": "Evaluate p(y* | D) = int p(y* | theta) p(theta | D) d theta. Extract credible intervals to quantify parameter and observation uncertainty simultaneously."
+      }
+    ],
+    math: [
+      {
+        "h": "MAP Objective and Log-Posterior Formulation",
+        "tex": "\\hat{\\theta}_{\\text{MAP}} = \\arg\\max_\\theta \\left\\{ \\sum_{i=1}^N \\log p(x_i \\mid \\theta) + \\log p(\\theta) \\right\\} = \\arg\\min_\\theta \\Big\\{ \\text{NLL}(\\theta) - \\log p(\\theta) \\Big\\}",
+        "p": "MAP estimation maximises the joint probability of data and parameters. Minimising negative log-likelihood with a negative log-prior penalty demonstrates the direct equivalence between MAP estimation and regularised loss minimisation."
+      },
+      {
+        "h": "MAP Equivalence to L2 Regularisation (Gaussian Prior)",
+        "tex": "\\theta_j \\sim \\mathcal{N}(0, \\sigma_0^2) \\implies \\log p(\\theta) = -\\frac{\\|\\theta\\|_2^2}{2\\sigma_0^2} - C \\implies \\mathcal{L}_{\\text{MAP}}(\\theta) = \\text{NLL}(\\theta) + \\frac{\\lambda}{2} \\|\\theta\\|_2^2, \\quad \\lambda = \\frac{1}{\\sigma_0^2}",
+        "p": "Assuming an independent zero-mean normal prior over model parameters produces a quadratic penalty identical to Ridge regression (L2 weight decay). Smaller prior variance \\sigma_0^2 corresponds to stronger regularisation hyperparameter \\lambda."
+      },
+      {
+        "h": "Posterior Predictive Distribution (Full Bayesian)",
+        "tex": "p(y^* \\mid \\mathcal{D}) = \\int_\\Theta p(y^* \\mid \\theta) \\, p(\\theta \\mid \\mathcal{D}) \\, d\\theta, \\qquad \\text{where } p(\\theta \\mid \\mathcal{D}) = \\frac{p(\\mathcal{D} \\mid \\theta) p(\\theta)}{\\int_\\Theta p(\\mathcal{D} \\mid \\theta') p(\\theta') \\, d\\theta'}",
+        "p": "Instead of committing to a single point estimate \\hat{\\theta}, full Bayesian inference integrates across all parameter possibilities. The marginalisation accounts for parameter uncertainty, avoiding overconfident predictions in regions with sparse data."
+      }
+    ],
+    code: "\"\"\"\nComparison of Maximum Likelihood (MLE), Maximum A Posteriori (MAP),\nand Full Bayesian Estimation on a Small Bernoulli Sample.\n\"\"\"\n\nimport numpy as np\n\n# Scenario: We flip a coin N=5 times and observe k=4 heads.\n# We want to estimate theta (probability of heads).\nN = 5\nk = 4  # 4 heads out of 5 flips\n\n# 1. Maximum Likelihood Estimation (MLE)\n# theta_MLE = k / N\ntheta_mle = k / N\n\n# 2. Maximum A Posteriori (MAP) Estimation with Beta(alpha, beta) Prior\n# Suppose our prior belief is centered at a fair coin: Beta(alpha=3, beta=3)\n# (equivalent to having seen 2 virtual heads and 2 virtual tails prior to the experiment)\nalpha_prior = 3.0\nbeta_prior = 3.0\n\n# Posterior is Beta(alpha + k, beta + N - k)\nalpha_post = alpha_prior + k\nbeta_post = beta_prior + (N - k)\n\n# Mode of Beta(a, b) for a, b > 1 is (a - 1) / (a + b - 2)\ntheta_map = (alpha_post - 1) / (alpha_post + beta_post - 2)\n\n# 3. Full Bayesian Estimation (Posterior Mean and Credible Interval)\n# Posterior Mean E[theta | D] = a / (a + b)\ntheta_bayes_mean = alpha_post / (alpha_post + beta_post)\n\n# 4. Posterior Predictive Distribution for next flip being Heads\n# P(Y* = 1 | D) = int theta * p(theta | D) d theta = E[theta | D]\np_next_heads_mle = theta_mle\np_next_heads_map = theta_map\np_next_heads_bayes = theta_bayes_mean\n\nprint(f\"=== Experiment: {k} Heads in {N} Flips ===\")\nprint(f\"MLE Estimate:            theta = {theta_mle:.3f} (80% heads)\")\nprint(f\"Prior:                   Beta(alpha={alpha_prior}, beta={beta_prior}) -> Prior Mode = 0.500\")\nprint(f\"Posterior Distribution:  Beta(alpha={alpha_post:.1f}, beta={beta_post:.1f})\")\nprint(f\"MAP Estimate (Mode):     theta = {theta_map:.3f} (shrunk toward prior)\")\nprint(f\"Bayes Posterior Mean:    theta = {theta_bayes_mean:.3f}\")\n\n# Numerical evaluation of 95% Equal-Tailed Credible Interval\n# Discretise theta in [0, 1] to calculate exact CDF\nthetas = np.linspace(0.001, 0.999, 10000)\n# Unnormalised Beta PDF: theta^(a-1) * (1-theta)^(b-1)\nlog_pdf = (alpha_post - 1) * np.log(thetas) + (beta_post - 1) * np.log(1 - thetas)\npdf = np.exp(log_pdf - np.max(log_pdf))\npdf /= np.trapz(pdf, thetas)\ncdf = np.cumsum(pdf) * (thetas[1] - thetas[0])\n\nci_lower = thetas[np.searchsorted(cdf, 0.025)]\nci_upper = thetas[np.searchsorted(cdf, 0.975)]\n\nprint(f\"\\n95% Bayesian Credible Interval: [{ci_lower:.3f}, {ci_upper:.3f}]\")\nprint(f\"Predictive Probability for Next Flip Heads:\")\nprint(f\"  Under MLE:        {p_next_heads_mle:.3f}\")\nprint(f\"  Under Full Bayes: {p_next_heads_bayes:.3f} (accounts for small sample size)\")\n",
+    keyPoints: [
+      "MLE finds the parameter value that maximises data likelihood alone, which overfits severely on small samples.",
+      "MAP incorporates a prior distribution, finding the posterior mode; it is mathematically equivalent to penalised regularisation (L2 = Gaussian prior, L1 = Laplace prior).",
+      "Full Bayesian estimation avoids single point estimates, maintaining the full posterior distribution and integrating over parameter uncertainty for predictions.",
+      "As sample size N approaches infinity, the data likelihood dominates the prior, causing MLE, MAP, and Bayesian posterior mean to converge to the same value."
+    ],
+    pitfalls: [
+      "Treating the MAP estimate as a full Bayesian solution: MAP is still a point estimate that discards parameter uncertainty and variance.",
+      "Using improper priors with MAP without verifying posterior propriety: Maximising an unnormalised objective with ill-defined priors can yield divergent solutions.",
+      "Assuming priors are purely subjective: Priors can represent empirical historical data, physical constraints (e.g. non-negative mass), or regularisation inductors."
+    ],
+    quiz: [
+      {
+        "q": "What machine learning regularisation technique is mathematically equivalent to MAP estimation with a zero-mean Gaussian prior?",
+        "o": [
+          "L2 regularisation (Ridge regression / weight decay)",
+          "L1 regularisation (Lasso regression)",
+          "Dropout regularisation",
+          "Early stopping"
+        ],
+        "a": 0,
+        "why": "The negative log-probability of a Gaussian prior is proportional to the squared Euclidean norm ||theta||_2^2, which corresponds directly to an L2 Ridge penalty."
+      },
+      {
+        "q": "Why does full Bayesian estimation produce superior predictive uncertainty compared to MAP estimation?",
+        "o": [
+          "Because full Bayesian prediction integrates over the entire posterior parameter distribution p(theta | D), whereas MAP reduces the posterior to a single point estimate (the mode)",
+          "Because Bayesian estimation never uses Bayes' theorem",
+          "Because MAP requires GPU matrix multiplication whereas Bayes runs on CPU",
+          "Because full Bayesian models have zero parameters"
+        ],
+        "a": 0,
+        "why": "MAP commits to a single parameter vector, ignoring how wide or flat the posterior surface is. Full Bayesian inference marginalises over all plausible parameters, preserving epistemic uncertainty in predictions."
+      },
+      {
+        "q": "As sample size N grows toward infinity, what happens to the relationship between MLE and MAP estimates?",
+        "o": [
+          "The likelihood grows proportionally with N while the prior remains constant, causing the MAP estimate to converge asymptotically to the MLE estimate",
+          "The prior overpowers the likelihood and forces the estimate to the prior mean",
+          "The MAP estimate diverges to infinity",
+          "The difference between them becomes permanently fixed at 1.0"
+        ],
+        "a": 0,
+        "why": "Data evidence scales with N. For large datasets, the likelihood dominates the prior term in log-space, making MAP and MLE numerically identical in the large-sample limit."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "maximum-likelihood-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "maximum-likelihood-estimation",
+      "conjugate-priors-beta-binomial",
+      "ridge_regression",
+      "bayesian_linear_regression"
+    ],
+    keywords: "map estimation maximum a posteriori bayesian estimation prior posterior predictive ridge lasso regularisation conjugate prior"
+  },
+  {
+    id: "estimator-properties-bias-consistency-cramer-rao-bound",
+    short: "Estimator Properties",
+    title: "Estimator properties: bias, consistency, Cramér–Rao bound",
+    task: "concepts",
+    module: "Estimation",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Statistical estimation evaluates how empirical sample statistics infer unknown true population parameters. The four fundamental criteria of estimator quality are Bias (systematic deviation from the true parameter), Consistency (convergence in probability to the truth as sample size approaches infinity), Efficiency (achieving the lowest possible variance among unbiased estimators), and Sufficiency. The Cramér–Rao Lower Bound (CRLB) establishes the theoretical lower limit on estimator variance, governed by the inverse of the Fisher Information matrix I(\\theta)^{-1}.",
+    lead: "When estimating the variance of a population from n sample points, why do statisticians divide the sum of squared deviations by n-1 instead of n? Why does an estimator that works well on 50 samples fail to converge as you gather 50,000 samples? Evaluating estimators requires a rigorous mathematical vocabulary: bias, consistency, efficiency, and asymptotic normality. The Cramér–Rao inequality sets the ultimate speed limit: no matter how clever your estimator is, its precision is physically bounded by the information contained in the data.",
+    intuition: [
+      "Bias vs Consistency:\n- Bias is a finite-sample property: across repeated hypothetical experiments of fixed size n, does your estimator hit the bullseye on average? Bias(theta_hat) = E[theta_hat] - theta.\n- Consistency is an asymptotic property: as sample size n approaches infinity, does the distribution of theta_hat collapse to a single point mass on the exact true value? plim_{n -> inf} theta_hat = theta.\n- An estimator can be biased in finite samples but completely consistent. A famous example is the maximum likelihood estimator for sample variance: S_n^2 = (1/n) sum (x_i - x_bar)^2. It is biased by a factor of (n-1)/n, but as n -> inf, (n-1)/n -> 1, making it fully consistent.",
+      "Efficiency and the Cramér–Rao Bound: If two candidate estimators are both unbiased, which one should you choose? The one with smaller variance. But can variance be made arbitrarily small? No! The Cramér–Rao Lower Bound (CRLB) proves that for any unbiased estimator, Var(theta_hat) >= 1 / I_n(theta), where I_n(theta) is Fisher Information. An estimator that achieves this theoretical minimum variance is called an efficient estimator or Minimum Variance Unbiased Estimator (MVUE).",
+      "The Bias-Variance Trade-off in Estimation: An unbiased estimator is not always the best choice. In many practical settings, introducing a small amount of bias (e.g. Ridge shrinkage, empirical Bayes shrinkage) reduces variance so dramatically that the total Mean Squared Error (MSE = Bias^2 + Variance) is substantially smaller than any unbiased estimator."
+    ],
+    analogy: "Think of an archer shooting arrows at a target. Bias is how far the centre of the arrow cluster is from the bullseye. Variance is the scatter or spread of the arrows. Consistency means as the archer takes more and more shots, the cluster tightens infinitesimally toward the exact centre. The Cramér–Rao bound is the atmospheric wind limit: physics dictates that even a perfect robotic archer cannot cluster tighter than the fundamental aerodynamic turbulence of the arrows.",
+    steps: [
+      {
+        "title": "Define the estimator as a function of random samples",
+        "desc": "Express theta_hat = g(X_1, ..., X_n) as a formal random variable.",
+        "detail": "Determine the functional mapping from sample observations to parameter space. Characterise its sampling distribution under repeated draws."
+      },
+      {
+        "title": "Evaluate expectation and calculate bias",
+        "desc": "Compute E[theta_hat] and check if it equals the true parameter theta.",
+        "detail": "Calculate Bias(theta_hat) = E[theta_hat] - theta. If bias is identically zero for all sample sizes n, the estimator is strictly unbiased."
+      },
+      {
+        "title": "Verify consistency as sample size approaches infinity",
+        "desc": "Demonstrate convergence in probability to the true parameter theta.",
+        "detail": "Check whether lim_{n -> inf} Bias(theta_hat_n) = 0 and lim_{n -> inf} Var(theta_hat_n) = 0. If Mean Squared Error vanishes asymptotically, consistency is guaranteed by Chebyshev's inequality."
+      },
+      {
+        "title": "Compute Fisher Information matrix",
+        "desc": "Evaluate the expected curvature of the log-likelihood function.",
+        "detail": "Calculate I_n(theta) = -n * E[d^2/d theta^2 log f(X; theta)]. Fisher Information quantifies the amount of statistical information sample data carries about the unknown parameter."
+      },
+      {
+        "title": "Evaluate efficiency against the Cramér–Rao Lower Bound",
+        "desc": "Compare the variance of theta_hat against the theoretical bound 1 / I_n(theta).",
+        "detail": "Compute efficiency ratio e(theta_hat) = [1 / I_n(theta)] / Var(theta_hat). If the ratio equals 1.0, the estimator is efficient and achieves the CRLB."
+      }
+    ],
+    math: [
+      {
+        "h": "Bias, Variance, and Mean Squared Error Decomposition",
+        "tex": "\\text{Bias}(\\hat{\\theta}) = \\mathbb{E}[\\hat{\\theta}] - \\theta, \\qquad \\text{MSE}(\\hat{\\theta}) = \\mathbb{E}\\left[(\\hat{\\theta} - \\theta)^2\\right] = \\text{Var}(\\hat{\\theta}) + \\left[\\text{Bias}(\\hat{\\theta})\\right]^2",
+        "p": "Mean Squared Error decomposes cleanly into variance (precision of the estimator across repeated samples) plus squared bias (systematic error). An estimator that sacrifices unbiasedness can achieve lower total MSE if the variance reduction outweighs the squared bias penalty."
+      },
+      {
+        "h": "Fisher Information Formulation",
+        "tex": "\\mathcal{I}_n(\\theta) = n \\, \\mathbb{E}\\left[ \\left(\\frac{\\partial \\log f(X; \\theta)}{\\partial \\theta}\\right)^2 \\right] = -n \\, \\mathbb{E}\\left[ \\frac{\\partial^2 \\log f(X; \\theta)}{\\partial \\theta^2} \\right]",
+        "p": "Fisher Information measures the expected curvature (Hessian) of the log-likelihood function. If the log-likelihood is sharply curved around the true parameter, small deviations in parameter space cause steep drops in likelihood, meaning observations carry high information about \\theta."
+      },
+      {
+        "h": "The Cramér–Rao Lower Bound (CRLB)",
+        "tex": "\\text{Var}(\\hat{\\theta}) \\ge \\frac{\\left(1 + b'(\\theta)\\right)^2}{\\mathcal{I}_n(\\theta)}, \\qquad \\text{For unbiased estimators } (b(\\theta) = 0): \\; \\text{Var}(\\hat{\\theta}) \\ge \\frac{1}{\\mathcal{I}_n(\\theta)}",
+        "p": "The Cramér–Rao inequality sets a fundamental lower bound on the variance of any estimator. For unbiased estimators, no valid statistical procedure can produce a variance smaller than the reciprocal of Fisher Information. Maximum likelihood estimators achieve the CRLB asymptotically as n \\to \\infty."
+      }
+    ],
+    code: "\"\"\"\nEstimator Properties Simulation\nDemonstrating finite-sample bias of sample variance, asymptotic consistency,\nand Fisher Information vs Cramér-Rao Lower Bound for Poisson data.\n\"\"\"\n\nimport numpy as np\n\n# 1. Finite-Sample Bias of Variance Estimator (Bessel's Correction)\n# Compare S_biased (1/n) vs S_unbiased (1/(n-1)) across 20,000 Monte Carlo trials\ntrue_sigma2 = 25.0  # True variance\ntrue_mu = 100.0\nsample_size = 5     # Small sample size where bias is pronounced\nnum_simulations = 20000\n\nnp.random.seed(42)\nsamples = np.random.normal(loc=true_mu, scale=np.sqrt(true_sigma2), size=(num_simulations, sample_size))\n\n# Sample variance with denominator n (MLE formula)\ns2_mle = np.var(samples, axis=1, ddof=0)\n# Sample variance with denominator n - 1 (Unbiased formula)\ns2_unbiased = np.var(samples, axis=1, ddof=1)\n\nmean_s2_mle = np.mean(s2_mle)\nmean_s2_unbiased = np.mean(s2_unbiased)\n\ntheoretical_mle_bias = -true_sigma2 / sample_size\nempirical_mle_bias = mean_s2_mle - true_sigma2\n\nprint(f\"=== 1. Sample Variance Bias (n = {sample_size}, True Variance = {true_sigma2}) ===\")\nprint(f\"Mean MLE Estimator (ddof=0):     {mean_s2_mle:.3f} (Biased: underestimates variance)\")\nprint(f\"Empirical MLE Bias:              {empirical_mle_bias:.3f} | Theoretical Bias: {theoretical_mle_bias:.3f}\")\nprint(f\"Mean Unbiased Estimator (ddof=1):{mean_s2_unbiased:.3f} (Unbiased!)\")\n\n# 2. Asymptotic Consistency Demonstration\n# Show that as n increases, the bias and variance of the MLE estimator vanish toward 0\nsample_sizes = [5, 20, 100, 1000]\nprint(\"\\n=== 2. Consistency: Asymptotic Behaviour as n -> Infinity ===\")\nfor n in sample_sizes:\n    s = np.random.normal(loc=true_mu, scale=np.sqrt(true_sigma2), size=(5000, n))\n    v = np.var(s, axis=1, ddof=0)\n    bias = np.mean(v) - true_sigma2\n    mse = np.mean((v - true_sigma2)**2)\n    print(f\"  n = {n:4d} | Bias: {bias:7.3f} | Variance: {np.var(v):7.3f} | MSE: {mse:7.3f}\")\n\n# 3. Fisher Information and Cramér-Rao Lower Bound for Poisson(lambda)\n# For Poisson(lambda), f(x) = exp(-lambda) * lambda^x / x!\n# Log-likelihood: -lambda + x*log(lambda) - log(x!)\n# d/d_lambda = -1 + x/lambda, d^2/d_lambda^2 = -x / lambda^2\n# I_n(lambda) = -n * E[-X / lambda^2] = n * lambda / lambda^2 = n / lambda\n# CRLB = 1 / I_n(lambda) = lambda / n\ntrue_lambda = 4.0\nn_poisson = 15\ncrlb = true_lambda / n_poisson\n\n# The sample mean X_bar is an unbiased estimator for lambda:\npoisson_samples = np.random.poisson(lam=true_lambda, size=(50000, n_poisson))\nsample_means = np.mean(poisson_samples, axis=1)\n\nempirical_var_mean = np.var(sample_means)\nefficiency = crlb / empirical_var_mean\n\nprint(f\"\\n=== 3. Fisher Information & Cramér-Rao Lower Bound (Poisson lambda={true_lambda}, n={n_poisson}) ===\")\nprint(f\"Fisher Information I_n(lambda): {n_poisson / true_lambda:.3f}\")\nprint(f\"Theoretical CRLB Lower Bound:   {crlb:.5f}\")\nprint(f\"Empirical Var(X_bar):           {empirical_var_mean:.5f}\")\nprint(f\"Estimator Efficiency:           {efficiency:.3f} (1.0 = reaches CRLB speed limit exactly!)\")\n",
+    keyPoints: [
+      "Bias measures systematic error in finite samples: E[theta_hat] - theta.",
+      "Consistency measures asymptotic convergence in probability to the truth: as sample size grows, the estimator converges to the true parameter.",
+      "Fisher Information measures the log-likelihood curvature; higher curvature means samples carry greater parameter precision.",
+      "The Cramér–Rao Lower Bound defines the mathematical minimum achievable variance for any unbiased estimator: Var(theta_hat) >= 1 / I_n(theta)."
+    ],
+    pitfalls: [
+      "Assuming an unbiased estimator is always superior to a biased one: Biased estimators (like Ridge regression) often achieve lower total Mean Squared Error by dramatically reducing variance.",
+      "Confusing unbiasedness with consistency: An estimator can be unbiased yet inconsistent (e.g. taking only the very first sample X_1 regardless of total sample size n).",
+      "Applying the standard CRLB to biased estimators without adjustment: If an estimator has non-zero bias b(theta), the lower bound is scaled by [1 + b'(theta)]^2."
+    ],
+    quiz: [
+      {
+        "q": "Why does Bessel's correction divide by n-1 instead of n in sample variance calculation?",
+        "o": [
+          "Because deviations are measured from the sample mean rather than the true population mean, which absorbs one degree of freedom and causes division by n to systematically underestimate population variance by a factor of (n-1)/n",
+          "Because sample variance is an exponential distribution",
+          "Because computers cannot divide by even numbers",
+          "To make the variance equal to the standard deviation"
+        ],
+        "a": 0,
+        "why": "Using the sample mean x_bar instead of true mean mu minimises the sum of squared deviations around x_bar, underestimating true variance by sigma^2 / n. Dividing by n-1 restores exact unbiasedness."
+      },
+      {
+        "q": "What does the Cramér–Rao Lower Bound (CRLB) establish for an unbiased estimator?",
+        "o": [
+          "The theoretical minimum variance that any unbiased estimator can possibly achieve, equal to the reciprocal of the Fisher Information 1 / I_n(theta)",
+          "The maximum number of features allowed in a regression model",
+          "The probability that a hypothesis test makes a Type I error",
+          "The maximum execution time of a gradient descent algorithm"
+        ],
+        "a": 0,
+        "why": "The CRLB sets a strict mathematical lower limit on variance. An unbiased estimator that attains this bound cannot be improved in terms of variance and is termed efficient."
+      },
+      {
+        "q": "Can an estimator be biased yet consistent?",
+        "o": [
+          "Yes: an estimator can have non-zero bias for small sample sizes n, provided that its bias and variance both shrink to zero as n approaches infinity",
+          "No: any estimator with bias is permanently barred from being consistent",
+          "Only when the data follows a uniform distribution",
+          "Only if the Fisher Information is negative"
+        ],
+        "a": 0,
+        "why": "Consistency requires plim theta_hat = theta as n -> inf. Many maximum likelihood estimators (such as MLE sample variance) have finite-sample bias of order O(1/n), which vanishes asymptotically."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "sampling-and-standard-error",
+      "maximum-likelihood-estimation"
+    ],
+    related: [
+      "sampling-and-standard-error",
+      "bias-variance-tradeoff",
+      "maximum-likelihood-estimation",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    keywords: "estimator properties bias consistency efficiency cramer rao lower bound crlb fisher information mvue asymptotic variance"
+  },
+  {
+    id: 'anova-and-post-hoc-tests',
+    short: 'ANOVA and Post-Hoc Tests',
+    title: r`ANOVA and Post-Hoc Tests`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Compare means across three or more groups simultaneously with the F-test, and pinpoint specific differences using Tukey's HSD post-hoc procedure.`,
+    lead: r`Running repeated pair-wise t-tests across multiple groups rapidly inflates the false alarm rate to unacceptable levels. Analysis of Variance (ANOVA) solves this multi-group dilemma with a single omnibus F-test that partitions total variability into between-group signal and within-group noise. When the omnibus test reveals significant variance, post-hoc procedures like Tukey's Honest Significant Difference (HSD) safely isolate which specific pairs differ.`,
+    intuition: [
+      r`Imagine an e-commerce platform testing three landing page layouts: A, B, and C. They recruit 30 users per layout (90 users total) and measure session duration in seconds. Average engagement is 45.2 seconds for Layout A, 49.1 seconds for Layout B, and 54.0 seconds for Layout C.`,
+      r`A novice analyst might test Layout A vs B, A vs C, and B vs C with three separate two-sample $t$-tests. However, conducting three independent tests at a 5% false positive threshold gives a combined risk of at least one false alarm of $1 - (1 - 0.05)^3 \approx 14.3\%$. With 10 groups, there are 45 pairwise comparisons, pushing the chance of at least one false discovery over 90%!`,
+      r`ANOVA prevents this multiplicity trap by evaluating all groups at once. It asks a single question: is the variance between group averages substantially larger than the natural random variance among users within each group? For our landing page data, the ratio of between-group variance to within-group variance produces an $F$-statistic of 10.18, with an omnibus p-value of $0.0001$. This establishes that the layouts do not perform identically. Next, Tukey's HSD examines the pairs with family-wise error protection: it reveals that Layout C significantly outperforms Layout A ($p < 0.0001$) and Layout B ($p = 0.0399$), while Layouts A and B do not significantly differ from each other ($p = 0.1114$).`,
+    ],
+    analogy: r`ANOVA is like a stadium metal detector that first checks whether anyone in a crowd is carrying metal; only when the master alarm rings do guards search individuals one by one.`,
+    steps: [
+      r`Define the omnibus hypotheses: $H_0: \mu_1 = \mu_2 = \dots = \mu_K$ versus $H_1$: at least one group mean differs.`,
+      r`Verify ANOVA assumptions: independent observations, approximately normal distributions within each group, and homogeneity of variances (homoscedasticity).`,
+      r`Calculate the sum of squares between groups ($SS_B$) and sum of squares within groups ($SS_W$).`,
+      r`Divide each sum of squares by its respective degrees of freedom to obtain Mean Square Between ($MS_B$) and Mean Square Within ($MS_W$).`,
+      r`Compute the variance ratio $F = MS_B / MS_W$ and obtain the omnibus p-value from the $F(K-1, N-K)$ distribution.`,
+      r`If the omnibus test rejects $H_0$, run Tukey's HSD to identify which pairwise differences are statistically significant while preserving family-wise error control.`,
+    ],
+    math: [
+      {
+        h: 'Total Variance Partitioning',
+        tex: r`$$SS_T = SS_B + SS_W \implies \sum_{i=1}^K \sum_{j=1}^{n_i} (X_{ij} - \bar{X}_{\cdot\cdot})^2 = \sum_{i=1}^K n_i (\bar{X}_{i\cdot} - \bar{X}_{\cdot\cdot})^2 + \sum_{i=1}^K \sum_{j=1}^{n_i} (X_{ij} - \bar{X}_{i\cdot})^2$$`,
+        p: r`Here $X_{ij}$ is observation $j$ in group $i$, $\bar{X}_{i\cdot}$ is the sample mean of group $i$, $\bar{X}_{\cdot\cdot}$ is the grand mean across all observations, and $n_i$ is group size. The total sum of squares $SS_T$ splits cleanly into between-group explained variation $SS_B$ and within-group residual variation $SS_W$.`,
+      },
+      {
+        h: 'The ANOVA F-Statistic',
+        tex: r`$$F = \frac{MS_B}{MS_W} = \frac{SS_B / (K - 1)}{SS_W / (N - K)} \sim F(K - 1, \, N - K)$$`,
+        p: r`Mean squares divide sums of squares by their degrees of freedom: $K - 1$ for groups and $N - K$ for residuals. Under the null hypothesis of equal means, both $MS_B$ and $MS_W$ provide independent, unbiased estimates of the common population variance $\sigma^2$, yielding $F \approx 1$. When true differences exist between group means, $MS_B$ inflates, pushing $F \gg 1$.`,
+      },
+      {
+        h: 'Tukey\'s Honest Significant Difference (HSD)',
+        tex: r`$$q = \frac{\bar{X}_i - \bar{X}_j}{\sqrt{MS_W / n}} \sim q(K, \, N - K) \implies \text{HSD} = q_{\alpha, K, N-K} \sqrt{\frac{MS_W}{n}}$$`,
+        p: r`Tukey's post-hoc procedure evaluates studentised range statistics $q$ across all group pairs. Comparing mean differences against the critical HSD threshold guarantees that the family-wise error rate across all $K(K-1)/2$ pairwise comparisons is strictly capped at $\alpha$.`,
+      },
+    ],
+    keyPoints: [
+      r`ANOVA prevents multiple-testing error inflation by evaluating group differences in a single omnibus test.`,
+      r`Rejecting the null hypothesis in ANOVA indicates that at least one group mean differs, but does not identify which specific groups drive the difference.`,
+      r`Tukey's HSD controls the family-wise error rate across all pairwise contrasts while providing greater statistical power than Bonferroni correction.`,
+      r`When group variances are substantially unequal, standard ANOVA breaks down; Welch's ANOVA should be used instead.`,
+    ],
+    pitfalls: [
+      r`Conducting multiple independent two-sample $t$-tests instead of ANOVA, drastically inflating false discovery rates.`,
+      r`Running post-hoc pairwise comparisons after a non-significant omnibus ANOVA $F$-test (data dredging).`,
+      r`Ignoring severe heteroscedasticity: when group sample sizes are unequal and variances differ, standard ANOVA false positive rates become untrustworthy.`,
+      r`Using standard one-way ANOVA on repeated-measures data, failing to remove between-subject variance.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 30
+
+# User engagement duration (seconds) across three landing page layouts
+layout_a = rng.normal(loc=45.0, scale=10.0, size=n)
+layout_b = rng.normal(loc=48.0, scale=10.0, size=n)
+layout_c = rng.normal(loc=55.0, scale=10.0, size=n)
+
+# 1. One-way ANOVA omnibus test
+f_stat, p_anova = stats.f_oneway(layout_a, layout_b, layout_c)
+
+# 2. Tukey's HSD post-hoc test
+tukey = stats.tukey_hsd(layout_a, layout_b, layout_c)
+
+print(f"ANOVA F-statistic: {f_stat:.3f}, p-value: {p_anova:.4e}")
+print(f"Layout A mean: {np.mean(layout_a):.1f}s, B: {np.mean(layout_b):.1f}s, C: {np.mean(layout_c):.1f}s")
+print(f"Tukey p-values -> A vs B: {tukey.pvalue[0, 1]:.4f}")
+print(f"                 A vs C: {tukey.pvalue[0, 2]:.4e}")
+print(f"                 B vs C: {tukey.pvalue[1, 2]:.4f}")`,
+    quiz: [
+      {
+        q: r`Why is conducting multiple independent two-sample $t$-tests problematic when comparing five experimental groups?`,
+        o: [
+          r`Because Student's t-distribution cannot handle more than 20 observations`,
+          r`Because running 10 pairwise tests compounds the probability of making at least one Type I error to over 40%`,
+          r`Because two-sample t-tests cannot compute standard errors`,
+          r`Because degrees of freedom become negative`,
+        ],
+        a: 1,
+        why: r`With 5 groups there are $\binom{5}{2} = 10$ pairs. Testing each at $\alpha = 0.05$ produces an overall family-wise error rate of $1 - (1 - 0.05)^{10} \approx 40.1\%$.`,
+      },
+      {
+        q: r`Under the null hypothesis that all group means are identical ($\mu_1 = \mu_2 = \dots = \mu_K$), what value is the ANOVA $F$-statistic expected to take on average?`,
+        o: [
+          r`Approximately 0`,
+          r`Approximately 1`,
+          r`Equal to the sample size $N$`,
+          r`Equal to the number of groups $K$`,
+        ],
+        a: 1,
+        why: r`Under $H_0$, both between-group mean square $MS_B$ and within-group mean square $MS_W$ estimate the same population variance $\sigma^2$, so their ratio $F = MS_B / MS_W \approx 1$.`,
+      },
+      {
+        q: r`What is the primary role of a post-hoc procedure like Tukey's HSD following a significant ANOVA test?`,
+        o: [
+          r`To determine whether the data is normally distributed`,
+          r`To identify exactly which specific pairs of group means differ while controlling the family-wise error rate`,
+          r`To recalculate the degrees of freedom for the F-statistic`,
+          r`To transform skewed data into Gaussian distributions`,
+        ],
+        a: 1,
+        why: r`The omnibus ANOVA test only indicates that at least one group mean differs. Tukey's HSD isolates the specific differing pairs without inflating the false positive rate.`,
+      },
+      {
+        q: r`An experiment compares 4 treatments with 25 participants per treatment (total $N = 100$). What are the numerator and denominator degrees of freedom for the ANOVA $F$-test?`,
+        o: [
+          r`3 and 96`,
+          r`4 and 96`,
+          r`3 and 100`,
+          r`4 and 25`,
+        ],
+        a: 0,
+        why: r`Numerator degrees of freedom are $K - 1 = 4 - 1 = 3$. Denominator degrees of freedom are $N - K = 100 - 4 = 96$.`,
+      },
+    ],
+    usedBy: ['feature-selection', 'decision_tree_regressor'],
+    prereq: ['hypothesis-testing-and-p-values', 'z-test-and-t-tests', 'type-i-ii-errors-power-and-sample-size'],
+    related: ['non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis', 'multiple-testing-bonferroni-holm-benjamini-hochberg', 'confidence-intervals'],
+    keywords: 'anova analysis of variance f-test f-statistic tukey hsd post-hoc between-group within-group one-way anova',
+  },
+  {
+    id: 'non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis',
+    short: 'Non-Parametric Rank Tests',
+    title: r`Non-Parametric Tests: Mann–Whitney, Wilcoxon, Kruskal–Wallis`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Replace fragile parametric assumptions with robust rank-based inference for skewed, heavy-tailed or ordinal data.`,
+    lead: r`When data violates normality through heavy skewness, severe outliers or ordinal scales, classical t-tests and ANOVA produce unreliable p-values and lose statistical power. Non-parametric rank tests discard absolute numerical values in favour of relative order, providing exact, distribution-free hypothesis tests. The Mann–Whitney U test, Wilcoxon signed-rank test, and Kruskal–Wallis H-test form the complete non-parametric counterpart to two-sample, paired, and multi-group parametric inference.`,
+    intuition: [
+      r`Consider measuring web service response times. Out of 35 requests, 34 complete in 40 to 90 milliseconds, but one request suffers a database lock timeout and hangs for 45,000 milliseconds (45 seconds). In a standard parametric $t$-test, this single massive outlier drastically distorts both the sample mean and the sample standard deviation, inflating the denominator and destroying our ability to detect genuine improvements in typical user experience.`,
+      r`Non-parametric tests solve this by replacing raw milliseconds with ranks: the fastest request gets rank 1, the second fastest rank 2, and the 45,000 ms timeout simply receives rank 35. Whether that timeout took 200 ms or 200,000 ms, its rank is exactly 35. By working with ranks, extreme values can never pull the test statistic off course.`,
+      r`If we have two independent services, the Mann–Whitney $U$ test pools all observations, ranks them from 1 to $N$, and sums the ranks for each service. If one service systematically responds faster than the other, its rank sum will be much smaller than expected by chance. Similarly, for before-and-after paired data, the Wilcoxon signed-rank test ranks the absolute differences, attaching positive or negative signs. And for three or more independent groups, the Kruskal–Wallis $H$-test generalises rank sums to evaluate whether any group dominates stochastically.`,
+    ],
+    analogy: r`Non-parametric tests are like ranking marathon runners by their finish place rather than their stopwatch times: a runner who stumbles and finishes an hour late does not disrupt who came first, second, and third.`,
+    steps: [
+      r`Inspect the measurement scale and distribution: choose rank tests when data is ordinal, heavily skewed, or contaminated with outliers that invalidate normality.`,
+      r`Select the appropriate rank design: Mann–Whitney $U$ for two independent groups, Wilcoxon signed-rank for paired samples, or Kruskal–Wallis $H$ for three or more independent groups.`,
+      r`Pool observations and assign ascending integer ranks from 1 to $N$, replacing ties with their average rank.`,
+      r`Compute the test statistic by summing ranks per group (or summing positive and negative ranks of paired differences).`,
+      r`Evaluate the p-value: using exact permutation distributions for small sample sizes, or asymptotic normal or chi-square approximations for $N > 20$.`,
+      r`Interpret the test as an assessment of stochastic dominance or median shift under the assumption of similarly shaped distributions.`,
+    ],
+    math: [
+      {
+        h: 'Mann–Whitney U Statistic (Two Independent Samples)',
+        tex: r`$$U_1 = R_1 - \frac{n_1(n_1 + 1)}{2}, \qquad U_2 = n_1 n_2 - U_1, \qquad U = \min(U_1, U_2)$$`,
+        p: r`Here $R_1$ is the sum of ranks for group 1, and $n_1, n_2$ are sample sizes. The statistic $U_1$ directly counts the number of times an observation from group 1 is smaller than an observation from group 2. Under the null hypothesis of equal distributions, $E[U] = n_1 n_2 / 2$ and $\text{Var}(U) = n_1 n_2 (n_1 + n_2 + 1) / 12$.`,
+      },
+      {
+        h: 'Wilcoxon Signed-Rank Statistic (Paired Samples)',
+        tex: r`$$D_i = X_{1,i} - X_{2,i}, \qquad W = \min\left(\sum_{D_i > 0} \text{rank}(|D_i|), \, \sum_{D_i < 0} \text{rank}(|D_i|)\right)$$`,
+        p: r`For paired observations, non-zero differences $D_i$ are ranked by absolute magnitude $|D_i|$. Ranks for positive differences and negative differences are summed separately. Under the null hypothesis of symmetric, zero-median differences, positive and negative rank sums are balanced with expectation $E[W] = n(n + 1) / 4$.`,
+      },
+      {
+        h: 'Kruskal–Wallis H-Statistic (K Independent Groups)',
+        tex: r`$$H = \frac{12}{N(N + 1)} \sum_{k=1}^K \frac{R_k^2}{n_k} - 3(N + 1) \sim \chi^2(K - 1)$$`,
+        p: r`Here $N = \sum n_k$ is the total pooled sample size, and $R_k$ is the rank sum of the $k$-th group. The statistic $H$ measures how far average group ranks deviate from the overall expected average rank $(N + 1) / 2$. Under $H_0$, $H$ converges asymptotically to a chi-square distribution with $K - 1$ degrees of freedom.`,
+      },
+    ],
+    keyPoints: [
+      r`Non-parametric tests do not assume Gaussian distributions; they operate on ranks, making them invariant to monotonic transformations.`,
+      r`The Mann–Whitney U test tests whether one distribution stochastically dominates another ($P(X > Y) \ne 0.5$); it is only a test of medians if distributions share identical shape and spread.`,
+      r`The asymptotic relative efficiency of the Mann–Whitney test compared to Student's t-test is 95.5% on perfect Gaussian data, and can be substantially higher on heavy-tailed distributions.`,
+      r`When sample sizes are small ($n < 20$), exact permutation p-values should be computed rather than normal approximations.`,
+    ],
+    pitfalls: [
+      r`Claiming a significant Mann–Whitney U test proves a difference in medians when group variances or distributional shapes differ substantially.`,
+      r`Discarding zero differences in the Wilcoxon signed-rank test without realising it reduces effective sample size and can induce bias.`,
+      r`Using parametric tests on ordinal survey ratings (e.g. Likert 1–5 scales) where spacing between numbers is not metric or uniform.`,
+      r`Forgetting that non-parametric tests still require independent and identically distributed observations within groups.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 35
+
+# Skewed latency distributions for two services (exponential)
+service_a = rng.exponential(scale=150.0, size=n)
+service_b = rng.exponential(scale=80.0, size=n)
+
+# 1. Mann-Whitney U test (two independent samples)
+u_stat, p_mann = stats.mannwhitneyu(service_b, service_a, alternative='less')
+
+# 2. Wilcoxon signed-rank test (paired benchmark on same 35 workload queries)
+latency_before = rng.exponential(scale=120.0, size=n)
+latency_after = latency_before * rng.uniform(0.70, 0.95, size=n)
+w_stat, p_wilc = stats.wilcoxon(latency_after, latency_before, alternative='less')
+
+# 3. Kruskal-Wallis H-test (three independent groups)
+service_c = rng.exponential(scale=200.0, size=n)
+h_stat, p_kruskal = stats.kruskal(service_a, service_b, service_c)
+
+print(f"Mann-Whitney U: stat={u_stat:.1f}, p={p_mann:.4f}")
+print(f"Wilcoxon signed-rank: stat={w_stat:.1f}, p={p_wilc:.4e}")
+print(f"Kruskal-Wallis H: stat={h_stat:.3f}, p={p_kruskal:.4e}")`,
+    quiz: [
+      {
+        q: r`Why are rank-based tests like Mann–Whitney and Wilcoxon robust against severe outliers?`,
+        o: [
+          r`Because outliers are deleted before calculation begins`,
+          r`Because data points are converted into ranks, bounding the influence of any extreme value to its ordinal position`,
+          r`Because rank tests automatically apply a log transform`,
+          r`Because ranks follow a Student's t-distribution`,
+        ],
+        a: 1,
+        why: r`Converting measurements to ranks ensures that whether an extreme value is 100 or 1,000,000, its impact on the test statistic is limited strictly to its position in the sorted list.`,
+      },
+      {
+        q: r`What does the Mann–Whitney $U$ test formally evaluate without making any distributional shape assumptions?`,
+        o: [
+          r`Equality of population variances`,
+          r`Stochastic dominance: the probability that a random draw from one distribution exceeds a draw from the other ($P(X > Y) = 0.5$)`,
+          r`Strict equality of sample means`,
+          r`Linear correlation between two variables`,
+        ],
+        a: 1,
+        why: r`Mann–Whitney U evaluates stochastic dominance. It only reflects a pure shift in population medians if one assumes the two distributions possess identical shape and variance.`,
+      },
+      {
+        q: r`How does the statistical efficiency of the Mann–Whitney test compare to Student's $t$-test on purely Gaussian data?`,
+        o: [
+          r`It has an asymptotic relative efficiency of roughly 95.5% ($3/\pi$), sacrificing minimal power`,
+          r`It loses more than 50% of statistical power`,
+          r`It cannot be computed on Gaussian data`,
+          r`It always has higher power than the t-test on Gaussian data`,
+        ],
+        a: 0,
+        why: r`The Hodges–Lehmann asymptotic relative efficiency (ARE) of Mann–Whitney relative to the t-test on normal data is $3/\pi \approx 0.955$, meaning very little efficiency is lost even when normality holds.`,
+      },
+      {
+        q: r`Which non-parametric test serves as the distribution-free counterpart to one-way ANOVA for three or more independent groups?`,
+        o: [
+          r`Wilcoxon signed-rank test`,
+          r`Kruskal–Wallis H-test`,
+          r`McNemar's test`,
+          r`Pearson's chi-square test`,
+        ],
+        a: 1,
+        why: r`The Kruskal–Wallis H-test generalises the two-sample Mann–Whitney rank test to three or more independent groups, evaluating whether group rank sums differ significantly.`,
+      },
+    ],
+    usedBy: ['feature-selection', 'decision_tree_classifier'],
+    prereq: ['hypothesis-testing-and-p-values', 'z-test-and-t-tests', 'random-variables-and-distributions'],
+    related: ['anova-and-post-hoc-tests', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling', 'bootstrap-and-jackknife'],
+    keywords: 'non-parametric mann whitney wilcoxon signed rank kruskal wallis ranks median test distribution free',
+  },
 ];
