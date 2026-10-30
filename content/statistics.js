@@ -6176,4 +6176,1072 @@ print(f"95% Credible Interval: [{ci_lower:.3f}, {ci_upper:.3f}]")`,
     related: ['bayesian_linear_regression', 'confidence-intervals', 'maximum-likelihood-estimation'],
     keywords: 'conjugate priors beta binomial bayesian updating posterior prior credible interval pseudo observations',
   },
+  {
+    id: "mcmc-metropolis-hastings-and-gibbs",
+    short: "MCMC: Metropolis & Gibbs",
+    title: "MCMC: Metropolis–Hastings and Gibbs",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Markov Chain Monte Carlo (MCMC) algorithms enable numerical sampling from complex, high-dimensional posterior probability distributions whose normalising constants (evidence integrals) are analytically intractable. The Metropolis-Hastings (MH) algorithm constructs an ergodic Markov chain whose stationary distribution equals the target posterior by proposing candidate states from an arbitrary proposal distribution and accepting them with a calculated acceptance probability that satisfies detailed balance. Gibbs sampling specialises Metropolis-Hastings by iteratively sampling each variable conditioned on all remaining parameters, achieving a guaranteed 100% acceptance rate.",
+    lead: "Bayes' rule is simple in concept: posterior equals likelihood times prior divided by marginal likelihood. But that denominator—the marginal likelihood \\int p(\\mathcal{D} \\mid \\theta) p(\\theta) \\, d\\theta—is an integral over hundreds or thousands of parameters. In high dimensions, standard numerical grid integration is impossible (requiring more grid points than atoms in the universe). How can we draw samples from a posterior distribution when we can only evaluate its unnormalised numerator? MCMC algorithms solve this profound computational bottleneck.",
+    intuition: [
+      "The Intractable Denominator: We know p(\\theta | D) = p(D | \\theta) p(\\theta) / Z, but normalising constant Z is unknown. Notice that if we take the ratio of posterior densities between two proposed states \\theta^* and \\theta, the unknown constant Z cancels out completely: p(\\theta^* | D) / p(\\theta | D) = [p(D | \\theta^*) p(\\theta^*)] / [p(D | \\theta) p(\\theta)]. We can compute relative probabilities anywhere in parameter space!",
+      "Detailed Balance and the Metropolis-Hastings Acceptance Rule: The algorithm walks through parameter space. At state \\theta, it proposes a new state \\theta^* ~ q(\\theta^* | \\theta). If \\theta^* has a higher posterior density, we always move there. If \\theta^* has a lower posterior density, we do not reject it outright—we accept it with probability equal to the density ratio! This ensures the chain explores the entire distribution without getting stuck at the mode, with the frequency of visits exactly proportional to the true posterior probability.",
+      "Gibbs Sampling: Full Conditionals: When parameter vector \\boldsymbol{\\theta} = (\\theta_1, \\dots, \\theta_D) has high dimension, proposing random vectors often results in high rejection rates. Gibbs sampling updates parameters one coordinate at a time by sampling from the full conditional distribution p(\\theta_j | \\boldsymbol{\\theta}_{-j}, D). Because the proposal matches the conditional target exactly, the Metropolis-Hastings acceptance ratio is identically 1.0!"
+    ],
+    analogy: "Imagine a blind cartographer mapping the topography of a mountainous island chain at night. The cartographer cannot see the whole island, but at any spot they stand, a handheld altimeter tells them their current elevation. To map the terrain, the cartographer picks a random direction and takes a step. If the new spot is higher, they step up. If the new spot is lower, they roll a die: if the elevation drop is small, they usually accept the step down; if it is a steep cliff, they reject it and stay put. Over months of walking, the fraction of hours spent at any altitude precisely matches the true surface area of the mountains.",
+    steps: [
+      {
+        "title": "Define unnormalised target posterior density",
+        "desc": "Specify joint model f(\\theta) = p(D | \\theta) p(\\theta) without normalising constant.",
+        "detail": "Work in log-space: \\ln f(\\theta) = \\ln p(D | \\theta) + \\ln p(\\theta) to prevent numerical underflow."
+      },
+      {
+        "title": "Select proposal distribution q(\\theta^* | \\theta)",
+        "desc": "Choose a random walk proposal (e.g. Gaussian \\theta^* ~ N(\\theta, \\sigma^2)).",
+        "detail": "Tune proposal variance \\sigma^2 to achieve optimal acceptance rate (~23.4% for high-dimensional Random Walk Metropolis, ~44% in 1D)."
+      },
+      {
+        "title": "Evaluate Metropolis-Hastings acceptance probability",
+        "desc": "Calculate \\alpha = \\min(1, [p(\\theta^*) q(\\theta | \\theta^*)] / [p(\\theta) q(\\theta^* | \\theta)]).",
+        "detail": "For symmetric proposals, proposal densities cancel out: \\alpha = \\min(1, f(\\theta^*) / f(\\theta))."
+      },
+      {
+        "title": "Execute accept/reject step and update chain",
+        "desc": "Draw u ~ Uniform(0, 1). If u <= \\alpha, accept \\theta^{(t)} = \\theta^*; else retain \\theta^{(t)} = \\theta^{(t-1)}.",
+        "detail": "Append current state to chain history. The chain forms an ergodic Markov chain converging to the true posterior."
+      },
+      {
+        "title": "Discard burn-in and verify convergence",
+        "desc": "Drop initial warmup iterations and calculate Gelman-Rubin R_hat diagnostic.",
+        "detail": "Confirm R_hat < 1.05 across multiple independent chains and evaluate Effective Sample Size (ESS) to ensure chain mixing."
+      }
+    ],
+    math: [
+      {
+        "h": "Detailed Balance Condition",
+        "tex": "p(\\theta) \\, T(\\theta \\to \\theta^*) = p(\\theta^*) \\, T(\\theta^* \\to \\theta), \\qquad T(\\theta \\to \\theta^*) = q(\\theta^* \\mid \\theta) \\, \\alpha(\\theta, \\theta^*)",
+        "p": "Detailed balance is a sufficient condition ensuring that the target posterior distribution p(\\theta) is the unique stationary invariant distribution of the Markov chain. In equilibrium, probability flux from \\theta to \\theta^* exactly matches reverse flux."
+      },
+      {
+        "h": "Metropolis-Hastings Acceptance Probability",
+        "tex": "\\alpha(\\theta, \\theta^*) = \\min\\left( 1, \\; \\frac{p(\\theta^* \\mid \\mathcal{D}) \\, q(\\theta \\mid \\theta^*)}{p(\\theta \\mid \\mathcal{D}) \\, q(\\theta^* \\mid \\theta)} \\right) = \\min\\left( 1, \\; \\frac{p(\\mathcal{D} \\mid \\theta^*) p(\\theta^*) \\, q(\\theta \\mid \\theta^*)}{p(\\mathcal{D} \\mid \\theta) p(\\theta) \\, q(\\theta^* \\mid \\theta)} \\right)",
+        "p": "Because the normalising constant Z appears in both numerator and denominator, it cancels out completely. This allows sampling from arbitrary unnormalised distributions."
+      },
+      {
+        "h": "Gibbs Sampling as a Special Case of Metropolis-Hastings",
+        "tex": "q(\\theta_j^* \\mid \\boldsymbol{\\theta}) = p(\\theta_j^* \\mid \\boldsymbol{\\theta}_{-j}, \\mathcal{D}) \\implies \\alpha(\\boldsymbol{\\theta}, \\boldsymbol{\\theta}^*) = \\min\\left(1, \\; \\frac{p(\\boldsymbol{\\theta}^*) \\, p(\\theta_j \\mid \\boldsymbol{\\theta}_{-j}^*)}{p(\\boldsymbol{\\theta}) \\, p(\\theta_j^* \\mid \\boldsymbol{\\theta}_{-j})} \\right) \\equiv 1.0",
+        "p": "When proposing each coordinate directly from its full conditional distribution, the Metropolis-Hastings acceptance ratio simplifies algebraically to exactly 1.0. Every proposed Gibbs step is accepted."
+      }
+    ],
+    code: "\"\"\"\nMetropolis-Hastings and Gibbs Sampling Implementations\nSampling from an unnormalised bivariate Gaussian posterior\nand evaluating chain mixing and burn-in.\n\"\"\"\n\nimport numpy as np\n\n# Target Distribution: Bivariate Normal with correlation rho = 0.8\n# Unnormalised log density: -0.5 * (1 / (1 - rho^2)) * (x1^2 - 2*rho*x1*x2 + x2^2)\nrho = 0.8\nvar_scale = 1.0 - rho**2\n\ndef target_log_prob(theta):\n    x1, x2 = theta[0], theta[1]\n    return -0.5 * (x1**2 - 2.0 * rho * x1 * x2 + x2**2) / var_scale\n\n# 1. Random Walk Metropolis-Hastings Sampler\ndef run_metropolis_hastings(num_samples=10000, proposal_std=0.6):\n    chain = np.empty((num_samples, 2))\n    curr_theta = np.array([5.0, -5.0])  # Start far from mode (testing convergence)\n    curr_log_p = target_log_prob(curr_theta)\n    accepted_count = 0\n\n    for i in range(num_samples):\n        # Propose candidate theta* ~ N(curr_theta, proposal_std^2)\n        candidate = curr_theta + np.random.normal(0, proposal_std, size=2)\n        candidate_log_p = target_log_prob(candidate)\n        \n        # Log acceptance ratio: log_alpha = candidate_log_p - curr_log_p\n        log_alpha = candidate_log_p - curr_log_p\n        \n        if np.log(np.random.uniform(0, 1)) <= log_alpha:\n            curr_theta = candidate\n            curr_log_p = candidate_log_p\n            accepted_count += 1\n            \n        chain[i] = curr_theta\n\n    acc_rate = accepted_count / num_samples\n    return chain, acc_rate\n\n# 2. Gibbs Sampler\n# Full Conditionals for Bivariate Normal:\n# x1 | x2 ~ N(rho * x2, 1 - rho^2)\n# x2 | x1 ~ N(rho * x1, 1 - rho^2)\ndef run_gibbs_sampler(num_samples=10000):\n    chain = np.empty((num_samples, 2))\n    x1, x2 = 5.0, -5.0\n    cond_std = np.sqrt(1.0 - rho**2)\n\n    for i in range(num_samples):\n        # Sample x1 | x2\n        x1 = np.random.normal(loc=rho * x2, scale=cond_std)\n        # Sample x2 | x1\n        x2 = np.random.normal(loc=rho * x1, scale=cond_std)\n        chain[i] = [x1, x2]\n\n    return chain\n\n# Run simulations\nnp.random.seed(42)\nnum_steps = 10000\nburn_in = 2000\n\nmh_chain, mh_acc_rate = run_metropolis_hastings(num_steps, proposal_std=0.7)\ngibbs_chain = run_gibbs_sampler(num_steps)\n\n# Discard burn-in\nmh_samples = mh_chain[burn_in:]\ngibbs_samples = gibbs_chain[burn_in:]\n\nprint(\"=== 1. Metropolis-Hastings Results ===\")\nprint(f\"Total Steps: {num_steps} | Discarded Burn-in: {burn_in}\")\nprint(f\"Empirical Acceptance Rate: {mh_acc_rate:.1%} (Target optimal ~23-44%)\")\nprint(f\"Estimated Mean:   [{np.mean(mh_samples[:, 0]):.3f}, {np.mean(mh_samples[:, 1]):.3f}] (True: [0.00, 0.00])\")\nprint(f\"Estimated Corr:   {np.corrcoef(mh_samples[:, 0], mh_samples[:, 1])[0, 1]:.3f} (True: {rho:.3f})\")\n\nprint(\"\\n=== 2. Gibbs Sampler Results ===\")\nprint(\"Acceptance Rate: 100.0% (by mathematical construction)\")\nprint(f\"Estimated Mean:   [{np.mean(gibbs_samples[:, 0]):.3f}, {np.mean(gibbs_samples[:, 1]):.3f}] (True: [0.00, 0.00])\")\nprint(f\"Estimated Corr:   {np.corrcoef(gibbs_samples[:, 0], gibbs_samples[:, 1])[0, 1]:.3f} (True: {rho:.3f})\")\n",
+    keyPoints: [
+      "MCMC draws representative samples from unnormalised posterior distributions where integration of the denominator is intractable.",
+      "Metropolis-Hastings accepts moves according to the posterior ratio, satisfying detailed balance to ensure convergence to the target distribution.",
+      "Gibbs sampling updates one variable at a time from its full conditional distribution, achieving a 100% acceptance rate.",
+      "Burn-in samples from early iterations before the chain reaches stationarity must be discarded prior to posterior inference."
+    ],
+    pitfalls: [
+      "High autocorrelation and slow mixing: When proposal step size is too small, the chain explores slowly via Brownian diffusion; when too large, proposals are rejected repeatedly.",
+      "Premature stopping before convergence: A chain starting far from the true mode requires sufficient burn-in to find the typical set; Gelman-Rubin diagnostics across multiple chains are essential.",
+      "Gibbs sampling in highly correlated dimensions: When variables exhibit extreme correlation, coordinate-wise Gibbs sampling becomes trapped taking tiny zig-zag steps; reparameterisation or HMC is needed."
+    ],
+    quiz: [
+      {
+        "q": "Why does the normalising constant Z cancel out in the Metropolis-Hastings acceptance ratio?",
+        "o": [
+          "Because the acceptance ratio divides the posterior density of the proposed state by the posterior density of the current state, causing constant denominators to cancel algebraically",
+          "Because the normalising constant is always equal to 1.0",
+          "Because MCMC algorithms only work on uniform distributions",
+          "Because logarithms eliminate all division"
+        ],
+        "a": 0,
+        "why": "The ratio p(\\theta^* | \\mathcal{D}) / p(\\theta | \\mathcal{D}) = [p(\\mathcal{D}|\\theta^*)p(\\theta^*)/Z] / [p(\\mathcal{D}|\\theta)p(\\theta)/Z] = [p(\\mathcal{D}|\\theta^*)p(\\theta^*)] / [p(\\mathcal{D}|\\theta)p(\\theta)], bypassing the intractable integral Z."
+      },
+      {
+        "q": "What condition guarantees that a Markov chain converges to the desired target distribution?",
+        "o": [
+          "Detailed balance (reversibility) combined with ergodicity (irreducibility and aperiodicity)",
+          "The chain must visit every point on a continuous grid",
+          "The acceptance rate must be 0%",
+          "All parameters must be statistically independent"
+        ],
+        "a": 0,
+        "why": "Detailed balance ensures the target distribution is stationary. Ergodicity guarantees the chain can reach any state and will not get trapped in periodic cycles."
+      },
+      {
+        "q": "Why does Gibbs sampling achieve a 100% acceptance rate?",
+        "o": [
+          "Because candidates are proposed directly from full conditional distributions, causing the Metropolis-Hastings acceptance ratio to simplify identically to 1.0",
+          "Because Gibbs sampling does not use random numbers",
+          "Because it rejects all proposals before evaluating them",
+          "Because Gibbs sampling only runs on Gaussian data"
+        ],
+        "a": 0,
+        "why": "Substituting the full conditional proposal q(\\theta_j^* | \\boldsymbol{\\theta}) = p(\\theta_j^* | \\boldsymbol{\\theta}_{-j}) into the MH formula cancels the numerator and denominator completely, yielding \\alpha = 1.0."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "map-and-bayesian-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "hamiltonian-monte-carlo",
+      "variational-inference",
+      "markov-chains-and-stationary-distributions",
+      "bayesian_linear_regression"
+    ],
+    keywords: "mcmc metropolis hastings gibbs sampling markov chain monte carlo detailed balance burn in stationary distribution acceptance rate"
+  },
+  {
+    id: "hamiltonian-monte-carlo",
+    short: "Hamiltonian Monte Carlo",
+    title: "Hamiltonian Monte Carlo",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Hamiltonian Monte Carlo (HMC) and the No-U-Turn Sampler (NUTS) overcome the random-walk diffusion limits of classical Metropolis-Hastings by transforming Bayesian parameter sampling into physical Hamiltonian dynamics. By augmenting target parameters (position) with auxiliary momentum vectors, HMC simulates frictionless motion across the negative log-posterior potential energy surface using symplectic numerical integrators (leapfrog algorithm). This physical trajectory simulation enables large, distant state transitions with acceptance rates approaching 100%, scaling Bayesian inference to models with thousands of correlated parameters.",
+    lead: "Random Walk Metropolis-Hastings is like taking drunken random steps in the dark: in a 100-dimensional space, almost every random direction steps into low-probability regions, causing acceptance rates to plummet unless step sizes are reduced to microscopic increments. In high dimensions, random walks take millions of iterations to explore the posterior. Hamiltonian Monte Carlo replaces random diffusion with physical mechanics: imagine rolling a frictionless hockey puck down the gravitational contours of your posterior landscape. Why does simulating classical mechanics solve high-dimensional Bayesian inference, and how does the leapfrog algorithm preserve energy?",
+    intuition: [
+      "The Curse of Dimensionality in Random Walks: In high dimensions, probability mass does not concentrate at the mode (where volume is zero) nor in the tails (where density is zero). It concentrates in a narrow hyperspherical shell called the \"typical set\". A random walk step almost always steps off this narrow ridge, getting rejected. To make distant jumps that stay within the typical set, we need vectors that guide proposals along the contours of the probability landscape.",
+      "The Hamiltonian Physics Analogy:\n- Position (\\mathbf{q}): The model parameters we want to sample (\\boldsymbol{\\theta}).\n- Potential Energy (U(\\mathbf{q})): The negative log-posterior density -\\ln p(\\mathbf{q} \\mid \\mathcal{D}). High probability corresponds to deep valleys.\n- Momentum (\\mathbf{p}): Auxiliary random velocities sampled from a Gaussian distribution \\mathbf{p} \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{M}).\n- Kinetic Energy (K(\\mathbf{p})): \\frac{1}{2} \\mathbf{p}^\\top \\mathbf{M}^{-1} \\mathbf{p}.\n- Total Hamiltonian Energy: H(\\mathbf{q}, \\mathbf{p}) = U(\\mathbf{q}) + K(\\mathbf{p}).",
+      "Frictionless Gliding: By Hamiltonian conservation of energy, as the particle rolls downhill into high probability valleys, potential energy converts into kinetic energy (it speeds up). As it climbs uphill into low probability tails, kinetic energy converts into potential energy (it slows down). The total energy H remains strictly constant! Because total energy is conserved, the Metropolis-Hastings acceptance probability \\exp(-\\Delta H) is identically 1.0!",
+      "The Leapfrog Integrator: Computers cannot simulate continuous differential equations perfectly. Standard Euler integration accumulates energy drift, causing the puck to fly into space. The leapfrog algorithm is \"symplectic\"—it alternates half-step momentum updates with full-step position updates, preserving phase space volume (Liouville's theorem) and maintaining near-perfect energy conservation over long trajectories."
+    ],
+    analogy: "Imagine a skateboarder in a giant U-shaped concrete skate bowl. The bottom of the bowl is the highest posterior probability region. If the skateboarder were a random-walk Metropolis sampler, they would stagger in random directions, falling flat on their face 95% of the time. HMC pushes the skateboarder with a random burst of speed (momentum): the skateboarder effortlessly carves high-speed arcs along the walls of the bowl, gliding across the entire geometry without ever losing total energy, landing at a completely different, distant spot on the bowl with 100% stability.",
+    steps: [
+      {
+        "title": "Define potential energy and analytical gradient",
+        "desc": "Establish U(q) = -ln p(q | D) and gradient \\nabla_q U(q).",
+        "detail": "Compute log-posterior derivatives with respect to parameters using autodiff or manual calculus."
+      },
+      {
+        "title": "Sample auxiliary momentum vector",
+        "desc": "Draw initial momentum p ~ N(0, M) independently at each step.",
+        "detail": "The mass matrix M is typically chosen as identity I or tuned to match parameter scales."
+      },
+      {
+        "title": "Simulate trajectory via symplectic leapfrog integration",
+        "desc": "Execute L leapfrog steps of size \\epsilon to update position and momentum.",
+        "detail": "Perform half-step momentum update, full-step position update, and half-step momentum update. Preserve volume in phase space."
+      },
+      {
+        "title": "Negate momentum and evaluate energy conservation",
+        "desc": "Calculate Hamiltonian energy difference \\Delta H = H(q^*, p^*) - H(q_old, p_0).",
+        "detail": "Negate momentum p* = -p to ensure time-reversibility of the transition kernel."
+      },
+      {
+        "title": "Accept or reject via Metropolis criterion",
+        "desc": "Accept candidate state q* with probability min(1, exp(-\\Delta H)).",
+        "detail": "Due to symplectic energy conservation, \\Delta H \\approx 0, achieving acceptance rates of 80% to 95% across distant jumps."
+      }
+    ],
+    math: [
+      {
+        "h": "Hamiltonian System Differential Equations",
+        "tex": "\\frac{d\\mathbf{q}}{dt} = \\frac{\\partial H}{\\partial \\mathbf{p}} = \\mathbf{M}^{-1}\\mathbf{p}, \\qquad \\frac{d\\mathbf{p}}{dt} = -\\frac{\\partial H}{\\partial \\mathbf{q}} = -\\nabla_\\mathbf{q} U(\\mathbf{q}) = \\nabla_\\mathbf{q} \\ln p(\\mathbf{q} \\mid \\mathcal{D})",
+        "p": "Hamilton's equations describe the time evolution of position \\mathbf{q} and momentum \\mathbf{p}. The total energy H(\\mathbf{q}, \\mathbf{p}) = U(\\mathbf{q}) + K(\\mathbf{p}) is conserved along continuous trajectories: dH/dt = 0."
+      },
+      {
+        "h": "Symplectic Leapfrog Integrator",
+        "tex": "\\mathbf{p}\\left(t + \\frac{\\epsilon}{2}\\right) = \\mathbf{p}(t) - \\frac{\\epsilon}{2} \\nabla U(\\mathbf{q}(t)), \\quad \\mathbf{q}(t + \\epsilon) = \\mathbf{q}(t) + \\epsilon \\mathbf{M}^{-1} \\mathbf{p}\\left(t + \\frac{\\epsilon}{2}\\right), \\quad \\mathbf{p}(t + \\epsilon) = \\mathbf{p}\\left(t + \\frac{\\epsilon}{2}\\right) - \\frac{\\epsilon}{2} \\nabla U(\\mathbf{q}(t + \\epsilon))",
+        "p": "The leapfrog algorithm updates momentum at half-integer time steps and position at integer time steps. It is time-reversible and volume-preserving (symplectic), ensuring that energy errors do not drift secularly over time."
+      },
+      {
+        "h": "Metropolis Acceptance Probability under Numerical Discretisation",
+        "tex": "\\alpha = \\min\\left(1, \\; \\exp\\big( -H(\\mathbf{q}^*, \\mathbf{p}^*) + H(\\mathbf{q}^{(t-1)}, \\mathbf{p}^{(0)}) \\big) \\right) = \\min\\left(1, \\; \\exp\\left( -\\Delta H \\right)\\right)",
+        "p": "Even though continuous dynamics preserve energy exactly (\\Delta H = 0), finite step size \\epsilon introduces minor discretisation error. The final Metropolis filter guarantees exact convergence to the stationary distribution."
+      }
+    ],
+    code: "\"\"\"\nHamiltonian Monte Carlo (HMC) Sampler Implementation\nDemonstrating leapfrog symplectic integration, energy conservation,\nand high acceptance sampling on a correlated 2D Gaussian.\n\"\"\"\n\nimport numpy as np\n\n# Target Potential Energy U(q) = -log p(q)\n# Correlated Gaussian: q ~ N(0, Sigma), Sigma = [[1.0, 0.8], [0.8, 1.0]]\ncov = np.array([[1.0, 0.8], [0.8, 1.0]])\ncov_inv = np.linalg.inv(cov)\n\ndef potential_energy(q):\n    \"\"\"U(q) = 0.5 * q^T Sigma^-1 q\"\"\"\n    return 0.5 * (q @ cov_inv @ q)\n\ndef grad_potential_energy(q):\n    \"\"\"nabla U(q) = Sigma^-1 q\"\"\"\n    return cov_inv @ q\n\ndef kinetic_energy(p):\n    \"\"\"K(p) = 0.5 * p^T p (assuming identity mass matrix M = I)\"\"\"\n    return 0.5 * np.sum(p ** 2)\n\ndef leapfrog(q, p, epsilon, num_steps):\n    \"\"\"Symplectic Leapfrog Integrator.\"\"\"\n    q_curr = np.copy(q)\n    p_curr = np.copy(p)\n    \n    # Initial half-step for momentum\n    p_curr -= 0.5 * epsilon * grad_potential_energy(q_curr)\n    \n    # Alternate full position and momentum steps\n    for step in range(num_steps):\n        q_curr += epsilon * p_curr\n        if step < num_steps - 1:\n            p_curr -= epsilon * grad_potential_energy(q_curr)\n            \n    # Final half-step for momentum\n    p_curr -= 0.5 * epsilon * grad_potential_energy(q_curr)\n    \n    # Negate momentum to make transition reversible\n    return q_curr, -p_curr\n\ndef run_hmc(num_samples=3000, epsilon=0.15, leapfrog_steps=20):\n    samples = np.empty((num_samples, 2))\n    curr_q = np.array([4.0, -4.0]) # Starting point\n    accepted = 0\n    delta_h_list = []\n\n    for i in range(num_samples):\n        # 1. Sample auxiliary momentum p ~ N(0, I)\n        curr_p = np.random.normal(0, 1, size=2)\n        \n        # 2. Compute initial Hamiltonian H = U(q) + K(p)\n        h_init = potential_energy(curr_q) + kinetic_energy(curr_p)\n        \n        # 3. Simulate Leapfrog Trajectory\n        prop_q, prop_p = leapfrog(curr_q, curr_p, epsilon, leapfrog_steps)\n        \n        # 4. Compute proposed Hamiltonian\n        h_prop = potential_energy(prop_q) + kinetic_energy(prop_p)\n        delta_h = h_prop - h_init\n        delta_h_list.append(delta_h)\n        \n        # 5. Metropolis Acceptance\n        if np.log(np.random.uniform(0, 1)) < -delta_h:\n            curr_q = prop_q\n            accepted += 1\n            \n        samples[i] = curr_q\n\n    acc_rate = accepted / num_samples\n    return samples, acc_rate, delta_h_list\n\n# Run HMC simulation\nnp.random.seed(42)\nsamples, acc_rate, delta_h_list = run_hmc(num_samples=4000, epsilon=0.18, leapfrog_steps=15)\nburn_in = 500\nclean_samples = samples[burn_in:]\n\nprint(\"=== Hamiltonian Monte Carlo Simulation ===\")\nprint(f\"Total Steps: 4000 | Burn-in: {burn_in} | Clean Samples: {len(clean_samples)}\")\nprint(f\"HMC Acceptance Rate: {acc_rate:.1%} (High acceptance despite large leapfrog jumps!)\")\nprint(f\"Mean Energy Error |Delta H|: {np.mean(np.abs(delta_h_list)):.4f} (Energy is near-conserved!)\")\n\nprint(f\"\\nEstimated Posterior Mean: [{np.mean(clean_samples[:, 0]):.3f}, {np.mean(clean_samples[:, 1]):.3f}] (True: [0.00, 0.00])\")\nprint(f\"Estimated Correlation:    {np.corrcoef(clean_samples[:, 0], clean_samples[:, 1])[0, 1]:.3f} (True: 0.800)\")\n",
+    keyPoints: [
+      "Hamiltonian Monte Carlo simulates classical Hamiltonian physical dynamics to propose distant, high-probability state transitions.",
+      "Auxiliary momentum variables allow the sampler to glide along the contours of the typical set, avoiding random-walk diffusion.",
+      "The leapfrog numerical integrator is symplectic and time-reversible, preserving phase-space volume and conserving total energy.",
+      "Because energy is approximately conserved (\\Delta H \\approx 0), HMC achieves high acceptance rates (> 80%) even in high-dimensional spaces."
+    ],
+    pitfalls: [
+      "Tuning leapfrog step size epsilon and trajectory length L: Too large an epsilon causes catastrophic numerical divergence; too small causes slow exploration (solved by the NUTS algorithm).",
+      "Pathological geometry and funnels: In hierarchical models with varying curvature (Neal's funnel), HMC encounters divergent transitions; non-centred parameterisations are necessary.",
+      "Requiring differentiable posteriors: HMC requires the gradient of the log-posterior \\nabla_\\mathbf{q} \\ln p(\\mathbf{q} \\mid \\mathcal{D}); it cannot be applied directly to discrete parameters without marginalisation."
+    ],
+    quiz: [
+      {
+        "q": "Why does Hamiltonian Monte Carlo scale vastly better to high dimensions than Random Walk Metropolis?",
+        "o": [
+          "Because physical momentum trajectories guide proposals along the contours of the high-probability typical set, enabling large distant jumps without falling into low-probability rejection regions",
+          "Because HMC avoids computing the likelihood function",
+          "Because HMC only samples 1 parameter at a time",
+          "Because HMC does not use the Metropolis acceptance step"
+        ],
+        "a": 0,
+        "why": "Random-walk proposals must shrink as dimension grows to keep a sensible acceptance rate, so the cost per independent sample rises roughly linearly with the dimension d (against about d^{1/4} for HMC). HMC translates gradient vector information into momentum, traversing the typical set efficiently."
+      },
+      {
+        "q": "What property of the leapfrog integrator makes it essential for HMC?",
+        "o": [
+          "It is symplectic (volume-preserving) and time-reversible, preventing numerical energy drift from accumulating over long trajectory simulations",
+          "It computes integrals in O(1) time without gradients",
+          "It eliminates the need for potential energy",
+          "It guarantees that momentum is always zero"
+        ],
+        "a": 0,
+        "why": "Non-symplectic integrators (like Euler) accumulate energy drift, causing the Hamiltonian to explode. Symplectic integrators oscillate around the true energy surface, preserving phase space volume."
+      },
+      {
+        "q": "What algorithm automatically tunes the trajectory length L in modern Bayesian probabilistic programming languages (such as Stan and PyMC)?",
+        "o": [
+          "The No-U-Turn Sampler (NUTS)",
+          "K-means clustering",
+          "Stochastic Gradient Descent",
+          "The Expectation-Maximisation algorithm"
+        ],
+        "a": 0,
+        "why": "NUTS builds recursive binary trees of leapfrog steps, automatically terminating the trajectory as soon as the particle begins to turn back on itself (No-U-Turn), eliminating the need for manual tuning of L."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "map-and-bayesian-estimation"
+    ],
+    related: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "variational-inference",
+      "markov-chains-and-stationary-distributions",
+      "bayesian_linear_regression"
+    ],
+    keywords: "hamiltonian monte carlo hmc nuts no u turn sampler leapfrog integrator symplectic momentum typical set stan"
+  },
+  {
+    id: "variational-inference",
+    short: "Variational inference",
+    title: "Variational Inference",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 3,
+    minutes: 18,
+    noLab: true,
+    summary: "Turn intractable posterior integration into continuous optimisation: fit a simpler tractable distribution q(z) to the true posterior p(z|x) by maximising the Evidence Lower Bound (ELBO).",
+    lead: "Exact Bayesian posterior calculation requires computing a marginal likelihood integral over latent variables that is intractable for all but conjugate models. Variational inference circumvents numerical integration by recasting inference as an optimisation problem.",
+    intuition: [
+      "In Bayesian modelling, we observe data $x$ generated via unobserved latent variables $z$ according to a joint distribution $p(x, z) = p(x \\mid z) p(z)$. The central goal is evaluating the posterior distribution $p(z \\mid x) = p(x, z) / p(x)$. However, the marginal likelihood (evidence) $p(x) = \\int p(x, z) dz$ is frequently an intractable high-dimensional integral when priors and likelihoods are non-conjugate, as in deep latent variable models or complex hierarchical Bayesian networks.",
+      "Markov chain Monte Carlo (MCMC) tackles this intractability by constructing a Markov chain whose stationary distribution matches the exact posterior. While asymptotically exact, MCMC explores state spaces slowly and scales poorly to millions of observations or real-time latent inferences. Variational inference (VI) offers an alternative paradigm: instead of sampling, approximate the posterior using continuous optimisation.",
+      "VI posits a tractable family of distributions over latent variables $\\mathcal{Q} = \\{q_\\theta(z)\\}$ parameterised by variational parameters $\\theta$. It then searches within $\\mathcal{Q}$ for the distribution $q^*(z)$ that minimises the Kullback–Leibler divergence $D_{\\mathrm{KL}}(q_\\theta(z) \\parallel p(z \\mid x))$ to the true posterior. Because the true posterior $p(z \\mid x)$ is unknown, we cannot minimise this divergence directly. Fortunately, decomposing the log marginal evidence reveals that maximising the Evidence Lower Bound (ELBO) is mathematically identical to minimising this divergence.",
+      "The choice of family $\\mathcal{Q}$ determines both fidelity and computational tractability. The classic mean-field approximation assumes latent variables factorise completely: $q(z) = \\prod_{j=1}^M q_j(z_j)$. Under this structure, Coordinate Ascent Variational Inference (CAVI) iteratively updates each variational factor in closed form. In modern deep learning, variational autoencoders (VAEs) employ stochastic gradient variational inference, using amortised neural networks and the reparameterisation trick to optimise the ELBO via standard backpropagation."
+    ],
+    analogy: "Imagine sculpting a statue out of a block of marble to match a phantom figure standing behind a frosted glass screen. You cannot touch or measure the phantom directly (the intractable posterior), but every step closer your chisel sculpts the marble against a shadow projection (the joint likelihood and prior) raises the total illumination in the studio (the evidence lower bound). When illumination reaches its peak, your marble sculpture is the closest possible physical approximation within your sculpting toolset.",
+    steps: [
+      {
+        "title": "1. Specify generative model and variational family",
+        "body": "Define the joint distribution $p(x, z) = p(x \\mid z) p(z)$ with observed $x$ and latents $z$. Choose a tractable variational family $\\mathcal{Q} = \\{q(z \\mid \\theta)\\}$, such as a factorised mean-field Gaussian distribution."
+      },
+      {
+        "title": "2. Formulate the Evidence Lower Bound (ELBO)",
+        "body": "Decompose $\\log p(x) = \\mathrm{ELBO}(q) + D_{\\mathrm{KL}}(q(z) \\parallel p(z \\mid x))$. Because KL divergence is non-negative, $\\mathrm{ELBO}(q) = \\mathbb{E}_q[\\log p(x, z)] - \\mathbb{E}_q[\\log q(z)] \\le \\log p(x)$. Maximising the ELBO directly minimises divergence to the true posterior."
+      },
+      {
+        "title": "3. Coordinate ascent updates (CAVI)",
+        "body": "Under the mean-field assumption $q(z) = \\prod_j q_j(z_j)$, derive closed-form updates for each factor: $\\log q_j^*(z_j) = \\mathbb{E}_{q_{-j}}[\\log p(x, z)] + \\mathrm{const}$. Iterate across factors until the ELBO converges."
+      },
+      {
+        "title": "4. Stochastic gradient and reparameterisation",
+        "body": "For non-conjugate or deep neural models where expectations lack closed forms, approximate gradients using Monte Carlo samples. For continuous latents, apply the reparameterisation trick $z = g_\\theta(\\epsilon)$ with $\\epsilon \\sim \\mathcal{N}(0, I)$ to propagate low-variance gradients directly into variational parameters."
+      }
+    ],
+    math: [
+      {
+        "h": "Evidence and KL Decomposition",
+        "tex": "\\log p(x) = \\mathbb{E}_{q(z)}\\left[\\log \\frac{p(x, z)}{q(z)}\\right] + D_{\\mathrm{KL}}(q(z) \\parallel p(z \\mid x)) = \\mathrm{ELBO}(q) + D_{\\mathrm{KL}}(q \\parallel p)",
+        "p": "Because the KL divergence is non-negative and equals zero if and only if q(z) = p(z|x), the ELBO serves as a strict mathematical lower bound on the log evidence log p(x). Maximising the ELBO with respect to q directly minimises KL divergence to the exact posterior."
+      },
+      {
+        "h": "ELBO Components: Reconstruction vs Regularisation",
+        "tex": "\\mathrm{ELBO}(q) = \\mathbb{E}_{q(z)}[\\log p(x \\mid z)] - D_{\\mathrm{KL}}(q(z) \\parallel p(z))",
+        "p": "Rewriting the ELBO decomposes the objective into an expected log-likelihood term (rewarding variational states that reconstruct observed data well) and a prior KL penalty (regularising q(z) toward prior p(z))."
+      },
+      {
+        "h": "Mean-Field Coordinate Ascent (CAVI)",
+        "tex": "\\log q_j^*(z_j) = \\mathbb{E}_{-j}[\\log p(x, z_j, z_{-j})] + \\text{const}",
+        "p": "For each latent variable j, the optimal mean-field factor q_j*(z_j) is proportional to the exponential of the expected complete-data log-likelihood conditioned on all remaining factors -j."
+      }
+    ],
+    code: "import numpy as np\n\n# Coordinate Ascent Variational Inference (CAVI) for 1D Gaussian Mixture\n# Model: x_i ~ N(mu_{c_i}, 1), prior mu_k ~ N(0, sigma_0^2), equal cluster weights\nnp.random.seed(42)\n\n# Generate synthetic two-component mixture\nn_samples = 300\ntrue_mus = np.array([-2.5, 3.0])\nassignments = np.random.binomial(1, 0.5, size=n_samples)\nx = np.where(assignments == 0, np.random.normal(true_mus[0], 1.0, n_samples),\n                               np.random.normal(true_mus[1], 1.0, n_samples))\n\nK = 2\nsigma0_sq = 10.0  # Prior variance on cluster means\n\n# Initialise variational parameters:\n# q(mu_k) = N(m_k, s2_k), q(c_i) = Categorical(phi_i)\nm = np.random.normal(0, 1, size=K)\ns2 = np.ones(K)\nphi = np.ones((n_samples, K)) / K\n\ndef compute_elbo(x, m, s2, phi, sigma0_sq):\n    elbo = 0.0\n    for k in range(K):\n        # Prior on mu_k\n        elbo += -0.5 * np.log(2 * np.pi * sigma0_sq) - (m[k]**2 + s2[k]) / (2 * sigma0_sq)\n        # Entropy of q(mu_k)\n        elbo += 0.5 * np.log(2 * np.pi * np.e * s2[k])\n    \n    # Expected likelihood and cluster entropy\n    for i in range(n_samples):\n        for k in range(K):\n            if phi[i, k] > 1e-12:\n                exp_log_lik = -0.5 * np.log(2 * np.pi) - 0.5 * ((x[i] - m[k])**2 + s2[k])\n                elbo += phi[i, k] * (exp_log_lik - np.log(phi[i, k]) - np.log(K))\n    return elbo\n\n# Coordinate Ascent iterations\nn_iters = 25\nelbo_history = []\n\nfor it in range(n_iters):\n    # 1. Update cluster responsibilities phi_ik\n    for i in range(n_samples):\n        log_rho = np.zeros(K)\n        for k in range(K):\n            log_rho[k] = -0.5 * ((x[i] - m[k])**2 + s2[k]) - np.log(K)\n        # Softmax normalisation for stability\n        rho = np.exp(log_rho - np.max(log_rho))\n        phi[i] = rho / np.sum(rho)\n        \n    # 2. Update variational parameters for cluster means m_k and s2_k\n    for k in range(K):\n        sum_phi = np.sum(phi[:, k])\n        s2[k] = 1.0 / (1.0 / sigma0_sq + sum_phi)\n        m[k] = s2[k] * np.sum(phi[:, k] * x)\n        \n    elbo = compute_elbo(x, m, s2, phi, sigma0_sq)\n    elbo_history.append(elbo)\n\nprint(f\"True cluster means: {true_mus}\")\nprint(f\"Variational posterior means: {np.sort(m).round(3)}\")\nprint(f\"Variational posterior variances: {s2[np.argsort(m)].round(4)}\")\nprint(f\"Initial ELBO: {elbo_history[0]:.2f} -> Final ELBO: {elbo_history[-1]:.2f}\")\nprint(f\"ELBO strictly non-decreasing: {np.all(np.diff(elbo_history) >= -1e-7)}\")",
+    keyPoints: [
+      "Transforms Bayesian inference from intractable numerical integration into continuous optimisation over distribution parameters.",
+      "The Evidence Lower Bound (ELBO) satisfies ELBO(q) = log p(x) - D_KL(q || p) <= log p(x); maximising it minimises divergence to the true posterior.",
+      "Mean-field variational inference factorises latent variables independently, enabling coordinate ascent (CAVI) in conditionally conjugate models.",
+      "Underestimates posterior variance: because reverse KL heavily penalises places where q > 0 but p approx 0, VI fits tightly into the dominant mode rather than covering the whole spread.",
+      "Stochastic VI and the reparameterisation trick allow VI to scale to massive datasets and power variational autoencoders (VAEs)."
+    ],
+    pitfalls: [
+      "Zero-forcing variance underestimation: Reverse KL forces q(z) to remain strictly within high-density regions of p(z|x), underestimating true parameter uncertainty and ignoring secondary modes.",
+      "Mean-field correlation blindness: Assuming complete factorisation q(z) = \\prod q_j(z_j) forces all covariance between latent variables to zero, potentially corrupting inference when latents are strongly coupled.",
+      "Local optima: Unlike MCMC which theoretically visits the whole support asymptotically, gradient ascent on the ELBO can get trapped in local optima or bad saddle points."
+    ],
+    quiz: [
+      {
+        "q": "Why does maximising the Evidence Lower Bound (ELBO) minimise the KL divergence D_KL(q(z) || p(z|x))?",
+        "o": [
+          "Because the log evidence log p(x) is constant with respect to q(z), and log p(x) = ELBO(q) + D_KL(q || p)",
+          "Because the KL divergence is always negative, so increasing ELBO reduces its absolute magnitude",
+          "Because ELBO equals the exact likelihood multiplied by the prior",
+          "Because variational inference forces the posterior to equal 1 everywhere"
+        ],
+        "a": 0,
+        "why": "The fundamental decomposition is log p(x) = ELBO(q) + D_KL(q || p(z|x)). Since log p(x) does not depend on variational distribution q, increasing ELBO directly forces D_KL down."
+      },
+      {
+        "q": "What is a major qualitative difference between the posterior approximation from mean-field VI compared to MCMC?",
+        "o": [
+          "Mean-field VI tends to underestimate posterior variance and ignores correlations between latent variables",
+          "Mean-field VI is guaranteed to be asymptotically exact while MCMC always diverges",
+          "Mean-field VI overestimates posterior variance across all peripheral modes",
+          "Mean-field VI cannot be applied to models with continuous latent variables"
+        ],
+        "a": 0,
+        "why": "Because reverse KL D_KL(q || p) is zero-forcing and the mean-field assumption forces factorisation q(z) = \\prod q_j(z_j), VI fits tightly inside the primary mode and zeroes out off-diagonal posterior covariances."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kl-divergence",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "hamiltonian-monte-carlo",
+      "map-and-bayesian-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    keywords: "variational inference, elbo, mean field, cavi, coordinate ascent, kl divergence, latent variables, reparameterisation trick"
+  },
+  {
+    id: "markov-chains-and-stationary-distributions",
+    short: "Markov chains",
+    title: "Markov Chains and Stationary Distributions",
+    task: "concepts",
+    module: "Bayesian and stochastic",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Model stochastic state transitions where the future depends only on the present: understand transition matrices, Chapman–Kolmogorov equations, ergodicity, and the stationary distribution \\pi = \\pi P.",
+    lead: "From Google PageRank and queueing systems to MCMC sampling and reinforcement learning, stochastic processes with memoryless state transitions provide the foundational framework for long-run equilibrium analysis.",
+    intuition: [
+      "A Markov chain is a discrete-time stochastic process {X_0, X_1, X_2, ...} taking values in a discrete state space S. Its defining property—the Markov property—states that conditional on current state X_t, the probability of transitioning to any future state X_{t+1} is independent of the sequence of past states: P(X_{t+1} = j | X_t = i, X_{t-1}, ..., X_0) = P(X_{t+1} = j | X_t = i) = P_{ij}.",
+      "These one-step transition probabilities form a row-stochastic matrix P where every entry P_{ij} >= 0 and each row sums to 1. To predict the distribution over states n steps into the future, we apply the Chapman–Kolmogorov equations: P(X_{t+n} = j | X_t = i) = (P^n)_{ij}. If the initial state distribution across all states is a row vector \\pi_0, the state distribution at step n is simply \\pi_n = \\pi_0 P^n.",
+      "A fundamental question is: what happens as n -> \\infty? Does the distribution settle into a steady state, independent of the initial starting condition \\pi_0? A probability distribution \\pi is called a stationary (or invariant) distribution if \\pi = \\pi P. Once the process attains this distribution, running it further forward in time never alters the probability of finding the system in any given state.",
+      "The Fundamental Convergence Theorem of Markov Chains guarantees that a unique stationary distribution \\pi exists and \\lim_{n \\to \\infty} \\pi_0 P^n = \\pi$ for any initial distribution \\pi_0, provided the chain is ergodic—meaning it is irreducible (any state can be reached from any other state in finite steps) and aperiodic (transitions do not cycle deterministically on fixed periods). Furthermore, if a distribution satisfies detailed balance (reversibility), \\pi_i P_{ij} = \\pi_j P_{ji}, it is guaranteed to be a stationary distribution—a property exploited by MCMC algorithms."
+    ],
+    analogy: "Imagine a group of commuters moving between three subway stations every morning according to fixed transition odds: 70% stay at their workplace station, 20% move to the downtown station, and 10% move to the outer ring. Regardless of where commuters began on Monday morning, within two or three weeks the percentage of commuters found at each station stabilises into an invariant daily distribution—the stationary distribution of the transit chain.",
+    steps: [
+      {
+        "title": "1. Specify states and transition matrix",
+        "body": "Define the state space S = {1, ..., K} and populate the transition matrix P where P_{ij} = P(X_{t+1}=j | X_t=i), ensuring each row sums strictly to 1."
+      },
+      {
+        "title": "2. Verify ergodicity (irreducibility and aperiodicity)",
+        "body": "Ensure the transition graph is strongly connected (every state communicates with every other state) and has no periodic loops (gcd of return path lengths equals 1)."
+      },
+      {
+        "title": "3. Solve the stationary distribution balance equation",
+        "body": "Solve the linear system \\pi = \\pi P subject to \\sum_i \\pi_i = 1 and \\pi_i >= 0. Algebraically, this corresponds to finding the normalised left eigenvector of P associated with eigenvalue \\lambda = 1."
+      },
+      {
+        "title": "4. Monitor convergence and mixing time",
+        "body": "Track ||\\pi_0 P^n - \\pi||_{TV} as step count n grows. The rate of geometric convergence is governed by the second largest eigenvalue magnitude |\\lambda_2| < 1, with spectral gap \\gamma = 1 - |\\lambda_2| determining mixing time."
+      }
+    ],
+    math: [
+      {
+        "h": "The Markov Property and Chapman–Kolmogorov",
+        "tex": "P(X_{t+n} = j \\mid X_t = i) = (P^n)_{ij}, \\quad \\pi_n = \\pi_0 P^n",
+        "p": "The memoryless property implies multi-step transition probabilities are obtained directly by matrix powering. Given initial row probability vector pi_0, the marginal state distribution at step n is pi_0 P^n."
+      },
+      {
+        "h": "Stationary Distribution Equation",
+        "tex": "\\pi P = \\pi \\quad \\iff \\quad \\pi (I - P) = 0 \\quad \\text{subject to} \\quad \\sum_{i=1}^K \\pi_i = 1, \\; \\pi_i \\ge 0",
+        "p": "The stationary distribution pi is the normalised left eigenvector of transition matrix P corresponding to eigenvalue lambda = 1."
+      },
+      {
+        "h": "Detailed Balance (Reversibility)",
+        "tex": "\\pi_i P_{ij} = \\pi_j P_{ji} \\quad \\forall i, j \\in \\mathcal{S}",
+        "p": "Detailed balance states the probability flux from state i to state j equals the reverse flux from j to i. Summing both sides over i shows detailed balance is a sufficient condition for stationarity."
+      }
+    ],
+    code: "import numpy as np\n\n# 4-state ergodic Markov chain\nstates = ['Sunny', 'Cloudy', 'Rainy', 'Stormy']\nK = len(states)\n\n# Row-stochastic transition matrix P: P[i, j] = P(X_{t+1} = j | X_t = i)\nP = np.array([\n    [0.70, 0.20, 0.08, 0.02],  # Sunny\n    [0.30, 0.40, 0.25, 0.05],  # Cloudy\n    [0.15, 0.35, 0.40, 0.10],  # Rainy\n    [0.10, 0.20, 0.50, 0.20],  # Stormy\n])\n\n# Method 1: Solve via Left Eigenvector of P\neigenvalues, left_eigenvectors = np.linalg.eig(P.T)\n# Find eigenvalue closest to 1.0\nidx = np.argmin(np.abs(eigenvalues - 1.0))\nstationary_eigen = np.real(left_eigenvectors[:, idx])\nstationary_eigen /= np.sum(stationary_eigen)\n\n# Method 2: Solve linear system (P.T - I) pi = 0 with constraint sum(pi) = 1\nA = np.vstack([P.T - np.eye(K), np.ones((1, K))])\nb = np.append(np.zeros(K), 1.0)\nstationary_lstsq, _, _, _ = np.linalg.lstsq(A, b, rcond=None)\n\n# Method 3: Simulate long-run discrete Markov trajectory\nnp.random.seed(42)\nn_steps = 100_000\ncurrent_state = 0  # Start at Sunny\nvisits = np.zeros(K)\n\nfor _ in range(n_steps):\n    visits[current_state] += 1\n    current_state = np.random.choice(K, p=P[current_state])\n\nempirical_dist = visits / n_steps\n\nprint(\"Stationary distribution (Analytic left-eigen):\")\nfor s, p in zip(states, stationary_eigen):\n    print(f\"  {s:8s}: {p:.4f}\")\n\nprint(\"\\nEmpirical long-run frequency (100k steps):\")\nfor s, p in zip(states, empirical_dist):\n    print(f\"  {s:8s}: {p:.4f}\")\n\n# Spectral gap and mixing rate\nsorted_eigenvals = np.sort(np.abs(eigenvalues))[::-1]\nspectral_gap = 1.0 - sorted_eigenvals[1]\nprint(f\"\\nSecond eigenvalue magnitude: {sorted_eigenvals[1]:.4f}\")\nprint(f\"Spectral gap: {spectral_gap:.4f} (governs mixing rate)\")",
+    keyPoints: [
+      "The Markov property dictates that the future state depends only on current state, not on the sequence of preceding states.",
+      "A stochastic matrix P has non-negative entries with row sums equal to 1, guaranteeing that 1 is its largest eigenvalue.",
+      "Ergodic chains (irreducible and aperiodic) possess a unique stationary distribution \\pi such that \\lim_{n \\to \\infty} \\pi_0 P^n = \\pi regardless of initial distribution \\pi_0.",
+      "Detailed balance \\pi_i P_{ij} = \\pi_j P_{ji} provides a sufficient condition for stationarity, forming the foundation of MCMC sampling algorithms.",
+      "The spectral gap 1 - |\\lambda_2| controls the mixing time: larger spectral gaps yield rapid convergence to the stationary distribution."
+    ],
+    pitfalls: [
+      "Periodic chains failing to converge: An alternating two-state chain oscillating between state A and B has stationary distribution (0.5, 0.5), but \\pi_0 P^n alternates (1, 0) and (0, 1) without converging.",
+      "Reducible chains with multiple equilibria: If the chain has disconnected absorbing sets, the stationary distribution is non-unique and depends directly on where the chain began.",
+      "Confusing row vectors and column vectors: Because P is row-stochastic (\\sum_j P_{ij} = 1), the stationary distribution satisfies the left-multiplication \\pi P = \\pi, not P \\pi = \\pi."
+    ],
+    quiz: [
+      {
+        "q": "Which condition is strictly required for a finite Markov chain to possess a unique stationary distribution independent of initial conditions?",
+        "o": [
+          "The chain must be ergodic (irreducible and aperiodic)",
+          "The transition matrix must be symmetric",
+          "All diagonal transition probabilities must be zero",
+          "The state space must contain at least one absorbing state"
+        ],
+        "a": 0,
+        "why": "Ergodicity guarantees irreducibility (every state is reachable from every other state) and aperiodicity (no deterministic cyclical loops), ensuring unique convergence regardless of initial distribution."
+      },
+      {
+        "q": "What is the relationship between detailed balance \\pi_i P_{ij} = \\pi_j P_{ji} and the stationary distribution?",
+        "o": [
+          "Detailed balance is a sufficient condition for stationarity, meaning any distribution satisfying it is guaranteed to be stationary",
+          "Detailed balance is necessary for stationarity; non-reversible chains never have stationary distributions",
+          "Detailed balance implies that the transition matrix P must be identity",
+          "Detailed balance guarantees that the chain will terminate within a finite number of steps"
+        ],
+        "a": 0,
+        "why": "Summing both sides of detailed balance over i yields \\sum_i \\pi_i P_{ij} = \\pi_j \\sum_i P_{ji} = \\pi_j(1) = \\pi_j, which is exactly the stationarity condition \\pi P = \\pi."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "probability-rules-and-bayes-theorem"
+    ],
+    related: [
+      "mcmc-metropolis-hastings-and-gibbs",
+      "hamiltonian-monte-carlo",
+      "variational-inference",
+      "state-space-models-and-the-kalman-filter"
+    ],
+    keywords: "markov chain, stationary distribution, transition matrix, ergodicity, detailed balance, chapman kolmogorov, mixing time, spectral gap"
+  },
+  {
+    id: 'stationarity-acf-and-pacf',
+    short: 'Stationarity, ACF and PACF',
+    title: 'Stationarity, Autocorrelation and Partial Autocorrelation',
+    task: 'concepts',
+    module: 'Time series and survival',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Weak stationarity ensures that mean, variance, and autocovariance remain invariant over time, while the ACF and PACF reveal the memory structure of temporal data.`,
+    lead: r`Statistical forecasting models rely on stationarity: historical patterns must behave consistently into the future. Autocorrelation (ACF) measures total linear association between observations at varying lags, whereas partial autocorrelation (PACF) isolates direct linear relationships by removing the confounding influence of intervening lags.`,
+    intuition: [
+      r`Imagine forecasting daily electricity demand. If demand grows steadily by 5% each year as the population expands, yesterday's mean is an unreliable baseline for tomorrow. Similarly, if winter demand swings by 50 GW while spring fluctuations rarely exceed 10 GW, the variance depends on the calendar. A non-stationary process is a moving target whose statistical parameters shift underneath your model, generating spurious correlations and unstable predictions.`,
+      r`Weak (second-order or covariance) stationarity imposes three conditions: a constant mean $\mu$, a constant finite variance $\sigma^2$, and an autocovariance $\gamma(k)$ that depends solely on the time separation $k = |t - s|$, not on the absolute calendar date $t$. When raw data drifts or displays changing volatility, transformations such as logarithmic scaling and differencing ($\Delta y_t = y_t - y_{t-1}$) stabilise the moments, converting persistent wanderings into stationary fluctuations around zero.`,
+      r`Once a series is stationary, we map its temporal memory using autocorrelation functions. The ACF at lag 2 measures the raw correlation between $y_t$ and $y_{t-2}$. However, $y_t$ correlates with $y_{t-1}$, and $y_{t-1}$ correlates with $y_{t-2}$, creating an indirect echo through the intermediate period. The PACF strips away this linear chain of mediation, measuring only the residual connection between $y_t$ and $y_{t-2}$ once $y_{t-1}$ is controlled for. For a pure autoregressive process AR(1), the ACF decays geometrically while the PACF cuts off cleanly after lag 1.`,
+    ],
+    analogy: r`ACF is like the total reverberation echoing down a corridor, while PACF isolates the distinct sound bouncing directly off a specific far wall after silencing echoes from every doorway in between.`,
+    steps: [
+      r`Plot the raw sequence against time to inspect for deterministic trends, seasonal cycles, or widening variance envelopes.`,
+      r`Calculate rolling window metrics (such as a 30-period rolling mean and standard deviation) to visually inspect parameter constancy across historical segments.`,
+      r`Execute formal unit-root hypothesis tests, such as the Augmented Dickey–Fuller (ADF) test, to assess whether stochastic trending requires first-order differencing.`,
+      r`Apply variance-stabilising transformations (e.g. natural logarithms) and differencing ($\Delta y_t = y_t - y_{t-1}$) until the series exhibits mean-reverting behaviour.`,
+      r`Compute sample ACF and PACF coefficients up to lag $K$, plotting them alongside 95% Bartlett confidence bounds ($\pm 1.96 / \sqrt{n}$) for white noise.`,
+      r`Diagnose model signatures: an AR($p$) process displays decaying ACF and sharp PACF cut-off at lag $p$, whereas an MA($q$) process displays sharp ACF cut-off at lag $q$ and decaying PACF.`,
+    ],
+    math: [
+      {
+        h: 'Weak (covariance) stationarity',
+        tex: r`$$\mathbb{E}[y_t] = \mu, \quad \operatorname{Var}(y_t) = \sigma^2 < \infty, \quad \operatorname{Cov}(y_t, y_{t-k}) = \gamma(k) \quad \forall t, k$$`,
+        p: r`A process is weakly stationary if its first moment (mean $\mu$) and second moments (variance $\sigma^2$ and autocovariance $\gamma(k)$) are finite and invariant to time shifts $t$. Strict stationarity requires all joint probability distributions to remain identical under time shifts, but weak stationarity suffices for linear time-series modelling.`,
+      },
+      {
+        h: 'Autocorrelation function (ACF)',
+        tex: r`$$\rho(k) = \frac{\gamma(k)}{\gamma(0)} = \frac{\sum_{t=k+1}^n (y_t - \bar{y})(y_{t-k} - \bar{y})}{\sum_{t=1}^n (y_t - \bar{y})^2}$$`,
+        p: r`$\rho(k)$ measures the linear correlation between observations separated by $k$ periods. Under the null hypothesis of Gaussian white noise, sample autocorrelations are asymptotically normal with variance $1/n$, yielding Bartlett 95% confidence bands of $\pm 1.96 / \sqrt{n}$.`,
+      },
+      {
+        h: 'Partial autocorrelation function (PACF)',
+        tex: r`$$\phi_{kk} = \operatorname{Corr}\big(y_t - \hat{y}_t^{(k-1)}, \; y_{t-k} - \hat{y}_{t-k}^{(k-1)}\big)$$`,
+        p: r`$\phi_{kk}$ represents the partial correlation between $y_t$ and $y_{t-k}$ after projecting both onto the linear subspace spanned by intermediate lags $\{y_{t-1}, \dots, y_{t-k+1}\}$. In an AR($p$) process, $\phi_{kk} = 0$ for all $k > p$, providing an exact diagnostic cut-off.`,
+      },
+    ],
+    keyPoints: [
+      r`Non-stationary series produce spurious regressions: two completely independent drifting series frequently exhibit inflated $R^2$ values and misleadingly tiny p-values.`,
+      r`ACF captures total serial correlation across time including cascaded intermediaries, while PACF isolates the direct conditional correlation at lag $k$.`,
+      r`Bartlett bounds ($\pm 1.96 / \sqrt{n}$) establish the threshold beyond which sample autocorrelations reflect genuine signal rather than sampling noise.`,
+      r`Differencing removes stochastic polynomial trends, but excessive over-differencing adds artificial negative autocorrelation and needlessly inflates forecast variance.`,
+    ],
+    pitfalls: [
+      r`Evaluating ACF and PACF on un-differenced trending data: strong trends cause sample ACF to decay linearly and sluggishly, obscuring the true autoregressive structure.`,
+      r`Over-differencing stationary data: differencing a stationary white noise series creates a non-invertible MA(1) process with $\theta = 1$, introducing artificial negative correlation.`,
+      r`Confusing weak stationarity with strict stationarity: weak stationarity concerns only the first two moments, whereas strict stationarity requires invariance of the entire joint distribution.`,
+      r`Neglecting seasonal non-stationarity: seasonal peaks occurring every $s$ periods violate autocovariance invariance and require seasonal differencing ($y_t - y_{t-s}$).`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n = 300
+eps = np.random.normal(0, 1.0, n)
+y = np.zeros(n)
+for t in range(1, n):
+    y[t] = 0.7 * y[t-1] + eps[t]
+
+# Sample moments
+y_dm = y - np.mean(y)
+gamma0 = np.dot(y_dm, y_dm) / n
+acf = [np.dot(y_dm[k:], y_dm[:-k]) / (n * gamma0) for k in range(1, 4)]
+
+# PACF: lag 1 equals ACF lag 1; lag 2 via OLS conditioning on lag 1
+pacf1 = acf[0]
+X2 = np.column_stack([y[1:-1], y[:-2]])
+y2 = y[2:]
+beta2 = np.linalg.lstsq(X2 - X2.mean(axis=0), y2 - y2.mean(), rcond=None)[0]
+pacf2 = beta2[1]
+bound_95 = 1.96 / np.sqrt(n)
+
+print("Sample mean:", round(float(np.mean(y)), 3))
+print("Sample var:", round(float(np.var(y)), 3))
+print("ACF lags 1..3:", [round(float(x), 3) for x in acf])
+print("PACF lag 1:", round(float(pacf1), 3), "lag 2:", round(float(pacf2), 3))
+print("Bartlett 95% bound:", round(float(bound_95), 3))`,
+    quiz: [
+      {
+        q: r`Which condition is strictly required for a time series to be weakly (covariance) stationary?`,
+        o: [
+          r`All higher-order moments must equal zero`,
+          r`The mean, variance, and autocovariance depend only on lag displacement, not on calendar time`,
+          r`The observations must follow an exact Gaussian distribution`,
+          r`The series must have zero autocorrelation at all lags`,
+        ],
+        a: 1,
+        why: r`Weak stationarity requires constant mean, constant finite variance, and autocovariances that depend solely on the lag difference $k = |t - s|$.`,
+      },
+      {
+        q: r`If a stationary series is generated by an AR(1) process $y_t = \phi y_{t-1} + \epsilon_t$ with $0 < \phi < 1$, what behaviour do ACF and PACF display?`,
+        o: [
+          r`ACF decays geometrically, while PACF cuts off cleanly after lag 1`,
+          r`ACF cuts off sharply after lag 1, while PACF decays exponentially`,
+          r`Both ACF and PACF remain exactly zero at all lags`,
+          r`Both ACF and PACF decay linearly to infinity`,
+        ],
+        a: 0,
+        why: r`In an AR(1) model, ACF displays geometric decay $\rho(k) = \phi^k$, whereas PACF isolates the direct lag effect and drops to zero for all lags $k \ge 2$.`,
+      },
+      {
+        q: r`Why does PACF differ from ACF at lag 2 for an autoregressive process?`,
+        o: [
+          r`PACF squares the correlation values to prevent negative numbers`,
+          r`PACF only uses even-numbered time steps`,
+          r`PACF controls for the linear intermediate influence of lag 1, isolating the direct relationship between $y_t$ and $y_{t-2}$`,
+          r`PACF includes non-linear polynomial interactions while ACF is linear`,
+        ],
+        a: 2,
+        why: r`ACF at lag 2 incorporates both the direct relationship and indirect transmission through $y_{t-1}$; PACF eliminates the intermediate linear mediation of $y_{t-1}$.`,
+      },
+      {
+        q: r`What is the risk of over-differencing a series that is already stationary?`,
+        o: [
+          r`It artificially increases the degrees of freedom`,
+          r`It permanently converts the series into a deterministic linear trend`,
+          r`It eliminates all random error from future forecasts`,
+          r`It introduces artificial negative autocorrelation and induces an unnecessary moving-average unit root`,
+        ],
+        a: 3,
+        why: r`Differencing white noise $y_t = \epsilon_t$ yields $\Delta y_t = \epsilon_t - \epsilon_{t-1}$, introducing an artificial MA(1) structure with $\rho(1) = -0.5$ and inflating prediction variance.`,
+      },
+    ],
+    usedBy: ['arima-and-sarima'],
+    prereq: ['expectation-variance-and-covariance', 'correlation-pearson-spearman-kendall', 'hypothesis-testing-and-p-values'],
+    related: ['arima-and-sarima', 'residual-diagnostics-and-heteroscedasticity', 'exponential-smoothing-ets'],
+    keywords: 'stationarity acf pacf autocorrelation partial autocorrelation time series bartlett bounds unit root differencing',
+  },
+  {
+    id: 'arima-and-sarima',
+    short: 'ARIMA and SARIMA',
+    title: 'Autoregressive Integrated Moving Average Models',
+    task: 'concepts',
+    module: 'Time series and survival',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`ARIMA combines autoregression, differencing, and moving-average error shocks into a flexible framework for non-seasonal and seasonal time-series forecasting.`,
+    lead: r`Real-world temporal sequences exhibit persistence, non-stationarity, and recurring seasonal cycles. ARIMA($p, d, q$) integrates autoregressive lag terms of order $p$, differencing of degree $d$ to enforce stationarity, and moving-average error shocks of order $q$. SARIMA extends this formulation with seasonal operators $(P, D, Q)_s$ to capture periodic cycles without inflating parameter counts.`,
+    intuition: [
+      r`Consider monthly retail revenue. Sales steadily climb over years (trend), spike dramatically every December (seasonality), and display momentum from quarter to quarter (persistence). To forecast next month's sales, three sources of information help: (1) where sales stood last month (autoregression, AR), (2) how much the series drifted recently (differencing, I), and (3) unexpected shocks—such as a promotional surge or a freight delay—whose effects linger into subsequent months (moving average, MA).`,
+      r`ARIMA integrates these three mechanisms into a single linear equation. The parameter $d$ specifies how many times successive differences ($y_t - y_{t-1}$) are taken to eliminate non-stationary drift and stabilise the mean. Once differenced, the AR($p$) component models the current value as a weighted sum of its own previous $p$ values, while the MA($q$) component models it as a linear combination of the current and prior $q$ unobserved white-noise forecast errors.`,
+      r`When dynamics repeat across seasonal periods of length $s$ (e.g. $s = 12$ for monthly cycles), fitting a high-order non-seasonal ARIMA model would require estimating dozens of intermediate coefficients, wasting statistical power. SARIMA resolves this with multiplicative seasonal operators: seasonal differencing $\Delta_s y_t = y_t - y_{t-s}$ eliminates cyclical baselines, while seasonal autoregressive ($P$) and moving-average ($Q$) terms link observations across annual intervals using only a handful of well-identified parameters.`,
+    ],
+    analogy: r`ARIMA steers a vessel by holding course based on recent heading (AR), trimming against prevailing drift (I), and damping turbulence from rogue waves (MA); SARIMA consults an annual tidal chart to anticipate periodic swells.`,
+    steps: [
+      r`Examine time plots, variance stability, and unit-root tests (ADF) to determine the required regular differencing order $d \in \{0, 1, 2\}$.`,
+      r`Inspect seasonal cycles across period $s$ and apply seasonal differencing $D \in \{0, 1\}$ if repeating annual or weekly patterns persist.`,
+      r`Examine ACF and PACF plots of the differenced series: non-seasonal spikes suggest orders $p$ and $q$, while recurring spikes at seasonal multiples ($s, 2s$) suggest $P$ and $Q$.`,
+      r`Estimate model coefficients ($\phi, \theta, \Phi, \Theta$) using conditional maximum likelihood estimation (MLE) or non-linear least squares.`,
+      r`Perform residual diagnostic checks: verify residuals resemble white noise using the Ljung–Box test ($p > 0.05$) and inspect residual ACF for leftover signal.`,
+      r`Compute multi-step point forecasts alongside analytical prediction intervals ($1.96 \times \text{SE}(h)$) that expand with horizon $h$.`,
+    ],
+    math: [
+      {
+        h: 'The non-seasonal ARIMA($p, d, q$) equation',
+        tex: r`$$\phi(B)(1 - B)^d y_t = c + \theta(B)\epsilon_t, \quad \epsilon_t \sim \mathcal{WN}(0, \sigma^2)$$`,
+        p: r`$B$ denotes the backshift operator ($B^k y_t = y_{t-k}$), $\phi(B) = 1 - \sum_{i=1}^p \phi_i B^i$ is the autoregressive polynomial, $(1 - B)^d$ denotes $d$-th order differencing, and $\theta(B) = 1 + \sum_{j=1}^q \theta_j B^j$ is the moving-average polynomial. Constant $c$ governs deterministic drift, and $\epsilon_t$ is zero-mean white noise with variance $\sigma^2$.`,
+      },
+      {
+        h: 'The multiplicative SARIMA($p, d, q) \times (P, D, Q)_s$ model',
+        tex: r`$$\Phi_P(B^s)\,\phi(B)(1 - B^s)^D(1 - B)^d y_t = \Theta_Q(B^s)\,\theta(B)\epsilon_t$$`,
+        p: r`$\Phi_P(B^s) = 1 - \sum_{k=1}^P \Phi_k B^{ks}$ models seasonal autoregression, $(1 - B^s)^D$ represents seasonal differencing of period $s$, and $\Theta_Q(B^s) = 1 + \sum_{m=1}^Q \Theta_m B^{ms}$ models seasonal moving-average errors. Multiplying seasonal and non-seasonal operators yields a parsimonious composite filter.`,
+      },
+      {
+        h: 'Stationarity and invertibility roots',
+        tex: r`$$\text{Roots of } \phi(z) = 0 \text{ and } \theta(z) = 0 \text{ must lie strictly outside the unit circle } (|z| > 1)$$`,
+        p: r`Characteristic roots outside the complex unit circle guarantee that the AR polynomial is stable (stationary) and the MA polynomial is invertible. Invertibility ensures that unobserved noise shocks $\epsilon_t$ can be expressed uniquely as a convergent infinite autoregression of observed past values.`,
+      },
+    ],
+    keyPoints: [
+      r`The "I" stands for integrated: a series differenced $d$ times must be integrated (cumulatively summed) $d$ times to recover original forecast levels.`,
+      r`Parsimony avoids parameter redundancy: adding both redundant AR and MA terms can cause roots to nearly cancel, destabilising numerical optimisation.`,
+      r`Moving-average terms model unobserved past forecast errors ($\epsilon_{t-j}$), not a simple rolling average of observed data points.`,
+      r`Forecast uncertainty expands with horizon: for $d \ge 1$, prediction interval widths grow without bound as time horizon $h \to \infty$.`,
+    ],
+    pitfalls: [
+      r`Over-differencing the series: applying $d=2$ when $d=1$ suffices induces an artificial moving-average root $\theta \approx 1$ and inflates forecast variance.`,
+      r`Neglecting the invertibility condition: non-invertible MA models yield unstable recursive error estimates and unreliable out-of-sample confidence intervals.`,
+      r`Relying on in-sample fit metrics ($R^2$): high-order ARIMA specifications easily overfit historical noise; model selection should minimise AIC or BIC.`,
+      r`Skipping residual diagnostic testing: failing to evaluate the Ljung–Box statistic leaves unmodelled serial dependence buried in forecast residuals.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n = 200
+phi_true, c_true = 0.65, 0.2
+eps = np.random.normal(0, 1.0, n)
+
+# Generate stationary AR(1) process w_t
+w = np.zeros(n)
+for t in range(1, n):
+    w[t] = c_true + phi_true * w[t-1] + eps[t]
+
+# Integrate to create ARIMA(1, 1, 0) series
+y = np.cumsum(w) + 100.0
+
+# Difference series to achieve stationarity
+dy = np.diff(y)
+X = np.column_stack([np.ones(len(dy) - 1), dy[:-1]])
+y_target = dy[1:]
+beta = np.linalg.lstsq(X, y_target, rcond=None)[0]
+c_hat, phi_hat = beta[0], beta[1]
+res = y_target - X @ beta
+sigma2_hat = np.var(res, ddof=2)
+
+# Multi-step point forecast for horizon h = 1, 2, 3
+current_dy = dy[-1]
+forecast_dy = []
+for _ in range(3):
+    current_dy = c_hat + phi_hat * current_dy
+    forecast_dy.append(current_dy)
+forecast_y = y[-1] + np.cumsum(forecast_dy)
+
+print("Estimated drift c:", round(float(c_hat), 3), "true:", c_true)
+print("Estimated phi:", round(float(phi_hat), 3), "true:", phi_true)
+print("Residual variance:", round(float(sigma2_hat), 3))
+print("Last observed y:", round(float(y[-1]), 2))
+print("Forecasts y_{t+1..3}:", [round(float(val), 2) for val in forecast_y])`,
+    quiz: [
+      {
+        q: r`In an ARIMA($p, d, q$) model, what does the parameter $d$ represent?`,
+        o: [
+          r`The number of seasonal dummy variables included in the model`,
+          r`The damping factor applied to multi-step forecasts`,
+          r`The number of times the series is consecutively differenced to eliminate trend and achieve stationarity`,
+          r`The autoregressive lag order of the disturbance term`,
+        ],
+        a: 2,
+        why: r`The parameter $d$ represents the integration order—the number of consecutive differencing operations $(1-B)^d$ required to achieve covariance stationarity.`,
+      },
+      {
+        q: r`What does the moving-average component MA($q$) model?`,
+        o: [
+          r`A linear combination of the current and past $q$ unobserved white-noise forecast errors`,
+          r`A simple rolling arithmetic average of the last $q$ observed historical values`,
+          r`A polynomial trend of degree $q$ fitted via ordinary least squares`,
+          r`The moving variance of the seasonal residuals`,
+        ],
+        a: 0,
+        why: r`The MA($q$) component models current deviations as a linear combination of past random shocks $\epsilon_t + \theta_1 \epsilon_{t-1} + \dots + \theta_q \epsilon_{t-q}$.`,
+      },
+      {
+        q: r`Why is the multiplicative SARIMA parameterisation preferred over including separate indicator dummy variables for every seasonal period?`,
+        o: [
+          r`SARIMA does not require computing any residual diagnostics`,
+          r`SARIMA captures seasonal dependence using far fewer parameters, avoiding degrees-of-freedom depletion and overfitting`,
+          r`SARIMA guarantees that prediction intervals never widen over time`,
+          r`SARIMA can only be applied to non-stationary data`,
+        ],
+        a: 1,
+        why: r`SARIMA models seasonal autoregression and moving averages parsimoniously across period $s$, capturing periodic dynamics with few parameters rather than estimating $s-1$ separate coefficients.`,
+      },
+      {
+        q: r`What condition must the roots of the autoregressive characteristic polynomial $\phi(z) = 0$ satisfy for the model to be stationary?`,
+        o: [
+          r`All roots must equal exactly 1.0`,
+          r`All roots must lie strictly on the imaginary axis`,
+          r`At least one root must lie inside the unit circle ($|z| < 1$)`,
+          r`All roots must lie strictly outside the complex unit circle ($|z| > 1$)`,
+        ],
+        a: 3,
+        why: r`Stationarity requires the roots of $\phi(z) = 1 - \sum \phi_i z^i = 0$ to lie outside the unit circle ($|z| > 1$), ensuring past shocks decay to zero rather than exploding over time.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['stationarity-acf-and-pacf', 'expectation-variance-and-covariance', 'residual-diagnostics-and-heteroscedasticity'],
+    related: ['stationarity-acf-and-pacf', 'exponential-smoothing-ets', 'ols-inference-t-tests-f-test-r2-and-adjusted-r2'],
+    keywords: 'arima sarima time series autoregressive moving average differencing box jenkins seasonal forecasting',
+  },
+  {
+    id: 'exponential-smoothing-ets',
+    short: 'Exponential smoothing (ETS)',
+    title: 'Exponential Smoothing and the ETS Framework',
+    task: 'concepts',
+    module: 'Time series and survival',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Exponential smoothing generates forecasts using geometrically decaying weights on past data, generalised by the ETS state-space framework into formal statistical likelihood models.`,
+    lead: r`Moving averages assign equal weight to recent observations and drop older history abruptly at window boundaries. Exponential smoothing replaces this cliff edge with geometrically decaying weights, giving greatest weight to recent data. The ETS (Error, Trend, Seasonal) framework formalises these intuitive heuristics into state-space innovations models with exact likelihoods and probabilistic prediction intervals.`,
+    intuition: [
+      r`Imagine tracking customer foot traffic at a café. Yesterday's attendance provides a strong signal for today's staffing needs, whereas traffic from three months ago carries much less relevance. If you compute a simple 7-day moving average, an unusual spike on day 1 drops off abruptly on day 8, causing an artificial jump in your forecast. Exponential smoothing eliminates this cliff: the most recent observation receives weight $\alpha$, the preceding day $\alpha(1-\alpha)$, the day before $\alpha(1-\alpha)^2$, and so on, fading into the past along an elegant, continuous curve.`,
+      r`Simple exponential smoothing (SES) handles stationary series with no clear trend or seasonal rhythm. When a series trends steadily upward or downward, Holt's linear method introduces a second parameter $\beta$ to update a local slope (growth rate). When periodic rhythms appear—such as weekend demand spikes—Holt–Winters smoothing incorporates a third parameter $\gamma$ to adjust seasonal indices, operating additively (constant seasonal amplitude) or multiplicatively (seasonal swings proportional to the series level).`,
+      r`The modern ETS taxonomy (Hyndman et al.) classifies time-series models by their three constituent components: Error ($\{A, M\}$), Trend ($\{N, A, A_d, M\}$), and Seasonal ($\{N, A, M\}$). Formulating exponential smoothing as state-space innovations models provides an exact Gaussian likelihood, transforming heuristic smoothing formulas into rigorous statistical estimators that support automated model selection via AIC and analytical prediction intervals.`,
+    ],
+    analogy: r`Exponential smoothing acts like a vehicular shock absorber: it damps short-term road turbulence while smoothly adjusting to sustained uphill grades (trend) and rhythmic highway ripples (seasonality).`,
+    steps: [
+      r`Decompose the historical series to determine whether trend and seasonal oscillations are absent, additive, or multiplicative.`,
+      r`Select candidate ETS specifications: e.g. $\text{ETS}(A, N, N)$ for level data, $\text{ETS}(A, A, N)$ for trending data, or $\text{ETS}(M, A, M)$ for seasonal series with widening variance.`,
+      r`Formulate state recursive equations for unobserved level $l_t$, trend growth $b_t$, and seasonal factor $s_t$.`,
+      r`Estimate smoothing parameters ($\alpha, \beta, \gamma \in [0, 1]$) and initial states ($l_0, b_0, s_0$) by minimising the sum of squared one-step forecast errors or maximising likelihood.`,
+      r`Generate recursive one-step-ahead fitted values $\hat{y}_{t|t-1}$ across training observations and perform residual diagnostic checks.`,
+      r`Extrapolate state estimates forward across forecast horizon $h$ and compute probabilistic prediction bounds.`,
+    ],
+    math: [
+      {
+        h: 'Simple exponential smoothing (SES)',
+        tex: r`$$\hat{y}_{t+1|t} = l_t, \quad l_t = \alpha y_t + (1 - \alpha) l_{t-1} = l_{t-1} + \alpha(y_t - l_{t-1})$$`,
+        p: r`$l_t$ represents the estimated series level at time $t$, $\alpha \in (0, 1)$ is the smoothing parameter, and $e_t = y_t - l_{t-1}$ is the one-step-ahead forecast error. As $\alpha \to 1$, the model approaches a naive random walk; as $\alpha \to 0$, it converges to the historical sample mean.`,
+      },
+      {
+        h: 'Holt’s linear trend method',
+        tex: r`$$l_t = \alpha y_t + (1 - \alpha)(l_{t-1} + b_{t-1}), \quad b_t = \beta(l_t - l_{t-1}) + (1 - \beta)b_{t-1}$$`,
+        p: r`$l_t$ tracks the local level, $b_t$ tracks local slope (trend), and $\beta \in (0, 1)$ governs the adaptation rate of the trend. Forecasts $h$ steps ahead extrapolate linearly: $\hat{y}_{t+h|t} = l_t + h b_t$. Damped trends multiply $b_t$ by damping factor $\phi \in (0, 1)$ to prevent unrealistic long-horizon divergence.`,
+      },
+      {
+        h: 'The state-space innovations model: ETS(A, A, N)',
+        tex: r`$$y_t = l_{t-1} + b_{t-1} + \epsilon_t, \quad l_t = l_{t-1} + b_{t-1} + \alpha\epsilon_t, \quad b_t = b_{t-1} + \alpha\beta\epsilon_t$$`,
+        p: r`Writing exponential smoothing in state-space form with a single innovation source $\epsilon_t \sim \mathcal{N}(0, \sigma^2)$ defines a joint probability density over the observations. This allows maximum likelihood estimation, information-criterion model selection (AIC, BIC), and exact prediction interval derivations.`,
+      },
+    ],
+    keyPoints: [
+      r`Weights decay geometrically: past observation $y_{t-k}$ carries weight $\alpha(1-\alpha)^k$, ensuring all historical data contributes while recent data dominates.`,
+      r`Damped trend specifications ($\phi \in [0.8, 0.98]$) guard against overly aggressive linear trend extrapolations in long-range forecasting.`,
+      r`Multiplicative error models explicitly accommodate heteroscedasticity where forecast uncertainty scales in proportion to series magnitude.`,
+      r`ETS models focus on trend, level, and seasonal states; unlike ARIMA, they do not explicitly parameterise stationary cyclical autocorrelations.`,
+    ],
+    pitfalls: [
+      r`Selecting smoothing parameters outside permissible stability bounds, which causes state updates to oscillate unstably or diverge.`,
+      r`Unconstrained linear trend extrapolation: projecting undamped linear trends into distant horizons often yields implausibly massive forecasts.`,
+      r`Using additive seasonality when seasonal amplitude expands proportionally with the series level: multiplicative seasonality ($\text{ETS}(\cdot, \cdot, M)$) is required.`,
+      r`Confusing simple moving averages with exponential smoothing: moving averages have a finite rectangular memory, whereas exponential smoothing has an infinite decaying memory.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+n = 100
+# Synthesise time series with shifting level and noise
+level = 50.0 + np.cumsum(np.random.normal(0, 0.5, n))
+y = level + np.random.normal(0, 1.5, n)
+
+def ses_fit(y_series, alpha):
+    n_pts = len(y_series)
+    l = np.zeros(n_pts)
+    l[0] = y_series[0]
+    for t in range(1, n_pts):
+        l[t] = alpha * y_series[t-1] + (1 - alpha) * l[t-1]
+    errors = y_series[1:] - l[1:]
+    return l, errors
+
+# Optimise alpha over grid [0.05, 0.95] by minimising sum of squared errors
+alphas = np.linspace(0.05, 0.95, 91)
+best_alpha, best_sse = None, float('inf')
+for a in alphas:
+    _, errs = ses_fit(y, a)
+    sse = np.sum(errs**2)
+    if sse < best_sse:
+        best_sse, best_alpha = sse, a
+
+opt_l, opt_errs = ses_fit(y, best_alpha)
+rmse = np.sqrt(np.mean(opt_errs**2))
+final_level = best_alpha * y[-1] + (1 - best_alpha) * opt_l[-1]
+forecast_h = [final_level] * 3
+
+print("Optimal alpha:", round(float(best_alpha), 3))
+print("In-sample RMSE:", round(float(rmse), 3))
+print("Last observed y:", round(float(y[-1]), 2))
+print("Estimated final level:", round(float(final_level), 2))
+print("3-step ahead forecasts:", [round(float(f), 2) for f in forecast_h])`,
+    quiz: [
+      {
+        q: r`In Simple Exponential Smoothing, how do the weights assigned to past observations behave as we look further back in time?`,
+        o: [
+          r`They decay geometrically at rate $(1 - \alpha)^k$`,
+          r`They remain completely constant up to window length $k$ and then drop to zero`,
+          r`They increase linearly with age`,
+          r`They oscillate periodically between positive and negative values`,
+        ],
+        a: 0,
+        why: r`Expanding the recursive formula shows that observation $y_{t-k}$ receives weight $\alpha(1-\alpha)^k$, decaying smoothly and geometrically as lag $k$ increases.`,
+      },
+      {
+        q: r`When should multiplicative seasonality be chosen over additive seasonality in the ETS framework?`,
+        o: [
+          r`When the series contains negative values only`,
+          r`When the seasonal period $s$ is strictly less than 4`,
+          r`When seasonal swings expand in amplitude as the overall level of the time series rises`,
+          r`When all smoothing parameters are set to 1.0`,
+        ],
+        a: 2,
+        why: r`Additive seasonality assumes seasonal fluctuations have constant magnitude regardless of series level, whereas multiplicative seasonality scales seasonal swings proportionally to the local level.`,
+      },
+      {
+        q: r`What is the primary benefit of formulating exponential smoothing as a state-space innovations model in ETS?`,
+        o: [
+          r`It eliminates the need for historical training data`,
+          r`It guarantees that forecast errors are identically zero`,
+          r`It restricts all smoothing parameters to equal exactly 0.5`,
+          r`It provides an exact statistical likelihood for automated model selection via AIC and derives analytical prediction intervals`,
+        ],
+        a: 3,
+        why: r`The state-space innovations formulation defines an exact probability distribution for the series, enabling maximum likelihood estimation, AIC/BIC comparison, and formal probabilistic forecast intervals.`,
+      },
+      {
+        q: r`Why is trend damping ($\phi < 1$) frequently introduced into Holt’s linear trend method?`,
+        o: [
+          r`To force the trend to reverse direction after every step`,
+          r`To prevent unrealistic and unbounded linear trend extrapolation over long forecast horizons`,
+          r`To convert the series into white noise`,
+          r`To eliminate the need for estimating the level parameter $\alpha$`,
+        ],
+        a: 1,
+        why: r`Linear trends tend to produce overly extreme projections on distant horizons; damping factor $\phi \in (0.8, 0.98)$ gradually flattens the trend toward a constant horizon level.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['stationarity-acf-and-pacf', 'expectation-variance-and-covariance'],
+    related: ['arima-and-sarima', 'stationarity-acf-and-pacf', 'regression-metrics'],
+    keywords: 'exponential smoothing ets holt winters state space forecasting trend seasonal level damping',
+  },
+  {
+    id: "state-space-models-and-the-kalman-filter",
+    short: "Kalman filter",
+    title: "State-Space Models and the Kalman Filter",
+    task: "concepts",
+    module: "Time series and survival",
+    level: 3,
+    minutes: 18,
+    noLab: true,
+    summary: "Track hidden dynamical states from noisy sequential observations: understand linear Gaussian state-space systems, the two-phase Predict–Update recursion, and optimal Kalman gain.",
+    lead: "Whether tracking satellite orbits, estimating vehicle velocity from GPS, or forecasting latent macroeconomic trends, real-world signals are obscured by measurement noise. The Kalman filter recursively computes the exact minimum mean squared error Bayesian estimate of hidden states.",
+    intuition: [
+      "A state-space model represents a dynamical system across time using two core components: a hidden state vector $x_t$ that evolves dynamically according to physical laws or autoregressive processes, and an observed measurement vector $y_t$ that reflects noisy, incomplete linear projections of that hidden state. The transition equation $x_t = F_t x_{t-1} + B_t u_t + w_t$ governs state progression with process noise $w_t \\sim \\mathcal{N}(0, Q_t)$, while the measurement equation $y_t = H_t x_t + v_t$ captures observations subject to sensor noise $v_t \\sim \\mathcal{N}(0, R_t)$.",
+      "The challenge is that neither process dynamics nor sensor readings are immaculate. If you rely solely on forward physics (process model), errors accumulate unbounded over time. If you rely solely on instantaneous sensor measurements, high-frequency measurement noise corrupts estimates. The Kalman filter provides the mathematically optimal fusion: it combines the dynamical prediction with the incoming sensor measurement, weighting each strictly in proportion to their relative inverse uncertainties.",
+      "The filter operates as a two-phase recursive algorithm: Predict and Update. In the Predict phase, the state estimate and error covariance are projected forward one step in time using system dynamics $F_t$ and process noise $Q_t$. In the Update phase, an incoming measurement $y_t$ is compared against predicted observation $H_t \\hat{x}_{t \\mid t-1}$ to form the innovation (or measurement residual) $\\tilde{y}_t$. The Kalman gain $K_t$ balances prior uncertainty $P_{t \\mid t-1}$ against measurement noise $R_t$, steering the posterior state estimate toward whichever source is cleaner.",
+      "Under linear dynamics and Gaussian noise distributions, the Kalman filter is the exact optimal Bayesian posterior estimator, producing the exact conditional mean and covariance at every time step. Even when noise distributions are non-Gaussian, the Kalman filter remains the Best Linear Unbiased Estimator (BLUE)."
+    ],
+    analogy: "Imagine steering a yacht through thick coastal fog at midnight. Your nautical dead-reckoning equations predict your position based on compass heading and engine throttle (the dynamic state prediction), but sea currents steadily drift your vessel off course (process noise). Every five minutes, a lighthouse flash briefly illuminates a shoreline buoy (noisy sensor measurement). The Kalman filter is the seasoned navigator who compares the dead-reckoning position against the momentary glimpse of the buoy, shifting the helm by an optimal correction that yields the most accurate position on the chart.",
+    steps: [
+      {
+        "title": "1. Model state dynamics and sensor geometry",
+        "body": "Formulate state vector $x_t$ (e.g. $[position, velocity]^T$), state transition matrix $F$, process noise covariance $Q$, measurement matrix $H$, and measurement noise covariance $R$."
+      },
+      {
+        "title": "2. Time update: predict state and covariance",
+        "body": "Project state ahead: $\\hat{x}_{t \\mid t-1} = F_t \\hat{x}_{t-1 \\mid t-1} + B_t u_t$. Project error covariance ahead: $P_{t \\mid t-1} = F_t P_{t-1 \\mid t-1} F_t^T + Q_t$."
+      },
+      {
+        "title": "3. Measurement update: compute innovation and Kalman gain",
+        "body": "Compute measurement innovation $\\tilde{y}_t = y_t - H_t \\hat{x}_{t \\mid t-1}$ and innovation covariance $S_t = H_t P_{t \\mid t-1} H_t^T + R_t$. Calculate optimal Kalman gain: $K_t = P_{t \\mid t-1} H_t^T S_t^{-1}$."
+      },
+      {
+        "title": "4. Correct state estimate and refine covariance",
+        "body": "Update posterior state: $\\hat{x}_{t \\mid t} = \\hat{x}_{t \\mid t-1} + K_t \\tilde{y}_t$. Refine posterior error covariance: $P_{t \\mid t} = (I - K_t H_t) P_{t \\mid t-1}$. Repeat for every incoming observation."
+      }
+    ],
+    math: [
+      {
+        "h": "State-Space Formulation",
+        "tex": "x_t = F_t x_{t-1} + B_t u_t + w_t, \\quad y_t = H_t x_t + v_t, \\quad w_t \\sim \\mathcal{N}(0, Q_t), \\; v_t \\sim \\mathcal{N}(0, R_t)",
+        "p": "Linear Gaussian state-space model relating unobserved hidden state x_t to observable measurements y_t via transition matrix F_t and observation matrix H_t."
+      },
+      {
+        "h": "Predict Step (Prior Distribution)",
+        "tex": "\\hat{x}_{t \\mid t-1} = F_t \\hat{x}_{t-1 \\mid t-1}, \\quad P_{t \\mid t-1} = F_t P_{t-1 \\mid t-1} F_t^T + Q_t",
+        "p": "Extrapolates state mean and covariance forward in time prior to incorporating measurement at step t, compounding existing uncertainty with process noise Q_t."
+      },
+      {
+        "h": "Update Step (Kalman Gain and Posterior)",
+        "tex": "K_t = P_{t \\mid t-1} H_t^T (H_t P_{t \\mid t-1} H_t^T + R_t)^{-1}, \\quad \\hat{x}_{t \\mid t} = \\hat{x}_{t \\mid t-1} + K_t (y_t - H_t \\hat{x}_{t \\mid t-1})",
+        "p": "Kalman gain K_t minimises the trace of posterior covariance matrix P_{t|t}. When sensor noise R_t is small, K_t approaches H^{-1} trusting measurement; when R_t is massive, K_t approaches 0 trusting prediction."
+      }
+    ],
+    code: "import numpy as np\n\n# 1D Kinematic Tracking: Position and Velocity\n# True physics: constant velocity with random acceleration shocks\nnp.random.seed(42)\ndt = 0.1\nn_steps = 100\n\n# State transition matrix F: [position, velocity]^T\nF = np.array([[1.0, dt],\n              [0.0, 1.0]])\n\n# Measurement matrix H: observe position only\nH = np.array([[1.0, 0.0]])\n\n# Noise covariances\nq_var = 0.1   # Process noise acceleration variance\nQ = np.array([[0.25 * dt**4, 0.5 * dt**3],\n              [0.5 * dt**3, dt**2]]) * q_var\nr_var = 4.0   # Measurement noise variance (noisy sensor)\nR = np.array([[r_var]])\n\n# Simulate true trajectory and noisy measurements\ntrue_state = np.array([0.0, 5.0])  # Initial: pos=0m, vel=5m/s\ntrue_positions = []\nnoisy_measurements = []\n\nfor _ in range(n_steps):\n    process_shock = np.random.multivariate_normal([0, 0], Q)\n    true_state = F @ true_state + process_shock\n    sensor_noise = np.random.normal(0, np.sqrt(r_var))\n    measurement = H @ true_state + sensor_noise\n    \n    true_positions.append(true_state[0])\n    noisy_measurements.append(measurement[0])\n\n# Kalman Filter Estimation\nx_hat = np.array([0.0, 0.0])       # Initial estimate\nP = np.array([[10.0, 0.0],\n              [0.0, 10.0]])        # High initial uncertainty\n\nestimated_positions = []\nestimated_velocities = []\n\nfor y_t in noisy_measurements:\n    # --- Predict Step ---\n    x_pred = F @ x_hat\n    P_pred = F @ P @ F.T + Q\n    \n    # --- Update Step ---\n    y_meas = np.array([y_t])\n    innovation = y_meas - H @ x_pred\n    S = H @ P_pred @ H.T + R\n    K = P_pred @ H.T @ np.linalg.inv(S)\n    \n    x_hat = x_pred + K @ innovation\n    P = (np.eye(2) - K @ H) @ P_pred\n    \n    estimated_positions.append(x_hat[0])\n    estimated_velocities.append(x_hat[1])\n\n# Calculate Root Mean Squared Errors\nrmse_noisy = np.sqrt(np.mean((np.array(noisy_measurements) - np.array(true_positions))**2))\nrmse_kalman = np.sqrt(np.mean((np.array(estimated_positions) - np.array(true_positions))**2))\n\nprint(f\"Raw measurement position RMSE: {rmse_noisy:.3f} m\")\nprint(f\"Kalman filtered position RMSE: {rmse_kalman:.3f} m\")\nprint(f\"Noise reduction: {(1 - rmse_kalman / rmse_noisy) * 100:.1f}%\")\nprint(f\"Final velocity estimate: {estimated_velocities[-1]:.3f} m/s (true: {true_state[1]:.3f} m/s)\")",
+    keyPoints: [
+      "Recursive online Bayesian estimator: processes observations sequentially without needing to store past history.",
+      "Optimal under Gaussian noise: minimises Mean Squared Error (MMSE) across all estimators for linear Gaussian models.",
+      "BLUE under non-Gaussian noise: Best Linear Unbiased Estimator even when noise distributions deviate from Gaussianity.",
+      "The Kalman gain K_t dynamically balances model prediction against sensor noise based on their relative covariances.",
+      "Forms the foundation for non-linear state estimation: Extended Kalman Filter (EKF via Jacobians) and Unscented Kalman Filter (UKF via sigma points)."
+    ],
+    pitfalls: [
+      "Filter divergence from mis-specified process noise Q: Setting Q unrealistically small causes the filter to overconfidently disregard new measurements, diverging from the true trajectory when accelerations or shocks occur.",
+      "Numerical instability in covariance update: Repeated subtractions in P_{t|t} = (I - K_t H_t) P_{t|t-1} can lose positive semi-definiteness due to floating-point rounding; Joseph form (I - KH)P(I - KH)^T + KRK^T or square-root Cholesky filtering ensures numerical stability.",
+      "Non-linear dynamics breakdown: Standard Kalman filtering requires strictly linear F and H; applying it directly to non-linear systems leads to catastrophic divergence."
+    ],
+    quiz: [
+      {
+        "q": "What occurs to the Kalman gain K_t as the measurement noise covariance R_t approaches infinity?",
+        "o": [
+          "K_t approaches 0, and the filter relies entirely on its dynamic state prediction",
+          "K_t approaches 1, and the filter trusts only the sensor measurement",
+          "The filter covariance P_t diverges to infinity immediately",
+          "The state estimate oscillates sinusoidally"
+        ],
+        "a": 0,
+        "why": "From K_t = P H^T (H P H^T + R)^{-1}, as R -> infinity the inverse matrix vanishes toward zero, driving K_t -> 0. Consequently x_hat = x_pred + 0 = x_pred, ignoring useless sensor data."
+      },
+      {
+        "q": "Why is the Kalman filter preferred over full batch historical smoothing for real-time robotic navigation?",
+        "o": [
+          "The Kalman filter is recursive and requires only the latest estimate and covariance, using O(1) memory per step",
+          "The Kalman filter requires inversion of an N x N matrix spanning all time steps",
+          "The Kalman filter does not require knowledge of measurement noise",
+          "The Kalman filter works only when offline batch data is fully available"
+        ],
+        "a": 0,
+        "why": "Because it is Markovian and recursive, the Kalman filter updates state estimates in constant O(1) time and memory per observation, making it ideal for online real-time embedded systems."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "stationarity-acf-and-pacf",
+      "arima-and-sarima",
+      "exponential-smoothing-ets",
+      "markov-chains-and-stationary-distributions"
+    ],
+    keywords: "kalman filter, state space model, hidden state, process noise, measurement noise, kalman gain, innovation, blue estimator"
+  },
+  {
+    id: "survival-analysis-kaplan-meier-and-cox",
+    short: "Survival analysis",
+    title: "Survival Analysis: Kaplan–Meier and Cox Proportional Hazards",
+    task: "concepts",
+    module: "Time series and survival",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Analyse time-to-event outcomes subject to right-censoring: master survival functions, the Kaplan–Meier non-parametric estimator, the log-rank test, and semi-parametric Cox proportional hazards modelling.",
+    lead: "Standard regression fails when predicting time-to-event outcomes because unfinished durations are right-censored: customers have not yet churned, machines have not yet failed, and patients remain alive at study conclusion. Survival analysis properly accounts for censored observation windows.",
+    intuition: [
+      "In many data science problems, the target variable of interest is the time $T \\ge 0$ until an event occurs: customer subscription cancellation (churn), machine component failure, loan default, or clinical relapse. Ordinary regression models encounter a fundamental roadblock: right-censoring. When a customer is still subscribed at the end of a six-month analysis period, their true time-to-churn is unknown—all we know is $T > 6$. Excluding censored cases creates severe survival bias, while treating censored duration as the true event time severely underestimates survival times.",
+      "Survival analysis resolves this by modelling two linked mathematical functions: the survival function $S(t) = P(T > t)$, which specifies the probability an individual survives past time $t$, and the hazard function $h(t)$, which quantifies the instantaneous rate of event occurrence at time $t$ conditional on having survived up to time $t$.",
+      "The Kaplan–Meier estimator provides the gold-standard non-parametric estimate of the survival curve. At each unique event time $t_i$, it computes the conditional probability of surviving step $t_i$ given the risk set $n_i$ (individuals still alive and uncensored immediately prior to $t_i$): $1 - d_i / n_i$, where $d_i$ is the number of events. The cumulative survival function is the product of these conditional survival probabilities. Greenwood's formula supplies asymptotic standard errors and confidence intervals.",
+      "When evaluating the impact of covariates (such as customer tier, contract type, or medical treatment), the Cox Proportional Hazards model provides an elegant semi-parametric regression framework: $h(t \\mid x) = h_0(t) \\exp(\\beta^T x)$. Here, $h_0(t)$ is an arbitrary baseline hazard function that requires no parametric assumptions, while the hazard ratio $\\exp(\\beta_j)$ quantifies the multiplicative increase in instantaneous risk associated with a unit increase in covariate $x_j$. The coefficients $\\beta$ are estimated via Cox's partial likelihood without needing to specify $h_0(t)$."
+    ],
+    analogy: "Imagine tracking the lifespan of lightbulbs in an office tower over a 12-month study. Some bulbs burn out after 3 months (uncensored events). But at month 12, hundreds of bulbs are still burning bright (right-censored). If you average only the burned-out bulbs, you calculate an artificially dismal lifespan. The Kaplan–Meier estimator treats each burnout as an event against the pool of currently glowing bulbs, accurately charting survival probabilities out to 12 months without discarding surviving bulbs.",
+    steps: [
+      {
+        "title": "1. Structure time and censoring indicators",
+        "body": "Represent each individual by duration $T_i$ and event indicator $\\delta_i \\in \\{0, 1\\}$, where $\\delta_i = 1$ denotes observed event and $\\delta_i = 0$ denotes right-censoring."
+      },
+      {
+        "title": "2. Compute Kaplan–Meier non-parametric survival curve",
+        "body": "Sort unique event times $t_1 < t_2 < \\dots < t_k$. At each $t_i$, calculate risk set size $n_i$ and event count $d_i$. Evaluate $\\hat{S}(t) = \\prod_{t_i \\le t} (1 - d_i/n_i)$."
+      },
+      {
+        "title": "3. Compare cohorts using the log-rank test",
+        "body": "Test the null hypothesis that survival curves across groups are identical: compare observed vs expected events at each event time using a chi-square test statistic."
+      },
+      {
+        "title": "4. Fit Cox proportional hazards model via partial likelihood",
+        "body": "Fit $h(t \\mid x) = h_0(t) \\exp(\\beta^T x)$ by maximising Cox's partial likelihood $L(\\beta) = \\prod_{i: \\delta_i=1} \\frac{\\exp(\\beta^T x_i)}{\\sum_{j \\in R(t_i)} \\exp(\\beta^T x_j)}$. Interpret exponentiated coefficients $\\exp(\\beta_j)$ as hazard ratios."
+      }
+    ],
+    math: [
+      {
+        "h": "Survival and Hazard Relationships",
+        "tex": "S(t) = P(T > t) = \\exp\\left(-\\int_0^t h(u) du\\right) = \\exp(-H(t)), \\quad h(t) = \\lim_{\\Delta t \\to 0} \\frac{P(t \\le T < t + \\Delta t \\mid T \\ge t)}{\\Delta t} = -\\frac{S'(t)}{S(t)}",
+        "p": "The survival function S(t) and hazard function h(t) are mathematically dual: hazard is the negative derivative of log survival, and cumulative hazard H(t) integrates hazard over time."
+      },
+      {
+        "h": "Kaplan–Meier Estimator and Greenwood Formula",
+        "tex": "\\hat{S}(t) = \\prod_{t_i \\le t} \\left(1 - \\frac{d_i}{n_i}\\right), \\quad \\widehat{\\operatorname{Var}}(\\hat{S}(t)) = \\hat{S}(t)^2 \\sum_{t_i \\le t} \\frac{d_i}{n_i (n_i - d_i)}",
+        "p": "Product-limit estimator accumulating survival rates over observed failure times. Greenwood formula yields standard error used to construct pointwise confidence intervals."
+      },
+      {
+        "h": "Cox Proportional Hazards and Partial Likelihood",
+        "tex": "h(t \\mid x) = h_0(t) \\exp(\\beta^T x), \\quad L(\\beta) = \\prod_{i=1}^k \\frac{\\exp(\\beta^T x_{(i)})}{\\sum_{j \\in R(t_{(i)})} \\exp(\\beta^T x_j)}",
+        "p": "Baseline hazard h_0(t) cancels completely out of the partial likelihood, allowing estimation of covariate effect coefficients beta without making parametric distributional assumptions about event times."
+      }
+    ],
+    code: "import numpy as np\n\n# Kaplan-Meier Estimator and Cox Partial Likelihood from Scratch\nnp.random.seed(42)\nn_samples = 200\n\n# Synthetic customer churn data\n# Covariate x: premium subscription tier (1 = premium, 0 = standard)\ntier = np.random.binomial(1, 0.4, size=n_samples)\n# True baseline hazard: exponential survival, premium reduces hazard by half (beta = -0.693)\ntrue_beta = -0.7\nhazard = 0.05 * np.exp(true_beta * tier)\ntrue_survival_time = np.random.exponential(1.0 / hazard)\n\n# Study ends at month 24: right-censoring\nstudy_duration = 24.0\nobserved_time = np.minimum(true_survival_time, study_duration)\nevent_occurred = (true_survival_time <= study_duration).astype(int)\n\n# --- Kaplan-Meier Estimation Function ---\ndef kaplan_meier(durations, events):\n    unique_times = np.sort(np.unique(durations[events == 1]))\n    s_t = 1.0\n    km_table = []\n    \n    for t in unique_times:\n        n_at_risk = np.sum(durations >= t)\n        d_events = np.sum((durations == t) & (events == 1))\n        s_t *= (1.0 - d_events / n_at_risk)\n        km_table.append((t, n_at_risk, d_events, s_t))\n    return km_table\n\nkm_standard = kaplan_meier(observed_time[tier == 0], event_occurred[tier == 0])\nkm_premium = kaplan_meier(observed_time[tier == 1], event_occurred[tier == 1])\n\n# --- Cox Proportional Hazards Partial Likelihood ---\ndef cox_log_partial_likelihood(beta, x, time, event):\n    # Sort events in descending order\n    order = np.argsort(time)[::-1]\n    sorted_time = time[order]\n    sorted_event = event[order]\n    sorted_x = x[order]\n    \n    log_lik = 0.0\n    risk_sum = 0.0\n    for i in range(len(sorted_time)):\n        risk_sum += np.exp(beta * sorted_x[i])\n        if sorted_event[i] == 1:\n            log_lik += beta * sorted_x[i] - np.log(risk_sum)\n    return log_lik\n\n# Grid search for maximum partial likelihood estimate beta\nbetas = np.linspace(-1.5, 0.5, 201)\nlog_liks = [cox_log_partial_likelihood(b, tier, observed_time, event_occurred) for b in betas]\nopt_beta = betas[np.argmax(log_liks)]\nhazard_ratio = np.exp(opt_beta)\n\nprint(f\"Censored observations: {np.sum(event_occurred == 0)} / {n_samples} ({np.mean(event_occurred == 0)*100:.1f}%)\")\nprint(f\"Estimated Cox beta: {opt_beta:.3f} (true beta: {true_beta:.3f})\")\nprint(f\"Estimated Hazard Ratio: {hazard_ratio:.3f} (premium customers have {(1 - hazard_ratio)*100:.1f}% lower churn hazard)\")\nprint(f\"Standard tier 12-month survival: {[s for t, n, d, s in km_standard if t <= 12][-1]:.3f}\")\nprint(f\"Premium tier 12-month survival:  {[s for t, n, d, s in km_premium if t <= 12][-1]:.3f}\")",
+    keyPoints: [
+      "Right-censoring occurs when an observation window ends before an event takes place; standard regression creates severe survival bias if censoring is neglected.",
+      "Survival function S(t) = P(T > t) gives the probability of surviving past t; hazard function h(t) gives the instantaneous event rate conditional on prior survival.",
+      "The Kaplan–Meier product-limit estimator provides an exact non-parametric step function estimate of S(t) with Greenwood confidence bands.",
+      "The log-rank test evaluates whether two or more survival curves differ significantly under a non-parametric null hypothesis.",
+      "Cox proportional hazards model is semi-parametric: it estimates hazard ratios exp(beta) via partial likelihood without specifying the baseline hazard h_0(t)."
+    ],
+    pitfalls: [
+      "Treating censored observations as event occurrences or dropping them entirely: Dropping censored data removes the longest-lived subjects, skewing average duration downwards.",
+      "Violation of proportional hazards assumption: Cox models assume hazard ratios exp(beta) remain constant across all time; if a treatment effect decays or inverts over time, the model is mis-specified and needs time-varying covariates or stratification.",
+      "Informative censoring: Survival analysis assumes censoring is non-informative (unrelated to the event probability); if high-risk subjects selectively drop out of a study, estimates become biased."
+    ],
+    quiz: [
+      {
+        "q": "Why does calculating mean time-to-event via standard linear regression produce biased estimates in right-censored studies?",
+        "o": [
+          "Because censored subjects have unknown future event times, and ignoring them removes long survivors while treating duration as event time underestimates survival",
+          "Because linear regression cannot handle continuous dependent variables",
+          "Because the survival function is always strictly greater than 1",
+          "Because censored data implies that the variance of the error terms is exactly zero"
+        ],
+        "a": 0,
+        "why": "Right-censoring means event time is strictly greater than study duration. Dropping censored subjects induces survival bias (discards long lifespans), while treating censored time as event time truncates true lifespan downwards."
+      },
+      {
+        "q": "In a Cox proportional hazards model, what does an estimated hazard ratio exp(beta_j) = 0.65 for a drug treatment indicate?",
+        "o": [
+          "Treated patients experience an instantaneous event risk that is 35% lower than untreated patients at any point in time",
+          "Treated patients live exactly 65% longer in total days",
+          "65% of patients in the treatment group were cured completely",
+          "The hazard increases by 65% per unit increase in drug dosage"
+        ],
+        "a": 0,
+        "why": "A hazard ratio of 0.65 represents a multiplicative scaling of the baseline hazard h(t|x) = h_0(t) * 0.65, meaning event hazard is reduced by 1 - 0.65 = 35% relative to the reference group."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "hypothesis-testing-and-p-values",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "stationarity-acf-and-pacf",
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "state-space-models-and-the-kalman-filter"
+    ],
+    keywords: "survival analysis, kaplan meier, cox proportional hazards, right censoring, hazard ratio, log rank test, greenwood formula, time to event"
+  },
 ];
