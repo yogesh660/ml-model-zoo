@@ -571,4 +571,1044 @@ print(f"Winsorised mean: {np.mean(x_winsor):.2f}, std: {np.std(x_winsor):.2f}")`
     related: ['data-cleaning-and-validation', 'robust_regression', 'isolation-forest'],
     keywords: 'outlier handling winsorisation tukey iqr mad clipping robust statistics huber loss data wrangling',
   },
+  {
+  "id": "dates-time-zones-and-temporal-joins",
+  "short": "Dates, time zones & joins",
+  "title": "Dates, Time Zones, and Temporal Joins in Data Engineering",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Mastering ISO 8601 timestamps, UTC normalisation, daylight saving edge cases, as-of joins, and point-in-time correct temporal feature lookups.",
+  "lead": "Temporal data is ubiquitous in real-world machine learning, yet improper handling of time zones, daylight saving shifts, and non-aligned timestamps introduces subtle, silent data corruption and severe lookahead leakage. A single local time mix-up can make an event appear an hour before it actually occurred, or corrupt training targets when matching asynchronous market prices to client orders.",
+  "analogy": "Imagine matching flight departure announcements in Tokyo with passenger bookings recorded in New York. If both systems record \"14:00\" without specifying time zones or offsets, you cannot know which happened first. Converting every event to Greenwich Mean Time (UTC) establishes a single unambiguous timeline, while an as-of join acts like looking at the departure board right at the moment you step up to the gate, ensuring you only see the latest scheduled boarding gate rather than tomorrow's update.",
+  "intuition": [
+    "Temporal information spans two concepts: physical time (an absolute point on the cosmic timeline, correctly measured in Unix epoch seconds or UTC ISO 8601 strings) and civil time (local wall-clock time subject to political boundaries, time zones, and daylight saving time adjustments).",
+    "A fundamental rule of data engineering is: ingest and store all timestamps in UTC ($+00:00$), and only convert to local civil time at the presentation layer or when extracting calendar features (such as local hour of day or day of week). Daylight saving transitions create ambiguous times (an hour repeating during autumn fallback) and nonexistent times (an hour skipped during spring forward).",
+    "Standard relational equijoins require exact timestamp matches ($t_A = t_B$), which almost never occurs across independent distributed telemetry streams. Instead, time-series workflows require temporal inequality joins, most notably the as-of join (or backward merge).",
+    "An as-of join merges each record from a primary table with the most recent preceding record from a secondary reference table, strictly enforcing $t_{\\mathrm{ref}} \\le t_{\\mathrm{event}}$. This guarantees point-in-time correctness, preventing target leakage where future prices or status changes inadvertently leak into past feature states."
+  ],
+  "steps": [
+    "Ingest and canonicalise: Parse input strings against ISO 8601 standard (`YYYY-MM-DDTHH:MM:SSZ`), resolve timezone offsets immediately, and store as UTC timestamps or epoch nanoseconds.",
+    "Feature extraction in local time: When creating behavioural features (e.g. rush-hour indicators, morning vs evening shopping), convert UTC to user-local civil time using the regional timezone database (IANA tzdb).",
+    "Index sorting: Ensure both event and reference tables are strictly sorted by entity ID and timestamp prior to temporal joining.",
+    "Point-in-time as-of join: Execute backward matching (`join_asof`) on matching keys (e.g. `user_id`, `ticker`) matching the latest reference timestamp $\\le$ the query timestamp.",
+    "Tolerance and lookahead audit: Configure a backward tolerance window (e.g. do not match reference data older than 24 hours) and assert zero forward-looking records."
+  ],
+  "math": [
+    {
+      "h": "Universal Time Normalisation",
+      "tex": "t_{\\mathrm{UTC}} = t_{\\mathrm{local}} - \\Delta_{\\mathrm{tz}}(\\mathrm{date}, \\mathrm{location})",
+      "p": "Physical time is invariant. Local civil time is adjusted by the historical offset $\\Delta_{\\mathrm{tz}}$ dictated by timezone rules and daylight saving time."
+    },
+    {
+      "h": "As-Of Temporal Join Specification",
+      "tex": "j^*(i) = \\operatorname*{arg\\,max}_{j \\in \\mathcal{R}_{k_i}} \\left\\{ t_j \\;\\middle|\\; t_j \\le t_i \\;\\land\\; t_i - t_j \\le \\tau_{\\max} \\right\\}",
+      "p": "For query event $i$ with key $k_i$ at time $t_i$, the as-of join identifies reference index $j^*$ with the latest timestamp $t_j$ strictly before $t_i$, bounded by maximum lookback tolerance $\\tau_{\\max}$."
+    },
+    {
+      "h": "Lookahead Leakage Violation Condition",
+      "tex": "\\exists i, j : \\text{Joined}(i, j) \\implies t_j > t_i \\quad [\\text{Fatal Target Leakage}]",
+      "p": "If any feature state incorporated at decision time $t_i$ derives from an event at $t_j > t_i$, the offline validation model evaluates with non-causal future information."
+    }
+  ],
+  "code": "import pandas as pd\nimport numpy as np\n\n# Create trade execution events (primary table)\ntrades = pd.DataFrame({\n    'timestamp': pd.to_datetime([\n        '2026-03-15 10:00:02Z',\n        '2026-03-15 10:00:07Z',\n        '2026-03-15 10:00:15Z'\n    ]),\n    'symbol': ['AAPL', 'AAPL', 'AAPL'],\n    'shares': [100, 250, 50]\n})\n\n# Create asynchronous quote updates (reference table)\nquotes = pd.DataFrame({\n    'timestamp': pd.to_datetime([\n        '2026-03-15 10:00:00Z',\n        '2026-03-15 10:00:05Z',\n        '2026-03-15 10:00:12Z',\n        '2026-03-15 10:00:20Z'\n    ]),\n    'symbol': ['AAPL', 'AAPL', 'AAPL', 'AAPL'],\n    'bid_price': [182.10, 182.25, 182.15, 182.40]\n})\n\n# Sort both frames by timestamp (prerequisite for merge_asof)\ntrades = trades.sort_values('timestamp')\nquotes = quotes.sort_values('timestamp')\n\n# Point-in-time backward join: find the latest quote before each trade\nenriched_trades = pd.merge_asof(\n    trades,\n    quotes,\n    on='timestamp',\n    by='symbol',\n    direction='backward',\n    tolerance=pd.Timedelta('10s')\n)\n\nprint(enriched_trades[['timestamp', 'symbol', 'shares', 'bid_price']])\n# Output matches 10:00:02 -> 182.10, 10:00:07 -> 182.25, 10:00:15 -> 182.15",
+  "keyPoints": [
+    "Store and transport timestamps exclusively in UTC; convert to local civil time solely for domain features or reporting.",
+    "As-of joins match each record with the most recent preceding entry from another table, preventing future data leakage.",
+    "Temporal joins require both dataframes to be sorted chronologically on the join timestamp.",
+    "Daylight saving transitions cause duplicate hours in autumn and missing hours in spring in naive local datetimes."
+  ],
+  "pitfalls": [
+    "Using naive datetime objects without timezone metadata (`tz_localize(None)`), causing silent 1-to-5 hour offsets when merging across systems.",
+    "Performing standard forward joins or nearest joins in trading or medical records, allowing future outcomes to leak into predictive features.",
+    "Neglecting daylight saving shifts when aggregating by \"local hour of day\", resulting in artificial spikes or dips twice a year."
+  ],
+  "quiz": [
+    {
+      "q": "Why should database timestamps almost always be stored in UTC rather than local time?",
+      "o": [
+        "UTC stores smaller integer values that take half the disk space",
+        "UTC provides an unambiguous, monotonic timeline free from daylight saving anomalies and timezone shifts",
+        "Database engines cannot index columns that contain timezone offsets",
+        "UTC automatically handles categorical variable encodings"
+      ],
+      "a": 1,
+      "why": "UTC is an invariant, continuous reference standard without discontinuities caused by daylight saving changes or local government decree."
+    },
+    {
+      "q": "What distinguishes an as-of join (`merge_asof`) with `direction=\"backward\"` from an inner join?",
+      "o": [
+        "It requires exact timestamp equivalence across both tables",
+        "It pairs each row in the left table with the closest preceding timestamp in the right table",
+        "It replaces missing values with the overall column mean",
+        "It randomly samples rows from the secondary dataset"
+      ],
+      "a": 1,
+      "why": "A backward as-of join matches each record with the most recent historical record that occurred at or before that record's timestamp."
+    },
+    {
+      "q": "What critical machine learning error occurs if an analyst uses `direction=\"nearest\"` when enriching transaction data with reference prices?",
+      "o": [
+        "Multicollinearity in continuous predictors",
+        "Lookahead leakage, because future reference prices after the transaction could be selected",
+        "Underfitting due to excessive regularisation",
+        "Covariate shift between train and test sets"
+      ],
+      "a": 1,
+      "why": "`direction=\"nearest\"` can select a reference timestamp that occurred in the future relative to the transaction, leaking unavailable future information into features."
+    }
+  ],
+  "related": [
+    "data-leakage",
+    "pandas-and-polars-patterns",
+    "train-validation-test-splits-group-and-time-based"
+  ],
+  "keywords": "dates, time zones, temporal joins, as-of join, merge_asof, utc, daylight saving, lookahead leakage, point-in-time correctness",
+  "usedBy": []
+},
+  {
+    id: 'encoding-categoricals-one-hot-ordinal-target-woe',
+    short: 'Encoding categoricals',
+    title: 'Encoding Categoricals: One-Hot, Ordinal, Target, WoE',
+    task: 'concepts',
+    module: 'Feature engineering',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Transforming discrete strings and high-cardinality levels into informative numerical representations while preventing target leakage and dimensionality explosion.`,
+    lead: r`Mathematical models cannot multiply, divide, or take gradients over raw string labels. Encoding maps discrete categorical variables into numeric vectors, but each strategy balances distinct trade-offs between dimensionality, ordinal assumptions, and information retention. From sparse one-hot expansions to smoothed target encoding and Weight of Evidence (WoE), selecting the correct transformation prevents curse-of-dimensionality memory crashes and catastrophic target leakage.`,
+    intuition: [
+      r`Imagine predicting hotel booking cancellations using categorical columns like room type (Standard, Deluxe, Suite) and user nationality (195 countries). The simplest idea is assigning consecutive integers: Standard = 1, Deluxe = 2, Suite = 3. For room type, this ordinal encoding makes intuitive sense because there is a natural hierarchy of luxury and price. But if you apply arbitrary integers to nationalities (France = 1, Germany = 2, Japan = 3), a linear model or neural network assumes that Germany is twice France and Japan is three times France, inventing nonsensical mathematical arithmetic out of arbitrary alphabetical order.`,
+      r`One-hot encoding avoids this false ordering by creating an independent binary flag for each level (e.g. [1, 0, 0] for France). For variables with few categories (low cardinality), one-hot encoding is clean and effective. But for UK postcodes or search queries with 50,000 unique levels, one-hot encoding explodes the feature space into a colossal 50,000-column sparse matrix. Tree models struggle because each individual binary split isolates only a tiny fraction of samples, diluting statistical split strength.`,
+      r`Target encoding and Weight of Evidence (WoE) solve high cardinality by condensing each category into a single continuous number representing its historical association with the outcome $y$. For each nationality, target encoding replaces the label with the mean cancellation rate of that country. To prevent rare categories (like a country with only 1 customer who cancelled) from overfitting to 100%, empirical Bayes m-estimate smoothing pulls rare categories toward the global cancellation prior.`,
+    ],
+    analogy: r`Translating a foreign menu: giving each dish an arbitrary catalogue number (ordinal), creating 200 checkboxes for 200 ingredients (one-hot), or simply labelling each dish with its average customer spiciness rating (target encoding).`,
+    steps: [
+      r`Audit cardinality and ordering: determine whether levels possess an intrinsic natural hierarchy (ordinal) or arbitrary nominal identity.`,
+      r`Apply one-hot encoding to low-cardinality nominals ($k < 10$): drop one reference dummy column when training unregularised linear models to avoid multicollinearity.`,
+      r`Map ranked tiers via ordinal encoding: assign monotonic integer values when domain hierarchy is strict (e.g. Low, Medium, High to 0, 1, 2).`,
+      r`Deploy smoothed target encoding for high-cardinality features: blend category target means with global priors using m-estimate or empirical Bayes weighting.`,
+      r`Enforce leakage-safe cross-validation: compute target encodings strictly inside cross-validation folds or using out-of-fold leave-one-out calculation to prevent target leakage.`,
+    ],
+    math: [
+      {
+        h: 'Smoothed empirical Bayes target encoding (m-estimate)',
+        tex: r`$$\hat{S}_c = \frac{n_c \cdot \bar{y}_c + m \cdot \bar{y}_{\text{global}}}{n_c + m}$$`,
+        p: r`Here $n_c$ is the count of category $c$ in training data, $\bar{y}_c$ is the sample mean of the target for category $c$, $\bar{y}_{\text{global}}$ is the overall target mean across all rows, and $m > 0$ is the smoothing weight of the prior. When $n_c \gg m$, $\hat{S}_c \to \bar{y}_c$; when $n_c \to 0$, $\hat{S}_c \to \bar{y}_{\text{global}}$, preventing rare categories from producing overfit extreme values.`,
+      },
+      {
+        h: 'Weight of Evidence (WoE) for binary classification',
+        tex: r`$$\text{WoE}_c = \ln\left(\frac{P(Y=1 \mid X=c)}{P(Y=0 \mid X=c)} \Big/ \frac{P(Y=1)}{P(Y=0)}\right) = \ln\left(\frac{B_c / B_{\text{total}}}{G_c / G_{\text{total}}}\right)$$`,
+        p: r`Here $B_c$ and $G_c$ are bad (events, $y=1$) and good (non-events, $y=0$) counts for category $c$. WoE represents the log-odds ratio relative to the population base rate. Because WoE possesses an exact linear relationship with log-odds, it is extensively used in credit risk scorecards with logistic regression.`,
+      },
+      {
+        h: 'Dummy variable trap and rank deficiency',
+        tex: r`$$\sum_{j=1}^k D_j = \mathbf{1}_n = X_0 \implies \text{rank}(X) < k$$`,
+        p: r`The sum of all $k$ one-hot binary indicator columns equals the constant intercept column vector $\mathbf{1}_n$, creating perfect multicollinearity. For unregularised Ordinary Least Squares, one category must be omitted ($k-1$ dummy columns) to ensure the design matrix $X^T X$ is invertible.`,
+      },
+    ],
+    keyPoints: [
+      r`Cardinality dictates strategy: use one-hot for low cardinality ($<10$ levels), frequency or target encoding for high cardinality.`,
+      r`Target leakage hazard: target encoding must never compute category statistics across the entire dataset before cross-validation splitting.`,
+      r`Bayesian prior smoothing: blending category averages with global priors prevents rare levels with tiny sample sizes from producing extreme overfit predictions.`,
+    ],
+    pitfalls: [
+      r`Catastrophic target leakage: calculating target means on training and validation data simultaneously causes near-perfect training scores and disastrous test performance.`,
+      r`Unseen categories in production: new categories absent during training crash one-hot transformers unless handle_unknown='ignore' or fallback to global target prior is configured.`,
+      r`Ordinal encoding on nominal variables: assigning sequential integers to arbitrary categories forces non-linear models to navigate artificial metric distances.`,
+    ],
+    code: r`import numpy as np
+
+categories = np.array(['UK', 'FR', 'DE', 'UK', 'US', 'FR', 'UK', 'LUX'])
+y = np.array([1, 0, 1, 1, 0, 0, 1, 0], dtype=float)
+global_mean, m = np.mean(y), 2.0  # m-estimate prior weight
+
+encoded = np.zeros_like(y)
+for cat in np.unique(categories):
+    idx = np.where(categories == cat)[0]
+    n_c, y_c = len(idx), np.sum(y[idx])
+    smoothed = (y_c + m * global_mean) / (n_c + m)
+    encoded[idx] = smoothed
+
+print(f"Global target mean: {global_mean:.3f}")
+for c in ['UK', 'LUX']:
+    print(f"Category {c} target encoded: {encoded[categories == c][0]:.3f}")`,
+    quiz: [
+      {
+        q: r`Why does raw unsmoothed target encoding overfit heavily on categories with very few observations?`,
+        o: [
+          r`A category with a single observation will receive an encoding of exactly 0.0 or 1.0, memorising target noise instead of true population affinity`,
+          r`It converts numbers into complex imaginary components`,
+          r`It causes the matrix determinant to equal zero`,
+          r`It only operates when the target is multi-class`,
+        ],
+        a: 0,
+        why: r`If category 'LUX' appears only once with target $y=1$, unsmoothed target encoding assigns it 1.0 (100% cancellation rate), creating an over-confident feature based on zero statistical evidence. Smoothing pulls small-sample categories toward the global mean.`,
+      },
+      {
+        q: r`What is the primary danger of applying ordinal integer encoding (e.g. 1, 2, 3, 4) to nominal variables like car colours?`,
+        o: [
+          r`It imposes an artificial metric distance and ordering, causing linear models and neural networks to assume colour 4 is mathematically four times colour 1`,
+          r`It causes memory exhaustion in decision trees`,
+          r`It is unsupported in Python`,
+          r`It requires all colours to have equal row counts`,
+        ],
+        a: 0,
+        why: r`Nominal categories possess no quantitative hierarchy. Assigning numbers implies metric distances ($|1 - 2| = |2 - 3|$) and mathematical ratios that corrupt linear regression, distance metrics, and neural weights.`,
+      },
+      {
+        q: r`How must target encoding be calculated to completely eliminate data leakage during cross-validation?`,
+        o: [
+          r`Category target statistics must be computed strictly on the training fold, or calculated out-of-fold without using each row's own target value`,
+          r`Target encoding should be computed across the test fold first`,
+          r`The target variable must be binned into quintiles`,
+          r`Target encoding cannot be used in cross-validation`,
+        ],
+        a: 0,
+        why: r`If validation row targets are included when computing category means, the model learns to reconstruct the validation target directly from the encoding, producing severe over-optimistic leakage. Out-of-fold or strictly train-fold statistics prevent this.`,
+      },
+    ],
+    usedBy: ['scaling-and-transforms-standard-robust-box-cox-yeo-johnson'],
+    prereq: ['sampling-and-standard-error', 'cross-validation'],
+    related: ['scaling-and-transforms-standard-robust-box-cox-yeo-johnson', 'multicollinearity-and-vif', 'logistic_regression'],
+    keywords: 'categorical encoding one hot encoding target encoding woe weight of evidence ordinal encoding high cardinality feature engineering',
+  },
+  {
+    id: 'scaling-and-transforms-standard-robust-box-cox-yeo-johnson',
+    short: 'Scaling and transforms',
+    title: 'Scaling and Transforms: Standard, Robust, Box–Cox, Yeo–Johnson',
+    task: 'concepts',
+    module: 'Feature engineering',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Standardising feature ranges and normalising skewed distributions to satisfy linear assumptions and accelerate gradient convergence.`,
+    lead: r`Distance metrics, regularisation penalties, and gradient descent updates are acutely sensitive to feature scales. If one feature spans $[0, 1]$ while another ranges $[0, 1{,}000{,}000]$, the larger variable completely dominates Euclidean distances and distorts L1/L2 penalties. Transforming features via standard, robust, or power transformations aligns feature scales and normalises skewed distributions into symmetrical Gaussian-like shapes.`,
+    intuition: [
+      r`Imagine training a k-Nearest Neighbours or Support Vector Machine model to evaluate bank loan risk based on two customer attributes: age in years (ranging from 18 to 75) and annual income in pounds (ranging from £15,000 to £500,000). If you compute the Euclidean distance between two applicants, a difference of 30 years in age contributes $(30)^2 = 900$ to the squared distance, while a difference of £10,000 in income contributes $(10,000)^2 = 100,000,000$. The income feature is over 100,000 times more influential simply because of the arbitrary choice of measurement currency. Age becomes completely invisible to the algorithm.`,
+      r`Scaling resolves this by transforming variables into comparable dimensionless numerical spaces. Standard scaling (Z-score normalisation) shifts the mean to 0 and rescales variance to 1. Min-max scaling squashes values into a bounded interval such as $[0, 1]$. However, both techniques are vulnerable to extreme outliers: a single massive outlier compresses all normal data points into a microscopic cluster near zero. Robust scaling replaces the sample mean and variance with the median and interquartile range (IQR), ensuring scale normalisation remains unaffected by rogue outliers.`,
+      r`Beyond scaling spread, many linear algorithms and hypothesis tests assume underlying errors or features are normally distributed. Highly skewed variables (such as website visit durations or insurance claim amounts) violate these assumptions. Power transformations—such as the Box-Cox transform for strictly positive data and the Yeo-Johnson transform for data containing zero or negative values—estimate an optimal power parameter $\lambda$ that mathematically bends skewed probability distributions into symmetrical, near-Gaussian bell curves.`,
+    ],
+    analogy: r`Converting currencies from Yen, Pounds, and Dollars into a single standardised international credit unit so that prices can be compared on equal terms.`,
+    steps: [
+      r`Diagnose distribution characteristics: inspect feature skewness, presence of negative values, and outlier density using histograms and quantile plots.`,
+      r`Select scaling mechanism: apply standard scaling ($z = (x - \mu)/\sigma$) for Gaussian features, Min-Max scaling for bounded bounds (e.g. neural network inputs), or robust scaling (median/IQR) for outlier-rich data.`,
+      r`Fit scaler exclusively on training data: calculate $\mu$, $\sigma$, or median strictly on training folds to prevent distribution leakage.`,
+      r`Evaluate power transformations for skewed data: apply Box-Cox for strictly positive features ($x > 0$) or Yeo-Johnson for real-valued features with zeros and negatives.`,
+      r`Optimise transformation parameter $\lambda$: maximise profile log-likelihood across grid search to find the power that minimises distribution skewness.`,
+    ],
+    math: [
+      {
+        h: 'Standard scaling vs Robust scaling',
+        tex: r`$$z_i = \frac{x_i - \bar{x}}{s}, \qquad r_i = \frac{x_i - \text{median}(X)}{\text{IQR}(X)}$$`,
+        p: r`Standard scaling centres at sample mean $\bar{x}$ and scales by standard deviation $s$. Robust scaling centres at the sample median and divides by $\text{IQR} = Q_3 - Q_1$, maintaining a 50% breakdown point that resists distortion from extreme outliers.`,
+      },
+      {
+        h: 'Box-Cox power transformation ($x > 0$)',
+        tex: r`$$y^{(\lambda)} = \begin{cases} \frac{x^\lambda - 1}{\lambda} & \text{if } \lambda \ne 0 \\ \ln(x) & \text{if } \lambda = 0 \end{cases}$$`,
+        p: r`Parametrised by power $\lambda$, Box-Cox continuous power scaling maps positive distributions into Gaussian profiles. At $\lambda = 1$, the transform is linear (shift); at $\lambda = 0.5$, it acts as a square root; at $\lambda = 0$, it becomes the natural logarithm, compressing heavy right tails.`,
+      },
+      {
+        h: r`Yeo-Johnson power transformation (all $x \in \mathbb{R}$)`,
+        tex: r`$$\psi(\lambda, x) = \begin{cases} \frac{(x + 1)^\lambda - 1}{\lambda} & \text{if } \lambda \ne 0, x \ge 0 \\ \ln(x + 1) & \text{if } \lambda = 0, x \ge 0 \\ -\frac{(-x + 1)^{2 - \lambda} - 1}{2 - \lambda} & \text{if } \lambda \ne 2, x < 0 \\ -\ln(-x + 1) & \text{if } \lambda = 2, x < 0 \end{cases}$$`,
+        p: r`Yeo-Johnson generalises Box-Cox to accommodate zero and negative values, guaranteeing monotonic continuity across the entire real line without requiring arbitrary additive positive shifts.`,
+      },
+    ],
+    keyPoints: [
+      r`Distance and gradient invariance: scaling ensures features contribute proportionately to Euclidean distance calculations and prevents elongated, zig-zagging gradient descent trajectories.`,
+      r`Robust scaling resistance: median/IQR scaling resists outlier contamination, preventing extreme observations from squashing normal feature distributions.`,
+      r`Yeo-Johnson zero-handling: unlike Box-Cox, Yeo-Johnson operates over positive, zero, and negative values without requiring arbitrary positive offset shifts.`,
+    ],
+    pitfalls: [
+      r`Data leakage by fitting on entire dataset: computing scaler parameters ($\mu, \sigma$) across training and test sets leaks test distribution bounds.`,
+      r`Tree-based model misconception: applying monotonic scaling or power transforms to features fed into decision trees, Random Forests, or XGBoost is computationally superfluous, as trees are invariant to monotonic univariate transforms.`,
+      r`Inverting predictions without inverse transformation: when transforming a continuous target variable $y$ with Box-Cox, predictions must be inverted via inverse power transform back to original monetary or physical units.`,
+    ],
+    code: r`import numpy as np
+from scipy import stats
+
+np.random.seed(42)
+raw = np.random.exponential(scale=2.0, size=100)
+
+standardised = (raw - np.mean(raw)) / np.std(raw)
+med = np.median(raw)
+iqr_val = np.percentile(raw, 75) - np.percentile(raw, 25)
+robust = (raw - med) / iqr_val
+boxcox_trans, opt_lambda = stats.boxcox(raw)
+
+print(f"Raw skewness:        {stats.skew(raw):.3f}")
+print(f"Standardised skew:   {stats.skew(standardised):.3f} (mean: {np.mean(standardised):.1f})")
+print(f"Robust scaled skew:  {stats.skew(robust):.3f} (median: {np.median(robust):.1f})")
+print(f"Box-Cox skew (lambda={opt_lambda:.2f}): {stats.skew(boxcox_trans):.3f}")`,
+    quiz: [
+      {
+        q: r`Why does standardising or min-max scaling features have virtually zero effect on the predictive accuracy of a Random Forest or XGBoost model?`,
+        o: [
+          r`Decision trees split on monotonic rank thresholds, making split decisions completely invariant to monotonic univariate scaling`,
+          r`Tree models internally normalise all columns to Gaussian distributions`,
+          r`Ensemble algorithms only process categorical variables`,
+          r`Gradient boosting automatically divides all numbers by 100`,
+        ],
+        a: 0,
+        why: r`Decision trees evaluate splits of the form $x_j \le \theta$. Monotonically scaling $x_j$ by $a x_j + b$ simply transforms the threshold $\theta$ by the same factor, leaving sample partitions and impurity gains identical.`,
+      },
+      {
+        q: r`What is the primary constraint that limits the use of the classic Box-Cox transformation?`,
+        o: [
+          r`All feature values must be strictly positive ($x > 0$)`,
+          r`The dataset must have fewer than 100 rows`,
+          r`It can only be applied to binary classification labels`,
+          r`The data must already follow a normal distribution`,
+        ],
+        a: 0,
+        why: r`Box-Cox relies on power functions and natural logarithms ($\ln x$), which are undefined for zero and negative real numbers. The Yeo-Johnson transform was developed specifically to overcome this constraint.`,
+      },
+      {
+        q: r`Why is RobustScaler (median and IQR) preferred over StandardScaler when scaling data with severe unclipped outliers?`,
+        o: [
+          r`StandardScaler's mean and variance are heavily distorted by outliers, squashing normal data into a narrow band, whereas median and IQR resist outlier leverage`,
+          r`RobustScaler guarantees all outputs fall strictly between 0 and 1`,
+          r`RobustScaler eliminates the need for test set splitting`,
+          r`StandardScaler cannot process floating-point data`,
+        ],
+        a: 0,
+        why: r`In StandardScaler, an extreme outlier inflates the sample standard deviation, shrinking the scaled values of typical records into a tiny range near zero. RobustScaler's median and IQR have a 50% breakdown point, preserving normal variation.`,
+      },
+    ],
+    usedBy: ['lag-and-rolling-window-features'],
+    prereq: ['outlier-handling', 'sampling-and-standard-error'],
+    related: ['outlier-handling', 'encoding-categoricals-one-hot-ordinal-target-woe', 'knn_classifier', 'ridge_regression'],
+    keywords: 'feature scaling standardisation normalisation robust scaler box cox yeo johnson power transform skewness feature engineering',
+  },
+  {
+    id: 'lag-and-rolling-window-features',
+    short: 'Lag and rolling-window features',
+    title: 'Lag and Rolling-Window Features',
+    task: 'concepts',
+    module: 'Feature engineering',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Constructing historical lag shifts, rolling summary statistics, and exponentially weighted moving averages for tabular time-series forecasting.`,
+    lead: r`Tabular models like XGBoost and LightGBM cannot inherently process sequential dependencies without explicit temporal feature engineering. Lag features and rolling-window aggregations convert sequential time-series into standard supervised learning matrices, capturing momentum, seasonality, and volatility. Rigorous window construction prevents lookahead leakage and ensures predictive features reflect strictly historical information.`,
+    intuition: [
+      r`Imagine predicting tomorrow's electricity consumption for a large city. If you provide a gradient boosted tree only with the date "Thursday, 12th November", the model has no way of knowing whether the city is currently experiencing a sudden cold snap or how much power was consumed yesterday. However, if you provide the electricity consumption from 24 hours ago (lag 1 day), from 7 days ago (lag 7 days, capturing weekly seasonality), and the average consumption over the past 3 days (rolling mean), the model instantly grasps current demand momentum and baseline expectations.`,
+      r`Constructing temporal tabular features relies on two primary primitives: lags and rolling windows. A lag feature shifts the time series backward by $k$ time steps ($y_{t-k}$), allowing standard tabular regression models to condition on previous state values. Rolling-window features pass a sliding aggregation frame over past observations, computing summary statistics such as rolling mean (trend), rolling standard deviation (volatility), rolling min/max (envelope range), and exponentially weighted moving averages (EWMA), which weight recent observations more heavily than distant history.`,
+      r`The single most catastrophic error in time-series feature engineering is lookahead leakage (future leakage). If you calculate a rolling 7-day average using a centred window that includes $t-3$ to $t+3$, your model is trained using information from three days in the future. In offline cross-validation, the model appears to predict the future with supernatural precision. When deployed into production, tomorrow's data does not exist, causing model accuracy to collapse completely. Every rolling feature must be strictly left-aligned or shifted by at least the forecast horizon.`,
+    ],
+    analogy: r`Driving a car forward while glancing at the rear-view mirror to observe how fast traffic behind you is moving, rather than attempting to look through a crystal ball.`,
+    steps: [
+      r`Establish regular time index: verify uniform sampling frequency (hourly, daily) and resolve missing temporal timestamps via forward-filling or interpolation.`,
+      r`Generate lag features: shift the target series backward by $k$ discrete steps ($y_{t-1}, y_{t-7}, y_{t-365}$) corresponding to domain seasonality cycles.`,
+      r`Compute rolling window aggregates: slide fixed-length historical frames ($W \in \{7, 14, 30\}$) to compute rolling means, standard deviations, and quantiles.`,
+      r`Enforce strict causal alignment: shift rolling calculations by at least the forecast horizon ($h \ge 1$) to eliminate lookahead leakage.`,
+      r`Calculate momentum and divergence ratios: compute relative velocity features such as $(y_{t-1} - \text{mean}_{7}) / \text{std}_{7}$ to measure deviation from recent baseline trends.`,
+    ],
+    math: [
+      {
+        h: 'Discrete lag operator and difference transformations',
+        tex: r`$$L^k y_t = y_{t-k}, \qquad \Delta^k y_t = (1 - L)^k y_t = y_t - y_{t-k}$$`,
+        p: r`Here $L$ is the backshift lag operator. The term $y_{t-k}$ captures the historical value $k$ steps prior. First-order differences $\Delta y_t = y_t - y_{t-1}$ remove linear trends, while seasonal differences $y_t - y_{t-s}$ remove recurring periodicities (such as $s = 7$ for weekly patterns).`,
+      },
+      {
+        h: 'Causal rolling window mean and variance',
+        tex: r`$$\mu_{t, W} = \frac{1}{W} \sum_{i=1}^W y_{t-i}, \qquad \sigma_{t, W}^2 = \frac{1}{W - 1} \sum_{i=1}^W \big(y_{t-i} - \mu_{t, W}\big)^2$$`,
+        p: r`Historical window $W$ is summed strictly over historical indices $i \in \{1, \dots, W\}$. The upper index is $t-1$, which strictly excludes the concurrent observation $y_t$ to prevent target leakage when training models to predict $y_t$.`,
+      },
+      {
+        h: 'Exponentially Weighted Moving Average (EWMA)',
+        tex: r`$$\hat{y}_t^{(\alpha)} = \alpha y_{t-1} + (1 - \alpha) \hat{y}_{t-1}^{(\alpha)} = \alpha \sum_{i=1}^\infty (1 - \alpha)^{i-1} y_{t-i}$$`,
+        p: r`The smoothing parameter $\alpha \in (0, 1]$ dictates the geometric decay rate. Recent observations receive exponentially decaying weights $(1 - \alpha)^{i-1}$, adapting rapidly to structural trend shifts without requiring a sharp rectangular cut-off window.`,
+      },
+    ],
+    keyPoints: [
+      r`Tabularizing sequential data: lag and window features allow non-recurrent algorithms (like LightGBM) to capture temporal dependencies with exceptional speed.`,
+      r`Strict causal lagging: rolling statistics must exclude the current time step $t$ when predicting $y_t$, strictly bounding historical inputs to $\{t-1, t-2, \dots\}$.`,
+      r`Domain seasonal lags: alignment with natural cycles (e.g. 24 hours, 7 days, 52 weeks) captures periodic autocorrelation structures.`,
+    ],
+    pitfalls: [
+      r`Centred window lookahead leakage: using default centred rolling windows incorporates future time points $t+1, \dots, t+k$, invalidating the model for live deployment.`,
+      r`Multi-step forecast horizon mismatch: when forecasting $h$ steps ahead (e.g. predicting day $t+7$), lag features like $y_{t-1}$ are unobserved at prediction time, demanding recursive or direct forecasting strategies.`,
+      r`Inadvertent training set NaN leakage: shifting by $k$ produces $k$ leading NaNs; dropping NaNs carelessly can truncate early training cohorts or cause row misalignment across multi-entity panels.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+series = 10.0 + np.sin(np.linspace(0, 10, 50)) + np.random.normal(0, 0.5, 50)
+T = len(series)
+
+# Lags: t-1 and t-3
+lag1 = series[2:-1]
+lag3 = series[0:-3]
+# Causal rolling mean (window=3)
+rolling_mean = np.array([np.mean(series[i-3:i]) for i in range(3, T)])
+y_target = series[3:]
+
+print(f"Constructed supervised samples: {len(y_target)}")
+print(f"Sample 0 -> Target: {y_target[0]:.2f}, Lag-1: {series[2]:.2f}, 3-step Rolling Mean: {rolling_mean[0]:.2f}")`,
+    quiz: [
+      {
+        q: r`Why is calculating a rolling mean using a centred window (e.g. including $t-2$ through $t+2$) considered fatal when building time-series features?`,
+        o: [
+          r`It introduces lookahead leakage by using future values ($t+1, t+2$) that are unobserved at inference time, rendering the model useless in production`,
+          r`It causes the rolling standard deviation to become negative`,
+          r`It converts daily time series into monthly data`,
+          r`It forces the model to use linear regression`,
+        ],
+        a: 0,
+        why: r`At test time, the model must forecast $y_t$ using only data available prior to $t$. A centred window incorporates future values that cannot exist at prediction time, producing deceptively high backtest scores that collapse in production.`,
+      },
+      {
+        q: r`When building a multi-step forecasting model to predict sales 7 days into the future ($y_{t+7}$), which of the following lag features is valid without recursive chaining?`,
+        o: [
+          r`$y_t$ or earlier lags like $y_{t-1}, y_{t-7}$`,
+          r`$y_{t+6}$`,
+          r`$y_{t+1}$`,
+          r`A centred 3-day average around $y_{t+7}$`,
+        ],
+        a: 0,
+        why: r`When forecasting 7 steps ahead from origin $t$, only observations at or before time $t$ ($y_t, y_{t-1}, \dots$) are known. Features like $y_{t+1}$ or $y_{t+6}$ are in the future and cannot be observed directly without multi-step recursive forecasting.`,
+      },
+      {
+        q: r`What structural role do lag differences ($\Delta y_t = y_t - y_{t-1}$) serve in time-series feature engineering?`,
+        o: [
+          r`They transform non-stationary trending series into stationary mean-reverting increments, highlighting short-term acceleration and momentum`,
+          r`They eliminate all missing values automatically`,
+          r`They ensure all target values are integers`,
+          r`They double the number of rows in the dataset`,
+        ],
+        a: 0,
+        why: r`Differencing removes secular non-stationary trends ($y_t - y_{t-1}$), capturing whether the process is accelerating or decelerating relative to its recent level.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['stationarity-acf-and-pacf', 'scaling-and-transforms-standard-robust-box-cox-yeo-johnson'],
+    related: ['stationarity-acf-and-pacf', 'exponential-smoothing-ets', 'gradient_boosting_regressor'],
+    keywords: 'lag features rolling window features time series feature engineering ewma lookahead leakage supervised forecasting autocorrelation',
+  },
+  {
+  "id": "binning-and-discretisation",
+  "short": "Binning & discretisation",
+  "title": "Binning and Discretisation: Transforming Continuous Predictors",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 14,
+  "noLab": true,
+  "summary": "Converting continuous variables into discrete intervals using uniform, quantile, k-means, and supervised decision tree binning strategies.",
+  "lead": "Continuous features often exhibit non-linear relationships, extreme outliers, or multimodal distributions that linear and generalised additive models struggle to capture directly. Discretisation maps continuous scales into discrete ordinal or categorical bins, introducing non-linear step responses, dampening outlier sensitivity, and producing interpretable scorecards.",
+  "analogy": "Consider categorising human ages for life insurance. Rather than forcing a single rigid linear relationship across all ages from 0 to 100, insurers split ages into distinct brackets: 18–25, 26–40, 41–60, and 60+. Within each bucket, risk is relatively uniform, and the risk premium can step up discretely without requiring complex high-degree polynomial curves.",
+  "intuition": [
+    "Discretisation partitions the domain of a continuous variable $X$ into $K$ intervals $[b_{k-1}, b_k)$, assigning each observation a discrete bin index or one-hot indicator. This effectively replaces a single continuous parameter with $K$ piecewise constant basis functions.",
+    "Unsupervised discretisation relies solely on feature distributions. Equal-width (uniform) binning divides the range into intervals of identical length, but is vulnerable to outliers compressing the vast majority of data into one bin. Equal-frequency (quantile) binning places an identical number of samples in every bin, making it robust against heavy tails and skewness.",
+    "Clustering-based binning (e.g. 1D k-means) clusters values into natural density modes, setting cut points midway between cluster centroids.",
+    "Supervised discretisation uses the target variable $y$ to determine optimal cutoffs. A single-variable decision tree finds split thresholds that maximise mutual information or minimise impurity with respect to $y$, directly isolating regions of differing risk or class probability."
+  ],
+  "steps": [
+    "Assess variable distribution: Inspect histograms, skewness, and kurtosis to determine whether the feature is uniform, bell-shaped, or heavily tailed.",
+    "Select binning strategy: Choose equal-frequency for skewed distributions, equal-width for uniformly bounded metrics, or decision tree binning for non-linear target associations.",
+    "Compute cut points on training data only: Fit bin edges $\\{b_0, b_1, \\dots, b_K\\}$ strictly on the training partition to avoid data leakage.",
+    "Handle boundary conditions: Ensure the outer edges extend to $(-\\infty, \\infty)$ so unseen minimum or maximum values in production do not produce missing values.",
+    "Encode discrete intervals: Encode bins as ordinal integers (for tree models) or one-hot dummy variables (for linear models and credit scorecards)."
+  ],
+  "math": [
+    {
+      "h": "Equal-Width (Uniform) Interval Partitioning",
+      "tex": "w = \\frac{\\max(X) - \\min(X)}{K}, \\quad b_k = \\min(X) + k \\cdot w, \\quad k \\in \\{0, 1, \\dots, K\\}",
+      "p": "Equal-width binning divides the total observed range into $K$ intervals of fixed length $w$."
+    },
+    {
+      "h": "Equal-Frequency (Quantile) Partitioning",
+      "tex": "b_k = Q_X\\left(\\frac{k}{K}\\right), \\quad P(X \\in [b_{k-1}, b_k)) = \\frac{1}{K}",
+      "p": "Quantile binning places bin edges at percentiles such that each of the $K$ bins contains exactly $1/K$ of the empirical probability mass."
+    },
+    {
+      "h": "Piecewise Constant Basis Expansion",
+      "tex": "f(X) = \\sum_{k=1}^K w_k \\cdot \\mathbb{I}(X \\in [b_{k-1}, b_k))",
+      "p": "Linear models fit a separate weight $w_k$ to each bin indicator $\\mathbb{I}$, learning arbitrary piecewise constant step functions without explicit polynomial features."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.preprocessing import KBinsDiscretizer\n\n# Generate skewed continuous data (e.g. income or transaction amounts)\nnp.random.seed(42)\nincome = np.random.exponential(scale=35000, size=1000).reshape(-1, 1)\n\n# Fit quantile-based discretisation (5 bins with equal sample frequency)\nquantile_bin = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='quantile')\nbinned_q = quantile_bin.fit_transform(income)\n\n# Fit uniform (equal-width) discretisation\nuniform_bin = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='uniform')\nbinned_u = uniform_bin.fit_transform(income)\n\nprint(\"Quantile cut points:\\n\", np.round(quantile_bin.bin_edges_[0], 1))\nprint(\"Quantile bin counts:\\n\", np.bincount(binned_q.flatten().astype(int)))\nprint(\"Uniform bin counts (heavily imbalanced):\\n\", np.bincount(binned_u.flatten().astype(int)))\n# Notice quantile creates balanced ~200 items/bin, while uniform starves upper bins",
+  "keyPoints": [
+    "Discretisation converts continuous variables into discrete bins, enabling linear models to learn non-linear step responses.",
+    "Quantile (equal-frequency) binning handles heavy-tailed skewed distributions without collapsing all samples into one bin.",
+    "Cut points must always be calculated strictly on the training set and applied unchanged to validation and test sets.",
+    "Supervised binning using decision tree splits finds thresholds that directly optimise class separation."
+  ],
+  "pitfalls": [
+    "Information loss: Discretisation discards fine-grained intra-bin variance, treating all values within an interval as completely identical.",
+    "Arbitrary boundary artifacts: Two data points on opposite sides of a cut boundary (e.g. 49.9 and 50.1) receive different representations, while 50.1 and 69.9 receive the same.",
+    "Calculating quantile thresholds on the combined dataset before train/test splitting, causing target leakage."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary vulnerability of equal-width (uniform) binning when applied to skewed distributions?",
+      "o": [
+        "It requires computationally expensive iterative matrix inversion",
+        "Outliers stretch the range, crowding the vast majority of observations into a single bin",
+        "It cannot be encoded into one-hot binary columns",
+        "It violates the Gauss-Markov theorem for linear regression"
+      ],
+      "a": 1,
+      "why": "In a skewed distribution with extreme outliers, the span $(\\max - \\min)$ is dominated by rare values, leaving nearly all normal observations compressed into the first interval."
+    },
+    {
+      "q": "Why does quantile binning generally outperform equal-width binning for financial variables like wealth or income?",
+      "o": [
+        "It guarantees an equal number of samples in every bin, making it robust against extreme long tails",
+        "It transforms categorical strings into continuous floating point numbers",
+        "It eliminates the need for cross-validation",
+        "It enforces normal Gaussianity on the output labels"
+      ],
+      "a": 0,
+      "why": "Quantile binning places cutoffs at empirical percentiles, ensuring balanced sample support across all bins regardless of distribution skewness."
+    },
+    {
+      "q": "What must an engineer ensure when deploying a fitted discretiser to production inference?",
+      "o": [
+        "Bin edges must be recomputed on each incoming production batch",
+        "The first and last intervals must cover $(-\\infty, \\infty)$ to handle extreme values without generating NaNs",
+        "Every bin must contain an odd number of samples",
+        "The target variable must be passed alongside the test features"
+      ],
+      "a": 1,
+      "why": "Production features may exhibit values lower than the training minimum or higher than the maximum. Infinite bounds prevent out-of-range errors."
+    }
+  ],
+  "related": [
+    "encoding-categoricals-one-hot-ordinal-target-woe",
+    "scaling-and-transforms-standard-robust-box-cox-yeo-johnson",
+    "outlier-handling"
+  ],
+  "keywords": "binning, discretisation, kbinsdiscretizer, equal width, equal frequency, quantile binning, step function, feature engineering",
+  "usedBy": []
+},
+  {
+  "id": "interactions-and-polynomial-features",
+  "short": "Interactions & polynomials",
+  "title": "Interactions and Polynomial Features: Capturing Non-Linear Synergies",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Constructing multiplicative feature interactions and polynomial expansions to model non-linear synergies while managing combinatorial feature explosion.",
+  "lead": "Linear models inherently assume that the effect of one feature on the target is entirely independent of all other features. In real-world phenomena, however, effects are deeply interactive: the impact of advertising depends on household income, and drug efficacy depends on patient body mass. Constructing interaction terms and polynomial features enables linear algorithms to capture multiplicative synergies and curved response surfaces.",
+  "analogy": "Imagine baking bread. Flour and yeast each contribute weight, but their true effect on loaf height occurs through their interactive combination: yeast without flour yields zero bread, and flour without yeast yields flatbread. A model that only adds individual flour weight plus yeast weight misses the multiplicative reaction entirely.",
+  "intuition": [
+    "In a standard linear regression $\\hat{y} = w_1 x_1 + w_2 x_2 + b$, the marginal derivative $\\frac{\\partial \\hat{y}}{\\partial x_1} = w_1$ is constant. It never changes regardless of whether $x_2$ is tiny or massive.",
+    "Adding an interaction term $x_1 x_2$ yields $\\hat{y} = w_1 x_1 + w_2 x_2 + w_{12} (x_1 x_2) + b$. Now the marginal effect $\\frac{\\partial \\hat{y}}{\\partial x_1} = w_1 + w_{12} x_2$ depends directly on the level of $x_2$, unlocking synergy or antagonism modelling.",
+    "Polynomial features expand individual inputs to higher powers ($x_1^2, x_1^3$), allowing linear models to fit quadratic parabolas, cubic curves, and multi-dimensional saddle surfaces.",
+    "The primary danger of polynomial and interaction expansion is combinatorial explosion. Expanding $d$ features to degree $p$ generates $\\binom{d+p}{p}$ terms. For 100 features at degree 2, this produces 5,151 columns, leading to extreme multicollinearity, memory bloat, and severe overfitting unless paired with L1 regularisation (Lasso) or domain-guided selection."
+  ],
+  "steps": [
+    "Domain hypothesis generation: Identify intuitive pairwise synergies based on physical or business logic (e.g. $\\text{speed} \\times \\text{time} = \\text{distance}$, $\\text{price} \\times \\text{quantity} = \\text{revenue}$) before blind generation.",
+    "Feature standardisation: Standardise raw continuous variables before creating polynomial terms to prevent high-degree powers from exploding to huge numerical scales.",
+    "Polynomial expansion: Generate cross-products and powers up to degree 2 or 3 using matrix operations or `PolynomialFeatures`.",
+    "Filter collinear columns: Check correlation matrices and variance inflation factors (VIF) to detect near-duplicate collinear interaction terms.",
+    "Regularised model fitting: Train linear models with L1/L2 regularisation (e.g. ElasticNet) to drive irrelevant cross-products to zero."
+  ],
+  "math": [
+    {
+      "h": "Two-Way Multiplicative Interaction Model",
+      "tex": "\\hat{y} = w_0 + w_1 x_1 + w_2 x_2 + w_{12} (x_1 x_2)",
+      "p": "The interaction coefficient $w_{12}$ represents the change in the slope of $x_1$ per unit increase in $x_2$."
+    },
+    {
+      "h": "Combinatorial Dimensionality Expansion",
+      "tex": "D_{\\mathrm{expanded}} = \\binom{d + p}{p} = \\frac{(d + p)!}{d! \\, p!}",
+      "p": "Expanding a $d$-dimensional feature vector up to polynomial degree $p$ scales factorially, necessitating strict feature pruning."
+    },
+    {
+      "h": "Marginal Rate of Substitution / Sensitivity",
+      "tex": "\\frac{\\partial \\hat{y}}{\\partial x_1} = w_1 + w_{12} x_2 + 2 w_{11} x_1",
+      "p": "With both interaction and quadratic terms, the sensitivity of predictions to changes in $x_1$ is a function of both $x_1$ and $x_2$."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.preprocessing import PolynomialFeatures, StandardScaler\nfrom sklearn.linear_model import LassoCV\n\n# Generate synthetic non-linear interaction data: y = 2*x1 - 3*x2 + 4*(x1*x2) + noise\nnp.random.seed(42)\nX_raw = np.random.uniform(-2, 2, size=(200, 3))  # 3 features: x0, x1, x2\ny = 2.0 * X_raw[:, 0] - 3.0 * X_raw[:, 1] + 4.0 * (X_raw[:, 0] * X_raw[:, 1]) + np.random.normal(0, 0.5, 200)\n\n# Standardise before polynomial expansion\nscaler = StandardScaler()\nX_norm = scaler.fit_transform(X_raw)\n\n# Generate degree-2 interaction features (including bias and squares)\npoly = PolynomialFeatures(degree=2, include_bias=False)\nX_poly = poly.fit_transform(X_norm)\nfeature_names = poly.get_feature_names_out(['x0', 'x1', 'x2'])\n\n# Fit Lasso to automatically select the true interaction terms\nlasso = LassoCV(cv=5).fit(X_poly, y)\n\nprint(\"Expanded feature count:\", X_poly.shape[1])\nselected = [(name, round(coef, 2)) for name, coef in zip(feature_names, lasso.coef_) if abs(coef) > 0.1]\nprint(\"Lasso selected non-zero features:\", selected)\n# Output reveals strong weights on x0, x1, and the cross-product x0*x1",
+  "keyPoints": [
+    "Interaction terms allow the marginal effect of one predictor to depend on the magnitude of another.",
+    "Polynomial features enable linear algorithms to fit smooth non-linear curves and saddle points.",
+    "Combinatorial expansion generates thousands of features rapidly, creating multicollinearity and overfitting risks.",
+    "Regularisation methods (Lasso, ElasticNet) are critical to prune redundant interaction terms."
+  ],
+  "pitfalls": [
+    "Expanding unscaled features: Raising variables with large raw scales (e.g. salaries of 100,000) to powers causes extreme floating point overflow and gradient instability.",
+    "Failing to keep main effects: Removing linear terms ($x_1, x_2$) while retaining their interaction ($x_1 x_2$) creates models whose interpretation changes drastically under simple coordinate shifts.",
+    "Overfitting on small samples: Degree-3 or degree-4 expansions on modest datasets fit random noise patterns perfectly, collapsing test set generalisation."
+  ],
+  "quiz": [
+    {
+      "q": "What is the mathematical meaning of the coefficient $w_{12}$ on the interaction term $x_1 x_2$?",
+      "o": [
+        "The baseline prediction when all features are zero",
+        "The rate at which the slope of $x_1$ with respect to $y$ changes as $x_2$ varies",
+        "The correlation coefficient between $x_1$ and $x_2$",
+        "The shrinkage factor applied to regularise the model"
+      ],
+      "a": 1,
+      "why": "Differentiating $\\hat{y}$ with respect to $x_1$ yields $w_1 + w_{12} x_2$. Thus $w_{12}$ indicates how the impact of $x_1$ shifts per unit change in $x_2$."
+    },
+    {
+      "q": "What severe issue arises when blindly generating degree-2 polynomial features on a dataset with 500 columns?",
+      "o": [
+        "The feature count balloons to over 125,000 columns, causing memory exhaustion and extreme overfitting",
+        "Linear models can no longer compute convex loss gradients",
+        "All correlation coefficients become exactly zero",
+        "Decision tree algorithms will fail to split on the data"
+      ],
+      "a": 0,
+      "why": "Formula $\\binom{500+2}{2} = 125{,}751$ terms (including the constant term). Such explosive dimensionality overwhelms memory and requires aggressive regularisation or domain pruning."
+    },
+    {
+      "q": "Why should continuous variables be standardised prior to computing polynomial expansions?",
+      "o": [
+        "To ensure all target labels are strictly positive",
+        "To prevent high powers from producing astronomical numerical scales and numerical overflow",
+        "To convert categorical strings into integers",
+        "To force all interaction coefficients to equal 1.0"
+      ],
+      "a": 1,
+      "why": "Variables with large magnitudes ($10^4$) when squared become $10^8$, creating vast disparities in feature magnitudes that destabilise optimisation algorithms."
+    }
+  ],
+  "related": [
+    "scaling-and-transforms-standard-robust-box-cox-yeo-johnson",
+    "binning-and-discretisation",
+    "scikit-learn-pipelines-and-columntransformer"
+  ],
+  "keywords": "interactions, polynomial features, multiplicative synergy, cross-products, polynomial expansion, combinatorial explosion, feature engineering",
+  "usedBy": []
+},
+  {
+  "id": "date-and-text-features",
+  "short": "Date & text features",
+  "title": "Date and Text Features: Engineering Tabular Signals from Unstructured Inputs",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Extracting high-value cyclical calendar signals and bag-of-words or embedding representations for tabular machine learning models.",
+  "lead": "Tabular machine learning models cannot directly process raw timestamps or free-form text strings. Converting calendar timestamps into cyclical trigonometric components and holiday indicators, while extracting term statistics, TF-IDF weights, or dense pretrained embeddings from text fields, unlocks high-signal tabular predictors without full deep language model infrastructure.",
+  "analogy": "Imagine a shopkeeper tracking sales notes. A timestamp like \"2026-12-25 09:30\" means little to an arithmetic equation until separated into \"Christmas Day\", \"Friday\", \"Morning rush\", and \"Month 12\". Similarly, a customer review saying \"the battery melted immediately\" is useless as a string, but highly predictive once flagged with high-severity sentiment terms and n-gram keyword counts.",
+  "intuition": [
+    "Raw dates contain rich multi-scale periodicity: intraday hour (24-hour cycle), day of week (7-day cycle), day of month (payday effects), month of year (seasonal cycle), and boolean holiday flags.",
+    "Treating cyclical calendar variables as simple integers (e.g. mapping hours to $0, 1, \\dots, 23$) introduces a severe false discontinuity: hour 23 and hour 0 appear 23 units apart despite being consecutive 60-minute neighbours. Sine and cosine trigonometric encodings $\\sin(2\\pi t / T)$ and $\\cos(2\\pi t / T)$ map time onto a smooth continuous 2D circle where 23:59 wraps seamlessly into 00:00.",
+    "Text fields in tabular datasets (product descriptions, customer support tickets, error logs) range from short categorical phrases to long paragraphs. Lightweight tabular text engineering uses token length, uppercase character ratios, punctuation counts, and n-gram TF-IDF representations.",
+    "Alternatively, passing short text through a small pretrained sentence transformer generates dense 384-dimensional embeddings, which can be compressed via TruncatedSVD or PCA into 8–16 dense numerical columns for gradient boosted decision trees."
+  ],
+  "steps": [
+    "Calendar component decomposition: Extract year, month, day, day of week, day of year, hour, and is_weekend booleans from canonical UTC timestamps.",
+    "Trigonometric cyclical encoding: Transform periodic variables (hour, day of week, month) into paired sine and cosine coordinates to preserve circle topology.",
+    "Calendar event enrichment: Join country-specific public holiday calendars, commercial sales events (e.g. Black Friday), and financial reporting period closes.",
+    "Text surface feature extraction: Compute character lengths, word counts, uppercase letter ratios, exclamation frequencies, and language identification.",
+    "Dense text representation: Compute TF-IDF matrices (with n-gram range (1, 2) and minimum document frequency threshold) or SVD-reduced sentence embeddings, concatenating them with tabular feature arrays."
+  ],
+  "math": [
+    {
+      "h": "Cyclical Periodic Coordinate Projection",
+      "tex": "x_{\\sin} = \\sin\\left(\\frac{2\\pi t}{T}\\right), \\quad x_{\\cos} = \\cos\\left(\\frac{2\\pi t}{T}\\right)",
+      "p": "Projects periodic index $t \\in [0, T)$ onto the 2D unit circle, ensuring Euclidean distance between boundary values $t=0$ and $t=T-1$ reflects true temporal proximity."
+    },
+    {
+      "h": "Circular Euclidean Distance Invariance",
+      "tex": "\\|(\\sin\\theta_1 - \\sin\\theta_2)^2 + (\\cos\\theta_1 - \\cos\\theta_2)^2\\| = 2 - 2\\cos(\\theta_1 - \\theta_2) = 4\\sin^2\\left(\\frac{\\theta_1 - \\theta_2}{2}\\right)",
+      "p": "The Euclidean distance between two points in projected sinusoidal space is a monotonic function of the angular difference along the cycle."
+    },
+    {
+      "h": "Term Frequency-Inverse Document Frequency (TF-IDF)",
+      "tex": "\\mathrm{tfidf}(t, d, D) = \\mathrm{tf}(t, d) \\times \\ln\\left(\\frac{1 + |D|}{1 + |\\{d \\in D : t \\in d\\}|}\\right) + 1",
+      "p": "Measures the informational specificity of token $t$ in document $d$ relative to the entire tabular corpus $D$."
+    }
+  ],
+  "code": "import numpy as np\nimport pandas as pd\nfrom sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.decomposition import TruncatedSVD\n\n# Sample tabular data with timestamps and customer support notes\ndf = pd.DataFrame({\n    'timestamp': pd.to_datetime([\n        '2026-01-01 23:45:00',\n        '2026-01-02 00:15:00',\n        '2026-07-15 14:30:00'\n    ]),\n    'ticket_text': [\n        'Payment gateway returned fatal timeout error',\n        'Unable to complete purchase during checkout timeout',\n        'How do I update my profile mailing address'\n    ]\n})\n\n# 1. Cyclical hour encoding\nhours = df['timestamp'].dt.hour + df['timestamp'].dt.minute / 60.0\ndf['hour_sin'] = np.sin(2 * np.pi * hours / 24.0)\ndf['hour_cos'] = np.cos(2 * np.pi * hours / 24.0)\n\n# 2. Text feature extraction: character count and TF-IDF\ndf['text_len'] = df['ticket_text'].str.len()\ntfidf = TfidfVectorizer(max_features=10, stop_words='english')\ntfidf_matrix = tfidf.fit_transform(df['ticket_text'])\n\n# Reduce text dimensionality for tabular inclusion\nsvd = TruncatedSVD(n_components=2, random_state=42)\ntext_dense = svd.fit_transform(tfidf_matrix)\ndf['text_svd_1'] = text_dense[:, 0]\ndf['text_svd_2'] = text_dense[:, 1]\n\nprint(df[['hour_sin', 'hour_cos', 'text_len', 'text_svd_1']])\n# Observe hour 23:45 and 00:15 have nearly identical trigonometric coordinates",
+  "keyPoints": [
+    "Trigonometric sine/cosine encodings eliminate artificial boundary gaps between consecutive cyclical times (e.g. 23:59 and 00:00).",
+    "Decomposing dates into hierarchical calendar units (day of week, holiday flag, quarter) reveals seasonality to tree algorithms.",
+    "Text fields can be efficiently represented using word counts, TF-IDF weights, or SVD-reduced sentence embeddings.",
+    "Always fit text vectorisers and normalisers exclusively on training data to prevent out-of-fold vocabulary leakage."
+  ],
+  "pitfalls": [
+    "Using only sine without cosine: Sine alone creates an ambiguous mapping where two distinct times of day (e.g. 06:00 and 18:00) share the exact same value.",
+    "High-dimensional sparse text vectors in tree models: Passing raw 50,000-column TF-IDF matrices to LightGBM or XGBoost causes memory thrashing; reduce via SVD first.",
+    "Ignoring local time when calculating \"hour of day\": UTC 02:00 corresponds to mid-morning in Tokyo but late evening in London."
+  ],
+  "quiz": [
+    {
+      "q": "Why is it necessary to include both sine and cosine terms when cyclically encoding hours of the day?",
+      "o": [
+        "Because linear regression requires even numbers of input variables",
+        "A single trigonometric wave produces identical values for two distinct times within each 24-hour cycle",
+        "Cosine removes the effect of leap years",
+        "Decision trees cannot split on negative floating point numbers"
+      ],
+      "a": 1,
+      "why": "The sine function is non-monotonic on $[0, 2\\pi)$, producing identical values for distinct hours (e.g. $\\sin(\\pi/4) = \\sin(3\\pi/4)$). Paired sine and cosine coordinates uniquely identify every point on the circle."
+    },
+    {
+      "q": "What is the most effective way to include free-text descriptions into a gradient boosted tree model alongside tabular columns?",
+      "o": [
+        "Convert the entire text into a single integer hash",
+        "Extract length/token metadata and reduce TF-IDF or embedding vectors to a small number of dense components via SVD",
+        "Train an end-to-end 70-billion parameter LLM for every single tabular row",
+        "Delete the text column because decision trees only support binary indicators"
+      ],
+      "a": 1,
+      "why": "Gradient boosted trees handle a moderate number of continuous dense signals well. Compressing text representations with SVD or sentence embeddings preserves semantic variance without overwhelming tree splits."
+    },
+    {
+      "q": "What issue arises when integer encoding the month of the year (1 to 12) in distance-based algorithms like k-NN?",
+      "o": [
+        "December (12) and January (1) appear maximally distant (distance 11) despite being consecutive months",
+        "The algorithm will fail to converge to a global minimum",
+        "The target distribution becomes multimodal",
+        "Matrix inversion yields an ill-conditioned determinant"
+      ],
+      "a": 0,
+      "why": "In linear integer encoding, 12 and 1 have an artificial distance of 11, obscuring winter seasonality across year boundaries."
+    }
+  ],
+  "related": [
+    "dates-time-zones-and-temporal-joins",
+    "bag-of-words-and-tf-idf",
+    "encoding-categoricals-one-hot-ordinal-target-woe"
+  ],
+  "keywords": "date features, text features, cyclical encoding, sine cosine encoding, tf-idf, truncated svd, calendar features, tabular feature engineering",
+  "usedBy": []
+},
+  {
+  "id": "feature-hashing-and-high-cardinality-columns",
+  "short": "Feature hashing & cardinality",
+  "title": "Feature Hashing and High-Cardinality Columns: The Hashing Trick",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Handling massive categorical feature spaces with the hashing trick (MurmurHash) to bound memory, handle unseen categories, and avoid dictionary lookups.",
+  "lead": "When categorical variables contain hundreds of thousands or millions of unique levels (such as user IDs, IP addresses, URL tokens, or search queries), standard one-hot encoding creates enormous, unmanageable sparse matrices that exhaust memory and break distributed pipelines. The hashing trick maps arbitrary string tokens into a fixed-size vector space using fast deterministic hash functions, bounding memory usage and effortlessly absorbing previously unseen levels.",
+  "analogy": "Imagine a coat check room in a massive convention centre with 500,000 attendees. Building a dedicated numbered hook for every single potential person would require a vast warehouse. Instead, the cloakroom uses 4,096 pigeonholes numbered $0$ to $4095$. When you arrive, your name is converted into a pigeonhole number via a fixed mathematical formula. Occasionally two people share a pigeonhole, but coats take up vastly less physical room, and anyone arriving with an unexpected ticket can be accommodated immediately.",
+  "intuition": [
+    "Standard categorical encodings (one-hot, frequency, target encoding) require maintaining a global vocabulary mapping each token to an integer index. In streaming environments and massive datasets, maintaining this vocabulary causes memory growth, synchronisation bottlenecks across worker nodes, and failure on unseen out-of-vocabulary (OOV) tokens.",
+    "The hashing trick (Weinberger et al., 2009) replaces the dictionary lookup with a deterministic hash function $h(x) \\pmod B$, which directly maps any arbitrary string token to an index in a fixed $B$-dimensional array.",
+    "To prevent collision bias, a second independent sign hash function $\\xi(x) \\in \\{-1, +1\\}$ is applied. If two uncorrelated tokens happen to hash to the same bucket, their expected inner product remains zero because their signs cancel out in expectation.",
+    "The trade-off is hash collision: multiple tokens mapped to the same index introduce slight variance into feature coefficients. By choosing bucket size $B$ sufficiently large relative to the number of active non-zero features per sample, collisions remain negligible while guaranteeing strict, constant memory bounds."
+  ],
+  "steps": [
+    "Determine feature sparsity and budget: Choose bucket dimension $B = 2^b$ (typically $2^{18}$ to $2^{22}$ in production ad-tech) balancing memory constraints against collision probability.",
+    "Select fast non-cryptographic hash: Use fast hash algorithms such as MurmurHash3 or xxHash for high-throughput string hashing.",
+    "Compute bucket index and sign: For token $x$, compute index $j = |h(x)| \\pmod B$ and sign $\\xi(x) = 2 \\cdot (h_2(x) \\pmod 2) - 1$.",
+    "Accumulate feature vector: Add $\\xi(x)$ (or $\\xi(x) \\times \\text{value}$) into index $j$ of the sparse sample vector.",
+    "Fit online or linear model: Train models such as Vowpal Wabbit, SGDClassifier, or sparse linear networks directly on the hashed sparse arrays."
+  ],
+  "math": [
+    {
+      "h": "Hashing Trick Feature Mapping",
+      "tex": "\\phi_j(x) = \\sum_{i : h(x_i) = j} \\xi(x_i) \\cdot v_i, \\quad j \\in \\{0, 1, \\dots, B-1\\}",
+      "p": "Maps an arbitrary token $x_i$ with value $v_i$ into bucket $j$ using primary hash $h$ and signed hash $\\xi$."
+    },
+    {
+      "h": "Unbiased Inner Product Preservation",
+      "tex": "\\mathbb{E}[\\langle \\phi(u), \\phi(v) \\rangle] = \\langle u, v \\rangle, \\quad \\operatorname{Var}(\\langle \\phi(u), \\phi(v) \\rangle) = \\frac{1}{B} \\left( \\|u\\|^2 \\|v\\|^2 + \\langle u, v \\rangle^2 \\right)",
+      "p": "Under independent sign hashing $\\xi$, the expected inner product is completely unbiased, with collision variance decaying inversely with bucket size $B$."
+    },
+    {
+      "h": "Birthday Paradox Collision Expectation",
+      "tex": "P(\\text{collision}) \\approx 1 - \\exp\\left( -\\frac{k(k - 1)}{2B} \\right)",
+      "p": "Estimates the probability of at least one collision when hashing $k$ distinct active tokens into $B$ discrete buckets."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.feature_extraction import FeatureHasher\n\n# High-cardinality categorical records (e.g. ad impressions with millions of user IDs and domains)\nrecords = [\n    {'user_id': 'usr_948271', 'domain': 'techcrunch.com', 'country': 'GB'},\n    {'user_id': 'usr_102938', 'domain': 'github.com', 'country': 'US'},\n    {'user_id': 'usr_948271', 'domain': 'reddit.com', 'country': 'GB'},\n    {'user_id': 'usr_unseen_9999', 'domain': 'bbc.co.uk', 'country': 'GB'}  # Unseen user at inference\n]\n\n# Set fixed hash space to 2^10 = 1024 buckets (strictly bounded memory)\nhasher = FeatureHasher(n_features=1024, input_type='dict')\nsparse_hashed = hasher.fit_transform(records)\n\nprint(\"Hashed sparse matrix shape:\", sparse_hashed.shape)\nprint(\"Non-zero entries in first row:\", sparse_hashed[0].nnz)\nprint(\"Memory bound: Exactly 1024 columns regardless of how many millions of new users arrive!\")\n# Handles unseen user 'usr_unseen_9999' instantly without re-fitting or vocabulary lookup",
+  "keyPoints": [
+    "The hashing trick maps unbounded categorical strings to a fixed $B$-dimensional space using fast hash functions.",
+    "Eliminates vocabulary storage and inter-worker dictionary synchronisation in distributed clusters.",
+    "Handles out-of-vocabulary tokens seamlessly at inference time without re-indexing.",
+    "Signed hashing ensures the expected inner product between samples is mathematically unbiased."
+  ],
+  "pitfalls": [
+    "Irreversible representation: Once hashed, feature names cannot be recovered from bucket indices, making coefficient interpretation difficult.",
+    "Bucket undersizing: If $B$ is set too small relative to the number of distinct categories, excessive collisions corrupt signal and degrade accuracy.",
+    "Hashing noise features: Hashing pure random identifiers that possess zero predictive power still consumes bucket capacity and increases collision noise."
+  ],
+  "quiz": [
+    {
+      "q": "What is the primary benefit of the hashing trick over standard one-hot encoding for massive categorical columns?",
+      "o": [
+        "It guarantees zero feature collisions under all circumstances",
+        "It bounds memory usage to a constant size and requires no vocabulary dictionary lookup",
+        "It forces gradient boosted trees to converge in a single iteration",
+        "It automatically converts non-linear relationships into linear ones"
+      ],
+      "a": 1,
+      "why": "Feature hashing allocates a fixed number of buckets, requiring zero vocabulary storage in memory and absorbing unseen tokens without schema updates."
+    },
+    {
+      "q": "Why does the hashing trick employ a secondary sign hash function $\\xi(x) \\in \\{-1, +1\\}$?",
+      "o": [
+        "To ensure all output matrix entries are positive",
+        "To make the expected inner product unbiased so random collisions cancel out in expectation",
+        "To encrypt private customer identifiers against cyber attacks",
+        "To accelerate matrix multiplication by avoiding floating point arithmetic"
+      ],
+      "a": 1,
+      "why": "Independent sign hashing ensures $\\mathbb{E}[\\xi(u)\\xi(v)] = 0$ for distinct tokens $u \\ne v$, meaning collision interference averages to zero."
+    },
+    {
+      "q": "What is a major operational downside of using feature hashing in production systems?",
+      "o": [
+        "It cannot process string inputs",
+        "Loss of feature interpretability: you cannot trace a learned weight back to a specific category name",
+        "It requires calculating the full Hessian matrix during inference",
+        "It cannot be implemented in streaming Python pipelines"
+      ],
+      "a": 1,
+      "why": "Hash functions are one-way projections. When a model assigns a large weight to bucket #4912, you cannot determine which original category produced it."
+    }
+  ],
+  "related": [
+    "encoding-categoricals-one-hot-ordinal-target-woe",
+    "scikit-learn-pipelines-and-columntransformer",
+    "bag-of-words-and-tf-idf"
+  ],
+  "keywords": "feature hashing, hashing trick, high-cardinality, featurehasher, murmurhash, collision, signed hashing, memory-bounded encoding",
+  "usedBy": []
+},
+  {
+    id: 'train-validation-test-splits-group-and-time-based',
+    short: 'Splits: group and time-based',
+    title: 'Train/Validation/Test Splits: Group and Time-Based',
+    task: 'concepts',
+    module: 'Pipelines and validation',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Partitioning data to mirror true production inference constraints, preventing optimistic bias caused by grouped customer records or temporal lookahead.`,
+    lead: r`A naive random 80/20 split assumes observations are independent and identically distributed. In real-world data science, multiple rows often originate from the same patient, device, or customer, and data arrives chronologically over time. Group-aware and time-based splits enforce strict boundaries across clusters and time horizons, ensuring validation scores accurately reflect generalisation to unseen entities and future events.`,
+    intuition: [
+      r`Imagine building a diagnostic computer vision system to detect skin lesions. You collect 10,000 dermatoscopic images across 200 patients. If you shuffle the images uniformly into a standard 80/20 train/test split, photos from almost every patient appear in both the training set and the test set. The model can easily achieve 98% test accuracy simply by memorising patient-specific skin tones, hair patterns, lighting conditions, or hospital background tags. When you ship the model to a new clinic and test it on patient #201, performance collapses to 65% because the model learned patient identity rather than medical pathology. Group-based splitting prevents this by allocating all observations from any single patient exclusively to train or test.`,
+      r`A parallel disaster unfolds in temporal forecasting. Suppose you predict daily supermarket sales. If you shuffle transactions randomly across a year, the training set will contain transactions from Monday, Wednesday, and Friday, while the validation set contains Tuesday and Thursday. The model predicts Tuesday's sales using information from Wednesday and Thursday—an impossible lookahead scenario in deployment. Time-based splitting enforces the chronological arrow of time: training on historical months (e.g. January through September) and validating strictly on subsequent months (e.g. October through December).`,
+      r`The classic three-way partition separates concerns across the modelling lifecycle: the training set optimises internal model parameters; the validation set compares architectures, calibrates thresholds, and tunes hyperparameters; and the test set remains locked in an untouchable vault until final sign-off. Repeatedly consulting test metrics during model iteration leaks test information into human design decisions, turning the final evaluation into a disguised validation set.`,
+    ],
+    analogy: r`Testing a trainee doctor on new patients they have never examined before, rather than quizzing them on the exact same patients they observed during morning rounds.`,
+    steps: [
+      r`Audit structural dependencies: identify whether records cluster within entities (user ID, hospital, vehicle) or follow a continuous timeline.`,
+      r`Select splitting architecture: use GroupKFold or GroupShuffleSplit for clustered entities, and TimeSeriesSplit or chronological holdout for sequential processes.`,
+      r`Enforce temporal embargo gaps: when features use rolling lookback windows or labels take time to resolve, insert an embargo buffer between train and test.`,
+      r`Isolate the final test vault: seal test data prior to exploratory analysis, feature extraction, and preprocessing fitment.`,
+      r`Verify disjoint entity boundaries: programmatically assert that the intersection between training entity identifiers and validation entity identifiers is strictly empty.`,
+    ],
+    math: [
+      {
+        h: 'Disjoint group partition constraint',
+        tex: r`\mathcal{G}_{\text{train}} \cap \mathcal{G}_{\text{val}} = \emptyset, \qquad \mathcal{G}_{\text{train}} \cup \mathcal{G}_{\text{val}} \subseteq \mathcal{G}`,
+        p: r`Where $\mathcal{G}$ represents the universe of unique entity identifiers (such as user or device IDs), and $\mathcal{G}_{\text{train}}$ and $\mathcal{G}_{\text{val}}$ are the subsets allocated to training and validation. Enforcing zero intersection ensures that no entity-specific idiosyncrasies can leak across partition boundaries.`,
+      },
+      {
+        h: 'Chronological split with purge and embargo gap',
+        tex: r`\max_{i \in \mathcal{D}_{\text{train}}} t_i < t_{\text{split}} < t_{\text{split}} + \Delta t_{\text{embargo}} \le \min_{j \in \mathcal{D}_{\text{val}}} t_j`,
+        p: r`Where $t_i$ is the event timestamp for record $i$, $t_{\text{split}}$ is the historical cutoff, and $\Delta t_{\text{embargo}}$ is an enforced purge window. Purging eliminates records whose rolling aggregations or future outcome resolutions span across the split boundary.`,
+      },
+      {
+        h: 'Expected generalisation risk under cluster shift',
+        tex: r`\mathcal{R}_{\text{group}}(\hat{f}) = \mathbb{E}_{G \sim \mathcal{P}_G} \left[ \mathbb{E}_{(X, Y) \sim \mathcal{P}_{XY|G}} [L(Y, \hat{f}(X))] \right]`,
+        p: r`Validation evaluates expected loss across newly drawn groups $G \sim \mathcal{P}_G$ rather than repeated draws from known training groups. This provides an unbiased estimator of true out-of-distribution performance when deploying to fresh customers or environments.`,
+      },
+    ],
+    keyPoints: [
+      r`Random shuffling on clustered or longitudinal data creates severe optimistic bias by rewarding models that memorise entity identities.`,
+      r`Chronological splits preserve the causal arrow of time, replicating true forward-looking production conditions.`,
+      r`Purging and embargo gaps prevent subtle leakage caused by multi-day rolling features or forward-looking label windows near split cutoffs.`,
+    ],
+    pitfalls: [
+      r`Randomly splitting panel datasets where multiple rows originate from the same user, machine, or household.`,
+      r`Evaluating time series with standard k-fold cross-validation, allowing future information to train models predicting past events.`,
+      r`Peeking at the final test set: adjusting hyperparameters or feature selections based on test feedback invalidates unbiased generalisation guarantees.`,
+    ],
+    code: r`import numpy as np
+
+# 1. Simulate longitudinal data: 8 entities, 5 measurements each
+np.random.seed(42)
+n_groups, n_obs = 8, 5
+group_ids = np.repeat(np.arange(n_groups), n_obs)
+# Entity random intercepts induce strong intra-group correlation
+group_effects = np.random.normal(0, 5.0, size=n_groups)
+X = np.random.normal(0, 1.0, size=(n_groups * n_obs, 1))
+y = 2.0 * X[:, 0] + group_effects[group_ids] + np.random.normal(0, 0.5, size=n_groups * n_obs)
+
+# Standard random split: same groups appear in both train and test
+perm = np.random.permutation(len(y))
+train_idx_rand, test_idx_rand = perm[:24], perm[24:]
+rand_overlap = len(set(group_ids[train_idx_rand]) & set(group_ids[test_idx_rand]))
+
+# Group-aware split: groups are partitioned disjointly
+unique_groups = np.unique(group_ids)
+np.random.shuffle(unique_groups)
+train_groups, test_groups = unique_groups[:5], unique_groups[5:]
+train_idx_grp = np.isin(group_ids, train_groups)
+test_idx_grp = np.isin(group_ids, test_groups)
+grp_overlap = len(set(group_ids[train_idx_grp]) & set(group_ids[test_idx_grp]))
+
+print(f"Random split shared entity overlap: {rand_overlap} groups")
+print(f"Group split shared entity overlap:  {grp_overlap} groups")
+print(f"Train groups: {[int(g) for g in train_groups]}, Test groups: {[int(g) for g in test_groups]}")`,
+    quiz: [
+      {
+        q: r`Why does standard random k-fold cross-validation yield misleadingly optimistic accuracy when applied to multi-visit hospital patient records?`,
+        o: [
+          r`Because patient records can only be validated using leave-one-out cross-validation`,
+          r`Because images and measurements from the same patient appear in both train and test folds, allowing models to memorise patient traits`,
+          r`Because k-fold cross-validation forces all features to follow Gaussian distributions`,
+          r`Because random splitting removes rows with missing values automatically`,
+        ],
+        a: 1,
+        why: r`When multi-row records from the same patient are scattered randomly across folds, the model learns patient-specific quirks (skin tone, background artifacts) rather than generalisable disease patterns, producing false confidence.`,
+      },
+      {
+        q: r`When splitting time-series data for a model forecasting demand 7 days ahead, why is an embargo or purge gap necessary at the split boundary?`,
+        o: [
+          r`To prevent rolling window features computed near the boundary from incorporating future post-split information`,
+          r`To ensure the training dataset contains an even number of samples`,
+          r`To artificially boost the variance of the validation predictions`,
+          r`Because scikit-learn models crash if time steps are strictly contiguous`,
+        ],
+        a: 0,
+        why: r`If features compute rolling multi-day averages or if target labels take several days to materialize, observations immediately preceding the split line may incorporate or overlap with target period data unless an embargo buffer is enforced.`,
+      },
+      {
+        q: r`What is the primary role of the holdout test set compared to the validation set in a supervised learning project?`,
+        o: [
+          r`The test set is used to optimise gradient descent learning rates`,
+          r`The test set is used for feature selection, while validation is used for training`,
+          r`The test set provides an untouched, unbiased assessment of final generalisation after all model and tuning decisions are frozen`,
+          r`The test set must be three times larger than the training set`,
+        ],
+        a: 2,
+        why: r`Iterating on models, features, and hyperparameters against a validation set causes subtle validation overfitting. An untouched test set serves as the final arbiter of performance.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['cross-validation', 'bias-variance-tradeoff'],
+    related: ['data-leakage', 'scikit-learn-pipelines-and-columntransformer', 'lag-and-rolling-window-features'],
+    keywords: 'train test split group kfold time based split validation data leakage embargo purge temporal holdout',
+  },
+  {
+    id: 'data-leakage',
+    short: 'Data leakage',
+    title: 'Data Leakage',
+    task: 'concepts',
+    module: 'Pipelines and validation',
+    level: 2,
+    minutes: 15,
+    noLab: true,
+    summary: r`Diagnosing and preventing the insidious contamination of training data with information available only at inference or in the future.`,
+    lead: r`Data leakage occurs when information from outside the training partition—or information unavailable at the real-time moment of prediction—inadvertently contaminates model training. Leakage produces deceptively flawless cross-validation scores that abruptly collapse into catastrophic failures in production. Recognizing target leakage, feature leakage, and preprocessing leakage is essential for reliable machine learning.`,
+    intuition: [
+      r`Imagine training a machine learning model to predict whether a hospital patient will develop severe pneumonia. During feature engineering, you include a column called "Antibiotic IV Dosage Administered". In offline validation, the model achieves a miraculous 99.8% ROC-AUC. But in clinical practice, doctors only prescribe high-dose IV antibiotics after pneumonia has already been diagnosed! The model did not predict pneumonia; it merely detected the physician's reaction to pneumonia. This is classic target leakage—including a feature that is a downstream consequence of the target rather than a genuine antecedent predictor.`,
+      r`A subtler, pervasive trap is preprocessing leakage. Suppose you standardise a dataset by subtracting the mean and dividing by the standard deviation. If you compute the mean and variance across the entire table before splitting into training and test sets, the training data has absorbed statistical parameters derived from the test set. If you perform feature selection or target encoding across the entire table, test labels directly influence the features selected for training, manufacturing artificial predictive power out of pure noise.`,
+      r`The diagnostic hallmark of data leakage is performance that appears "too good to be true". Whenever a model achieves near-perfect metrics on a notoriously noisy or uncertain task, the cause is almost never an algorithmic breakthrough—it is almost always data leakage. Building strict isolation firewalls around the point of prediction ensures models rely solely on information that genuinely exists at decision time.`,
+    ],
+    analogy: r`Studying for a medical licensing exam with a stolen copy of the answer key: you score 100% on practice exams, but fail in the clinic when answers are no longer provided.`,
+    steps: [
+      r`Define the point of prediction: fix the exact real-world timestamp $T_{\text{pred}}$ when inference executes in production.`,
+      r`Audit feature timelines: systematically eliminate any feature created, updated, or recorded after $T_{\text{pred}}$ (downstream consequence of the target).`,
+      r`Fit all transformers inside cross-validation: enforce that scalers, imputers, and encoders call fit strictly on training folds and transform on validation folds.`,
+      r`Isolate target encoding out-of-fold: ensure target-based categorical encodings exclude the current record's label to prevent self-referential leakage.`,
+      r`Stress-test with temporal holdouts: validate models on a strictly future time block; a dramatic divergence between cross-validation and holdout exposes leakage.`,
+    ],
+    math: [
+      {
+        h: 'Mutual information target leakage condition',
+        tex: r`I(X_{\text{leaked}}; Y \mid T_{\text{pred}}) \gg I(X_{\text{valid}}; Y \mid T_{\text{pred}})`,
+        p: r`Where $X_{\text{leaked}}$ represents information generated chronologically after decision timestamp $T_{\text{pred}}$. Such features exhibit spurious high mutual information with target $Y$ during backtesting that disappears under true live inference.`,
+      },
+      {
+        h: 'Global preprocessing parameter mismatch',
+        tex: r`\hat{\mu}_{\text{leaked}} = \frac{1}{n_{\text{tr}} + n_{\text{val}}} \sum_{i \in \mathcal{D}_{\text{tr}} \cup \mathcal{D}_{\text{val}}} x_i \ne \hat{\mu}_{\text{train}} = \frac{1}{n_{\text{tr}}} \sum_{i \in \mathcal{D}_{\text{tr}}} x_i`,
+        p: r`Estimating transformation parameters (such as mean $\hat{\mu}$ or variance $\hat{\sigma}^2$) across the pooled dataset introduces an out-of-fold bias of order $\mathcal{O}(n_{\text{val}} / n)$, breaking the statistical independence assumption between training and validation partitions.`,
+      },
+      {
+        h: 'Out-of-fold target encoding formulation',
+        tex: r`\hat{S}_{i, c} = \frac{\sum_{j \in \mathcal{D}_{\text{tr}} \setminus \{i\}, X_j = c} y_j + m \bar{y}_{\text{tr}}}{n_{c, \text{tr},-i} + m}`,
+        p: r`Target encoding must be computed by explicitly excluding sample $i$ (or via out-of-fold cross-fitting), preventing observation $i$'s own target label $y_i$ from leaking directly into its feature representation.`,
+      },
+    ],
+    keyPoints: [
+      r`Target leakage introduces features that are downstream effects or proxies of the outcome rather than causes.`,
+      r`Preprocessing leakage occurs whenever transformation parameters (means, medians, vocabularies) are learned on pooled train and test data.`,
+      r`Feature selection leakage across the entire dataset can make pure noise appear 80%+ accurate in cross-validation.`,
+    ],
+    pitfalls: [
+      r`Calling fit_transform on the full dataset before splitting into train, validation, and test partitions.`,
+      r`Performing unsupervised or supervised feature selection on the entire dataset prior to cross-validation.`,
+      r`Including database record update timestamps, transaction IDs, or account closure dates that are logged concurrently with the target event.`,
+    ],
+    code: r`import numpy as np
+
+# Simulate feature selection leakage on pure noise (100 samples, 500 noise features)
+np.random.seed(42)
+n_samples, n_features = 100, 500
+X = np.random.normal(0, 1, size=(n_samples, n_features))
+y = np.random.binomial(1, 0.5, size=n_samples)  # independent random binary targets
+
+# 1. LEAKED: Select top 5 correlated features using the FULL dataset before splitting
+corrs = np.array([np.abs(np.corrcoef(X[:, j], y)[0, 1]) for j in range(n_features)])
+top_leaked = np.argsort(corrs)[-5:]
+
+# Nearest centroid classification on test set using leaked features
+train_idx, test_idx = np.arange(70), np.arange(70, 100)
+c1_leak = np.mean(X[train_idx][y[train_idx] == 1][:, top_leaked], axis=0)
+c0_leak = np.mean(X[train_idx][y[train_idx] == 0][:, top_leaked], axis=0)
+preds_leak = (np.linalg.norm(X[test_idx][:, top_leaked] - c1_leak, axis=1) <
+              np.linalg.norm(X[test_idx][:, top_leaked] - c0_leak, axis=1)).astype(int)
+acc_leak = np.mean(preds_leak == y[test_idx])
+
+# 2. CLEAN: Select features using ONLY training partition
+corrs_clean = np.array([np.abs(np.corrcoef(X[train_idx, j], y[train_idx])[0, 1]) for j in range(n_features)])
+top_clean = np.argsort(corrs_clean)[-5:]
+c1_clean = np.mean(X[train_idx][y[train_idx] == 1][:, top_clean], axis=0)
+c0_clean = np.mean(X[train_idx][y[train_idx] == 0][:, top_clean], axis=0)
+preds_clean = (np.linalg.norm(X[test_idx][:, top_clean] - c1_clean, axis=1) <
+               np.linalg.norm(X[test_idx][:, top_clean] - c0_clean, axis=1)).astype(int)
+acc_clean = np.mean(preds_clean == y[test_idx])
+
+print(f"Test accuracy with feature selection leakage: {acc_leak:.2f}")
+print(f"Test accuracy with clean in-fold selection:   {acc_clean:.2f}")`,
+    quiz: [
+      {
+        q: r`A machine learning engineer achieves 99.5% accuracy predicting loan defaults, but in production the model performs no better than random guessing. What is the most probable cause?`,
+        o: [
+          r`The learning rate in gradient descent was set too low`,
+          r`A feature such as 'Collection Agency Referral Date' was included, which is only populated after a borrower defaults (target leakage)`,
+          r`The dataset was scaled using RobustScaler instead of StandardScaler`,
+          r`The model had too few tree estimators`,
+        ],
+        a: 1,
+        why: r`Features that are populated or updated as a consequence of the target event (like referral to collections) leak future outcome knowledge into training, creating deceptive offline performance that fails live.`,
+      },
+      {
+        q: r`Why is computing StandardScaler mean and standard deviation across an entire dataset prior to cross-validation considered data leakage?`,
+        o: [
+          r`It inflates the training set with test distribution statistics, violating the assumption that test data is unseen`,
+          r`It forces continuous features to become discrete integers`,
+          r`It causes the matrix inverse to become singular during regression`,
+          r`It converts the target variable into a normal distribution`,
+        ],
+        a: 0,
+        why: r`Fitting transformers on the full dataset allows test set statistical information to seep into the training set, causing optimistic validation scores.`,
+      },
+      {
+        q: r`How does out-of-fold target encoding prevent target leakage in high-cardinality categorical variables?`,
+        o: [
+          r`By replacing all categorical strings with random Gaussian noise`,
+          r`By ensuring each observation's target encoding is calculated exclusively from other rows, excluding its own target value`,
+          r`By converting categorical columns into one-hot binary columns`,
+          r`By calculating category means only on the test partition`,
+        ],
+        a: 1,
+        why: r`If a row's own target label is included when calculating its category's mean target value, the feature directly leaks the label, especially for rare categories with sample count 1.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['train-validation-test-splits-group-and-time-based', 'cross-validation'],
+    related: ['scikit-learn-pipelines-and-columntransformer', 'missing-data-mcar-mar-mnar-and-imputation', 'encoding-categoricals-one-hot-ordinal-target-woe'],
+    keywords: 'data leakage target leakage preprocessing leakage feature leakage lookahead bias out of fold cross validation',
+  },
 ];
