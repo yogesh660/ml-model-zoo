@@ -68,11 +68,14 @@ const mq = JSON.parse(execSync('node scripts/dev/merge-queue.js status --json', 
 const onGithub = new Set(mq.branches.map(b => b.branch));
 let prev = [];
 try { prev = JSON.parse(fs.readFileSync(path.join(out, 'branches.json'), 'utf8')); } catch (e) { /* first run */ }
-const branches = mq.branches.map(b => ({
-  branch: b.branch, kind: b.kind === 'quizzes' ? 'Quizzes' : b.kind === 'lessons' ? 'Lessons' : 'Other',
-  new_lessons: b.kind === 'lessons' ? b.total : null, merged: b.kind === 'lessons' ? b.merged : null, pending: b.kind === 'lessons' ? b.pending : (b.ahead || 0),
-  status: b.done ? 'Ready to delete' : 'In progress', on_github: true,
-}));
+// a lesson branch keeps the lesson count it had when first tracked, so merged = that count - pending
+const prevBy = Object.fromEntries(prev.map(r => [r.branch, r]));
+const today = new Date().toISOString().slice(0, 10);
+const branches = mq.branches.map(b => {
+  if (b.kind !== 'lessons') return { branch: b.branch, kind: b.kind === 'quizzes' ? 'Quizzes' : 'Other', new_lessons: null, merged: null, pending: null, on_github: true, status: b.done ? 'Ready to delete' : 'In progress', last_checked: today };
+  const p = prevBy[b.branch], total = p && p.new_lessons != null ? p.new_lessons : b.pending, merged = Math.max(0, total - b.pending);
+  return { branch: b.branch, kind: 'Lessons', new_lessons: total, merged, pending: b.pending, on_github: true, status: b.done ? 'Ready to delete' : merged === 0 ? 'Not started' : 'In progress', last_checked: today };
+});
 // branches that were tracked before but have since been deleted on GitHub stay in the list as "Deleted"
 for (const r of prev) if (!onGithub.has(r.branch)) branches.push({ ...r, status: 'Deleted', on_github: false, pending: 0 });
 
