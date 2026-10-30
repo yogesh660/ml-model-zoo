@@ -61,6 +61,13 @@ const ICONS = {
 const icon = n => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const plain = s => String(s).replace(/<[^>]+>/g, '').replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1').replace(/\$+([^$]*)\$+/g, (m, t) => t.replace(/\\[a-zA-Z]+/g, '').replace(/[{}^_\\]/g, '')).replace(/\s+/g, ' ').trim();
+// Short one-line blurb for hub rows and search: the first sentence, capped at about 160 characters.
+const blurb = s => {
+  const t = plain(s), re = /[.!?](?=\s|$)/g;
+  let m, first = t;
+  while ((m = re.exec(t))) if (!/\b(e\.g|i\.e|etc|vs|cf|approx|al|Fig)$/i.test(t.slice(0, m.index))) { first = t.slice(0, m.index + 1); break; }
+  return first.length <= 170 ? first : first.slice(0, 160).replace(/\s+\S*$/, '') + '…';
+};
 const LEVELS = ['', 'Beginner', 'Intermediate', 'Advanced'];
 const level = l => `<span class="lvl" data-l="${l}"><i><b></b></i>${LEVELS[l]}</span>`;
 
@@ -270,7 +277,7 @@ function hub() {
   const lessonRow = (l, i) => `
             <li class="lesson-row${l.planned ? ' planned-row' : ''}" data-id="${l.id}" data-task="${l.path.track}" data-level="${l.level}">
               <span class="idx">${String(l.pathIndex).padStart(2, '0')}</span>
-              <span class="ttl"><b><a href="${hrefFromRoot(l)}">${esc(l.short)}</a></b><em>${l.planned ? `Planned · ${l.tier}${l.lab ? ' · live lab' : ''}` : esc(plain(l.summary))}</em></span>
+              <span class="ttl"><b><a href="${hrefFromRoot(l)}">${esc(l.short)}</a></b><em>${l.planned ? `Planned · ${l.tier}${l.lab ? ' · live lab' : ''}` : esc(blurb(l.summary))}</em></span>
               <span class="meta"><span class="done">${icon('check')}</span>${l.planned ? '<span class="soon">Planned</span>' : level(l.level)}<span>${l.planned ? '' : `${l.minutes} min`}</span></span>
             </li>`;
   const syllabus = PATHS.map(p => `
@@ -318,7 +325,7 @@ function hub() {
   ];
 
   const data = {
-    lessons: [...ORDER, ...PLANNED].map(l => ({ id: l.id, href: hrefFromRoot(l), title: plain(l.title), short: l.short, summary: plain(l.summary), path: l.path.id, pathTitle: l.path.title, module: l.module, level: l.level, minutes: l.minutes, task: l.path.track, keywords: l.keywords || '', ...(l.planned ? { planned: true, tier: l.tier } : {}) })),
+    lessons: [...ORDER, ...PLANNED].map(l => ({ id: l.id, href: hrefFromRoot(l), title: plain(l.title), short: l.short, summary: blurb(l.summary), path: l.path.id, pathTitle: l.path.title, module: l.module, level: l.level, minutes: l.minutes, task: l.path.track, keywords: l.keywords || '', ...(l.planned ? { planned: true, tier: l.tier } : {}) })),
     paths: PATHS.map(p => ({ id: p.id, lessons: p.items.filter(l => !l.planned).map(l => l.id), planned: p.planned })),
   };
 

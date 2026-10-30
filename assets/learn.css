@@ -79,7 +79,7 @@
 }
 .lesson-row:hover { background: #ffffff07; }
 .lesson-row + .lesson-row::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px; background: #ffffff0a; }
-.lesson-row .idx { font: 400 12px var(--mono); color: var(--dim); }
+.lesson-row .idx { font: 400 12px var(--mono); color: var(--dim); align-self: start; padding-top: 4px; }
 .lesson-row .ttl { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .lesson-row .ttl b { font-weight: 500; font-size: 15.5px; color: var(--ink); line-height: 1.35; }
 .lesson-row .ttl em { font-style: normal; color: var(--muted); font-size: 13px; line-height: 1.5; }
