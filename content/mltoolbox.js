@@ -3633,4 +3633,1188 @@ print(f"Final log-likelihood: {ll:.2f}")`,
     ],
     keywords: "bayesian networks, directed graphical models, conditional independence, d-separation, variable elimination, explaining away, cpts, belief propagation"
   },
+  {
+    id: "markov-random-fields",
+    short: "Markov random fields",
+    title: "Markov Random Fields and Undirected Graphical Models",
+    task: "concepts",
+    module: "Probabilistic models",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Model symmetric spatial and relational interactions with undirected graphical models: master clique potentials, the Hammersley–Clifford theorem, and image denoising.",
+    lead: "While Bayesian networks model directed causal flows, many physical and spatial dependencies (like neighbouring pixels in an image or social ties) are symmetric. Markov Random Fields (MRFs) specify joint distributions as products of maximal clique potentials.",
+    intuition: [
+      "Directed graphical models (Bayesian Networks) are natural for causal processes where time flows forward from cause to effect. However, in spatial and relational systems—such as pixels in a 2D digital image, spatial disease incidence across bordering counties, or spin orientations in a crystal lattice—dependencies are inherently bidirectional and symmetric. Pixel A influences Pixel B just as strongly as Pixel B influences Pixel A.",
+      "Markov Random Fields (MRFs), also called Undirected Graphical Models, represent joint probability distributions over undirected graphs $G = (V, E)$. The Markov properties in an MRF state that a variable is conditionally independent of all other nodes in the network given its Markov Blanket (its immediate neighbouring nodes in the graph).",
+      "How do we parameterise a joint distribution on an undirected graph? In 1971, John Hammersley and Peter Clifford proved the fundamental theorem of undirected graphical models: any strictly positive probability distribution satisfying the Markov properties factorises as a Gibbs distribution over the maximal cliques of the graph: $P(x) = \\frac{1}{Z} \\prod_{C \\in \\mathcal{C}} \\psi_C(x_C) = \\frac{1}{Z} \\exp\\left(-\\sum_{C} E_C(x_C)\\right)$.",
+      "Here, $\\psi_C(x_C) > 0$ are non-negative potential functions (or clique energy functions $E_C$), and $Z = \\sum_x \\exp(-E(x))$ is the normalising constant (termed the Partition Function in statistical physics). While the partition function $Z$ is intractable to compute exactly for large grids, algorithms like Iterated Conditional Modes (ICM) or Graph Cuts perform rapid maximum a posteriori (MAP) inference for applications like image denoising and semantic segmentation."
+    ],
+    analogy: "Imagine a flock of starlings performing a murmur in the evening sky. No single bird is the directed \"leader\" commanding the others. Instead, each individual starling constantly adjusts its velocity and distance symmetrically relative to its six or seven nearest neighbours. When one bird veers left to avoid a falcon, its neighbours follow, propagating a smooth fluid wave through the entire flock.",
+    steps: [
+      {
+        "title": "1. Construct undirected graph structure",
+        "body": "Define graph $G = (V, E)$ where edges represent symmetric interactions (e.g. 4-connected grid on image pixels)."
+      },
+      {
+        "title": "2. Define clique potential energy functions",
+        "body": "Assign energy functions $E_C(x_C)$ to cliques: for pairwise MRFs, specify unary potentials $E_i(x_i)$ (data likelihood) and pairwise potentials $E_{ij}(x_i, x_j)$ (neighbour smoothing)."
+      },
+      {
+        "title": "3. Formulate total Gibbs energy",
+        "body": "Express joint probability as $P(x) = \\frac{1}{Z} \\exp(-E(x))$, where total energy $E(x) = \\sum_{i} E_i(x_i) + \\sum_{(i, j) \\in E} E_{ij}(x_i, x_j)$. Minimising energy maximises posterior probability."
+      },
+      {
+        "title": "4. Perform MAP inference via Iterated Conditional Modes (ICM)",
+        "body": "Initialise state (e.g. noisy image). Iterate over nodes: update node $x_i \\leftarrow \\arg\\min_{k} [E_i(k) + \\sum_{j \\in \\mathcal{N}(i)} E_{ij}(k, x_j)]$. Repeat until energy converges."
+      }
+    ],
+    math: [
+      {
+        "h": "Hammersley–Clifford Theorem (Gibbs Distribution)",
+        "tex": "P(x) = \\frac{1}{Z} \\prod_{C \\in \\mathcal{C}} \\psi_C(x_C) = \\frac{1}{Z} \\exp\\left(-\\sum_{C \\in \\mathcal{C}} E_C(x_C)\\right), \\quad Z = \\sum_{x} \\exp(-E(x))",
+        "p": "A positive distribution satisfies the local Markov properties of graph G if and only if it factorises over the maximal cliques C of G. Z is the normalising partition function."
+      },
+      {
+        "h": "Pairwise MRF Energy Formulation (Ising / Potts Model)",
+        "tex": "E(x) = \\sum_{i \\in V} \\phi_i(x_i, y_i) + \\beta \\sum_{(i, j) \\in E} \\mathbb{I}(x_i \\neq x_j)",
+        "p": "Standard energy model for vision: unary term phi_i enforces fidelity to noisy measurement y_i; pairwise Potts penalty beta enforces spatial smoothness among adjacent pixels."
+      },
+      {
+        "h": "Local Markov Property and Markov Blanket",
+        "tex": "P(X_i \\mid X_{-i}) = P(X_i \\mid X_{\\mathcal{N}(i)}) = \\frac{\\exp(-E_i(x_i) - \\sum_{j \\in \\mathcal{N}(i)} E_{ij}(x_i, x_j))}{\\sum_{x'_i} \\exp(-E_i(x'_i) - \\sum_{j \\in \\mathcal{N}(i)} E_{ij}(x'_i, x_j))}",
+        "p": "Conditioned on its immediate graph neighbours N(i) (its Markov blanket), node X_i is conditionally independent of all remaining nodes in the graph."
+      }
+    ],
+    code: "import numpy as np\n\n# Binary Image Denoising using a Markov Random Field (Ising Model) and ICM from scratch\nnp.random.seed(42)\n\n# 1. Create a synthetic clean 20x20 binary image (+1 and -1)\nsize = 20\nclean_img = -np.ones((size, size), dtype=int)\n# Draw a square in the centre\nclean_img[5:15, 5:15] = 1\n\n# 2. Corrupt image with 25% random bit-flip noise\nnoisy_img = clean_img.copy()\nflip_mask = np.random.uniform(0, 1, (size, size)) < 0.25\nnoisy_img[flip_mask] *= -1\n\n# 3. Iterated Conditional Modes (ICM) MAP Inference\n# Energy E(x) = -eta * sum_i (x_i * y_i) - beta * sum_{<i, j>} (x_i * x_j)\neta = 2.0   # Data fidelity weight (how much we trust noisy pixel y_i)\nbeta = 1.5  # Spatial smoothness weight (how much adjacent pixels must agree)\n\nx_state = noisy_img.copy()  # Initial state\nmax_iters = 10\n\ndef compute_total_energy(x, y, eta, beta):\n    # Data fidelity term\n    data_energy = -eta * np.sum(x * y)\n    # Horizontal interactions\n    h_energy = -beta * np.sum(x[:, :-1] * x[:, 1:])\n    # Vertical interactions\n    v_energy = -beta * np.sum(x[:-1, :] * x[1:, :])\n    return data_energy + h_energy + v_energy\n\nenergy_history = [compute_total_energy(x_state, noisy_img, eta, beta)]\n\n# ICM coordinate descent iterations\nfor it in range(max_iters):\n    changes = 0\n    for r in range(size):\n        for c in range(size):\n            y_val = noisy_img[r, c]\n            \n            # Sum of 4-connected neighbours\n            neighbour_sum = 0\n            if r > 0: neighbour_sum += x_state[r - 1, c]\n            if r < size - 1: neighbour_sum += x_state[r + 1, c]\n            if c > 0: neighbour_sum += x_state[r, c - 1]\n            if c < size - 1: neighbour_sum += x_state[r, c + 1]\n            \n            # Compare local energy for x = +1 vs x = -1\n            # E_local(val) = -eta * (val * y_val) - beta * (val * neighbour_sum)\n            e_plus = -eta * (1 * y_val) - beta * (1 * neighbour_sum)\n            e_minus = -eta * (-1 * y_val) - beta * (-1 * neighbour_sum)\n            \n            new_val = 1 if e_plus < e_minus else -1\n            if new_val != x_state[r, c]:\n                x_state[r, c] = new_val\n                changes += 1\n                \n    curr_energy = compute_total_energy(x_state, noisy_img, eta, beta)\n    energy_history.append(curr_energy)\n    if changes == 0:\n        break\n\n# Evaluate error rates\nerror_noisy = np.mean(clean_img != noisy_img)\nerror_denoised = np.mean(clean_img != x_state)\n\nprint(f\"Image dimensions: {size}x{size} (400 binary pixels)\")\nprint(f\"Initial Noisy Pixel Error:    {error_noisy * 100:.1f}%\")\nprint(f\"MRF Denoised Pixel Error:     {error_denoised * 100:.1f}% (noise eliminated!)\")\nprint(f\"Initial Energy: {energy_history[0]:.1f} -> Final Converged Energy: {energy_history[-1]:.1f}\")\nprint(\"Energy monotonically decreasing:\", np.all(np.diff(energy_history) <= 1e-6))",
+    keyPoints: [
+      "Undirected graphical model parameterised by non-negative clique potentials over undirected graph cliques.",
+      "Ideal for symmetric spatial and relational systems where directed causal arrows do not apply (e.g. image lattices, physical spins).",
+      "Hammersley–Clifford theorem proves any strictly positive Markov distribution factorises as a Gibbs distribution $P(x) = \\frac{1}{Z} \\exp(-E(x))$.",
+      "The normalising partition function $Z = \\sum_x \\exp(-E(x))$ is computationally intractable in general, summing over exponentially many states.",
+      "Iterated Conditional Modes (ICM) performs greedy coordinate descent on local node energies, guaranteeing monotonic convergence to a local energy minimum."
+    ],
+    pitfalls: [
+      "Intractability of the partition function Z: Computing marginal likelihoods or maximum likelihood parameter gradients requires evaluating $Z$, demanding MCMC or contrastive divergence.",
+      "ICM local minima trapping: Because ICM is greedy coordinate descent, it can get trapped in sub-optimal local energy minima; Graph Cuts (alpha-expansion) or simulated annealing find global/stronger optima.",
+      "Over-smoothing boundaries: If the pairwise spatial smoothness weight $\\beta$ is set too large, fine edge details and sharp image contours are erased into homogeneous blobs."
+    ],
+    quiz: [
+      {
+        "q": "Why are Markov Random Fields preferred over Bayesian Networks for 2D image pixel grids?",
+        "o": [
+          "Pixel dependencies are symmetric and bidirectional, so imposing an arbitrary directed acyclic ordering would create artificial causal bias",
+          "Bayesian networks cannot be used with discrete variables",
+          "Markov Random Fields require no math or probability",
+          "Images have negative pixel values that Bayesian networks cannot process"
+        ],
+        "a": 0,
+        "why": "Adjacent pixels mutually influence each other symmetrically. Imposing directed arrows on an image grid creates an artificial ordering and DAG cycles."
+      },
+      {
+        "q": "What is the primary computational bottleneck when training general Markov Random Fields via Maximum Likelihood?",
+        "o": [
+          "Evaluating the partition function Z = sum_x exp(-E(x)), which sums over exponentially many global configurations",
+          "Inverting a 2x2 matrix",
+          "Computing the discrete Fourier transform",
+          "Drawing random numbers"
+        ],
+        "a": 0,
+        "why": "The partition function Z normalises the distribution. For an N-pixel binary image, Z requires summing over 2^N states, which is computationally intractable for exact likelihood."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "bayesian-networks",
+      "probability-rules-and-bayes-theorem"
+    ],
+    related: [
+      "bayesian-networks",
+      "markov-chains-and-stationary-distributions",
+      "variational-inference",
+      "bayesian-networks"
+    ],
+    keywords: "markov random field, mrf, undirected graphical model, hammersley clifford, gibbs distribution, ising model, icm, partition function, image denoising"
+  },
+  {
+  "id": "gaussian-process-classifier",
+  "short": "GP classifier",
+  "title": "Gaussian Process Classification",
+  "task": "concepts",
+  "module": "Probabilistic models",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Non-parametric Bayesian classification with principled uncertainty: master latent Gaussian processes, non-conjugate Bernoulli likelihoods, and the Laplace approximation.",
+  "lead": "While Gaussian Process Regression has a closed-form Gaussian posterior, GP classification involves a discrete non-Gaussian likelihood that destroys exact conjugacy. Approximate inference methods (Laplace approximation and Expectation Propagation) yield well-calibrated class probabilities and epistemic uncertainty.",
+  "intuition": [
+    "In safety-critical classification domains—such as autonomous vehicle pedestrian detection, medical radiology triage, or financial stress forecasting—predicting a class label is insufficient; the model must communicate how confident it is in its prediction, distinguishing between familiar operational regimes and alien out-of-distribution inputs (epistemic uncertainty).",
+    "Gaussian Process Classification (GPC) models classification non-parametrically by placing a Gaussian Process prior over an unobserved continuous latent function $f(x) \\sim \\mathcal{GP}(m(x), k(x, x'))$. This latent function $f(x)$ represents log-odds scores across input space. To transform latent real numbers into valid probabilities, $f(x)$ is squashed through a sigmoid or probit link function: $\\pi(x) = P(y = 1 \\mid f(x)) = \\sigma(f(x))$.",
+    "However, a fundamental mathematical hurdle arises: unlike Gaussian noise in regression, the discrete Bernoulli likelihood $p(y \\mid f) = \\prod_{i=1}^n \\sigma(y_i f_i)$ is non-Gaussian. Multiplying a Gaussian prior $p(f)$ by a non-Gaussian likelihood yields a non-Gaussian posterior distribution $p(f \\mid y) = p(y \\mid f) p(f) / p(y)$ whose normalising marginal evidence integral is analytically intractable.",
+    "To resolve this intractability, GPC employs deterministic approximations. The Laplace Approximation fits a Gaussian $\\mathcal{N}(\\hat{f}, \\Sigma)$ centred at the posterior mode $\\hat{f} = \\arg\\max \\log p(f \\mid y)$ by taking the second-order Taylor expansion (negative Hessian) of the unnormalized log posterior. Test predictions are obtained by integrating the sigmoid link over the resulting Gaussian predictive distribution."
+  ],
+  "analogy": "Imagine a sound engineer setting an audio volume threshold. The underlying acoustics of the room vary smoothly across different corners (the continuous latent Gaussian process f(x)). A red warning light blinks on whenever the noise exceeds a decibel threshold (the discrete binary observation y in {0, 1}). We cannot measure the exact decibel level directly, only whether the red light blinked. The Laplace approximation acts as an acoustic reconstruction tool, calculating the most probable decibel level and uncertainty bands at every coordinate in the room.",
+  "steps": [
+    {
+      "title": "1. Specify GP covariance kernel and latent prior",
+      "body": "Choose a valid kernel $k(x, x')$ (such as RBF/Squared Exponential) defining smooth correlation between points. Formulate prior $f \\sim \\mathcal{N}(0, K)$."
+    },
+    {
+      "title": "2. Compute posterior mode via Newton–Raphson",
+      "body": "Maximise unnormalized log-posterior $\\Psi(f) = -\\frac{1}{2} f^T K^{-1} f + \\sum_{i=1}^n \\log \\sigma(y_i f_i)$. Iterate Newton updates to find mode $\\hat{f}$."
+    },
+    {
+      "title": "3. Construct Laplace covariance at the mode",
+      "body": "Evaluate the negative Hessian: $W = -\\nabla^2 \\sum \\log p(y_i \\mid f_i) = \\operatorname{diag}(\\pi_i (1 - \\pi_i))$. Compute Laplace posterior covariance $\\Sigma = (K^{-1} + W)^{-1}$."
+    },
+    {
+      "title": "4. Compute predictive distribution and squash",
+      "body": "For test point $x_*$, compute predictive latent mean $\\mu_* = k_*^T \\nabla \\log p(y \\mid \\hat{f})$ and latent variance $\\sigma_*^2 = k(x_*, x_*) - k_*^T (K + W^{-1})^{-1} k_*$. Approximate test class probability $\\bar{\\pi}_* = \\int \\sigma(f_*) \\mathcal{N}(f_* \\mid \\mu_*, \\sigma_*^2) df_*$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Laplace Approximation Objective and Mode Finding",
+      "tex": "\\nabla \\Psi(f) = -K^{-1} f + (t - \\pi), \\quad \\nabla^2 \\Psi(f) = -(K^{-1} + W), \\quad W = \\operatorname{diag}(\\pi_i (1 - \\pi_i))",
+      "p": "Gradient and Hessian of unnormalized log posterior over latent vector f, where t_i = (y_i + 1)/2 and pi_i = sigma(f_i). Because W is positive semi-definite, the objective is strictly concave."
+    },
+    {
+      "h": "Newton Update for Posterior Mode",
+      "tex": "f^{\\mathrm{new}} = (K^{-1} + W)^{-1} (W f + t - \\pi) = K (I + W K)^{-1} (W f + t - \\pi)",
+      "p": "Numerically stable mode-finding iteration avoiding inversion of K directly, evaluating Cholesky factorisation on (B = I + W^{1/2} K W^{1/2})."
+    },
+    {
+      "h": "Probit Sigmoid Approximation for Predictive Class Probability",
+      "tex": "\\bar{\\pi}_* = \\mathbb{E}_{f_* \\sim \\mathcal{N}(\\mu_*, \\sigma_*^2)}[\\sigma(f_*)] \\approx \\sigma\\left(\\frac{\\mu_*}{\\sqrt{1 + \\frac{\\pi}{8} \\sigma_*^2}}\\right)",
+      "p": "Convoluting a Gaussian distribution with a sigmoid is analytically intractable, but substituting a cumulative probit link yields this accurate closed-form approximation."
+    }
+  ],
+  "code": "import numpy as np\n\n# Gaussian Process Classifier with Laplace Approximation from scratch\nclass GPClassifierLaplace:\n    def __init__(self, gamma=1.0, max_iters=30, tol=1e-6):\n        self.gamma = gamma\n        self.max_iters = max_iters\n        self.tol = tol\n        self.X_train = None\n        self.y_train = None\n        self.f_hat = None\n        self.K = None\n        self.W = None\n        \n    def _rbf_kernel(self, X1, X2):\n        dists_sq = np.sum(X1**2, axis=1)[:, None] + np.sum(X2**2, axis=1)[None, :] - 2 * (X1 @ X2.T)\n        return np.exp(-self.gamma * np.maximum(dists_sq, 0))\n        \n    def fit(self, X, y):\n        self.X_train = X\n        self.y_train = y  # y in {0, 1}\n        n = len(X)\n        \n        # 1. Compute kernel matrix with jitter for numerical stability\n        self.K = self._rbf_kernel(X, X) + 1e-6 * np.eye(n)\n        \n        # 2. Newton-Raphson iteration to find posterior mode f_hat\n        f = np.zeros(n)\n        for it in range(self.max_iters):\n            pi = 1.0 / (1.0 + np.exp(-np.clip(f, -30, 30)))\n            # W = diag(pi * (1 - pi))\n            w = pi * (1.0 - pi)\n            W = np.diag(w)\n            \n            # Stable Cholesky factorisation of (I + W^{1/2} K W^{1/2})\n            W_sqrt = np.diag(np.sqrt(w))\n            B = np.eye(n) + W_sqrt @ self.K @ W_sqrt\n            L = np.linalg.cholesky(B)\n            \n            grad = self.y_train - pi\n            b = W @ f + grad\n            # Solve (K^{-1} + W) f_new = b via Woodbury identity\n            a = b - W_sqrt @ np.linalg.solve(L.T, np.linalg.solve(L, W_sqrt @ self.K @ b))\n            f_new = self.K @ a\n            \n            diff = np.max(np.abs(f_new - f))\n            f = f_new\n            if diff < self.tol:\n                break\n                \n        self.f_hat = f\n        self.pi_hat = 1.0 / (1.0 + np.exp(-np.clip(f, -30, 30)))\n        self.w_hat = self.pi_hat * (1.0 - self.pi_hat)\n        \n    def predict_proba(self, X_test):\n        n_train = len(self.X_train)\n        n_test = len(X_test)\n        \n        K_star = self._rbf_kernel(self.X_train, X_test)\n        K_star_star = self._rbf_kernel(X_test, X_test) + 1e-6 * np.eye(n_test)\n        \n        # Predictive latent mean: mu_* = K_*^T (y - pi)\n        grad = self.y_train - self.pi_hat\n        mu_star = K_star.T @ grad\n        \n        # Predictive latent variance: sigma_*^2\n        W_sqrt = np.diag(np.sqrt(self.w_hat))\n        B = np.eye(n_train) + W_sqrt @ self.K @ W_sqrt\n        L = np.linalg.cholesky(B)\n        v = np.linalg.solve(L, W_sqrt @ K_star)\n        sigma2_star = np.diag(K_star_star) - np.sum(v**2, axis=0)\n        sigma2_star = np.maximum(sigma2_star, 1e-8)\n        \n        # Probit link approximation for predictive probability\n        kappa = 1.0 / np.sqrt(1.0 + np.pi * sigma2_star / 8.0)\n        p_star = 1.0 / (1.0 + np.exp(-kappa * mu_star))\n        \n        return p_star, sigma2_star\n\n# Synthetic non-linear classification dataset\nnp.random.seed(42)\nn_samples = 80\nX = np.random.uniform(-3, 3, (n_samples, 2))\n# True non-linear boundary: circle x1^2 + x2^2 < 3.0\ny = ((X[:, 0]**2 + X[:, 1]**2) < 3.0).astype(int)\n\ngpc = GPClassifierLaplace(gamma=0.5)\ngpc.fit(X, y)\n\n# Predict on inlier and far out-of-distribution point\ntest_points = np.array([\n    [0.0, 0.0],    # Firmly inside circle (Class 1)\n    [1.8, 1.8],    # Firmly outside circle (Class 0)\n    [10.0, 10.0],  # Far out-of-distribution point!\n])\n\nprobs, latent_vars = gpc.predict_proba(test_points)\n\nprint(\"Gaussian Process Classification (Laplace Approximation):\")\nprint(f\"Point [0, 0] (Inside):      P(Y=1) = {probs[0]:.4f}, Latent Var = {latent_vars[0]:.3f} (High certainty)\")\nprint(f\"Point [1.8, 1.8] (Outside):  P(Y=1) = {probs[1]:.4f}, Latent Var = {latent_vars[1]:.3f} (High certainty)\")\nprint(f\"Point [10, 10] (OOD Alien): P(Y=1) = {probs[2]:.4f}, Latent Var = {latent_vars[2]:.3f} (High uncertainty reverting to 0.50!)\")",
+  "keyPoints": [
+    "Non-parametric Bayesian classification placing a Gaussian Process prior over continuous latent log-odds function $f(x)$.",
+    "Discrete Bernoulli likelihood breaks conjugacy; exact posterior is non-Gaussian and intractable.",
+    "Laplace approximation fits a Gaussian distribution around the posterior mode $\\hat{f}$ using the negative Hessian of the log posterior.",
+    "Produces principled epistemic uncertainty: on distant out-of-distribution inputs, latent variance increases and probabilities revert toward 0.50.",
+    "Provides superior probability calibration compared to uncalibrated neural networks and support vector machines."
+  ],
+  "pitfalls": [
+    "Computational scaling: Mode finding and covariance inversion scale as $O(n^3)$ per Newton step, limiting vanilla GPC to a few thousand samples.",
+    "Laplace mode underestimation: The Laplace approximation fits the curvature at the mode; if the true posterior is skewed or multimodal, Expectation Propagation (EP) is more accurate.",
+    "Overfitting hyperparameter selection: Optimising marginal likelihood with respect to kernel lengthscales on small datasets can collapse onto narrow lengthscales."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Gaussian Process Classification require approximate inference (such as Laplace approximation) whereas GP Regression has a closed-form solution?",
+      "o": [
+        "The discrete Bernoulli/sigmoid likelihood is non-Gaussian, so the posterior distribution cannot be computed in closed form",
+        "Classification has no training labels",
+        "Kernel matrices cannot be computed for classification data",
+        "GP classification requires infinite samples"
+      ],
+      "a": 0,
+      "why": "In GP regression, Gaussian prior multiplied by Gaussian likelihood yields a Gaussian posterior. In classification, the Bernoulli likelihood is non-conjugate to the Gaussian prior, making the posterior integral intractable."
+    },
+    {
+      "q": "What occurs to the predicted class probability of a Gaussian Process Classifier when presented with an input far outside the training support?",
+      "o": [
+        "The latent variance increases toward prior variance, driving the probit scaling factor kappa down and reverting predicted probability toward 0.50 (maximum uncertainty)",
+        "It outputs exactly 1.0 with 100% confidence",
+        "The algorithm crashes with a division by zero error",
+        "It outputs negative probabilities"
+      ],
+      "a": 0,
+      "why": "Far from training data, latent variance sigma_*^2 explodes. The probit convolution factor 1/sqrt(1 + pi/8 * sigma^2) dampens the latent mean toward zero, reverting the probability safely to 0.50."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "bayesian_linear_regression",
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "gaussian_process_regressor",
+    "variational-inference",
+    "logistic_regression",
+    "kernel-pca"
+  ],
+  "keywords": "gaussian process classifier, gpc, laplace approximation, non conjugate inference, epistemic uncertainty, out of distribution, probit link"
+},
+  {
+    id: 'convex-optimisation-and-duality',
+    short: 'Convex Optimisation & Duality',
+    title: 'Convex Optimisation and Duality',
+    task: 'concepts',
+    module: 'Optimisation',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Fundamental theory of convex optimisation where local minima are global, paired with Lagrange duality providing certified lower bounds and dual problem formulations.`,
+    lead: r`In general mathematical optimisation, finding the true global minimum is notoriously difficult because objectives are riddled with deceptive local valleys, plateaus, and saddle points. Convex optimisation defines the boundary of tractable mathematics: when both the objective function and constraint sets are convex, any local minimum is guaranteed to be a global minimum. Lagrange duality transforms difficult constrained primal problems into convex dual problems, providing certificates of optimality and foundational insights for algorithms like Support Vector Machines and LASSO.`,
+    intuition: [
+      r`Imagine walking through a hilly landscape shrouded in thick fog. If you are standing in a general non-convex terrain (like a mountain range full of craters and ravines), walking downhill until the slope is zero only lands you at the bottom of whichever small ditch you happened to step into—you have no idea if a much deeper valley lies just over the next ridge. But if the terrain is a giant smooth bowl (a convex function), gravity guarantees that descending in any downhill direction leads inexorably to the single lowest point in the entire landscape.`,
+      r`Real-world machine learning models must satisfy constraints—such as capping budget, enforcing non-negative weights, or bounding classification margins. A constrained problem asks: "What is the lowest point inside a fenced-off boundary?" Directly navigating the boundary fence in the primal space can be cumbersome.`,
+      r`Duality approaches the problem from the outside in. Imagine wanting to prove that a manufacturing cost cannot possibly fall below £500, no matter which choices you make. Instead of testing millions of designs, you construct a lower bound function (the Lagrange dual function) by adding penalty multipliers for each constraint. By maximising this lower bound across all possible multipliers (the dual problem), you push the floor upward until it meets the primal ceiling. Under standard conditions (such as Slater's condition), the dual maximum equals the primal minimum exactly—a phenomenon called strong duality ($p^* = d^*$). The difference between primal and dual objectives, the duality gap, acts as a real-time certificate proving how close any candidate solution is to true optimality.`,
+    ],
+    analogy: r`Verifying the exact floor of a subterranean cave by measuring how high you can raise a flat hydraulic jack from below until it firmly touches the bedrock ceiling above.`,
+    steps: [
+      r`Verify convexity: ensure the objective function $f_0(x)$ is convex (its Hessian $\\nabla^2 f_0(x) \\succeq 0$ is positive semidefinite) and the constraint set is convex (convex inequalities $f_i(x) \\le 0$ and affine equalities $Ax = b$).`,
+      r`Formulate the primal Lagrangian function by attaching Lagrange multipliers: $L(x, \\lambda, \\nu) = f_0(x) + \\sum_{i=1}^m \\lambda_i f_i(x) + \\sum_{j=1}^p \\nu_j (a_j^T x - b_j)$ with dual feasibility $\\lambda_i \\ge 0$.`,
+      r`Derive the Lagrange dual function $g(\\lambda, \\nu) = \\inf_x L(x, \\lambda, \\nu)$ by finding the unconstrained infimum over $x$.`,
+      r`Formulate the dual optimisation problem: $\\max_{\\lambda, \\nu} g(\\lambda, \\nu)$ subject to $\\lambda \\ge 0$. Note that $g(\\lambda, \\nu)$ is always concave, making the dual problem convex even if the primal is non-convex.`,
+      r`Check constraint qualifications (e.g. Slater's condition: existence of a strictly feasible point where $f_i(\\tilde{x}) < 0$) to confirm strong duality ($p^* = d^*$).`,
+      r`Solve the dual problem using dual ascent, interior-point methods, or coordinate descent, monitoring the duality gap $|f_0(x) - g(\\lambda, \\nu)| \\to 0$ as a stopping criterion.`,
+    ],
+    math: [
+      {
+        h: 'Convex set and convex function definition',
+        tex: r`$$f_0\\big(\\alpha x + (1 - \\alpha) y\\big) \\le \\alpha f_0(x) + (1 - \\alpha) f_0(y) \\quad \\forall \\, \\alpha \\in [0, 1]$$`,
+        p: r`A function is convex if the chord connecting any two points on its graph lies above or on the function. For twice-differentiable functions, convexity is equivalent to the Hessian matrix being positive semidefinite: $\\nabla^2 f_0(x) \\succeq 0$.`,
+      },
+      {
+        h: 'The Lagrangian and Lagrange dual function',
+        tex: r`$$L(x, \\lambda, \\nu) = f_0(x) + \\sum_{i=1}^m \\lambda_i f_i(x) + \\sum_{j=1}^p \\nu_j h_j(x), \qquad g(\\lambda, \\nu) = \\inf_{x} L(x, \\lambda, \\nu)$$`,
+        p: r`where $\\lambda_i \\ge 0$. For any feasible primal $x$ and any dual feasible $(\\lambda, \\nu)$, $\\sum \\lambda_i f_i(x) \\le 0$ and $\\sum \\nu_j h_j(x) = 0$, guaranteeing that $g(\\lambda, \\nu) \\le f_0(x)$. Taking the infimum over $x$ establishes weak duality: $d^* \\le p^*$.`,
+      },
+      {
+        h: 'Strong duality and Slater\'s condition',
+        tex: r`$$p^* - d^* = 0 \\quad (\\text{zero duality gap})$$`,
+        p: r`Strong duality holds for convex optimisation problems if Slater's condition is satisfied: there exists at least one point $\\tilde{x}$ in the relative interior of the domain such that $f_i(\\tilde{x}) < 0$ for all strictly convex inequality constraints and $A\\tilde{x} = b$.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Quadratic program: min 0.5 * x^T Q x - c^T x  subject to A x <= b
+Q = np.array([[4.0, 1.0], [1.0, 2.0]])
+c = np.array([3.0, 2.0])
+A = np.array([1.0, 1.0])
+b = 1.0
+Q_inv = np.linalg.inv(Q)
+
+# Solve via dual ascent on multiplier lambda >= 0
+lam = 0.0
+lr = 0.1
+for _ in range(120):
+    x_opt = Q_inv @ (c - lam * A)
+    lam = max(0.0, lam + lr * (A @ x_opt - b))
+
+# Reconstruct primal solution and evaluate duality gap
+x_star = Q_inv @ (c - lam * A)
+primal_obj = 0.5 * x_star @ Q @ x_star - c @ x_star
+dual_obj = -0.5 * (c - lam * A) @ Q_inv @ (c - lam * A) - lam * b
+gap = abs(primal_obj - dual_obj)
+
+print(f"Primal optimal x*: {x_star.round(4)}")
+print(f"Optimal dual multiplier lambda*: {lam:.4f}")
+print(f"Constraint value A x - b: {(A @ x_star - b):.6f}")
+print(f"Primal objective: {primal_obj:.4f}")
+print(f"Dual objective: {dual_obj:.4f}")
+print(f"Duality gap: {gap:.6f}")`,
+    pitfalls: [
+      r`Assuming all machine learning problems are convex: Deep neural networks, matrix factorisation with missing values, and clustering are highly non-convex, meaning duality gaps may remain non-zero and gradient descent can stall in local minima.`,
+      r`Failure of strong duality: Without constraint qualifications like Slater's condition, the dual bound can strictly underestimate the primal optimum ($d^* < p^*$), leaving a stubborn duality gap.`,
+      r`Unbounded dual functions: If the primal Lagrangian has no lower bound with respect to $x$ for certain multiplier values, the dual function evaluates to $-\\infty$. Enforcing dual domain constraints is essential when deriving analytical duals.`,
+      r`Non-unique dual solutions: Even when the primal problem has a unique strictly convex minimiser, the dual problem can have multiple equivalent multiplier configurations if constraints are linearly dependent.`,
+    ],
+    keyPoints: [
+      r`In convex optimisation, any local minimum is guaranteed to be a global minimum.`,
+      r`The Lagrange dual function $g(\\lambda, \\nu)$ is always concave, making the dual problem convex regardless of primal convexity.`,
+      r`Weak duality ($d^* \\le p^*$) always holds; strong duality ($d^* = p^*$) holds when Slater's condition is satisfied.`,
+      r`The duality gap $f_0(x) - g(\\lambda, \\nu)$ provides a computable, certified bound on how close an iterate is to the global optimum.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the most important operational advantage of a strictly convex optimisation problem over a non-convex one?`,
+        o: [
+          r`Convex problems do not require derivative calculations`,
+          r`Convex problems can only be solved using linear programming`,
+          r`The optimal solution is always located at the origin ($x=0$)`,
+          r`Any local minimum is guaranteed to be the global minimum, eliminating entrapment in suboptimal local valleys`,
+        ],
+        a: 3,
+        why: r`In a convex function, all sub-level sets are convex. If a point satisfies the zero-gradient condition $\\nabla f(x) = 0$, the geometry guarantees that no other point in the domain can achieve a strictly lower objective value.`,
+      },
+      {
+        q: r`What is always true about the Lagrange dual function $g(\\lambda, \\nu) = \\inf_x L(x, \\lambda, \\nu)$?`,
+        o: [
+          r`It is concave with respect to the dual variables $(\\lambda, \\nu)$, even if the original primal problem is non-convex`,
+          r`It is strictly convex with respect to $x$`,
+          r`It always equals zero at the optimal point`,
+          r`It is non-differentiable at all interior points`,
+        ],
+        a: 0,
+        why: r`The dual function is the pointwise infimum of a family of affine functions of $(\\lambda, \\nu)$. Because affine functions are concave and the pointwise infimum of concave functions is always concave, $g(\\lambda, \\nu)$ is concave.`,
+      },
+      {
+        q: r`What does Slater's condition require in order to guarantee strong duality ($p^* = d^*$) for a convex optimisation problem?`,
+        o: [
+          r`The objective function must be linear`,
+          r`There must exist at least one strictly feasible point satisfying all inequality constraints with strict inequality ($f_i(x) < 0$)`,
+          r`All Lagrange multipliers must be strictly equal to 1.0`,
+          r`The sample size must exceed the number of features by a factor of ten`,
+        ],
+        a: 1,
+        why: r`Slater's condition is a standard constraint qualification. For convex problems, the existence of a strictly feasible point in the interior of the constraint set guarantees that strong duality holds with a zero duality gap.`,
+      },
+      {
+        q: r`What is the duality gap in an optimisation algorithm, and how is it used in practice?`,
+        o: [
+          r`The difference between training and test loss used for early stopping`,
+          r`The difference between the eigenvalues of the Hessian matrix`,
+          r`The difference between the primal objective $f_0(x)$ and the dual objective $g(\\lambda, \\nu)$, providing a verified stopping criterion`,
+          r`The distance between the initial guess and the final iterate`,
+        ],
+        a: 2,
+        why: r`Because weak duality guarantees $g(\\lambda, \\nu) \\le p^* \\le f_0(x)$, the gap $f_0(x) - g(\\lambda, \\nu)$ bounds the maximum possible error of the current primal solution from true optimality, providing a rigorous stopping criterion.`,
+      },
+    ],
+    usedBy: ['support_vector_classifier', 'ridge_regression', 'lasso_regression'],
+    prereq: ['gradient-descent', 'quasi-newton-and-lbfgs'],
+    related: ['lagrange-multipliers-and-kkt-conditions', 'support_vector_classifier', 'gradient-descent'],
+    keywords: 'convex optimisation duality lagrangian dual function slaters condition duality gap primal dual strong duality',
+  },
+  {
+    id: 'lagrange-multipliers-and-kkt-conditions',
+    short: 'Lagrange & KKT conditions',
+    title: 'Lagrange Multipliers and KKT Conditions',
+    task: 'concepts',
+    module: 'Optimisation',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Mathematical conditions for constrained optimisation, extending Lagrange multipliers to inequality constraints via the Karush–Kuhn–Tucker conditions.`,
+    lead: r`Constrained optimisation problems govern much of machine learning, from Support Vector Machines maximising geometric margins to LASSO shrinking coefficients within an $\\ell_1$ budget. Lagrange multipliers provide the analytical machinery to handle equality constraints by balancing objective gradients against constraint normals. The Karush–Kuhn–Tucker (KKT) conditions extend this principle to inequality constraints, providing necessary (and often sufficient) conditions that identify active constraints and optimal solutions.`,
+    intuition: [
+      r`Imagine rolling a marble down a smooth, bowl-shaped wooden track. If the track has no barriers, the marble rolls straight down to the bottom where the surface is flat (gradient equals zero). Now place a stiff circular fence on the slope. The marble rolls downhill until it collides with the fence and comes to a dead stop. At that resting point, gravity is still pulling the marble downward, but the fence pushes back with an equal and opposite force perpendicular to the barrier.`,
+      r`This physical balance illustrates the Lagrange multiplier. The gradient of the objective function $\\nabla f_0(x)$ represents the downhill pull of gravity. The gradient of the constraint boundary $\\nabla h(x)$ represents the normal force exerted by the fence. At the constrained optimum, these two vectors must align in opposite directions: $\\nabla f_0(x^*) + \\nu^* \\nabla h(x^*) = 0$. The scalar multiplier $\\nu^*$ measures the exact intensity of force the constraint fence exerts to keep the marble in place.`,
+      r`When constraints are inequalities ($f_i(x) \\le 0$), a new question arises: does the marble hit the fence, or does it settle naturally in the interior before reaching it? This is governed by complementary slackness: $\\lambda_i^* f_i(x^*) = 0$. If the unconstrained minimum lies inside the fenced area ($f_i(x^*) < 0$), the fence is inactive and exerts zero force ($\\lambda_i^* = 0$). If the marble is pressed against the fence ($f_i(x^*) = 0$), the fence is active and exerts positive resistance ($\\lambda_i^* > 0$). In Support Vector Machines, this simple condition determines which data points become support vectors.`,
+    ],
+    analogy: r`A dog resting on a lead: if the dog sits inside the yard, the lead is slack and exerts zero tension; if the dog tries to run past the gate, the lead pulls taut with positive tension exactly counteracting the dog's forward momentum.`,
+    steps: [
+      r`Formulate the constrained problem: minimise objective $f_0(x)$ subject to inequality constraints $f_i(x) \\le 0$ ($i=1,\\dots,m$) and equality constraints $h_j(x) = 0$ ($j=1,\\dots,p$).`,
+      r`Construct the Lagrangian: $L(x, \\lambda, \\nu) = f_0(x) + \\sum_{i=1}^m \\lambda_i f_i(x) + \\sum_{j=1}^p \\nu_j h_j(x)$.`,
+      r`Check Stationarity: set the gradient with respect to $x$ to zero: $\\nabla_x L(x^*, \\lambda^*, \\nu^*) = \\nabla f_0(x^*) + \\sum \\lambda_i^* \\nabla f_i(x^*) + \\sum \\nu_j^* \\nabla h_j(x^*) = 0$.`,
+      r`Enforce Primal Feasibility: verify all constraints are satisfied: $f_i(x^*) \\le 0$ and $h_j(x^*) = 0$.`,
+      r`Enforce Dual Feasibility: ensure inequality multipliers are non-negative: $\\lambda_i^* \\ge 0$.`,
+      r`Enforce Complementary Slackness: verify $\\lambda_i^* f_i(x^*) = 0$ for each inequality constraint, separating active constraints ($\\lambda_i^* > 0, f_i(x^*) = 0$) from inactive ones ($\\lambda_i^* = 0, f_i(x^*) < 0$).`,
+    ],
+    math: [
+      {
+        h: 'The four Karush–Kuhn–Tucker (KKT) conditions',
+        tex: r`$$\\begin{aligned}
+\\text{1. Stationarity:} & \\quad \\nabla f_0(x^*) + \\sum_{i=1}^m \\lambda_i^* \\nabla f_i(x^*) + \\sum_{j=1}^p \\nu_j^* \\nabla h_j(x^*) = 0 \\\\
+\\text{2. Primal Feasibility:} & \\quad f_i(x^*) \\le 0 \\quad (\\forall i), \qquad h_j(x^*) = 0 \\quad (\\forall j) \\\\
+\\text{3. Dual Feasibility:} & \\quad \\lambda_i^* \\ge 0 \\quad (\\forall i) \\\\
+\\text{4. Complementary Slackness:} & \\quad \\lambda_i^* f_i(x^*) = 0 \\quad (\\forall i)
+\\end{aligned}$$`,
+        p: r`For any optimisation problem with zero duality gap, any pair of primal and dual optimal points $(x^*, \\lambda^*, \\nu^*)$ must satisfy these four conditions. If the primal problem is convex, the KKT conditions are both necessary and sufficient for global optimality.`,
+      },
+      {
+        h: 'Geometric interpretation of stationarity',
+        tex: r`$$-\\nabla f_0(x^*) = \\sum_{i \in \\mathcal{A}} \\lambda_i^* \\nabla f_i(x^*) + \\sum_{j=1}^p \\nu_j^* \\nabla h_j(x^*)$$`,
+        p: r`where $\\mathcal{A} = \\{i : f_i(x^*) = 0\\}$ is the active constraint set. The negative gradient of the objective (the direction of steepest descent) lies inside the cone spanned by the outward normal vectors of the active constraints.`,
+      },
+      {
+        h: 'Complementary slackness in Support Vector Machines',
+        tex: r`$$\\alpha_i^* \\big(y_i(w^T x_i + b) - 1\\big) = 0$$`,
+        p: r`If a training point lies strictly outside the margin ($y_i(w^T x_i + b) > 1$), its multiplier $\\alpha_i^* = 0$, meaning the point exerts no influence on the decision boundary. Only points lying directly on the margin boundary have $\\alpha_i^* > 0$, forming the sparse set of support vectors.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Problem: min 0.5 * ||x - x0||^2 subject to a^T x <= b (halfspace projection)
+x0 = np.array([3.0, 4.0])
+a = np.array([1.0, 2.0])
+b = 5.0
+
+# Check unconstrained violation: a^T x0 - b
+viol = a @ x0 - b  # 3*1 + 4*2 - 5 = 6 > 0 (infeasible)
+if viol <= 0:
+    x_star = x0
+    lam_star = 0.0
+else:
+    # Active constraint: lam = (a^T x0 - b) / ||a||^2
+    lam_star = viol / np.sum(a ** 2)
+    x_star = x0 - lam_star * a
+
+# Verify the 4 KKT conditions
+grad_L = (x_star - x0) + lam_star * a       # 1. Stationarity (~ 0)
+primal_feas = a @ x_star - b <= 1e-9        # 2. Primal feasibility
+dual_feas = lam_star >= 0.0                 # 3. Dual feasibility
+comp_slack = lam_star * (a @ x_star - b)    # 4. Complementary slackness (~ 0)
+
+print(f"Unconstrained point: {x0}")
+print(f"Optimal constrained point x*: {x_star.round(4)}")
+print(f"Lagrange multiplier lambda*: {lam_star:.4f}")
+print(f"1. Stationarity norm: {np.linalg.norm(grad_L):.6f}")
+print(f"2. Primal feasible: {primal_feas}")
+print(f"3. Dual feasible: {dual_feas}")
+print(f"4. Complementary slackness: {comp_slack:.6f}")`,
+    pitfalls: [
+      r`Neglecting dual feasibility sign ($\\lambda_i \\ge 0$): For inequality constraints $f_i(x) \\le 0$, $\\lambda_i$ must be non-negative. A negative $\\lambda_i$ means the constraint is pulling the solution into the forbidden region rather than repelling it.`,
+      r`Assuming KKT is sufficient for non-convex problems: In non-convex optimisation, points satisfying the KKT conditions can be saddle points, local maxima, or suboptimal local minima. Sufficiency requires convexity of the objective and constraint functions.`,
+      r`Ignoring constraint qualification failure: When gradients of active constraints are linearly dependent at the optimum (such as touching tangent constraints), the standard KKT conditions may fail to hold even at the true global minimum.`,
+      r`Misinterpreting inactive constraints: An inactive constraint ($f_i(x^*) < 0$) has $\\lambda_i^* = 0$, meaning removing that constraint entirely leaves the optimal solution unchanged.`,
+    ],
+    keyPoints: [
+      r`Stationarity balances objective gradients against the linear combination of active constraint gradients.`,
+      r`Complementary slackness ($\\lambda_i^* f_i(x^*) = 0$) guarantees that non-binding constraints exert zero force on the optimal solution.`,
+      r`For convex optimisation problems satisfying Slater's condition, the KKT conditions are both necessary and sufficient for global optimality.`,
+      r`Forms the core mathematical justification for support vectors in SVMs, lasso sparsity, and barrier/interior-point algorithms.`,
+    ],
+    quiz: [
+      {
+        q: r`What does the complementary slackness condition $\\lambda_i^* f_i(x^*) = 0$ signify about an inequality constraint $f_i(x) \\le 0$?`,
+        o: [
+          r`The objective function must evaluate to zero at the optimal point`,
+          r`Either the constraint is active ($f_i(x^*) = 0$) with a non-negative multiplier, or the constraint is strictly inactive ($f_i(x^*) < 0$) and its multiplier is zero`,
+          r`All data points must be equidistant from the decision boundary`,
+          r`The Lagrange multiplier must equal the value of the objective function`,
+        ],
+        a: 1,
+        why: r`Complementary slackness dictates that if a point lies in the strict interior of the feasible region ($f_i(x^*) < 0$), the constraint imposes no restriction and $\\lambda_i^* = 0$. If $\\lambda_i^* > 0$, the point must lie precisely on the boundary fence ($f_i(x^*) = 0$).`,
+      },
+      {
+        q: r`Why are the KKT conditions both necessary AND sufficient for global optimality in convex problems, but only necessary in general problems?`,
+        o: [
+          r`Because non-convex problems do not have gradient vectors`,
+          r`Because non-convex problems cannot have equality constraints`,
+          r`In convex problems, any stationary point of the Lagrangian is guaranteed to be a global minimum with no deceptive local valleys`,
+          r`Because convexity guarantees that all Lagrange multipliers are equal to 1.0`,
+        ],
+        a: 2,
+        why: r`For convex functions, zero gradient implies a global minimum. When paired with constraint qualifications, any point satisfying the KKT conditions is certified to be the global optimum. In non-convex problems, KKT points can be local minima, local maxima, or saddle points.`,
+      },
+      {
+        q: r`In a Support Vector Machine, how does complementary slackness explain why only a small subset of training points become support vectors?`,
+        o: [
+          r`Points correctly classified beyond the margin satisfy $y_i(w^T x_i + b) > 1$, forcing their dual multiplier $\\alpha_i = 0$ so they do not affect the hyperplane`,
+          r`Points beyond the margin are deleted during data pre-processing`,
+          r`SVMs only compute gradients for the first ten training instances`,
+          r`The kernel trick converts all non-margin points into imaginary numbers`,
+        ],
+        a: 0,
+        why: r`The margin constraint is $1 - y_i(w^T x_i + b) \\le 0$. For any point strictly beyond the margin, $1 - y_i(w^T x_i + b) < 0$. By complementary slackness $\\alpha_i (1 - y_i(w^T x_i + b)) = 0$, the multiplier $\\alpha_i$ must be zero, leaving only boundary points with $\\alpha_i > 0$ as support vectors.`,
+      },
+      {
+        q: r`What does the magnitude of a Lagrange multiplier $\\lambda_i^*$ represent from an economic or sensitivity perspective?`,
+        o: [
+          r`The percentage of training iterations required for convergence`,
+          r`The probability that the constraint will be violated in test data`,
+          r`The curvature of the objective function along the principal axis`,
+          r`The shadow price: the rate of change in the optimal objective value with respect to relaxing the constraint boundary ($\\partial p^* / \\partial b_i = -\\lambda_i^*$)`,
+        ],
+        a: 3,
+        why: r`In sensitivity analysis, $\\lambda_i^*$ measures how much the optimal objective value improves if the $i$-th constraint is relaxed by an infinitesimal amount: $\\frac{\\partial p^*}{\\partial b_i} = -\\lambda_i^*$. It represents the marginal cost of the constraint.`,
+      },
+    ],
+    usedBy: ['support_vector_classifier'],
+    prereq: ['convex-optimisation-and-duality', 'gradient-descent'],
+    related: ['convex-optimisation-and-duality', 'support_vector_classifier', 'quasi-newton-and-lbfgs'],
+    keywords: 'lagrange multipliers kkt conditions karush kuhn tucker complementary slackness stationarity constrained optimisation support vectors',
+  },
+  {
+  "id": "coordinate-descent",
+  "short": "Coordinate descent",
+  "title": "Coordinate Descent and Cyclic Updates",
+  "task": "concepts",
+  "module": "Optimisation",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Minimise multi-variable objective functions by optimising one coordinate at a time: master soft-thresholding, Lasso path solving, and convergence guarantees.",
+  "lead": "Full gradient descent computes gradients across all p features at every step. Coordinate descent simplifies optimisation by cycling through parameters one by one, solving fast 1D sub-problems in closed form.",
+  "intuition": [
+    "When training high-dimensional machine learning models with thousands or millions of parameters, full gradient descent can be computationally unwieldy: each step requires evaluating gradients across all features and carefully selecting a global learning rate. If features vary in curvature, gradient descent oscillates wildly in steep directions while creeping in flat directions.",
+    "Coordinate Descent (CD) offers an alternative optimisation strategy: instead of updating all variables simultaneously along a combined gradient vector, update only one coordinate direction at a time while keeping all other $p - 1$ variables rigidly fixed.",
+    "At step $j$, the multi-variable problem collapses into a simple one-dimensional scalar optimisation: $\\beta_j^* = \\arg\\min_z f(\\beta_1, \\dots, \\beta_{j-1}, z, \\beta_{j+1}, \\dots, \\beta_p)$. For many common objectives, this 1D sub-problem has an exact closed-form algebraic minimiser, eliminating the need for line searches or learning rate tuning entirely.",
+    "Coordinate descent achieves its greatest triumph in $L_1$-regularised problems like Lasso and Elastic Net. The $L_1$ penalty $|\\beta_j|$ has a sharp non-differentiable kink at zero that invalidates standard gradient descent. However, along individual coordinate axes, the objective separates cleanly into 1D sub-problems solved analytically via the Soft-Thresholding Operator. This algorithmic breakthrough makes coordinate descent the core computational engine behind glmnet and scikit-learn Lasso."
+  ],
+  "analogy": "Imagine tuning an analog radio receiver with ten dials to eliminate background static. Trying to twist all ten dials simultaneously with both hands is clumsy and throws everything out of alignment. Instead, you hold nine dials completely steady with your fingers, twisting only the first dial back and forth until reception peaks. You freeze the first dial, move to the second dial, and repeat. By cycling through the dials one by one, the signal quickly becomes crystal clear.",
+  "steps": [
+    {
+      "title": "1. Initialise coefficient vector and precalculate residuals",
+      "body": "Set initial parameters $\\beta = 0$. Calculate initial partial residuals $r = y - X \\beta = y$. Standardise feature columns so that $X_j^T X_j = n$ (or 1)."
+    },
+    {
+      "title": "2. Iterate cyclically over coordinates",
+      "body": "For coordinate $j = 1, \\dots, p$, isolate feature $j$ by adding its contribution back to the residual: $r^{(j)} = r + \\beta_j X_j$."
+    },
+    {
+      "title": "3. Compute 1D closed-form minimiser via soft-thresholding",
+      "body": "Calculate OLS correlation with residual: $\\rho_j = X_j^T r^{(j)}$. Apply soft-thresholding: $\\beta_j^{\\mathrm{new}} = \\frac{S_{\\lambda}(\\rho_j)}{\\|X_j\\|^2} = \\frac{\\operatorname{sign}(\\rho_j) \\max(0, |\\rho_j| - \\lambda)}{\\|X_j\\|^2}$."
+    },
+    {
+      "title": "4. Update residual and check convergence",
+      "body": "Update residual $r \\leftarrow r^{(j)} - \\beta_j^{\\mathrm{new}} X_j$. Continue cycling across all coordinates until maximum parameter shift $\\max_j |\\beta_j^{\\mathrm{new}} - \\beta_j| < \\text{tolerance}$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Coordinate-Wise Lasso Decomposition",
+      "tex": "f(\\beta) = \\frac{1}{2n} \\sum_{i=1}^n \\left( y_i - \\sum_{k \\neq j} x_{ik} \\beta_k - x_{ij} \\beta_j \\right)^2 + \\lambda \\sum_{k \\neq j} |\\beta_k| + \\lambda |\\beta_j|",
+      "p": "Decomposes the objective into terms independent of beta_j plus a simple univariate quadratic and absolute value function in beta_j."
+    },
+    {
+      "h": "The Soft-Thresholding Operator",
+      "tex": "S_\\lambda(z) = \\operatorname{sign}(z) (|z| - \\lambda)_+ = \\begin{cases} z - \\lambda & \\text{if } z > \\lambda \\\\ 0 & \\text{if } |z| \\le \\lambda \\\\ z + \\lambda & \\text{if } z < -\\lambda \\end{cases}",
+      "p": "The exact analytical minimiser of 0.5 (beta_j - z)^2 + lambda |beta_j|. Pulls small coefficients strictly to zero, inducing structural sparsity."
+    },
+    {
+      "h": "Tseng Separability Convergence Condition",
+      "tex": "f(\\beta) = g(\\beta) + \\sum_{j=1}^p h_j(\\beta_j)",
+      "p": "Paul Tseng proved that cyclic coordinate descent is guaranteed to converge to a global minimum for composite functions where g is convex and smooth, and the non-smooth part h separates into coordinate-wise terms."
+    }
+  ],
+  "code": "import numpy as np\n\n# Cyclic Coordinate Descent for Lasso from scratch\ndef coordinate_descent_lasso(X, y, alpha=0.1, max_iters=500, tol=1e-6):\n    n, p = X.shape\n    beta = np.zeros(p)\n    \n    # Precalculate column squared norms\n    norm_sq = np.sum(X**2, axis=0)\n    \n    # Initial residual\n    r = y - X @ beta\n    \n    # Soft-thresholding operator\n    def soft_thresh(z, thresh):\n        return np.sign(z) * np.maximum(0.0, np.abs(z) - thresh)\n        \n    for it in range(max_iters):\n        max_change = 0.0\n        \n        for j in range(p):\n            beta_old = beta[j]\n            \n            # Partial residual without feature j\n            # r_j = r + beta_old * X[:, j]\n            # rho_j = X[:, j]^T r_j\n            rho_j = np.dot(X[:, j], r) + beta_old * norm_sq[j]\n            \n            # Analytical update via soft-thresholding\n            # Loss: (1 / (2n)) * ||y - X beta||^2 + alpha * ||beta||_1\n            # Scaling threshold by n\n            thresh = alpha * n\n            beta_new = soft_thresh(rho_j, thresh) / norm_sq[j]\n            \n            # Update residual vector: r <- r - (beta_new - beta_old) * X_j\n            delta = beta_new - beta_old\n            if delta != 0.0:\n                r -= delta * X[:, j]\n                beta[j] = beta_new\n                max_change = max(max_change, abs(delta))\n                \n        if max_change < tol:\n            break\n            \n    return beta\n\n# Generate sparse regression problem: 100 samples, 20 features, only 3 active\nnp.random.seed(42)\nn_samples = 150\nn_features = 25\nX = np.random.normal(0, 1, (n_samples, n_features))\ntrue_beta = np.zeros(n_features)\ntrue_beta[2] = 2.5\ntrue_beta[7] = -1.8\ntrue_beta[15] = 3.0\ny = X @ true_beta + np.random.normal(0, 0.5, n_samples)\n\n# Fit Lasso via Coordinate Descent\nlambda_reg = 0.15\nbeta_est = coordinate_descent_lasso(X, y, alpha=lambda_reg)\n\nn_nonzero = np.sum(beta_est != 0)\nmse = np.mean((y - X @ beta_est)**2)\n\nprint(f\"Dataset shape: {X.shape}\")\nprint(f\"True non-zero coefficients: indices 2 (2.5), 7 (-1.8), 15 (3.0)\")\nprint(f\"Recovered non-zero count:  {n_nonzero} / {n_features}\")\nprint(f\"Recovered beta[2]:         {beta_est[2]:.3f}\")\nprint(f\"Recovered beta[7]:         {beta_est[7]:.3f}\")\nprint(f\"Recovered beta[15]:        {beta_est[15]:.3f}\")\nprint(f\"All other 22 features zeroed out: {np.all(beta_est[np.setdiff1d(np.arange(n_features), [2, 7, 15])] == 0)}\")",
+  "keyPoints": [
+    "Optimises multi-variable objective functions by updating one coordinate at a time, keeping all other variables frozen.",
+    "Replaces complex multi-variable gradient steps with fast 1D sub-problems that frequently possess exact closed-form algebraic solutions.",
+    "The foundational solver for Lasso and Elastic Net, using the Soft-Thresholding operator to handle non-differentiable $L_1$ kinks.",
+    "Guaranteed to converge to the global minimum for convex functions with coordinate-wise separable non-smooth terms (Tseng condition).",
+    "Requires zero learning rate tuning or line searches when closed-form coordinate updates exist."
+  ],
+  "pitfalls": [
+    "Non-separable non-smooth penalties: Coordinate descent can get trapped in non-optimal points if non-smooth terms are non-separable (e.g. constraints like $|x_1 - x_2| \\le 1$).",
+    "Correlated features slowing convergence: Highly collinear features create elongated diagonal ravines where coordinate steps make slow zigzagging progress.",
+    "Memory access inefficiency on column-major data: Cycling across features requires efficient column-wise matrix memory layout; row-major memory causes CPU cache misses."
+  ],
+  "quiz": [
+    {
+      "q": "Why is coordinate descent uniquely suited for solving L1-regularised Lasso regression?",
+      "o": [
+        "The non-differentiable L1 penalty separates across coordinates, allowing each 1D coordinate sub-problem to be solved in closed form via soft-thresholding",
+        "Coordinate descent eliminates all noise from the dataset",
+        "It inverts the full p x p matrix in O(1) time",
+        "It requires no training samples"
+      ],
+      "a": 0,
+      "why": "While the L1 kink breaks joint gradient descent, along any single coordinate axis the sub-problem has an exact closed-form minimiser given by the soft-thresholding operator."
+    },
+    {
+      "q": "Under what condition can coordinate descent fail to converge to a stationary point?",
+      "o": [
+        "When the objective function has non-smooth terms that are non-separable across coordinates",
+        "When all variables are strictly positive",
+        "When the objective function is quadratic",
+        "When the dataset has more samples than features"
+      ],
+      "a": 0,
+      "why": "If a non-smooth term couples multiple variables (such as non-separable constraints), coordinate descent can get trapped at a corner point where no axis-aligned move reduces loss."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "lasso_regression"
+  ],
+  "related": [
+    "lasso_regression",
+    "elastic_net",
+    "proximal-gradient-methods",
+    "newtons-method"
+  ],
+  "keywords": "coordinate descent, cyclic updates, lasso, soft thresholding, l1 regularisation, glmnet, 1d optimisation, separable convex"
+},
+  {
+  "id": "newtons-method",
+  "short": "Newton's method",
+  "title": "Newton's Method and Second-Order Optimisation",
+  "task": "concepts",
+  "module": "Optimisation",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Accelerate convergence using local quadratic curvature: master the Hessian matrix, Newton–Raphson updates, and Quasi-Newton approximations (BFGS).",
+  "lead": "First-order gradient descent crawls slowly along narrow ravines. Newton’s method uses the second derivative (Hessian matrix) to fit a local osculating paraboloid, jumping directly to the minimum with quadratic convergence.",
+  "intuition": [
+    "First-order optimisation methods like Gradient Descent navigate parameter space using only local slope information (the gradient vector $\\nabla f$). When an objective function has ill-conditioned curvature—such as a long, narrow canyon where one direction is 1,000 times steeper than another—gradient descent bounces helplessly between the canyon walls, requiring tens of thousands of tiny steps to make forward progress.",
+    "Newton’s method (also known as the Newton–Raphson method) solves this by incorporating second-order curvature information via the Hessian matrix $\\nabla^2 f(x)$, whose entries represent all second-order partial derivatives $\\frac{\\partial^2 f}{\\partial x_i \\partial x_j}$.",
+    "At each step, Newton’s method fits a second-order Taylor polynomial (a local quadratic bowl) to the objective function: $f(x + \\Delta x) \\approx f(x) + \\nabla f(x)^T \\Delta x + \\frac{1}{2} \\Delta x^T \\nabla^2 f(x) \\Delta x$. By calculating the exact stationary point of this quadratic approximation, the Newton step jumps directly to the bowl minimum: $\\Delta x = -[\\nabla^2 f(x)]^{-1} \\nabla f(x)$.",
+    "When near the minimum, Newton’s method achieves local quadratic convergence: the error at step $t+1$ is proportional to the square of the error at step $t$ ($\\|e_{t+1}\\| \\le M \\|e_t\\|^2$), doubling the number of correct decimal places at every single iteration. However, inverting the $p \\times p$ Hessian matrix costs $O(p^3)$ time, motivating Quasi-Newton algorithms like BFGS and L-BFGS that iteratively build curvature approximations from gradient changes."
+  ],
+  "analogy": "Imagine hiking down a foggy mountain peak at night. Gradient descent feels the slope beneath your boots and takes a step in the steepest downward direction, frequently stumbling into rocky gullies. Newton’s method shines a radar beam into the fog that scans the 3D bowl shape of the entire valley floor, calculating the exact GPS coordinates of the valley base and walking directly there in a few giant strides.",
+  "steps": [
+    {
+      "title": "1. Compute gradient and Hessian matrix",
+      "body": "Evaluate the gradient vector $g = \\nabla f(x) \\in \\mathbb{R}^p$ and the symmetric Hessian matrix $H = \\nabla^2 f(x) \\in \\mathbb{R}^{p \\times p}$."
+    },
+    {
+      "title": "2. Check positive definiteness and modify Hessian",
+      "body": "Ensure $H$ is strictly positive definite (all eigenvalues $\\lambda_i > 0$). If negative or near-zero eigenvalues exist, regularise via Levenberg–Marquardt: $H_{\\mathrm{reg}} = H + \\mu I$."
+    },
+    {
+      "title": "3. Solve Newton linear system",
+      "body": "Solve $H \\Delta x = -g$ for the Newton direction $\\Delta x$ using Cholesky factorisation ($O(p^3)$), avoiding explicit matrix inversion."
+    },
+    {
+      "title": "4. Perform backtracking line search (Damped Newton)",
+      "body": "Ensure global convergence: test step sizes $\\alpha = 1, \\beta, \\beta^2, \\dots$ until Armijo condition $f(x + \\alpha \\Delta x) \\le f(x) + c_1 \\alpha g^T \\Delta x$ is satisfied. Update $x \\leftarrow x + \\alpha \\Delta x$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Second-Order Taylor Approximation",
+      "tex": "f(x + \\Delta x) \\approx f(x) + \\nabla f(x)^T \\Delta x + \\frac{1}{2} \\Delta x^T \\nabla^2 f(x) \\Delta x",
+      "p": "Local quadratic model of the objective function. Differentiating with respect to Delta x and setting to zero yields the optimal step."
+    },
+    {
+      "h": "Newton Step Equation",
+      "tex": "\\Delta x = -[\\nabla^2 f(x)]^{-1} \\nabla f(x) = -H^{-1} g",
+      "p": "The unconstrained Newton step. Scales and rotates the gradient by the inverse Hessian, automatically compensating for anisotropic curvature."
+    },
+    {
+      "h": "Quadratic Convergence Rate",
+      "tex": "\\|x_{t+1} - x^*\\| \\le M \\|x_t - x^*\\|^2",
+      "p": "In the neighbourhood of a strict local minimum, the distance to the optimum squares at each iteration, achieving extreme precision in fewer than 10 steps."
+    }
+  ],
+  "code": "import numpy as np\n\n# Newton's Method vs Gradient Descent on the Rosenbrock Banana Function\n# f(x, y) = (1 - x)^2 + 100 * (y - x^2)^2 (classic ill-conditioned valley)\ndef rosenbrock(v):\n    x, y = v[0], v[1]\n    return (1.0 - x)**2 + 100.0 * (y - x**2)**2\n\ndef rosenbrock_grad(v):\n    x, y = v[0], v[1]\n    df_dx = -2.0 * (1.0 - x) - 400.0 * x * (y - x**2)\n    df_dy = 200.0 * (y - x**2)\n    return np.array([df_dx, df_dy])\n\ndef rosenbrock_hessian(v):\n    x, y = v[0], v[1]\n    d2f_dx2 = 2.0 - 400.0 * y + 1200.0 * x**2\n    d2f_dxdy = -400.0 * x\n    d2f_dy2 = 200.0\n    return np.array([[d2f_dx2, d2f_dxdy],\n                     [d2f_dxdy, d2f_dy2]])\n\n# 1. Newton's Method with Backtracking Line Search\nx_newton = np.array([-1.2, 1.0])\nnewton_history = [x_newton.copy()]\n\nfor it in range(30):\n    g = rosenbrock_grad(x_newton)\n    if np.linalg.norm(g) < 1e-8:\n        break\n    H = rosenbrock_hessian(x_newton)\n    \n    # Regularise Hessian if not positive definite\n    eigvals = np.linalg.eigvalsh(H)\n    if np.min(eigvals) <= 1e-4:\n        H += np.eye(2) * (1e-3 - np.min(eigvals))\n        \n    # Solve H delta_x = -g\n    delta_x = np.linalg.solve(H, -g)\n    \n    # Backtracking Armijo Line Search\n    alpha = 1.0\n    while rosenbrock(x_newton + alpha * delta_x) > rosenbrock(x_newton) + 1e-4 * alpha * np.dot(g, delta_x):\n        alpha *= 0.5\n        if alpha < 1e-10: break\n        \n    x_newton += alpha * delta_x\n    newton_history.append(x_newton.copy())\n\n# 2. Gradient Descent with Tuned Step Size\nx_gd = np.array([-1.2, 1.0])\nlr = 0.0015\ngd_history = [x_gd.copy()]\n\nfor it in range(1000):\n    g = rosenbrock_grad(x_gd)\n    if np.linalg.norm(g) < 1e-8:\n        break\n    x_gd -= lr * g\n    gd_history.append(x_gd.copy())\n\nprint(f\"True Global Minimum: [1.000, 1.000] with f = 0.000\")\nprint(f\"\\nNewton's Method:\")\nprint(f\"  Converged to: {x_newton.round(5)} in {len(newton_history)-1} iterations!\")\nprint(f\"  Final value:  {rosenbrock(x_newton):.2e}\")\n\nprint(f\"\\nGradient Descent:\")\nprint(f\"  Reached:      {x_gd.round(5)} after {len(gd_history)-1} iterations (struggling in curved valley)\")\nprint(f\"  Final value:  {rosenbrock(x_gd):.4f}\")",
+  "keyPoints": [
+    "Second-order optimisation algorithm that uses the Hessian matrix to capture local quadratic curvature.",
+    "Scales and rotates search directions by the inverse Hessian: $\\Delta x = -[\\nabla^2 f(x)]^{-1} \\nabla f(x)$.",
+    "Achieves quadratic local convergence ($\\|e_{t+1}\\| \\le M \\|e_t\\|^2$), doubling accuracy precision at each step near the minimum.",
+    "Eliminates the oscillations in narrow ravines that cripple first-order gradient descent.",
+    "Inverting the $p \\times p$ Hessian costs $O(p^3)$, motivating Quasi-Newton methods like BFGS and L-BFGS."
+  ],
+  "pitfalls": [
+    "Computational scaling with dimension: Computing and inverting the $p \\times p$ Hessian scales as $O(p^3)$ time and $O(p^2)$ memory, becoming unusable for millions of neural network weights.",
+    "Saddle points and maxima in non-convex functions: If the Hessian has negative eigenvalues, the standard Newton step jumps toward local maxima or saddle points; Hessian regularisation is mandatory.",
+    "Overshooting without line search: Pure Newton steps (step size $\\alpha = 1$) can jump across non-quadratic regions into explosive divergence; backtracking line search is required for global stability."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Newton’s method navigate narrow curved ravines vastly faster than Gradient Descent?",
+      "o": [
+        "By multiplying the gradient by the inverse Hessian, it rescales directions by their curvature, equalising steep and flat dimensions",
+        "Newton’s method uses random exploration",
+        "Newton’s method sets all second derivatives to zero",
+        "Newton’s method operates only on linear functions"
+      ],
+      "a": 0,
+      "why": "In ill-conditioned ravines, the Hessian inverse H^{-1} shrinks steps along steep directions and expands steps along flat valleys, steering the update directly toward the minimum."
+    },
+    {
+      "q": "What is the primary computational drawback of Newton’s method in high-dimensional deep learning?",
+      "o": [
+        "Calculating and inverting the p x p Hessian matrix requires O(p^3) time and O(p^2) memory, which is intractable for millions of parameters",
+        "Newton’s method cannot compute gradients",
+        "Newton’s method works only when sample size n = 1",
+        "The learning rate must be tuned manually at every iteration"
+      ],
+      "a": 0,
+      "why": "For a neural network with 100 million parameters, storing the Hessian requires 40 petabytes of RAM, and inverting it would require 10^24 operations."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+  ],
+  "related": [
+    "coordinate-descent",
+    "proximal-gradient-methods",
+    "generalised-linear-models",
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "keywords": "newtons method, second order optimisation, hessian matrix, newton raphson, rosenbrock, quadratic convergence, bfgs, quasi newton"
+},
+  {
+  "id": "proximal-gradient-methods",
+  "short": "Proximal gradient methods",
+  "title": "Proximal Gradient Methods and FISTA",
+  "task": "concepts",
+  "module": "Optimisation",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Optimise composite objectives with non-smooth penalties: master the proximal operator, ISTA, and Nesterov acceleration in FISTA.",
+  "lead": "Many modern regularised machine learning objectives take composite form: a smooth convex loss f(x) plus a non-smooth convex regulariser g(x). Proximal gradient algorithms split the optimisation, combining gradient descent on f with the proximal operator of g.",
+  "intuition": [
+    "In modern machine learning, objectives frequently take a composite structure: $\\min_x F(x) = f(x) + g(x)$, where $f(x)$ is a convex, continuously differentiable loss function (such as mean squared error, logistic loss, or neural cross-entropy), and $g(x)$ is a convex but non-smooth regulariser (such as the $L_1$ norm $\\|x\\|_1$ for feature sparsity, nuclear norm for matrix completion, or indicator functions for box constraints).",
+    "Standard gradient descent cannot be applied because $g(x)$ lacks derivatives at kinks (e.g. at $x=0$ in the $L_1$ norm). Subgradient methods can handle non-differentiable points, but suffer from a notoriously sluggish convergence rate of $O(1/\\sqrt{k})$ and rarely produce exact sparse zeros.",
+    "Proximal Gradient Methods resolve this by operator splitting. At each iteration, the algorithm takes a standard gradient step along the smooth loss $f$, and then passes the resulting intermediate point through the Proximal Operator of $g$: $x_{k+1} = \\operatorname{prox}_{\\gamma g}(x_k - \\gamma \\nabla f(x_k))$. The proximal operator $\\operatorname{prox}_{\\gamma g}(v) = \\arg\\min_x \\left( g(x) + \\frac{1}{2\\gamma} \\|x - v\\|^2 \\right)$ balances minimising the regulariser $g$ while staying close to the gradient step $v$.",
+    "When applied to $L_1$ regularisation, this yields the Iterative Shrinkage-Thresholding Algorithm (ISTA), which converges at rate $O(1/k)$. Amir Beck and Marc Teboulle (2009) introduced Fast ISTA (FISTA), which incorporates Nesterov momentum acceleration to achieve the optimal theoretical rate $O(1/k^2)$ for first-order composite optimisation."
+  ],
+  "analogy": "Imagine sculpting an intricate marble statue. The smooth loss function f is an artist using a coarse polishing cloth to buff out broad curves. The non-smooth regulariser g is an artisan wielding a sharp chisel that clips off unwanted chunks to carve sharp, crisp geometric edges. The proximal gradient method alternates between the two: polish smoothly with the cloth, then immediately chisel with the proximal operator.",
+  "steps": [
+    {
+      "title": "1. Formulate composite objective and evaluate Lipschitz constant",
+      "body": "Structure objective as $F(x) = f(x) + g(x)$. Compute the Lipschitz constant $L$ of $\\nabla f$ (for linear regression $\\|X^T X\\|_2$), setting step size $\\gamma \\le 1/L$."
+    },
+    {
+      "title": "2. Perform forward gradient step on smooth loss f",
+      "body": "Compute gradient of the smooth loss: $v_k = y_k - \\gamma \\nabla f(y_k)$."
+    },
+    {
+      "title": "3. Apply backward proximal step on non-smooth penalty g",
+      "body": "Compute proximal operator: $x_{k+1} = \\operatorname{prox}_{\\gamma g}(v_k)$. For $L_1$ regularisation, this is the element-wise soft-thresholding operator $S_{\\gamma \\lambda}(v_k)$."
+    },
+    {
+      "title": "4. Update Nesterov acceleration momentum (FISTA)",
+      "body": "Compute scalar momentum sequence: $t_{k+1} = \\frac{1 + \\sqrt{1 + 4 t_k^2}}{2}$. Update auxiliary extrapolation point: $y_{k+1} = x_{k+1} + \\left(\\frac{t_k - 1}{t_{k+1}}\\right) (x_{k+1} - x_k)$."
+    }
+  ],
+  "math": [
+    {
+      "h": "The Proximal Operator",
+      "tex": "\\operatorname{prox}_{\\gamma g}(v) = \\arg\\min_{x} \\left( g(x) + \\frac{1}{2 \\gamma} \\|x - v\\|_2^2 \\right)",
+      "p": "Resolves non-smooth objective by finding a compromise between minimising penalty g(x) and proximity to candidate vector v."
+    },
+    {
+      "h": "Proximal Gradient (ISTA) Update",
+      "tex": "x_{k+1} = \\operatorname{prox}_{\\gamma g}\\left(x_k - \\gamma \\nabla f(x_k)\\right)",
+      "p": "Iterative Shrinkage-Thresholding Algorithm. Alternates a gradient descent step on smooth term f with the proximal mapping of non-smooth term g."
+    },
+    {
+      "h": "FISTA Nesterov Momentum Acceleration",
+      "tex": "y_{k+1} = x_k + \\frac{t_{k-1} - 1}{t_k} (x_k - x_{k-1}), \\quad t_k = \\frac{1 + \\sqrt{1 + 4 t_{k-1}^2}}{2}",
+      "p": "Accelerates convergence rate from O(1/k) to the optimal Nesterov theoretical limit O(1/k^2) for first-order composite optimisation."
+    }
+  ],
+  "code": "import numpy as np\n\n# Proximal Gradient Methods: ISTA vs FISTA from scratch on Lasso\nnp.random.seed(42)\nn_samples = 200\nn_features = 80\n\n# True sparse signal (only 5 active coefficients)\nX = np.random.normal(0, 1, (n_samples, n_features))\ntrue_beta = np.zeros(n_features)\ntrue_beta[[5, 12, 28, 45, 60]] = [2.0, -1.5, 3.2, -2.8, 1.0]\ny = X @ true_beta + np.random.normal(0, 0.4, n_samples)\n\n# Smooth loss: f(beta) = 0.5 * ||y - X beta||^2\n# Non-smooth penalty: g(beta) = lambda * ||beta||_1\nlambda_reg = 15.0\n\n# Lipschitz constant of nabla f: L = max eigenvalue of X^T X\nL = np.linalg.norm(X.T @ X, 2)\ngamma = 1.0 / L  # Step size\n\ndef soft_threshold(v, thresh):\n    return np.sign(v) * np.maximum(0.0, np.abs(v) - thresh)\n\ndef objective(beta):\n    return 0.5 * np.sum((y - X @ beta)**2) + lambda_reg * np.sum(np.abs(beta))\n\n# 1. Standard ISTA (O(1/k) convergence)\nn_iters = 120\nbeta_ista = np.zeros(n_features)\nloss_ista = []\n\nfor k in range(n_iters):\n    # Gradient of smooth loss: nabla f(beta) = -X^T (y - X beta)\n    grad_f = -X.T @ (y - X @ beta_ista)\n    # Gradient step followed by proximal soft-thresholding\n    v = beta_ista - gamma * grad_f\n    beta_ista = soft_threshold(v, gamma * lambda_reg)\n    loss_ista.append(objective(beta_ista))\n\n# 2. Fast ISTA (FISTA) with Nesterov Momentum (O(1/k^2) convergence)\nbeta_fista = np.zeros(n_features)\nbeta_prev = np.zeros(n_features)\ny_aux = np.zeros(n_features)\nt = 1.0\nloss_fista = []\n\nfor k in range(n_iters):\n    # Gradient step evaluated at auxiliary momentum point y_aux\n    grad_f = -X.T @ (y - X @ y_aux)\n    v = y_aux - gamma * grad_f\n    beta_fista = soft_threshold(v, gamma * lambda_reg)\n    \n    # Nesterov momentum update\n    t_next = (1.0 + np.sqrt(1.0 + 4.0 * t**2)) / 2.0\n    y_aux = beta_fista + ((t - 1.0) / t_next) * (beta_fista - beta_prev)\n    \n    beta_prev = beta_fista.copy()\n    t = t_next\n    loss_fista.append(objective(beta_fista))\n\nmin_obj = min(loss_fista[-1], loss_ista[-1])\nprint(f\"Dataset: {n_samples} samples x {n_features} features (5 active)\")\nprint(f\"Step size gamma = 1/L = {gamma:.6f}\")\nprint(f\"\\nAfter {n_iters} iterations:\")\nprint(f\"  ISTA Objective:  {loss_ista[-1]:.3f} (Distance to min: {loss_ista[-1] - min_obj:.4f})\")\nprint(f\"  FISTA Objective: {loss_fista[-1]:.3f} (Distance to min: {loss_fista[-1] - min_obj:.4f})\")\nprint(f\"Iterations to reach loss < {loss_ista[-1]:.1f}:\")\nprint(f\"  ISTA:  {n_iters} iterations\")\nfista_match_iter = next(i + 1 for i, l in enumerate(loss_fista) if l <= loss_ista[-1])\nprint(f\"  FISTA: {fista_match_iter} iterations ({n_iters / fista_match_iter:.1f}x speedup via momentum!)\")",
+  "keyPoints": [
+    "Optimises composite objectives $F(x) = f(x) + g(x)$ combining smooth convex loss $f$ with non-smooth convex regulariser $g$.",
+    "Alternates a forward gradient step on $f$ with the backward proximal operator of $g$: $x_{k+1} = \\operatorname{prox}_{\\gamma g}(x_k - \\gamma \\nabla f(x_k))$.",
+    "For $L_1$ regularisation, the proximal operator equals the analytical soft-thresholding operator (ISTA).",
+    "FISTA incorporates Nesterov momentum acceleration, boosting convergence rate from $O(1/k)$ to the optimal theoretical limit $O(1/k^2)$.",
+    "Applies broadly to Lasso, Elastic Net, group lasso, nuclear norm matrix completion, and constrained optimisation."
+  ],
+  "pitfalls": [
+    "Step size exceeding 1/L: Setting step size $\\gamma > 1/L$ (where $L$ is the Lipschitz constant of $\\nabla f$) causes proximal gradient steps to diverge.",
+    "Non-convex regularisers: If $g(x)$ is non-convex (e.g. $L_0$ pseudo-norm), the proximal operator may have multiple local solutions, forfeiting global convergence guarantees.",
+    "Non-monotone FISTA energy spikes: Standard Nesterov momentum in FISTA can produce temporary objective energy spikes; monotone FISTA (MFISTA) restores strict monotonic descent."
+  ],
+  "quiz": [
+    {
+      "q": "What is the theoretical convergence rate of FISTA compared to standard ISTA for composite convex optimisation?",
+      "o": [
+        "FISTA converges at O(1/k^2) while ISTA converges at O(1/k)",
+        "FISTA has exponential convergence while ISTA has linear convergence",
+        "FISTA converges at O(1/k) while ISTA converges at O(1/k^2)",
+        "Both algorithms have identical convergence rates"
+      ],
+      "a": 0,
+      "why": "By incorporating Nesterov momentum extrapolation, FISTA improves the convergence rate from O(1/k) to O(1/k^2), which is the proven optimal first-order bound."
+    },
+    {
+      "q": "What does the proximal operator prox_{gamma g}(v) compute geometrically?",
+      "o": [
+        "It balances minimising the penalty function g(x) with staying close to vector v via a quadratic proximity penalty",
+        "It calculates the projection onto the null space of the feature matrix",
+        "It computes the gradient of the loss function",
+        "It inverts the covariance matrix"
+      ],
+      "a": 0,
+      "why": "From its definition prox(v) = argmin_x { g(x) + (1/(2 gamma)) ||x - v||^2 }, it acts as an implicit step compromising between the regulariser g and distance to v."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "coordinate-descent",
+    "lasso_regression"
+  ],
+  "related": [
+    "coordinate-descent",
+    "newtons-method",
+    "lasso_regression",
+    "elastic_net"
+  ],
+  "keywords": "proximal gradient, fista, ista, proximal operator, soft thresholding, composite optimisation, nesterov momentum, l1 regularisation"
+},
+  {
+    id: 'hyperparameter-search-grid-random-successive-halving',
+    short: 'Hyperparameter search',
+    title: 'Hyperparameter Search: Grid, Random, Successive Halving',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Strategies for navigating hyperparameter configurations, from brute-force grid search to distribution sampling and resource-adaptive successive halving.`,
+    lead: r`Machine learning models rely on external hyperparameters—such as regularisation strength, tree depth, and learning rates—that cannot be estimated directly through gradient descent. Exhaustive grid search scales exponentially with dimensionality and wastes trials exploring uninformative parameters. Random search and multi-fidelity successive halving dramatically accelerate discovery by sampling continuous spaces and aggressively terminating unpromising configurations early.`,
+    intuition: [
+      r`Imagine searching for the perfect recipe for baking sourdough bread. You have three knobs to adjust: baking temperature, proofing time, and oven rack height. If you set up an exhaustive grid testing 5 temperatures, 5 proofing times, and 4 rack heights, you must bake $5 \times 5 \times 4 = 100$ individual loaves. Worse, after tasting them all, you discover that oven rack height makes virtually zero difference to the bread's texture. Because you used a rigid grid, you baked the same 25 temperature-time combinations four times over, testing only 5 distinct temperatures.`,
+      r`Random search breaks this gridlock. Instead of locking hyperparameters to discrete intersections, it samples configurations randomly from continuous distributions. In 100 random loaves, you test roughly 100 distinct temperatures and 100 distinct proofing times. As Bergstra and Bengio (2012) proved mathematically, most machine learning problems have low effective dimensionality—only a fraction of hyperparameters drive performance. By scattering trials across the space, random search explores the critical dimensions far more granularly for the exact same computational budget.`,
+      r`But why bake every trial loaf for the full 45 minutes? If a loaf fails to rise after 10 minutes, you already know it will not win. Successive halving formalises this intuition as a multi-fidelity bandit problem. It begins by launching dozens of configurations on tiny budgets (e.g. 5 epochs or 10% of the training data). At regular checkpoints, it ranks all candidates, prunes the bottom half (or bottom two-thirds), and doubles the resource budget for the survivors. By focusing compute only on configurations that show early promise, successive halving identifies superior hyperparameters up to an order of magnitude faster.`,
+    ],
+    analogy: r`Running an audition for an orchestra: listening to a hundred musicians play a 30-second scale, inviting the top twenty to play a full piece, and giving the top three a full rehearsal to choose the winner.`,
+    steps: [
+      r`Define the search space: specify bounds, categorical choices, and prior probability distributions (e.g. log-uniform for learning rates and regularisation penalties).`,
+      r`Select an exploration strategy: choose random search over grid search whenever the hyperparameter dimensionality exceeds two or three variables.`,
+      r`Configure a multi-fidelity schedule: choose an allocation factor $\eta$ (typically 2 or 3), a minimum resource budget $r_{\min}$ (e.g. 1 epoch or 100 samples), and a maximum resource budget $R$.`,
+      r`Initialise candidates: sample $N = \eta^s$ configurations uniformly across the defined search space.`,
+      r`Run successive halving rounds: evaluate all active configurations on resource budget $r$, rank by validation loss, retain the top $1/\eta$ fraction, multiply budget $r \leftarrow r \cdot \eta$, and repeat until survivors reach $R$.`,
+      r`Refit the winning configuration on the full dataset using maximum compute to produce the final production model.`,
+    ],
+    math: [
+      {
+        h: 'Grid search complexity and the curse of dimensionality',
+        tex: r`$$N_{\text{grid}} = \prod_{i=1}^d k_i = k^d$$`,
+        p: r`Evaluating $k$ discrete values across $d$ hyperparameters requires exponential computational effort. If only $d_{\text{eff}} \ll d$ hyperparameters actually influence model performance, grid search wastes $k^d - k^{d_{\text{eff}}}$ model evaluations re-testing redundant configurations along uninformative axes.`,
+      },
+      {
+        h: 'Random search sample efficiency',
+        tex: r`$$P(\text{finding within top } \alpha \text{ percentile}) = 1 - (1 - \alpha)^n$$`,
+        p: r`To achieve a 95% probability of sampling at least one configuration within the top 5% of the parameter space ($\alpha = 0.05$), random search requires only $n = \frac{\ln(1 - 0.95)}{\ln(1 - 0.05)} \approx 59$ trials, completely independent of the number of hyperparameter dimensions $d$.`,
+      },
+      {
+        h: 'Successive halving resource allocation',
+        tex: r`$$N_k = \left\lfloor \frac{N_{k-1}}{\eta} \right\rfloor, \qquad R_k = R_{k-1} \cdot \eta, \qquad \sum_{k=0}^K N_k R_k \approx N_0 r_{\min} (K + 1)$$`,
+        p: r`where $\eta$ is the reduction factor and $K = \lfloor \log_\eta(R / r_{\min}) \rfloor$ is the number of halving rungs. By discarding the worst $(1 - 1/\eta)$ configurations at each rung, the total compute allocated across all configurations scales logarithmically with maximum resource depth.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic linear data with 5 features
+rng = np.random.default_rng(42)
+X_full = rng.normal(0, 1, (200, 5))
+y_full = X_full[:, 0] * 2.0 - X_full[:, 1] * 1.5 + rng.normal(0, 0.5, 200)
+
+# Sample 16 random hyperparameter candidates for Ridge (log-alpha in [-3, 3])
+alphas = np.exp(rng.uniform(-3, 3, 16))
+budgets = [25, 50, 100, 200]  # training subsample sizes
+
+current_alphas = alphas.copy()
+for b in budgets[:-1]:
+    X_sub, y_sub = X_full[:b], y_full[:b]
+    losses = []
+    for a in current_alphas:
+        w = np.linalg.solve(X_sub.T @ X_sub + a * np.eye(5), X_sub.T @ y_sub)
+        val_mse = np.mean((y_full[100:] - X_full[100:] @ w) ** 2)
+        losses.append(val_mse)
+    survivors = np.argsort(losses)[:len(current_alphas) // 2]
+    print(f"Budget n={b:3d} | Candidates: {len(current_alphas):2d} | Best MSE: {min(losses):.4f}")
+    current_alphas = current_alphas[survivors]
+
+# Final evaluation on full data
+w_best = np.linalg.solve(X_full.T @ X_full + current_alphas[0] * np.eye(5), X_full.T @ y_full)
+final_mse = np.mean((y_full - X_full @ w_best) ** 2)
+print(f"Best alpha: {current_alphas[0]:.4f} | Full data MSE: {final_mse:.4f}")`,
+    pitfalls: [
+      r`Early-stage ranking noise: If the initial resource budget $r_{\min}$ is set too low (e.g. only 1 epoch or 10 samples), learning rates with slow warmup or deep architectures may perform poorly early on and get discarded despite having superior asymptotic performance.`,
+      r`Uniform sampling on linear scale for scale-sensitive parameters: Sampling learning rates or regularisation parameters linearly between $10^{-5}$ and $1.0$ allocates 90% of trials to values above $0.1$. Multiplicative parameters must be sampled on a logarithmic scale (log-uniform).`,
+      r`Data leakage during subsample evaluation: Subsampling data for resource scaling must preserve class label distributions via stratified sampling; otherwise minority classes may be entirely absent from low-resource rungs.`,
+      r`Overfitting the validation set: Evaluating thousands of hyperparameter configurations against a single validation split inevitably selects for validation set noise (the winner's curse), requiring nested cross-validation or an untouched holdout test set.`,
+    ],
+    keyPoints: [
+      r`Random search consistently outperforms grid search on high-dimensional spaces because it evaluates far more unique values along critical dimensions.`,
+      r`Successive halving allocates compute dynamically by evaluating many candidates on cheap budgets and pruning unpromising configurations early.`,
+      r`Logarithmic prior distributions are mandatory for scale-invariant parameters like learning rate, L2 penalty, and kernel width.`,
+      r`Hyperband extends successive halving by looping over multiple trade-offs between initial candidate count and minimum resource budget.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does random search consistently outperform exhaustive grid search when tuning machine learning models with 5 or more hyperparameters?`,
+        o: [
+          r`Because random numbers eliminate gradient descent variance`,
+          r`Because most models have low effective dimensionality, and random search explores many distinct values along the few important axes rather than re-testing identical coordinates`,
+          r`Because grid search cannot be evaluated on GPU hardware`,
+          r`Because random search guarantees finding the global analytical minimum in finite steps`,
+        ],
+        a: 1,
+        why: r`In most machine learning models, only 1 or 2 hyperparameters strongly dictate performance (e.g. learning rate and regularisation). While grid search wastes compute repeatedly testing the same few values of the important parameter against unimportant variations, random search tests a unique value on every single trial.`,
+      },
+      {
+        q: r`How many random trials $n$ are required to have a 95% probability of sampling at least one configuration within the top 5% ($\alpha = 0.05$) of all possible hyperparameter settings?`,
+        o: [
+          r`Exactly 100 trials`,
+          r`Over 10,000 trials`,
+          r`Approximately 59 trials, regardless of the number of hyperparameter dimensions`,
+          r`The number of trials depends exponentially on the number of features $d$`,
+        ],
+        a: 2,
+        why: r`Setting $1 - (1 - 0.05)^n \ge 0.95$ yields $(0.95)^n \le 0.05$. Taking logarithms gives $n \ge \ln(0.05) / \ln(0.95) \approx -2.9957 / -0.05129 \approx 58.4$ (or 59 trials). Remarkably, this probability is completely independent of dimensionality.`,
+      },
+      {
+        q: r`What is the core mechanism of the Successive Halving algorithm?`,
+        o: [
+          r`It begins with many configurations evaluated on a small resource budget, progressively pruning the worst performers and multiplying resources for the survivors`,
+          r`It cuts the learning rate in half every 10 epochs`,
+          r`It divides the dataset into two halves and trains on both simultaneously`,
+          r`It computes second-order Hessian approximations to halve the parameter space`,
+        ],
+        a: 0,
+        why: r`Successive halving allocates compute efficiently by testing $N$ configurations on a small initial budget (e.g. subsamples or epochs), pruning the bottom fraction (e.g. 50%), and doubling the budget for the survivors over successive rungs.`,
+      },
+      {
+        q: r`Why should hyperparameters like regularisation weight $\lambda$ or learning rate $\eta$ be sampled from a log-uniform distribution rather than a uniform distribution?`,
+        o: [
+          r`Because logarithms force all sampled values to be negative numbers`,
+          r`Because uniform distributions cannot generate floating-point decimals`,
+          r`Because log-uniform sampling prevents models from underfitting`,
+          r`Because their effects scale multiplicatively; a linear uniform distribution would waste nearly all trials exploring the single largest order of magnitude`,
+        ],
+        a: 3,
+        why: r`A shift from $10^{-4}$ to $10^{-3}$ has a comparable structural impact to a shift from $10^{-1}$ to $1.0$. Sampling uniformly on $[10^{-4}, 1.0]$ would allocate 90% of samples to values between 0.1 and 1.0, virtually ignoring the smaller decades.`,
+      },
+    ],
+    usedBy: ['bayesian-optimisation-and-optuna'],
+    prereq: ['cross-validation', 'bias-variance-tradeoff'],
+    related: ['bayesian-optimisation-and-optuna', 'nested-cross-validation', 'cross-validation'],
+    keywords: 'hyperparameter search grid search random search successive halving hyperband tuning model selection cross-validation',
+  },
+  {
+    id: 'bayesian-optimisation-and-optuna',
+    short: 'Bayesian opt. & Optuna',
+    title: 'Bayesian Optimisation and Optuna',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Sequential model-based optimisation balancing exploration and exploitation via Gaussian process surrogates, Expected Improvement, and Optuna's TPE.`,
+    lead: r`Random search and grid search treat every trial independently, discarding valuable information about the objective landscape uncovered during previous runs. Bayesian optimisation models the objective function as an expensive black-box probabilistic distribution, balancing exploration of uncertain regions with exploitation of known high-performing areas using acquisition functions like Expected Improvement. Modern frameworks like Optuna replace Gaussian processes with Tree-structured Parzen Estimators (TPE) and automated pruning, enabling scalable tuning across complex mixed-type search spaces.`,
+    intuition: [
+      r`Imagine prospecting for oil across a vast desert by drilling exploratory test wells. Drilling a single well costs £100,000 and takes two weeks. You would never choose your drilling sites using a rigid grid or random lottery. After drilling your first few sites, you analyse the geological data to form a mental map of the subsurface: where oil is likely concentrated (high expected yield) and where the terrain remains completely unknown (high uncertainty).`,
+      r`If you only drill right next to your best existing well, you might squeeze out minor gains while missing a massive oil basin fifty miles away (over-exploitation). If you only drill in completely random unexplored corners, you waste millions confirming dry dust (over-exploration). The rational strategy balances both: drill where the probability of finding a larger deposit than your current best is highest.`,
+      r`Bayesian optimisation formalises this balance using two components: a probabilistic surrogate model (such as a Gaussian process) that predicts both the expected performance and its uncertainty at every unvisited coordinate, and an acquisition function (such as Expected Improvement) that scores each point's potential. Optuna brings this into modern production through the Tree-structured Parzen Estimator (TPE). Instead of modelling $p(y \mid \theta)$ via expensive matrix inversions, TPE models the parameter distributions of good trials $p(\theta \mid y < y^*)$ and bad trials $p(\theta \mid y \ge y^*)$ separately using kernel density estimates, selecting candidate points that maximise their ratio while aggressively pruning stalled trials mid-training.`,
+    ],
+    analogy: r`A grandmaster chess player evaluating candidate moves: calculating deep variants only for moves with high tactical promise while occasionally exploring unconventional lines that offer surprising upside.`,
+    steps: [
+      r`Initialise the search space: evaluate a small budget of seed points (typically 5 to 10 trials) using quasi-random Sobol or Latin hypercube sampling.`,
+      r`Fit the surrogate model: train a Gaussian Process or Tree-structured Parzen Estimator (TPE) on all evaluated configurations and their observed validation losses.`,
+      r`Formulate the acquisition function: calculate Expected Improvement (EI) or Upper Confidence Bound (UCB) across candidate hyperparameter configurations.`,
+      r`Optimise the acquisition function: identify the hyperparameter coordinate $\theta^*$ that maximises the acquisition score.`,
+      r`Evaluate the objective: train the machine learning model using $\theta^*$ on validation data to record its true objective value $f(\theta^*)$.`,
+      r`Enable automated pruning: abort trials early (via Optuna's MedianPruner or Hyperband) if intermediate training curves fall below median historical progress.`,
+      r`Update the surrogate dataset and iterate until the computational trial budget is exhausted.`,
+    ],
+    math: [
+      {
+        h: 'Gaussian Process surrogate posterior',
+        tex: r`$$f(\theta) \sim \mathcal{GP}\big(\mu(\theta), \, k(\theta, \theta')\big), \qquad \mu_n(\theta) = k_*^T (K + \sigma_n^2 I)^{-1} y, \quad \sigma_n^2(\theta) = k(\theta, \theta) - k_*^T (K + \sigma_n^2 I)^{-1} k_*$$`,
+        p: r`where $K$ is the kernel Gram matrix evaluated at observed trials and $k_*$ is the covariance vector between candidate $\theta$ and past observations. The posterior mean $\mu_n(\theta)$ models exploitation, while the posterior variance $\sigma_n^2(\theta)$ quantifies epistemic uncertainty for exploration.`,
+      },
+      {
+        h: 'Expected Improvement (EI) acquisition function',
+        tex: r`$$\operatorname{EI}(\theta) = \mathbb{E}\big[\max(0, y_{\text{best}} - f(\theta))\big] = (y_{\text{best}} - \mu_n(\theta)) \, \Phi(z) + \sigma_n(\theta) \, \phi(z), \quad z = \frac{y_{\text{best}} - \mu_n(\theta)}{\sigma_n(\theta)}$$`,
+        p: r`where $\Phi$ is the standard normal cumulative distribution function and $\phi$ is the standard normal density function. The first term prioritises exploitation (large improvement over current best $y_{\text{best}}$), while the second term rewards exploration (high uncertainty $\sigma_n(\theta)$).`,
+      },
+      {
+        h: 'Optuna\'s Tree-structured Parzen Estimator (TPE)',
+        tex: r`$$\frac{p(\theta \mid y < y^*)}{p(\theta \mid y \ge y^*)} = \frac{\ell(\theta)}{g(\theta)} \propto \operatorname{EI}(\theta)$$`,
+        p: r`By setting a quantile threshold $\gamma$ (typically 10% or 15%), TPE partitions historical trials into good performers $\ell(\theta)$ and bad performers $g(\theta)$. Maximising the likelihood ratio $\ell(\theta) / g(\theta)$ samples points that are highly probable under the good distribution and improbable under the bad distribution, eliminating $O(n^3)$ GP matrix inversion.`,
+      },
+    ],
+    code: r`import numpy as np
+from scipy.stats import norm
+
+# True black-box function with local minimum
+def f(x):
+    return np.sin(3 * x) + 0.5 * (x - 1) ** 2
+
+# Initial observations
+X_obs = np.array([0.2, 1.8, 2.8])
+y_obs = f(X_obs)
+
+# RBF kernel for Gaussian Process surrogate
+def rbf_cov(x1, x2, l=0.5, s=1.0):
+    return s**2 * np.exp(-0.5 * (x1[:, None] - x2[None, :])**2 / l**2)
+
+# Run 4 Bayesian Optimisation steps via Expected Improvement (EI)
+cands = np.linspace(0, 3, 100)
+for step in range(4):
+    K = rbf_cov(X_obs, X_obs) + 1e-6 * np.eye(len(X_obs))
+    K_s = rbf_cov(cands, X_obs)
+    mu = K_s @ np.linalg.solve(K, y_obs)
+    sigma = np.sqrt(np.maximum(1e-6, 1.0 - np.sum(K_s * np.linalg.solve(K, K_s.T).T, axis=1)))
+    
+    # Expected Improvement (minimisation: improvement over current best y_best)
+    y_best = np.min(y_obs)
+    z = (y_best - mu) / sigma
+    ei = (y_best - mu) * norm.cdf(z) + sigma * norm.pdf(z)
+    
+    next_x = cands[np.argmax(ei)]
+    X_obs = np.append(X_obs, next_x)
+    y_obs = np.append(y_obs, f(next_x))
+
+best_idx = np.argmin(y_obs)
+print(f"Evaluated points: {X_obs.round(3)}")
+print(f"Best observed x*: {X_obs[best_idx]:.3f} | Minimum value: {y_obs[best_idx]:.4f}")`,
+    pitfalls: [
+      r`Cubic scaling of Gaussian processes: Inverting the GP covariance matrix scales as $O(n^3)$ with the number of trials $n$. Standard GP Bayesian optimisation slows to a crawl beyond 150 to 200 trials (which is why Optuna uses TPE or Random Forests).`,
+      r`Inappropriate kernel length scales: If the GP kernel length-scale is too short, the surrogate assumes the objective is wildly jagged, treating nearby points as completely independent and collapsing into random search.`,
+      r`Cold-start vulnerability: If initial seed points all happen to fall in uninformative regions, the acquisition function can get trapped reinforcing local minima before exploring broader basins.`,
+      r`Ignoring trial execution overhead: In fast-training models (e.g. linear models or small decision trees), fitting a complex surrogate model can take longer than simply running 500 parallel random trials.`,
+    ],
+    keyPoints: [
+      r`Replaces uninformed sampling with sequential probabilistic modelling of the hyperparameter response surface.`,
+      r`Expected Improvement balances the trade-off between exploiting promising regions and exploring uncertain areas.`,
+      r`Optuna's Tree-structured Parzen Estimator (TPE) replaces Gaussian processes with non-parametric kernel density ratios, scaling to high trial counts and categorical spaces.`,
+      r`Automated pruning terminates unpromising trials midway through training epochs, saving up to 80% of total compute.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the primary role of the acquisition function in Bayesian optimisation?`,
+        o: [
+          r`To compute the gradient of the loss function with respect to model weights`,
+          r`To calculate the training accuracy of the neural network`,
+          r`To mathematically quantify the trade-off between exploiting areas of known high performance and exploring regions of high uncertainty`,
+          r`To perform Singular Value Decomposition on the feature matrix`,
+        ],
+        a: 2,
+        why: r`The acquisition function (such as Expected Improvement or Upper Confidence Bound) evaluates the surrogate model's posterior mean and uncertainty across unvisited points, guiding the search to coordinates with the highest potential return.`,
+      },
+      {
+        q: r`How does Optuna's Tree-structured Parzen Estimator (TPE) differ fundamentally from a standard Gaussian Process surrogate?`,
+        o: [
+          r`TPE models the input distribution of good trials $\ell(\theta)$ and poor trials $g(\theta)$ separately, choosing points that maximise the ratio $\ell(\theta)/g(\theta)$ without inverting covariance matrices`,
+          r`TPE only works on strictly convex linear regression problems`,
+          r`TPE requires computing the full Hessian matrix of the neural network weights`,
+          r`TPE uses exhaustive grid search across integer coordinates`,
+        ],
+        a: 0,
+        why: r`Instead of modelling $p(y \mid \theta)$ with a computationally heavy Gaussian Process ($O(n^3)$ complexity), TPE splits historical evaluations into top performers $\ell(\theta)$ and remaining performers $g(\theta)$ using a quantile cutoff $\gamma$, maximising $\ell(\theta)/g(\theta) \propto \operatorname{EI}(\theta)$.`,
+      },
+      {
+        q: r`In the Expected Improvement formula $\operatorname{EI}(\theta) = (y_{\text{best}} - \mu) \Phi(z) + \sigma \phi(z)$, what behaviour does the second term $\sigma \phi(z)$ represent?`,
+        o: [
+          r`Early stopping of divergent neural networks`,
+          r`L1 regularisation penalty`,
+          r`Exploitation of the current best observed hyperparameter`,
+          r`Exploration of regions where the surrogate model has high prediction uncertainty $\sigma$`,
+        ],
+        a: 3,
+        why: r`The term $\sigma \phi(z)$ is proportional to the posterior standard deviation $\sigma$. When evaluating an unexplored region of the search space, $\sigma$ is large, driving up Expected Improvement even if the predicted mean $\mu$ is unremarkable.`,
+      },
+      {
+        q: r`What is the purpose of Optuna's automated "pruning" mechanism (such as MedianPruner)?`,
+        o: [
+          r`To remove low-importance features from the training dataset`,
+          r`To abort unpromising training trials early if intermediate metrics fall below historical baselines, freeing compute for better candidates`,
+          r`To prune branches from decision tree models during inference`,
+          r`To zero out small neural network weights after backpropagation`,
+        ],
+        a: 1,
+        why: r`Pruning checks intermediate validation scores (e.g. after each epoch) against past completed trials. If a trial performs worse than the historical median at that epoch, Optuna halts the trial immediately, saving compute.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['hyperparameter-search-grid-random-successive-halving', 'cross-validation'],
+    related: ['hyperparameter-search-grid-random-successive-halving', 'nested-cross-validation', 'cross-validation'],
+    keywords: 'bayesian optimisation optuna gaussian process tpe expected improvement acquisition function surrogate model hyperparameter tuning',
+  },
+  {
+    id: 'learning-curves-and-diagnosing-fit',
+    short: 'Learning curves & fit',
+    title: 'Learning Curves and Diagnosing Fit',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Empirical diagnostic plotting training and validation error against sample size to distinguish high bias (underfitting) from high variance (overfitting).`,
+    lead: r`When a machine learning model underperforms, practitioners often make random architectural tweaks or reflexively gather more training data, often with zero improvement. Learning curves plot training error and validation error as a function of training dataset size $n$, offering an empirical diagnostic that exposes the true bottleneck: high bias, high variance, or data quality limits. Interpreting the gap and convergence asymptotes reveals precisely whether the solution requires more data, a more expressive model, or stronger regularisation.`,
+    intuition: [
+      r`Imagine a primary school pupil learning to read music versus a student memorising exam answers. If the pupil tries to sight-read complex Mozart symphonies using only a rudimentary knowledge of three notes, their reading error will be atrocious on day one and remain equally atrocious six months later, no matter how many sheet music books you buy them. The problem is not a shortage of books (data); the pupil's mental model is fundamentally too primitive to capture harmonic complexity (high bias / underfitting).`,
+      r`Now imagine a student cramming for a history test by memorising exact practice exam questions word for word. On the practice tests they have memorised, their score is 100% (near-zero training error). But on the final exam with slightly rephrased questions, they flounder with a 55% score (high validation error). However, if you give this student 500 diverse practice exams covering every possible variation, memorisation gradually forces them to learn the underlying historical themes, and their exam score steadily climbs toward their practice score (high variance / overfitting).`,
+      r`Learning curves plot this exact dynamic across sample sizes $n$. When $n$ is tiny, any flexible model can easily memorise the training instances (training error starts near zero), while validation error starts high. As $n$ increases, fitting every point perfectly becomes harder, so training error rises slightly while validation error falls. Where the two curves end up tells you the whole story: if both flatten early at an unacceptably high error plateau with virtually no gap, collecting more data is a total waste of money. If a large gap persists between low training error and high validation error, more data or regularisation is the exact cure.`,
+    ],
+    analogy: r`Reading the gauges on an engine diagnostics panel: knowing whether a sputtering car suffers from fuel starvation (underfitting) or spark plug misfires (overfitting) before spending thousands on the wrong replacement parts.`,
+    steps: [
+      r`Select training sample increments: define a progression of training subset sizes $n_1 < n_2 < \dots < n_m = n_{\text{total}}$ (e.g. 10%, 25%, 50%, 75%, 100%).`,
+      r`Perform cross-validation: for each sample size $n_i$, randomly sample $n_i$ instances from the training fold, fit the estimator, and record the training score and validation score across $K$ folds.`,
+      r`Compute mean and variance: calculate the mean training error $\bar{E}_{\text{train}}(n_i)$ and validation error $\bar{E}_{\text{val}}(n_i)$, along with confidence bands ($\pm 1 \text{ standard error}$).`,
+      r`Diagnose high bias: check if the validation curve plateaus at high error and the training curve converges upward to meet it with a negligible gap.`,
+      r`Diagnose high variance: check if the training error remains low while the validation error remains significantly higher, with the validation curve still descending as $n$ grows.`,
+      r`Execute corrective action: increase model capacity or reduce regularisation for high bias; add training samples, prune features, or increase regularisation for high variance.`,
+    ],
+    math: [
+      {
+        h: 'Generalisation error decomposition',
+        tex: r`$$\mathbb{E}\big[(y - \hat{f}(x))^2\big] = \operatorname{Bias}^2\big(\hat{f}(x)\big) + \operatorname{Var}\big(\hat{f}(x)\big) + \sigma_{\epsilon}^2$$`,
+        p: r`where $\sigma_{\epsilon}^2$ is the irreducible noise floor (Bayes error). The asymptotic gap between the convergence plateau of learning curves and zero reflects the sum of squared bias and irreducible noise.`,
+      },
+      {
+        h: 'High bias (underfitting) asymptotic regime',
+        tex: r`$$\lim_{n \to \infty} E_{\text{train}}(n) \approx \lim_{n \to \infty} E_{\text{val}}(n) \gg \sigma_{\epsilon}^2, \qquad \frac{\partial E_{\text{val}}}{\partial n} \approx 0$$`,
+        p: r`As sample size $n$ grows, training error increases and validation error decreases until both collide at a high error plateau. The vanishing derivative $\partial E_{\text{val}} / \partial n \approx 0$ indicates that additional training data yields zero marginal performance gain.`,
+      },
+      {
+        h: 'High variance (overfitting) asymptotic regime',
+        tex: r`$$E_{\text{val}}(n) - E_{\text{train}}(n) \gg 0, \qquad \frac{\partial E_{\text{val}}}{\partial n} < 0$$`,
+        p: r`A persistent, substantial gap separates training and validation performance. The negative derivative confirms that collecting more training observations will continue driving validation error downward toward the training error asymptote.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Non-linear ground truth: y = 0.5 * x^2 + noise
+rng = np.random.default_rng(42)
+X_all = rng.uniform(-3, 3, (300, 1))
+y_all = 0.5 * X_all[:, 0]**2 + rng.normal(0, 0.5, 300)
+
+X_test, y_test = X_all[200:], y_all[200:]
+train_sizes = [15, 30, 60, 120, 200]
+
+print("--- Linear Model (High Bias: Underfitting) ---")
+for n in train_sizes:
+    X_tr, y_tr = X_all[:n], y_all[:n]
+    A_tr = np.hstack([X_tr, np.ones((n, 1))])
+    w = np.linalg.lstsq(A_tr, y_tr, rcond=None)[0]
+    
+    tr_mse = np.mean((y_tr - A_tr @ w) ** 2)
+    A_te = np.hstack([X_test, np.ones((len(X_test), 1))])
+    te_mse = np.mean((y_test - A_te @ w) ** 2)
+    print(f"n={n:3d} | Train MSE: {tr_mse:.3f} | Val MSE: {te_mse:.3f} | Gap: {abs(te_mse - tr_mse):.3f}")`,
+    pitfalls: [
+      r`Conflating learning curves with training epoch loss curves: Loss plotted over training epochs tracks optimiser convergence (gradient descent progress), whereas learning curves plot final performance against sample size $n$ to diagnose statistical capacity.`,
+      r`Data leakage across training subsamples: When sampling subsets of size $n$, instances must be sampled strictly from the training folds; validation folds must remain constant and untouched.`,
+      r`Unstratified subsampling on imbalanced classes: Drawing small subsamples (e.g. $n=20$) from highly imbalanced datasets can omit minority classes entirely, causing massive artificial variance spikes in early curve points.`,
+      r`Misinterpreting the irreducible Bayes error floor: If both curves converge at 85% accuracy and no model can exceed 85% due to noisy labels or missing features, the model does not have high bias—it has hit the irreducible Bayes error rate.`,
+    ],
+    keyPoints: [
+      r`High bias displays high training and validation error with an early plateau and a negligible gap; adding data will not help.`,
+      r`High variance displays low training error, higher validation error, and a persistent gap that shrinks as training data increases.`,
+      r`The asymptote of the learning curve reveals whether the model is limited by statistical sample size or structural model capacity.`,
+      r`Saves immense engineering time and budget by proving whether gathering more data will improve performance before collecting it.`,
+    ],
+    quiz: [
+      {
+        q: r`If a model's learning curve shows that both training error and validation error plateau at a high error rate with a negligible gap between them, what is the correct diagnosis and remediation?`,
+        o: [
+          r`High bias (underfitting); increase model capacity, engineer non-linear features, or decrease regularisation (do not gather more data)`,
+          r`High variance (overfitting); collect more training data immediately`,
+          r`Data leakage; remove duplicate rows from the validation split`,
+          r`The model has reached 100% test accuracy`,
+        ],
+        a: 0,
+        why: r`When both training and validation errors are high and parallel with a near-zero gap, the model is underfitting (high bias). The model lacks the capacity to represent the underlying patterns, so adding more training examples will not improve performance.`,
+      },
+      {
+        q: r`What does a learning curve with very low training error and significantly higher validation error that is still trending downwards at the maximum available sample size indicate?`,
+        o: [
+          r`High bias, indicating the model should be simplified`,
+          r`The learning rate is set too high`,
+          r`The dataset contains no predictive signal`,
+          r`High variance (overfitting); gathering more training data or increasing regularisation will likely improve test performance`,
+        ],
+        a: 3,
+        why: r`A large gap between low training error and higher validation error defines high variance. If the validation error curve maintains a negative downward slope at the maximum sample size, collecting more data will continue driving test error down.`,
+      },
+      {
+        q: r`How do learning curves (performance vs dataset size $n$) differ fundamentally from loss curves in deep learning?`,
+        o: [
+          r`Learning curves can only be plotted for linear regression models`,
+          r`Loss curves track optimiser convergence over training epochs for a fixed dataset, whereas learning curves track final model performance as a function of training dataset size $n$`,
+          r`Learning curves are always strictly horizontal lines`,
+          r`Loss curves require cross-validation, while learning curves do not`,
+        ],
+        a: 1,
+        why: r`Training loss curves monitor whether gradient descent is converging across iterative epochs. Learning curves evaluate statistical generalisation by retraining models from scratch on subsets of varying sizes $n$.`,
+      },
+      {
+        q: r`Why does training error typically increase as the training sample size $n$ grows on a learning curve?`,
+        o: [
+          r`Because larger datasets automatically increase label noise`,
+          r`Because gradient descent fails on datasets with more than 100 samples`,
+          r`Because it is easy for a model to perfectly fit or memorise a small handful of points, but harder to fit a large, diverse dataset with the same parameter budget`,
+          r`Because regularisation is automatically disabled on small sample sizes`,
+        ],
+        a: 2,
+        why: r`On tiny datasets (e.g. $n=10$), an expressive model has enough degrees of freedom to interpolate every single point, yielding near-zero training error. As $n$ increases, constraints multiply and the model must compromise, pulling training error up toward the population error.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['bias-variance-tradeoff', 'cross-validation'],
+    related: ['bias-variance-tradeoff', 'cross-validation', 'nested-cross-validation'],
+    keywords: 'learning curves diagnosing fit bias variance underfitting overfitting model selection sample size validation error',
+  },
 ];
