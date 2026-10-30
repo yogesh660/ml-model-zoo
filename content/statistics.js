@@ -4934,4 +4934,1246 @@ print(f"Rate ratio exp(beta_1): {rate_ratio:.3f} (per unit increase in x)")`,
     related: ['logistic_regression', 'residual-diagnostics-and-heteroscedasticity', 'loss-functions'],
     keywords: 'glm generalised linear models poisson regression link function exponential family irls deviance overdispersion',
   },
+  {
+    id: "logistic-regression-inference-odds-ratios-wald-tests",
+    short: "Logistic Regression Inference",
+    title: "Logistic regression inference: odds ratios, Wald tests",
+    task: "concepts",
+    module: "Regression inference",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Statistical inference in logistic regression moves beyond binary classification accuracy to evaluate parameter uncertainty, hypothesis testing, and quantitative risk interpretation. Because logistic regression models the log-odds (logit) of an outcome as a linear combination of predictors \\ln(\\frac{p}{1-p}) = \\mathbf{x}^\\top \\boldsymbol{\\beta}, exponentiating coefficients yields Odds Ratios (\\text{OR} = \\exp(\\beta_j)). Hypothesis tests rely on the asymptotic normality of maximum likelihood estimators via Wald z-tests, profile likelihood confidence intervals, and likelihood-ratio deviance tests.",
+    lead: "In medical trials or credit scoring, predicting whether a patient recovers or a borrower defaults is only half the battle. Regulatory compliance and clinical decision-making demand rigorous statistical inference: Does a new drug reduce the odds of relapse by a statistically significant margin, and what is the exact 95% confidence interval on that effect size? Unlike linear regression where coefficients represent direct additive changes, logistic regression operates on the multiplicative scale of odds ratios. Understanding Wald inference, odds ratios, and deviance is essential for rigorous applied data science.",
+    intuition: [
+      "From Probabilities to Odds to Log-Odds:\n- Probability p in (0, 1) is bounded and non-linear.\n- Odds p / (1 - p) in (0, inf) measures the ratio of success probability to failure probability. An odds of 3.0 means success is 3 times more likely than failure.\n- Log-odds ln(p / (1 - p)) in (-inf, inf) maps odds onto the unbounded real line, allowing linear modelling: logit(p) = \\beta_0 + \\beta_1 x_1 + ...",
+      "Interpreting the Odds Ratio exp(\\beta_j): If feature x_j increases by 1 unit, the log-odds increases by \\beta_j. Therefore, the odds are multiplied by exp(\\beta_j)!\n- If \\beta_j = 0, exp(\\beta_j) = 1.0: feature has zero association with the outcome.\n- If \\beta_j = 0.693, exp(\\beta_j) = 2.0: each 1-unit increase doubles the odds of the outcome (100% increase in odds).\n- If \\beta_j = -0.693, exp(\\beta_j) = 0.5: each 1-unit increase cuts the odds of the outcome in half (50% reduction in odds).",
+      "Wald Inference and the Hauck-Donner Effect: The Wald test statistic z = \\hat{\\beta}_j / SE(\\hat{\\beta}_j) tests H_0: \\beta_j = 0. However, in extreme cases (e.g. near-perfect separation), the estimated standard error explodes faster than the coefficient, causing the Wald statistic to paradoxically drop toward zero! In critical applications, profile likelihood intervals and likelihood-ratio deviance tests should always be inspected."
+    ],
+    analogy: "Think of betting at a horse racing track. The track does not quote probabilities like 0.75; it quotes betting odds like 3 to 1. If a horse's jockey changes and the trainer says the new jockey improves performance with an odds ratio of 2.0, your 3-to-1 odds become 6-to-1 odds. Exponentiating logistic regression coefficients is literally finding the multiplier that scales betting odds.",
+    steps: [
+      {
+        "title": "Fit logistic regression via maximum likelihood estimation",
+        "desc": "Estimate coefficients \\hat{\\boldsymbol{\\beta}} using Iteratively Reweighted Least Squares (IRLS).",
+        "detail": "Maximise log-likelihood \\ell(\\boldsymbol{\\beta}) = \\sum [y_i \\ln p_i + (1 - y_i) \\ln(1 - p_i)]. Store final fitted probabilities \\hat{p}_i."
+      },
+      {
+        "title": "Extract covariance matrix from inverse Fisher Information",
+        "desc": "Calculate \\widehat{\\text{Cov}}(\\hat{\\boldsymbol{\\beta}}) = (\\mathbf{X}^\\top \\mathbf{W} \\mathbf{X})^{-1}, where \\mathbf{W} is the diagonal weight matrix.",
+        "detail": "Diagonal weights are w_i = \\hat{p}_i(1 - \\hat{p}_i). Standard errors are the square roots of the diagonal elements of the inverse information matrix."
+      },
+      {
+        "title": "Calculate Wald statistics and p-values",
+        "desc": "Evaluate z_j = \\hat{\\beta}_j / \\text{SE}(\\hat{\\beta}_j) against standard normal distribution.",
+        "detail": "Compute two-tailed p-values p_j = 2 * (1 - \\Phi(|z_j|)) to determine if predictors have statistically significant associations."
+      },
+      {
+        "title": "Compute Odds Ratios and exponentiated confidence intervals",
+        "desc": "Transform linear log-odds coefficients into multiplicative odds multipliers.",
+        "detail": "Evaluate \\text{OR}_j = \\exp(\\hat{\\beta}_j). Calculate 95% confidence intervals by exponentiating the linear bounds: [\\exp(\\hat{\\beta}_j - 1.96 \\cdot \\text{SE}), \\exp(\\hat{\\beta}_j + 1.96 \\cdot \\text{SE})]."
+      },
+      {
+        "title": "Assess goodness-of-fit via residual deviance",
+        "desc": "Compare model deviance against null deviance using a likelihood-ratio test.",
+        "detail": "Compute deviance D = -2 \\ell(\\hat{\\boldsymbol{\\beta}}). Calculate overall model significance \\Delta D = D_{\\text{null}} - D_{\\text{model}} \\sim \\chi^2(p) to verify joint predictive power."
+      }
+    ],
+    math: [
+      {
+        "h": "Logit Transformation and Odds Ratio Formulation",
+        "tex": "\\text{logit}(p) = \\ln\\left(\\frac{p}{1 - p}\\right) = \\beta_0 + \\sum_{j=1}^k \\beta_j x_j \\implies \\text{OR}_j = \\frac{\\text{Odds}(x_j + 1)}{\\text{Odds}(x_j)} = \\exp(\\beta_j)",
+        "p": "The logit function linearises binary probabilities. Because the link function is logarithmic in the odds ratio, adding 1 unit to predictor x_j multiplies the outcome odds by \\exp(\\beta_j), holding all other covariates constant."
+      },
+      {
+        "h": "Asymptotic Covariance and Wald z-Statistic",
+        "tex": "\\text{Cov}(\\hat{\\boldsymbol{\\beta}}) \\approx \\left( \\mathbf{X}^\\top \\mathbf{W} \\mathbf{X} \\right)^{-1}, \\quad \\mathbf{W} = \\text{diag}\\big( \\hat{p}_i (1 - \\hat{p}_i) \\big), \\qquad z_j = \\frac{\\hat{\\beta}_j}{\\text{SE}(\\hat{\\beta}_j)} \\xrightarrow{d} \\mathcal{N}(0, 1)",
+        "p": "The inverse of the negative Hessian (observed Fisher Information) yields the asymptotic covariance matrix of parameter estimates. The Wald z-statistic evaluates individual coefficient significance against standard normal critical thresholds."
+      },
+      {
+        "h": "Model Deviance and Likelihood-Ratio Goodness-of-Fit",
+        "tex": "D = -2 \\sum_{i=1}^n \\left[ y_i \\ln \\hat{p}_i + (1 - y_i) \\ln(1 - \\hat{p}_i) \\right], \\qquad G = D_{\\text{null}} - D_{\\text{model}} \\sim \\chi^2(k)",
+        "p": "Deviance measures unexplained variation analogous to residual sum of squares in OLS. The drop in deviance G between the null model (intercept only) and fitted model follows a \\chi^2 distribution with k degrees of freedom, testing overall model utility."
+      }
+    ],
+    code: "\"\"\"\nLogistic Regression Statistical Inference Engine\nDemonstrating IRLS maximum likelihood estimation, Fisher Information,\nWald z-tests, Odds Ratios, and Deviance goodness-of-fit.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\nclass LogisticRegressionInference:\n    def __init__(self, add_intercept: bool = True):\n        self.add_intercept = add_intercept\n        self.beta = None\n        self.cov_matrix = None\n        self.se = None\n\n    def fit(self, X: np.ndarray, y: np.ndarray, max_iter: int = 50, tol: float = 1e-7):\n        if self.add_intercept:\n            X = np.column_stack([np.ones(len(X)), X])\n        \n        n_samples, n_features = X.shape\n        beta = np.zeros(n_features)\n\n        # Iteratively Reweighted Least Squares (Newton-Raphson)\n        for iteration in range(max_iter):\n            p = 1.0 / (1.0 + np.exp(-np.clip(X @ beta, -30, 30)))\n            # Weight matrix W = diag(p * (1 - p))\n            w = p * (1.0 - p)\n            # Prevent zero division\n            w = np.maximum(w, 1e-12)\n            \n            # Gradient: X^T (y - p)\n            gradient = X.T @ (y - p)\n            # Hessian: -X^T W X\n            hessian = -X.T @ (w[:, np.newaxis] * X)\n            \n            # Newton-Raphson update: beta_new = beta - H^-1 * g\n            delta = np.linalg.solve(-hessian, gradient)\n            beta += delta\n            \n            if np.max(np.abs(delta)) < tol:\n                break\n\n        self.beta = beta\n        # Asymptotic covariance is inverse Fisher Information = (-H)^-1\n        self.cov_matrix = np.linalg.inv(-hessian)\n        self.se = np.sqrt(np.diagonal(self.cov_matrix))\n        self.p_fitted = 1.0 / (1.0 + np.exp(-np.clip(X @ beta, -30, 30)))\n        self.X_design = X\n        self.y = y\n\n    def summary(self, feature_names=None):\n        if feature_names is None:\n            feature_names = [f\"x{i}\" for i in range(len(self.beta))]\n            if self.add_intercept:\n                feature_names[0] = \"Intercept\"\n\n        z_scores = self.beta / self.se\n        p_values = 2.0 * (1.0 - stats.norm.cdf(np.abs(z_scores)))\n        odds_ratios = np.exp(self.beta)\n        or_ci_lower = np.exp(self.beta - 1.96 * self.se)\n        or_ci_upper = np.exp(self.beta + 1.96 * self.se)\n\n        # Deviance\n        eps = 1e-12\n        p_safe = np.clip(self.p_fitted, eps, 1 - eps)\n        model_deviance = -2.0 * np.sum(self.y * np.log(p_safe) + (1.0 - self.y) * np.log(1.0 - p_safe))\n        \n        y_mean = np.mean(self.y)\n        null_deviance = -2.0 * np.sum(self.y * np.log(y_mean) + (1.0 - self.y) * np.log(1.0 - y_mean))\n        g_stat = null_deviance - model_deviance\n        df = len(self.beta) - 1\n        p_model = 1.0 - stats.chi2.cdf(g_stat, df=df)\n\n        print(\"=== Logistic Regression Statistical Summary ===\")\n        header = f\"{'Variable':14s} | {'Coef':8s} | {'StdErr':8s} | {'z-value':8s} | {'p-value':8s} | {'OddsRatio':10s} | {'95% CI on OR':16s}\"\n        print(header)\n        print(\"-\" * len(header))\n        for j, name in enumerate(feature_names):\n            ci_str = f\"[{or_ci_lower[j]:.3f}, {or_ci_upper[j]:.3f}]\"\n            row = f\"{name:14s} | {self.beta[j]:8.4f} | {self.se[j]:8.4f} | {z_scores[j]:8.3f} | {p_values[j]:8.4f} | {odds_ratios[j]:10.4f} | {ci_str:16s}\"\n            print(row)\n\n        print(\"-\" * len(header))\n        print(f\"Null Deviance:     {null_deviance:.2f}\")\n        print(f\"Residual Deviance: {model_deviance:.2f}\")\n        print(f\"Model Chi-Square:  {g_stat:.2f} (df={df}, p-value = {p_model:.4e})\")\n\n# Demonstration on synthetic clinical trial data\n# Outcome: Disease recovery (1 = yes, 0 = no)\n# Predictor 1: Treatment dosage in mg\n# Predictor 2: Patient baseline age in years\nnp.random.seed(42)\nN = 250\ndosage = np.random.uniform(1.0, 5.0, N)\nage = np.random.normal(50.0, 10.0, N)\n\n# True model: logit = -2.0 + 0.8 * dosage - 0.04 * age\ntrue_logits = -2.0 + 0.8 * dosage - 0.04 * age\ntrue_probs = 1.0 / (1.0 + np.exp(-true_logits))\nrecovery = np.random.binomial(1, true_probs)\n\nX_data = np.column_stack([dosage, age])\nmodel = LogisticRegressionInference(add_intercept=True)\nmodel.fit(X_data, recovery)\nmodel.summary(feature_names=[\"Intercept\", \"Dosage (mg)\", \"Age (years)\"])\n",
+    keyPoints: [
+      "Logistic regression models log-odds; exponentiating coefficients yields multiplicative Odds Ratios: OR = exp(\\beta_j).",
+      "An Odds Ratio > 1 indicates increased probability of outcome per unit predictor increase; OR < 1 indicates decreased odds.",
+      "Wald z-tests test individual parameter significance using the inverse Fisher Information covariance matrix.",
+      "Deviance measures goodness-of-fit; the drop in deviance from the null model tests overall model predictive validity."
+    ],
+    pitfalls: [
+      "Interpreting Odds Ratios as relative risks: Odds Ratios only approximate Relative Risk when the baseline outcome is rare (< 5%); for common outcomes, Odds Ratios substantially exaggerate effect sizes.",
+      "The Hauck-Donner failure in Wald tests: With quasi-complete or perfect data separation, coefficients grow large while standard errors explode, causing Wald statistics to fall paradoxically to zero.",
+      "Adding Odds Ratios instead of multiplying: Odds Ratios operate on a multiplicative scale; two 1-unit increases multiply odds by OR^2, not 2*OR."
+    ],
+    quiz: [
+      {
+        "q": "In a logistic regression model, what does an estimated coefficient of beta_1 = 0.693 for a binary treatment variable imply?",
+        "o": [
+          "Treatment doubles the odds of the outcome (Odds Ratio = exp(0.693) approx 2.0)",
+          "Treatment increases the probability of the outcome by 69.3 percentage points",
+          "Treatment has zero effect on the outcome",
+          "Treatment decreases the odds by half"
+        ],
+        "a": 0,
+        "why": "Because the link function is the log-odds, exponentiating the coefficient yields the odds multiplier: exp(0.693) = 2.0, meaning the odds of the outcome double under treatment."
+      },
+      {
+        "q": "What paradoxical behaviour can occur in Wald tests when data exhibits near-perfect separation (the Hauck-Donner effect)?",
+        "o": [
+          "The estimated standard error explodes to infinity faster than the coefficient estimate, causing the Wald z-statistic to erroneously approach zero and fail to detect significance",
+          "The p-value becomes negative",
+          "The model deviance becomes infinite",
+          "The odds ratio becomes negative"
+        ],
+        "a": 0,
+        "why": "In separated data, the likelihood becomes flat asymptotically. The curvature (information) vanishes, driving standard errors to extreme values and causing Wald tests to fail. Profile likelihood or LR tests must be used instead."
+      },
+      {
+        "q": "How is overall model significance evaluated in logistic regression?",
+        "o": [
+          "By comparing the difference between Null Deviance and Residual Deviance against a Chi-Squared distribution with degrees of freedom equal to the number of predictors",
+          "By computing the R-squared value like in OLS",
+          "By calculating the mean squared error",
+          "By checking if all coefficients are positive"
+        ],
+        "a": 0,
+        "why": "The difference G = D_null - D_model is a likelihood-ratio test statistic that follows a \\chi^2 distribution with degrees of freedom equal to the number of non-intercept predictors."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "generalised-linear-models",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    related: [
+      "logistic_regression",
+      "generalised-linear-models",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "likelihood-ratio-wald-and-score-tests"
+    ],
+    keywords: "logistic regression inference odds ratios wald test deviance fisher information irls logit link hauck donner effect"
+  },
+  {
+    id: "mixed-effects-models",
+    short: "Mixed-Effects Models",
+    title: "Mixed-effects models",
+    task: "concepts",
+    module: "Regression inference",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Linear Mixed-Effects Models (LMMs / hierarchical linear models) extend classical regression to handle clustered, grouped, longitudinal, and repeated-measures data by simultaneously estimating fixed effects (population-level averages) and random effects (cluster-specific deviations drawn from a probability distribution). By pooling information across groups through empirical Bayes shrinkage (\"partial pooling\"), mixed models avoid the dual pitfalls of complete pooling (ignoring cluster structure) and no pooling (overfitting isolated groups), providing unbiased variance components and robust inference under non-independent errors.",
+    lead: "Suppose you measure patient blood pressure across 50 different hospitals. If you fit a single regression line ignoring hospitals (complete pooling), you violate the independence assumption and produce falsely confident standard errors. If you fit 50 separate regression models for each hospital (no pooling), small clinics with only 3 patients produce wild, noisy estimates. How do you share statistical strength across groups while respecting individual cluster idiosyncrasies? Mixed-effects models provide the mathematically principled answer through partial pooling and variance components.",
+    intuition: [
+      "The Three Regimes of Grouped Data:\n- Complete Pooling: Fit one global model y = X\\beta + \\epsilon. Treats all observations as independent. Violates independence, masks Simpson's paradox, and underestimates standard errors.\n- No Pooling: Fit separate isolated models or dummy indicators for every group. Small groups with few observations overfit wildly. Fails to capitalise on population commonalities.\n- Partial Pooling (Mixed Effects): Treat group differences as random draws from a latent distribution u_j ~ N(0, \\sigma_u^2). Groups with abundant data rely on their own observations; groups with sparse data shrink automatically toward the global mean!",
+      "Fixed Effects vs Random Effects:\n- Fixed Effects (\\beta): Non-random parameters representing constant population-wide relationships (e.g. the average effect of a drug dosage across all humans).\n- Random Effects (u): Random variables representing idiosyncratic cluster deviations (e.g. hospital baseline offsets or clinic-specific dosage sensitivities), governed by covariance matrix G.",
+      "Shrinkage and Empirical Bayes: The estimated random effect u_hat_j for group j shrinks toward 0 by shrinkage factor \\sigma_u^2 / (\\sigma_u^2 + \\sigma_\\epsilon^2 / n_j). When group sample size n_j is large, shrinkage is negligible; when n_j is small, shrinkage pulls the group toward the population grand mean, protecting against extreme outliers."
+    ],
+    analogy: "Imagine a school district evaluating teachers based on student test scores. Complete pooling compares raw student scores across all schools, ignoring that some schools are in wealthy suburbs and others in underfunded areas. No pooling ranks teachers strictly within their own school, making a new teacher with only 4 students either the best or worst in the district due to small-sample noise. Mixed-effects models use partial pooling: a teacher with 4 students is gently pulled toward the district average until more student scores are collected, balancing local performance with district-wide context.",
+    steps: [
+      {
+        "title": "Identify hierarchical grouping structure",
+        "desc": "Detect clustered, longitudinal, or repeated-measures dependencies in experimental observations.",
+        "detail": "Determine grouping variables (e.g. patient ID, classroom, clinic, geographical region). Confirm that errors within clusters are correlated."
+      },
+      {
+        "title": "Specify fixed and random effects design matrices",
+        "desc": "Formulate model y = X\\beta + Z u + \\epsilon with fixed matrix X and random matrix Z.",
+        "detail": "Choose random intercepts (cluster-specific baseline shifts) or random slopes (cluster-specific covariate sensitivities). Define covariance structure G = Cov(u) and R = Cov(\\epsilon)."
+      },
+      {
+        "title": "Estimate variance components via REML",
+        "desc": "Apply Restricted Maximum Likelihood to eliminate degrees-of-freedom bias in variance estimation.",
+        "detail": "Standard MLE underestimates variance components because it fails to account for degrees of freedom consumed by fixed effects. REML projects data onto the error contrast subspace to obtain unbiased variance estimates."
+      },
+      {
+        "title": "Solve Henderson's Mixed Model Equations",
+        "desc": "Simultaneously estimate fixed coefficients \\hat{\\beta} and Best Linear Unbiased Predictions (BLUPs) \\hat{u}.",
+        "detail": "Compute empirical Bayes shrinkage estimates for each group. Extract standard errors for fixed effects that properly account for clustered variance."
+      },
+      {
+        "title": "Compute Intraclass Correlation Coefficient (ICC)",
+        "desc": "Measure the proportion of total variance explained by grouping structure: ICC = \\sigma_u^2 / (\\sigma_u^2 + \\sigma_\\epsilon^2).",
+        "detail": "An ICC near 0 indicates clusters are negligible (OLS is sufficient); an ICC > 0.10 confirms strong grouping requiring mixed modelling."
+      }
+    ],
+    math: [
+      {
+        "h": "Linear Mixed Model Formulation",
+        "tex": "\\mathbf{y} = \\mathbf{X}\\boldsymbol{\\beta} + \\mathbf{Z}\\mathbf{u} + \\boldsymbol{\\epsilon}, \\quad \\mathbf{u} \\sim \\mathcal{N}(\\mathbf{0}, \\mathbf{G}), \\quad \\boldsymbol{\\epsilon} \\sim \\mathcal{N}(\\mathbf{0}, \\sigma^2 \\mathbf{I}), \\quad \\mathbf{y} \\sim \\mathcal{N}(\\mathbf{X}\\boldsymbol{\\beta}, \\; \\mathbf{V})",
+        "p": "Here \\mathbf{X}\\boldsymbol{\\beta} represents fixed effects across the population, and \\mathbf{Z}\\mathbf{u} represents group-specific random effects. The total marginal covariance matrix is \\mathbf{V} = \\mathbf{Z}\\mathbf{G}\\mathbf{Z}^\\top + \\sigma^2 \\mathbf{I}, inducing non-zero correlations among observations from the same cluster."
+      },
+      {
+        "h": "Empirical Bayes Shrinkage Factor (Random Intercept)",
+        "tex": "\\hat{u}_j = \\frac{n_j \\sigma_u^2}{\\sigma^2 + n_j \\sigma_u^2} \\left( \\bar{y}_j - \\bar{\\mathbf{x}}_j^\\top \\hat{\\boldsymbol{\\beta}} \\right) = \\lambda_j \\left( \\bar{y}_j - \\bar{\\mathbf{x}}_j^\\top \\hat{\\boldsymbol{\\beta}} \\right), \\quad \\lambda_j \\in [0, 1)",
+        "p": "The random effect prediction for group j shrinks the observed group residual toward zero by shrinkage multiplier \\lambda_j. For large sample sizes n_j, \\lambda_j \\approx 1 (no pooling); for small sample sizes n_j \\to 0, \\lambda_j \\to 0, borrowing strength from the population grand mean (complete pooling)."
+      },
+      {
+        "h": "Intraclass Correlation Coefficient (ICC)",
+        "tex": "\\text{ICC} = \\frac{\\sigma_u^2}{\\sigma_u^2 + \\sigma^2} = \\text{Corr}(y_{ij}, y_{ik}) \\quad \\text{for } j \\neq k",
+        "p": "The ICC quantifies the proportion of total variance attributable to differences between clusters. It represents the expected correlation between two randomly drawn observations from the same cluster."
+      }
+    ],
+    code: "\"\"\"\nLinear Mixed-Effects Model Simulation\nDemonstrates complete pooling vs no pooling vs partial pooling (LMM)\nand empirical Bayes shrinkage across groups of varying sample sizes.\n\"\"\"\n\nimport numpy as np\n\n# Simulate hierarchical multi-centre clinical trial\n# 8 clinics with vastly different patient counts (from 3 to 100 patients)\nnp.random.seed(42)\nnum_clinics = 8\nclinic_sizes = [3, 4, 6, 10, 20, 35, 60, 100]\n\ntrue_beta_0 = 10.0   # Population baseline score\ntrue_beta_1 = 2.5    # Population treatment effect\ntrue_sigma_u = 3.0   # Between-clinic standard deviation\ntrue_sigma_e = 2.0   # Within-clinic residual noise\n\n# Sample clinic random baseline offsets u_j ~ N(0, sigma_u^2)\nclinic_offsets = np.random.normal(0, true_sigma_u, num_clinics)\n\nrecords = []\nfor j in range(num_clinics):\n    n_j = clinic_sizes[j]\n    x_dosage = np.random.uniform(0.5, 4.0, n_j)\n    noise = np.random.normal(0, true_sigma_e, n_j)\n    y_response = (true_beta_0 + clinic_offsets[j]) + true_beta_1 * x_dosage + noise\n    for i in range(n_j):\n        records.append({\n            \"clinic\": j,\n            \"x\": x_dosage[i],\n            \"y\": y_response[i]\n        })\n\nprint(f\"=== Hierarchical Dataset: {len(records)} patients across {num_clinics} clinics ===\")\nprint(\"Clinic sizes:\", clinic_sizes)\nprint(f\"True Population Intercept: {true_beta_0:.2f} | True Between-Clinic Std: {true_sigma_u:.2f}\\n\")\n\n# Calculate group sample means and residuals\nclinic_means = []\nfor j in range(num_clinics):\n    y_j = [r[\"y\"] for r in records if r[\"clinic\"] == j]\n    clinic_means.append(np.mean(y_j))\n\ngrand_mean = np.mean([r[\"y\"] for r in records])\n\n# Partial Pooling (Empirical Bayes Shrinkage calculation)\n# Shrinkage weight lambda_j = n_j * sigma_u^2 / (sigma_e^2 + n_j * sigma_u^2)\nvar_u = true_sigma_u ** 2\nvar_e = true_sigma_e ** 2\n\nprint(\"=== Comparison: No Pooling vs Partial Pooling (Shrinkage) ===\")\nprint(f\"{'Clinic':7s} | {'Size':5s} | {'Raw Mean':10s} | {'Shrinkage lambda':18s} | {'Partial Pooled':15s} | {'Offset from Grand':18s}\")\nprint(\"-\" * 82)\n\nfor j in range(num_clinics):\n    n_j = clinic_sizes[j]\n    raw_mean = clinic_means[j]\n    lambda_j = (n_j * var_u) / (var_e + n_j * var_u)\n    # Shrunk estimate: grand_mean + lambda_j * (raw_mean - grand_mean)\n    partial_pooled = grand_mean + lambda_j * (raw_mean - grand_mean)\n    \n    print(f\"Clinic {j:1d} | {n_j:5d} | {raw_mean:10.2f} | {lambda_j:18.3f} | {partial_pooled:15.2f} | {(partial_pooled - grand_mean):18.2f}\")\n\nicc = var_u / (var_u + var_e)\nprint(\"-\" * 82)\nprint(f\"Grand Mean: {grand_mean:.2f}\")\nprint(f\"True Intraclass Correlation Coefficient (ICC): {icc:.3f}\")\nprint(\"Notice: Small clinics (n=3, 4) experience heavy shrinkage toward the grand mean (lambda ~ 0.85),\")\nprint(\"while large clinics (n=100) retain their observed data with virtually zero shrinkage (lambda ~ 0.99).\")\n",
+    keyPoints: [
+      "Linear Mixed-Effects Models combine fixed effects (population averages) and random effects (cluster deviations).",
+      "Partial pooling via empirical Bayes shrinkage borrows statistical strength across groups, protecting small clusters from noisy overfitting.",
+      "Restricted Maximum Likelihood (REML) provides unbiased variance component estimation by accounting for fixed effect degrees of freedom.",
+      "The Intraclass Correlation Coefficient (ICC) measures the proportion of variance attributable to grouping structure."
+    ],
+    pitfalls: [
+      "Treating cluster variables as fixed effect dummies when predicting on new clusters: Fixed effect models cannot generalise to unseen clusters; random effects models quantify the population distribution of cluster effects.",
+      "Using standard Maximum Likelihood instead of REML for small sample sizes: ML variance estimates have downward bias of order O(p/n).",
+      "Ignoring random slopes: If treatment effects vary systematically across clusters, fitting only random intercepts yields overconfident standard errors for treatment."
+    ],
+    quiz: [
+      {
+        "q": "Why does partial pooling in mixed-effects models outperform 'no pooling' (separate models per group) on small clusters?",
+        "o": [
+          "Because empirical Bayes shrinkage pulls noisy small-sample estimates toward the population grand mean, borrowing statistical strength from the rest of the dataset",
+          "Because partial pooling deletes small groups entirely",
+          "Because mixed models do not allow regression slopes",
+          "Because no pooling requires GPU supercomputers"
+        ],
+        "a": 0,
+        "why": "No pooling overfits small groups due to high sampling variance. Partial pooling shrinks small groups toward the population mean while allowing large groups to remain close to their sample means."
+      },
+      {
+        "q": "What does the Intraclass Correlation Coefficient (ICC) represent?",
+        "o": [
+          "The proportion of total variance explained by grouping structure, or the expected correlation between two observations from the same cluster",
+          "The Pearson correlation between x and y",
+          "The p-value of the fixed effect slopes",
+          "The R-squared value of the residuals"
+        ],
+        "a": 0,
+        "why": "ICC = \\sigma_u^2 / (\\sigma_u^2 + \\sigma^2). It measures how much variance is between clusters versus within clusters, defining intra-cluster correlation."
+      },
+      {
+        "q": "Why is Restricted Maximum Likelihood (REML) preferred over standard Maximum Likelihood (ML) for estimating variance components?",
+        "o": [
+          "Because REML accounts for the degrees of freedom consumed by fixed effect parameters, eliminating the downward bias inherent in standard ML variance estimates",
+          "Because REML runs faster than standard matrix multiplication",
+          "Because REML forces random effects to equal zero",
+          "Because ML cannot invert positive-definite matrices"
+        ],
+        "a": 0,
+        "why": "Just as Bessel's correction divides by n-1 instead of n in sample variance, REML adjusts for estimated fixed effects \\hat{\\boldsymbol{\\beta}}, yielding strictly unbiased variance component estimates."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "generalised-linear-models"
+    ],
+    related: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "residual-diagnostics-and-heteroscedasticity",
+      "anova-and-post-hoc-tests",
+      "bayesian_linear_regression"
+    ],
+    keywords: "mixed effects models hierarchical linear models lmm reml partial pooling empirical bayes shrinkage blup random intercepts icc"
+  },
+  {
+    id: 'a-b-testing-end-to-end',
+    short: 'A/B Testing End-to-End',
+    title: r`A/B Testing End-to-End`,
+    task: 'concepts',
+    module: 'Experiments and causality',
+    level: 1,
+    minutes: 18,
+    noLab: true,
+    summary: r`Design, run and analyse randomised controlled online experiments from sample sizing to hypothesis testing and guardrail metrics.`,
+    lead: r`Online controlled experiments, or A/B tests, represent the gold standard of causal inference in modern software and product engineering. By randomly allocating users between a control variant and an experimental treatment, A/B tests guarantee that observed differences are caused by the feature change rather than confounding factors. Designing an end-to-end test requires disciplined sample sizing, Sample Ratio Mismatch (SRM) validation, statistical testing, and tracking guardrail metrics.`,
+    intuition: [
+      r`Imagine an e-commerce company testing a "Buy with 1-Click" button against the standard 3-step checkout. Over two weeks, 40,000 users are randomly assigned: 20,000 to Control (A) and 20,000 to Treatment (B). In Control, 1,600 users purchase (8.0% conversion). In Treatment, 1,760 users purchase (8.8% conversion)—an apparent absolute uplift of 0.8 percentage points (a 10% relative increase).`,
+      r`How does the team verify this win? First, they audit experiment integrity using a Sample Ratio Mismatch (SRM) test. If the randomisation server delivered 19,200 Control users and 20,800 Treatment users, a chi-square goodness-of-fit test against the expected 50/50 split yields $p < 0.0001$. This indicates that the experiment is fundamentally broken—perhaps buggy JavaScript crashed older browsers in Treatment, silently dropping users and invalidating the sample.`,
+      r`When the allocation passes the SRM test ($p = 1.000$), the team runs a two-proportion $z$-test: the 0.8 percentage point lift with standard error $0.00277$ gives $z = 2.884$ and $p = 0.0039$. Because $p < 0.05$, the lift is statistically significant, with a 95% confidence interval spanning $[0.26\%, 1.34\%]$. Finally, they inspect guardrail metrics: did 1-Click checkout cause a surge in accidental orders and customer support refunds? Only when guardrails remain healthy is the winning variant safely rolled out.`,
+    ],
+    analogy: r`An A/B test is like a randomised medical clinical trial: patients receive either a placebo or the active drug under identical conditions so that health improvements can be attributed solely to the molecule, not to weather, diet, or doctor optimism.`,
+    steps: [
+      r`Formulate a falsifiable causal hypothesis and define the primary evaluation metric and secondary guardrail metrics.`,
+      r`Choose the unit of randomisation (e.g. user ID, cookie, device ID) to prevent cross-contamination across sessions.`,
+      r`Determine the required sample size based on baseline conversion, Minimum Detectable Effect (MDE), significance level $\alpha = 0.05$, and power $1 - \beta = 0.80$.`,
+      r`Run an initial Sample Ratio Mismatch (SRM) chi-square test to verify that traffic allocation matches the design split.`,
+      r`Collect data for a pre-determined duration that encompasses full weekly cycles (minimum 1 to 2 weeks) without early peeking.`,
+      r`Compute the test statistic, confidence interval for the treatment effect, and p-value; check guardrail metrics before rolling out.`,
+    ],
+    math: [
+      {
+        h: 'Two-Sample Proportion Test Statistic',
+        tex: r`$$z = \frac{\hat{p}_B - \hat{p}_A}{\sqrt{\hat{p}_{\text{pool}}(1 - \hat{p}_{\text{pool}})\left(\frac{1}{n_A} + \frac{1}{n_B}\right)}}, \qquad \hat{p}_{\text{pool}} = \frac{x_A + x_B}{n_A + n_B}$$`,
+        p: r`Here $x_A, x_B$ are conversion counts, $n_A, n_B$ are sample sizes, and $\hat{p}_{\text{pool}}$ is the pooled proportion. Under the null hypothesis $H_0: p_A = p_B$, the test statistic $z$ asymptotically follows the standard normal distribution $\mathcal{N}(0, 1)$.`,
+      },
+      {
+        h: 'Sample Ratio Mismatch (SRM) Test',
+        tex: r`$$\chi_{\text{SRM}}^2 = \sum_{v \in \{A, B\}} \frac{(n_v - E_v)^2}{E_v} \sim \chi^2(1), \qquad E_A = E_B = \frac{n_A + n_B}{2}$$`,
+        p: r`The SRM test checks whether observed traffic counts conform to the planned 50/50 allocation ratio. A significant discrepancy ($p < 0.001$) signals severe tracking bugs, redirect delays, or platform-specific crashes that invalidate all downstream statistical inference.`,
+      },
+      {
+        h: 'Sample Size Determination Formula',
+        tex: r`$$n = \frac{2\left(z_{1 - \alpha/2} + z_{1 - \beta}\right)^2 p(1 - p)}{\delta^2}$$`,
+        p: r`Here $p$ is the baseline conversion probability and $\delta = |p_B - p_A|$ is the Minimum Detectable Effect. Sizing experiments to achieve 80% power at $\alpha = 0.05$ requires fixing $n$ in advance to avoid underpowered experiments and inflated false discovery rates.`,
+      },
+    ],
+    keyPoints: [
+      r`A/B testing isolates causality by ensuring treatment and control cohorts differ exclusively by the experimental intervention.`,
+      r`The Sample Ratio Mismatch (SRM) test is a mandatory hygiene check: an SRM failure invalidates all downstream metrics regardless of p-values.`,
+      r`Experiments must run across complete business cycles (typically 7 or 14 full days) to account for weekday versus weekend behavioural shifts.`,
+      r`Guardrail metrics ensure that optimising the primary metric does not silently degrade user experience, system stability, or long-term retention.`,
+    ],
+    pitfalls: [
+      r`Peeking at p-values daily and stopping the test early as soon as significance is reached, multiplying the true false positive rate.`,
+      r`Ignoring Sample Ratio Mismatches (SRMs), treating severe traffic drop-offs as legitimate experimental outcomes.`,
+      r`Seasonality and novelty effects: enthusiastic initial adoption of a new UI that fades after novelty wears off.`,
+      r`Twyman's law: "Any figure that looks interesting or different is usually wrong"—unexpectedly massive uplifts almost always reflect instrumentation bugs.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# A/B test results: 20,000 visitors per variant
+n_a, n_b = 20000, 20000
+x_a, x_b = 1600, 1760  # Conversions
+p_a, p_b = x_a / n_a, x_b / n_b
+
+# 1. Sample Ratio Mismatch (SRM) check (expected 50/50 split)
+chi2_srm, p_srm = stats.chisquare([n_a, n_b], [20000, 20000])
+
+# 2. Two-proportion z-test
+p_pool = (x_a + x_b) / (n_a + n_b)
+se_diff = np.sqrt(p_pool * (1.0 - p_pool) * (1.0 / n_a + 1.0 / n_b))
+z_stat = (p_b - p_a) / se_diff
+p_val = 2.0 * (1.0 - stats.norm.cdf(abs(z_stat)))
+
+lift = p_b - p_a
+ci_low = lift - 1.96 * se_diff
+ci_high = lift + 1.96 * se_diff
+
+print(f"SRM check p-value: {p_srm:.4f} (Valid allocation)")
+print(f"Control conversion:   {p_a:.1%}")
+print(f"Treatment conversion: {p_b:.1%} (Lift: {lift:+.2%})")
+print(f"z-statistic: {z_stat:.3f}, p-value: {p_val:.4f}")
+print(f"95% Confidence Interval: [{ci_low:.4f}, {ci_high:.4f}]")`,
+    quiz: [
+      {
+        q: r`Why does daily "peeking" at accumulated A/B test results and stopping early as soon as $p < 0.05$ invalidate the experiment?`,
+        o: [
+          r`Because sample sizes must always be odd numbers`,
+          r`Because repeated testing across accumulating data inflates the true Type I error rate far above the nominal 5% level`,
+          r`Because early stopping decreases statistical power`,
+          r`Because conversion rates cannot be calculated before 30 days`,
+        ],
+        a: 1,
+        why: r`Continuous monitoring gives random sampling noise multiple opportunities to cross the significance boundary, drastically inflating false discovery rates.`,
+      },
+      {
+        q: r`What does a statistically significant result ($p < 0.0001$) in a Sample Ratio Mismatch (SRM) test indicate?`,
+        o: [
+          r`The treatment variant won with overwhelming confidence`,
+          r`The experiment has severe tracking or allocation flaws (such as browser crashes or redirect drops), invalidating all causal claims`,
+          r`The sample size was too small`,
+          r`The primary conversion metric should be adjusted`,
+        ],
+        a: 1,
+        why: r`An SRM failure indicates that users were systematically dropped or misallocated between variants, violating the fundamental assumption of unbiased random assignment.`,
+      },
+      {
+        q: r`Why must A/B tests typically run for a minimum duration of 7 or 14 full consecutive days?`,
+        o: [
+          r`To capture day-of-week seasonality and cyclical user behavioural differences`,
+          r`Because standard normal distributions require 7 degrees of freedom`,
+          r`To allow database indexes to rebuild`,
+          r`Because p-values cannot be computed on weekends`,
+        ],
+        a: 0,
+        why: r`User behaviour varies systematically across weekdays and weekends; running experiments in full 7-day multiples balances day-of-week cyclicality.`,
+      },
+      {
+        q: r`What is the primary role of "guardrail metrics" in online controlled experiments?`,
+        o: [
+          r`To replace the primary evaluation metric`,
+          r`To ensure that optimising the primary metric does not cause unintended harm to system performance, latency, or customer satisfaction`,
+          r`To guarantee that $R^2$ remains positive`,
+          r`To compute statistical power`,
+        ],
+        a: 1,
+        why: r`Guardrail metrics monitor critical operational and business vitals (e.g. page load latency, crash rates, refund requests) to prevent destructive wins.`,
+      },
+    ],
+    usedBy: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'confidence-intervals'],
+    related: ['simpsons-paradox-and-confounding', 'z-test-and-t-tests', 'chi-square-tests'],
+    keywords: 'a-b testing online experiments randomized controlled trial srm sample ratio mismatch guardrail metrics conversion lift mde',
+  },
+  {
+    id: 'simpsons-paradox-and-confounding',
+    short: 'Simpson\'s Paradox & Confounding',
+    title: r`Simpson's Paradox and Confounding`,
+    task: 'concepts',
+    module: 'Experiments and causality',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Discover how hidden confounding variables can reverse statistical conclusions between aggregated data and subgroup strata.`,
+    lead: r`When analysing aggregated datasets, a statistical trend observed in the population can completely reverse direction when the data is partitioned into subgroups. This statistical phenomenon—Simpson's paradox—occurs when an unobserved or uncontrolled confounding variable distorts the marginal relationship between treatment and outcome. Understanding confounding and applying stratified analysis or causal adjustment prevents disastrously mistaken policy and business decisions.`,
+    intuition: [
+      r`Consider a clinical trial evaluating two treatments for kidney stones: Treatment A (an invasive open surgical procedure) and Treatment B (a non-invasive ultrasound procedure). Looking at the overall aggregate data across 700 patients, Treatment A succeeds in 273 out of 350 patients (78.0%), while Treatment B succeeds in 289 out of 350 patients (82.6%). A health authority inspecting only this aggregate summary would recommend Treatment B, which appears to boast a 4.6 percentage point advantage.`,
+      r`Now partition the data by stone severity (the confounding variable): for small stones, Treatment A succeeds in 81/87 (93.1%), while Treatment B succeeds in 234/270 (86.7%)—Treatment A wins by 6.4 percentage points! For large stones, Treatment A succeeds in 192/263 (73.0%), while Treatment B succeeds in 55/80 (68.8%)—Treatment A wins again by 4.3 percentage points!`,
+      r`Treatment A is medically superior for small stones AND superior for large stones. Yet when pooled together, Treatment A looks worse! Why does this happen? Stone severity acts as a confounder: severe cases have lower survival rates overall, and doctors disproportionately assigned severe patients to invasive Treatment A (263 vs 80). Treatment B received a flood of easy, mild cases (270 vs 87). Aggregation conflates treatment efficacy with patient sickness, producing an illusory reversal. Standardised adjustment reweighting by marginal stone size restores the true positive treatment effect of +5.4%.`,
+    ],
+    analogy: r`Simpson's paradox is like comparing two basketball players' overall shooting percentages when one player shoots mostly easy layups and the other takes contested three-pointers: the second player can have a higher percentage from both ranges yet have a lower overall score.`,
+    steps: [
+      r`Identify the treatment variable $X$, the outcome variable $Y$, and potential confounding covariates $Z$.`,
+      r`Inspect the data at both the aggregated level and within stratified subgroups of $Z$.`,
+      r`Test whether the confounder $Z$ is associated with both the treatment allocation $X$ and the outcome $Y$.`,
+      r`Draw a causal directed acyclic graph (DAG) to determine if $Z$ is a true confounder ($X \leftarrow Z \rightarrow Y$) rather than a mediator ($X \rightarrow Z \rightarrow Y$).`,
+      r`Compute stratum-specific effect sizes and combine them using weighted stratification or standardised adjustment.`,
+      r`Interpret the adjusted causal effect rather than the misleading aggregated marginal association.`,
+    ],
+    math: [
+      {
+        h: 'Mathematical Formulation of Simpson\'s Reversal',
+        tex: r`$$P(Y \mid X) < P(Y \mid \neg X) \quad \text{while} \quad P(Y \mid X, Z_k) > P(Y \mid \neg X, Z_k) \quad \forall k$$`,
+        p: r`By the law of total probability, marginal probability is a weighted sum over subgroups: $P(Y \mid X) = \sum_k P(Y \mid X, Z_k) P(Z_k \mid X)$. When treatment assignment strongly correlates with the confounder $Z$, the subgroup weights $P(Z_k \mid X)$ differ dramatically, allowing the aggregate marginal comparison to reverse sign relative to every subgroup.`,
+      },
+      {
+        h: 'Confounder Structure (Causal DAG)',
+        tex: r`$$X \longleftarrow Z \longrightarrow Y$$`,
+        p: r`A confounder $Z$ is a common cause that affects both treatment assignment $X$ and outcome $Y$. Failing to condition on $Z$ leaves an open backdoor path $X \leftarrow Z \rightarrow Y$, confounding the true causal effect of $X$ on $Y$ with non-causal association.`,
+      },
+      {
+        h: 'Standardised Causal Risk Difference',
+        tex: r`$$\Delta_{\text{adj}} = \sum_{k=1}^K \left[P(Y=1 \mid X=1, Z=k) - P(Y=1 \mid X=0, Z=k)\right] P(Z=k)$$`,
+        p: r`Standardised adjustment eliminates confounding bias by re-weighting stratum-specific treatment differences by the marginal population distribution $P(Z=k)$ rather than the biased treatment-dependent weights $P(Z \mid X)$.`,
+      },
+    ],
+    keyPoints: [
+      r`Simpson's paradox occurs when an uncontrolled confounding variable is associated with both the treatment and the outcome.`,
+      r`A treatment can be superior in every single subgroup yet appear inferior in aggregate data due to imbalanced allocation.`,
+      r`True confounders must be controlled for; however, conditioning on a mediator ($X \rightarrow M \rightarrow Y$) or a collider ($X \rightarrow C \leftarrow Y$) introduces severe bias.`,
+      r`Randomised controlled trials (A/B tests) prevent Simpson's paradox by forcing treatment allocation to be statistically independent of all baseline covariates.`,
+    ],
+    pitfalls: [
+      r`Blindly trusting aggregate conversion rates or medical trial results without checking for subgroup imbalances.`,
+      r`Controlling for variables that are consequences of the treatment (mediators), which blocks the true causal mechanism.`,
+      r`Conditioning on colliders (common effects of treatment and outcome), which artificially manufactures non-existent correlations.`,
+      r`Believing that collecting more observational data resolves Simpson's paradox; more unadjusted data simply estimates the biased number with higher precision.`,
+    ],
+    code: r`import numpy as np
+
+# Kidney stone treatment data: [Successes, Total]
+# Small stones: Treatment A vs B
+a_small, a_small_tot = 81, 87      # 93.1%
+b_small, b_small_tot = 234, 270    # 86.7%
+
+# Large stones: Treatment A vs B
+a_large, a_large_tot = 192, 263    # 73.0%
+b_large, b_large_tot = 55, 80      # 68.8%
+
+# Aggregated data
+rate_a_agg = (a_small + a_large) / (a_small_tot + a_large_tot)
+rate_b_agg = (b_small + b_large) / (b_small_tot + b_large_tot)
+
+# Stratified differences within each stone size
+diff_small = (a_small / a_small_tot) - (b_small / b_small_tot)
+diff_large = (a_large / a_large_tot) - (b_large / b_large_tot)
+
+# Standardised causal risk difference (reweighting by population stone distribution)
+tot_small = a_small_tot + b_small_tot
+tot_large = a_large_tot + b_large_tot
+w_small = tot_small / (tot_small + tot_large)
+w_large = tot_large / (tot_small + tot_large)
+adj_causal_diff = w_small * diff_small + w_large * diff_large
+
+print(f"Aggregate Success:  Treatment A={rate_a_agg:.1%}, B={rate_b_agg:.1%} (B appears +{rate_b_agg - rate_a_agg:.1%} better)")
+print(f"Small Stones:       Treatment A={a_small/a_small_tot:.1%}, B={b_small/b_small_tot:.1%} (A is {diff_small:+.1%} better)")
+print(f"Large Stones:       Treatment A={a_large/a_large_tot:.1%}, B={b_large/b_large_tot:.1%} (A is {diff_large:+.1%} better)")
+print(f"Adjusted Causal Difference: {adj_causal_diff:+.1%} (Treatment A is truly superior)")`,
+    quiz: [
+      {
+        q: r`What causes Simpson's paradox to occur in observational data?`,
+        o: [
+          r`Measurement rounding errors in digital databases`,
+          r`A confounding variable that is correlated with both the treatment assignment and the outcome variable`,
+          r`Small sample sizes that violate the central limit theorem`,
+          r`Negative variances in the calculation`,
+        ],
+        a: 1,
+        why: r`When an uncontrolled confounder influences both treatment allocation and the outcome, the marginal aggregated average is weighted unevenly, reversing the true subgroup direction.`,
+      },
+      {
+        q: r`In the classic kidney stone example, why did Treatment B appear superior in the aggregate data despite being inferior in both stone subgroups?`,
+        o: [
+          r`Treatment B was given predominantly to patients with small stones (easy cases), inflating its overall success rate`,
+          r`Treatment A was administered incorrectly`,
+          r`The study had a Sample Ratio Mismatch`,
+          r`The p-value was greater than 0.50`,
+        ],
+        a: 0,
+        why: r`Doctors disproportionately assigned mild cases to Treatment B and severe cases to Treatment A, confounding treatment efficacy with baseline patient sickness.`,
+      },
+      {
+        q: r`Why does running a properly randomised A/B test prevent Simpson's paradox from occurring?`,
+        o: [
+          r`Because randomisation forces sample sizes to be greater than 1,000`,
+          r`Because random assignment ensures that all baseline confounding variables are balanced across treatment and control groups ($P(Z \mid X) = P(Z \mid \neg X)$)`,
+          r`Because randomisation eliminates random noise`,
+          r`Because it automatically stratifies data into deciles`,
+        ],
+        a: 1,
+        why: r`Random assignment breaks the link between confounders and treatment ($X \leftarrow Z$), ensuring both groups have identical distributions of all baseline characteristics.`,
+      },
+      {
+        q: r`In a causal DAG, what type of variable is positioned on the causal chain between treatment and outcome ($X \rightarrow M \rightarrow Y$)?`,
+        o: [
+          r`A confounder`,
+          r`A mediator`,
+          r`A collider`,
+          r`An instrument`,
+        ],
+        a: 1,
+        why: r`A mediator lies on the causal path from treatment to outcome. Controlling for a mediator blocks the causal effect rather than removing confounding.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'decision_tree_classifier'],
+    prereq: ['probability-rules-and-bayes-theorem', 'a-b-testing-end-to-end', 'correlation-pearson-spearman-kendall'],
+    related: ['a-b-testing-end-to-end', 'logistic_regression', 'feature-selection'],
+    keywords: 'simpsons paradox confounding causal inference backdoor path dag stratification observational data treatment effect',
+  },
+  {
+    id: "sequential-testing-and-the-peeking-problem",
+    short: "Sequential Testing & Peeking",
+    title: "Sequential testing and the peeking problem",
+    task: "concepts",
+    module: "Experiments and causality`",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Continuous monitoring (\"peeking\") at incoming experimental data in classical fixed-horizon A/B testing inflates False Positive Rates (Type I error) from a nominal 5% to over 30–40%. Because the test statistic performs a random walk across time, repeatedly evaluating whether p < 0.05 creates multiple testing across time, virtually guaranteeing that chance fluctuations will trigger a false rejection. Sequential testing frameworks—including Group Sequential Designs (O'Brien-Fleming alpha spending), Wald's Sequential Probability Ratio Test (SPRT), and Always-Valid p-values via martingales (mSPRT)—allow continuous experiment evaluation and early stopping while strictly controlling overall Type I error.",
+    lead: "In digital product experimentation, product managers cannot resist checking experiment dashboards every morning. If the dashboard flashes \"Statistically Significant (p < 0.05)\" on Day 3, the temptation to declare victory and stop the experiment immediately is overwhelming. What happens if you stop an A/B test early the moment p < 0.05? You have committed the \"peeking problem\", drastically corrupting your statistical guarantees. How can data teams safely monitor live experiments and stop early for massive wins without destroying statistical validity?",
+    intuition: [
+      "The Random Walk of the p-Value: Under the null hypothesis (two identical variants), the difference in sample means is a stochastic Wiener process (Brownian motion). Even though the true effect is zero, random noise causes the difference to occasionally spike into the \"rejection zone\" before reverting to zero. If you only look once at sample size N, the chance of being in the rejection zone is 5%. But if you look every single day, you are giving random noise 30 chances to breach the threshold! Over a 30-day experiment, the true false alarm rate exceeds 35%.",
+      "Alpha Spending Functions: You have a total budget of \\alpha = 0.05 to spend across the lifetime of the experiment. If you want to peek at multiple interim milestones, you must \"spend\" a tiny fraction of alpha early on and reserve the bulk for the end. The O'Brien-Fleming boundary sets extremely conservative early thresholds (e.g. requiring z > 4.5, p < 0.0001 on Day 1), ensuring that only colossal effects stop the test prematurely.",
+      "Always-Valid p-Values and Martingales (mSPRT): Developed by Robbins and modernised by tech platforms (Netflix, experimentation platforms), mixture Sequential Probability Ratio Tests (mSPRT) construct test statistics that are mathematical martingales. By applying Ville's inequality, an always-valid p-value can be checked continuously after every single user with an ironclad mathematical guarantee: P(exists t : p_t <= \\alpha) <= \\alpha."
+    ],
+    analogy: "Imagine flipping a fair coin 10,000 times. By the law of large numbers, the percentage of heads will be close to 50% at the end. However, early on (e.g. at flip 5), you might see 4 heads and 1 tail (80% heads). If you allow yourself to stop the game whenever heads leads by 3 flips and declare \"the coin is biased toward heads!\", you will always find a moment to stop and \"prove\" the coin is biased. Fixed-horizon testing requires waiting until all 10,000 flips conclude. Sequential testing allows stopping early only if the coin produces a run of heads so astronomical that no fair coin could ever produce it.",
+    steps: [
+      {
+        "title": "Define monitoring cadence and sample budget",
+        "desc": "Specify maximum sample size N_max and planned interim inspection milestones.",
+        "detail": "Determine whether evaluation occurs at discrete batches (Group Sequential) or continuously after every observation (mSPRT)."
+      },
+      {
+        "title": "Select sequential stopping boundary",
+        "desc": "Choose an alpha spending function (e.g. O'Brien-Fleming or Pocock).",
+        "detail": "O'Brien-Fleming boundaries start extremely strict and converge to nominal alpha at 100% information, preserving end-of-test power. Pocock boundaries distribute alpha evenly across all looks."
+      },
+      {
+        "title": "Calculate dynamic critical thresholds",
+        "desc": "Compute adjusted critical values c(t) as a function of information fraction t = n / N_max.",
+        "detail": "At look k with fraction t_k, evaluate threshold c(t_k). In O'Brien-Fleming, c(t) = z_{\\alpha/2} / \\sqrt{t}."
+      },
+      {
+        "title": "Evaluate test statistic at interim milestones",
+        "desc": "Check whether current test statistic exceeds the adjusted critical threshold.",
+        "detail": "If |z_k| >= c(t_k), terminate early for efficacy (variant wins). If futility boundary is crossed, terminate early for lack of effect. If within continuation region, collect next batch."
+      },
+      {
+        "title": "Compute always-valid p-values for continuous streaming",
+        "desc": "Apply martingale-based mSPRT to enable anytime evaluation without look schedules.",
+        "detail": "Track likelihood ratio martingale \\Lambda_n. Reject null whenever \\Lambda_n >= 1/\\alpha."
+      }
+    ],
+    math: [
+      {
+        "h": "Type I Error Rate Inflation Under Repeated Peeking",
+        "tex": "\\alpha_{\\text{inflated}} = P_{H_0}\\left( \\bigcup_{k=1}^K \\big\\{ |Z_k| \\ge z_{\\alpha/2} \\big\\} \\right) \\approx 1 - (1 - \\alpha)^K \\quad \\text{(upper bound)}, \\qquad \\lim_{K \\to \\infty} \\alpha_{\\text{inflated}} = 1.0",
+        "p": "Because the sequence of test statistics Z_1, Z_2, \\dots, Z_K forms a correlated stochastic process, repeated evaluations against an unadjusted threshold cause Type I error to inflate rapidly with the number of looks K."
+      },
+      {
+        "h": "O'Brien-Fleming Alpha Spending Boundary",
+        "tex": "c(t) = \\frac{z_{\\alpha/2}}{\\sqrt{t}}, \\qquad \\alpha^*(t) = 2 \\left( 1 - \\Phi\\left(\\frac{z_{\\alpha/2}}{\\sqrt{t}}\\right) \\right), \\quad t = \\frac{n}{N_{\\max}} \\in (0, 1]",
+        "p": "The O'Brien-Fleming boundary scales inversely with the square root of the information fraction t. Early in the experiment (small t), the required critical z-score is very high, guarding against premature false rejections while spending minimal alpha."
+      },
+      {
+        "h": "Mixture Sequential Probability Ratio Test (mSPRT)",
+        "tex": "\\Lambda_n = \\int_{-\\infty}^\\infty \\prod_{i=1}^n \\frac{f(x_i; \\theta)}{f(x_i; 0)} \\, dH(\\theta), \\qquad P_{H_0}\\left( \\exists n \\ge 1 : \\Lambda_n \\ge \\frac{1}{\\alpha} \\right) \\le \\alpha",
+        "p": "By mixing likelihood ratios over a prior distribution H(\\theta) (typically Gaussian), \\Lambda_n is a non-negative martingale under H_0 with expectation 1. Ville's inequality guarantees that the probability of ever exceeding 1/\\alpha at ANY stopping time is bounded by \\alpha."
+      }
+    ],
+    code: "\"\"\"\nThe Peeking Problem in A/B Testing vs O'Brien-Fleming Sequential Testing\nDemonstrates false positive rate inflation under naive monitoring\nand how sequential boundaries restore nominal alpha = 0.05.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\nnp.random.seed(42)\nnum_simulations = 2000\nsample_size_max = 500\nnum_looks = 10  # Peek every 50 observations\nlook_points = np.linspace(50, sample_size_max, num_looks, dtype=int)\n\n# Simulate A/A tests (True effect = 0.0, both groups N(0, 1))\nnaive_false_positives = 0\nfixed_horizon_false_positives = 0\nobrien_fleming_false_positives = 0\n\nz_alpha_fixed = stats.norm.ppf(0.975)  # 1.96\n\nfor _ in range(num_simulations):\n    # Generate A and B observations\n    a = np.random.normal(0, 1, sample_size_max)\n    b = np.random.normal(0, 1, sample_size_max)\n    \n    # 1. Fixed Horizon Test (Only evaluate at the very end n = sample_size_max)\n    z_final = (np.mean(b) - np.mean(a)) / np.sqrt(2.0 / sample_size_max)\n    if abs(z_final) >= z_alpha_fixed:\n        fixed_horizon_false_positives += 1\n        \n    # 2. Naive Peeking (Check at every look using unadjusted z >= 1.96)\n    naive_stopped = False\n    of_stopped = False\n    \n    for look_idx, n in enumerate(look_points):\n        # Current z-statistic\n        sub_a = a[:n]\n        sub_b = b[:n]\n        z_k = (np.mean(sub_b) - np.mean(sub_a)) / np.sqrt(2.0 / n)\n        \n        # Check Naive Threshold\n        if not naive_stopped and abs(z_k) >= z_alpha_fixed:\n            naive_false_positives += 1\n            naive_stopped = True\n            \n        # Check O'Brien-Fleming Threshold\n        # t = information fraction n / N_max\n        t_frac = n / sample_size_max\n        c_t = z_alpha_fixed / np.sqrt(t_frac)\n        \n        if not of_stopped and abs(z_k) >= c_t:\n            obrien_fleming_false_positives += 1\n            of_stopped = True\n\nrate_fixed = (fixed_horizon_false_positives / num_simulations) * 100\nrate_naive = (naive_false_positives / num_simulations) * 100\nrate_of = (obrien_fleming_false_positives / num_simulations) * 100\n\nprint(f\"=== A/A Simulation Results ({num_simulations} simulated experiments, Nominal Alpha = 5.0%) ===\")\nprint(f\"1. Fixed Horizon (Check once at end):      {rate_fixed:5.2f}% False Positives (Controlled!)\")\nprint(f\"2. Naive Daily Peeking (Check every look): {rate_naive:5.2f}% False Positives (Dramatically Inflated!)\")\nprint(f\"3. O'Brien-Fleming Sequential Boundary:    {rate_of:5.2f}% False Positives (Controlled at ~5%!)\")\nprint(\"\\nO'Brien-Fleming Critical Z-Score Trajectory:\")\nfor n in look_points:\n    t = n / sample_size_max\n    c = z_alpha_fixed / np.sqrt(t)\n    p_thresh = 2 * (1 - stats.norm.cdf(c))\n    print(f\"  n = {n:3d} (t={t:.2f}) -> Required z >= {c:.2f} (p < {p_thresh:.5f})\")\n",
+    keyPoints: [
+      "Repeatedly checking p-values on accumulating data inflates Type I error rates from 5% to 30% or more.",
+      "The peeking problem occurs because the difference in sample means executes a random walk that frequently touches significance thresholds by chance.",
+      "Group Sequential Designs (O'Brien-Fleming) adjust critical boundaries across looks, requiring extreme evidence early on to preserve overall alpha.",
+      "Martingale-based tests (mSPRT) provide always-valid p-values, allowing continuous real-time monitoring and stopping with strict mathematical guarantees."
+    ],
+    pitfalls: [
+      "Stopping an experiment early for significance while using fixed-horizon p-values: This guarantees an elevated false positive rate and inflates estimated effect sizes (the winner's curse).",
+      "Extending an experiment because it was 'almost significant': Post-hoc sample extension is peeking in reverse; it also severely inflates false positive rates.",
+      "Failing to define N_max upfront in sequential testing: Group sequential boundaries depend on the maximum planned sample size N_max; without it, information fractions cannot be calculated."
+    ],
+    quiz: [
+      {
+        "q": "Why does checking an A/B test daily and stopping as soon as p < 0.05 inflate the False Positive Rate?",
+        "o": [
+          "Because test statistics fluctuate like a random walk over time, giving random chance multiple opportunities to breach the significance threshold",
+          "Because sample variance decreases over time",
+          "Because users become tired of seeing variant B",
+          "Because computers round floating-point numbers differently each day"
+        ],
+        "a": 0,
+        "why": "Continuous peeking creates multiple testing across time. Even when the null hypothesis is true, random Brownian fluctuations will cross the unadjusted z=1.96 boundary at some point with high probability."
+      },
+      {
+        "q": "How does the O'Brien-Fleming boundary prevent false positive inflation during early looks?",
+        "o": [
+          "By requiring extremely conservative significance thresholds early in the test (e.g. z > 4.0, p < 0.0001) and gradually relaxing the threshold toward 1.96 as sample size approaches N_max",
+          "By multiplying all p-values by 100",
+          "By discarding all data collected during the first week",
+          "By forcing the sample sizes of A and B to be odd numbers"
+        ],
+        "a": 0,
+        "why": "O'Brien-Fleming sets critical threshold c(t) = z_{\\alpha/2} / \\sqrt{t}, spending negligible alpha during early looks and preserving the majority of the alpha budget for the final evaluation."
+      },
+      {
+        "q": "What mathematical tool allows mSPRT to compute 'always-valid' p-values for continuous monitoring?",
+        "o": [
+          "Non-negative martingales and Ville's maximal inequality",
+          "Fourier transforms",
+          "Polynomial regression",
+          "K-means clustering"
+        ],
+        "a": 0,
+        "why": "The likelihood ratio in mSPRT is a non-negative martingale under H_0. Ville's inequality bounds the probability of the supremum over all time steps, guaranteeing strict Type I error control regardless of when peeking occurs."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "hypothesis-testing-and-p-values"
+    ],
+    related: [
+      "a-b-testing-end-to-end",
+      "bayesian-a-b-testing",
+      "multiple-testing-bonferroni-holm-benjamini-hochberg",
+      "type-i-ii-errors-power-and-sample-size"
+    ],
+    keywords: "sequential testing peeking problem a b testing obrien fleming alpha spending msprt martingales optional stopping"
+  },
+  {
+    id: "bayesian-a-b-testing",
+    short: "Bayesian A/B Testing",
+    title: "Bayesian A/B testing",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Bayesian A/B testing reformulates online experimentation from binary null-hypothesis significance testing (p-values) into direct posterior probability assessment. Instead of asking \"Is there a statistically significant difference under the assumption that the variants are identical?\", Bayesian testing answers the intuitive questions business stakeholders actually care about: \"What is the probability that Variant B is better than Variant A?\" (P(B > A)) and \"What is the expected financial loss if I choose Variant B and I am wrong?\" (Expected Loss / Bayes Risk). This framework naturally integrates historical priors and supports continuous decision-making without multiple testing penalties.",
+    lead: "Ask an executive what a p-value of 0.03 means, and they will almost certainly say: \"There is a 97% chance Variant B is better than Variant A.\" In classical frequentist statistics, this interpretation is completely false: a p-value only measures how improbable the observed data would be if the two variants were identical. Why use a framework whose core output is routinely misunderstood? Bayesian A/B testing computes the exact quantity decision-makers desire: the direct probability of superiority and the monetary risk of making the wrong decision.",
+    intuition: [
+      "Probability of Superiority (P(B > A)): By placing prior distributions on conversion rates \\theta_A ~ Beta(\\alpha_A, \\beta_A) and \\theta_B ~ Beta(\\alpha_B, \\beta_B), observed customer conversions update these into posterior distributions. We can directly compute the probability that variant B has a higher conversion rate than variant A by integrating over the joint posterior: P(\\theta_B > \\theta_A | D).",
+      "Expected Loss (Bayes Risk) as the Decision Threshold: Knowing P(B > A) = 90% is not enough. If B is better, it might beat A by only 0.01%; but if A is better, B might destroy conversion rates by 50%! Expected Loss computes the expected financial cost of choosing variant B when A is actually better: E[Loss | Choose B] = \\int_{\\theta_A > \\theta_B} (\\theta_A - \\theta_B) p(\\theta_A, \\theta_B | D) d\\theta_A d\\theta_B. When Expected Loss drops below a business threshold \\epsilon (e.g. 0.001 lift), you can safely ship Variant B with guaranteed bounded risk.",
+      "Natural Peeking and Continuous Stopping: In Bayesian inference, the posterior distribution at step n is an exact reflection of all evidence accumulated up to step n. Updating posteriors as data streams in does not corrupt the posterior. You can evaluate Expected Loss continuously and stop whenever uncertainty is sufficiently small."
+    ],
+    analogy: "Imagine deciding between two routes to the airport. A frequentist test assumes both routes take identical time, collects 50 test drives, and computes whether the observed difference is rare enough to reject equality. A Bayesian driver combines traffic reports (priors) with live GPS data (observations) to output: \"Route B has an 88% chance of being faster, and if you choose Route B and it turns out to be slower, you will lose on average only 45 seconds.\" That expected loss lets the driver make a rational, risk-calibrated choice instantly.",
+    steps: [
+      {
+        "title": "Specify prior distributions for conversion rates",
+        "desc": "Select informative or uninformative conjugate Beta priors \\theta ~ Beta(\\alpha, \\beta).",
+        "detail": "Use historical baseline data to calibrate prior parameters (e.g. Beta(100, 900) for a 10% historical conversion rate), or use uninformative Beta(1, 1)."
+      },
+      {
+        "title": "Update posterior distributions with experiment data",
+        "desc": "Apply analytical Beta-Binomial updating rule: \\theta | (y, n) ~ Beta(\\alpha + y, \\beta + n - y).",
+        "detail": "Add observed successes y and failures n - y directly to the prior shape parameters for both Variant A and Variant B."
+      },
+      {
+        "title": "Compute Probability of Superiority",
+        "desc": "Calculate P(\\theta_B > \\theta_A | D) via numerical integration or Monte Carlo draws.",
+        "detail": "Sample 100,000 draws from both posterior Beta distributions and calculate the proportion of samples where \\theta_B > \\theta_A."
+      },
+      {
+        "title": "Evaluate Expected Loss (Bayes Risk) for each decision",
+        "desc": "Quantify the expected downside: E[max(0, \\theta_A - \\theta_B)] if B is chosen, and vice versa.",
+        "detail": "Calculate the average magnitude of error when the decision is wrong. If choosing B and \\theta_A > \\theta_B, you lose \\theta_A - \\theta_B."
+      },
+      {
+        "title": "Execute stopping rule against risk threshold",
+        "desc": "Conclude experiment and ship the winning variant when Expected Loss <= \\epsilon.",
+        "detail": "Define business tolerance threshold \\epsilon (e.g. 0.1% absolute conversion rate). Once Expected Loss drops below \\epsilon, deploy the winner."
+      }
+    ],
+    math: [
+      {
+        "h": "Beta-Binomial Conjugate Posterior Updating",
+        "tex": "\\theta_A \\mid (y_A, n_A) \\sim \\text{Beta}(\\alpha_0 + y_A, \\; \\beta_0 + n_A - y_A), \\qquad \\theta_B \\mid (y_B, n_B) \\sim \\text{Beta}(\\alpha_0 + y_B, \\; \\beta_0 + n_B - y_B)",
+        "p": "The Beta distribution is conjugate to the Binomial likelihood. The posterior parameters represent effective pseudo-counts of successes and failures combining prior beliefs with observed experimental results."
+      },
+      {
+        "h": "Probability of Superiority Formulation",
+        "tex": "P(\\theta_B > \\theta_A \\mid \\mathcal{D}) = \\int_0^1 f(\\theta_B \\mid \\mathcal{D}_B) \\left[ \\int_0^{\\theta_B} f(\\theta_A \\mid \\mathcal{D}_A) \\, d\\theta_A \\right] d\\theta_B",
+        "p": "Because Variant A and Variant B are sampled independently, their joint posterior distribution factorises as p(\\theta_A, \\theta_B \\mid \\mathcal{D}) = p(\\theta_A \\mid \\mathcal{D}_A) \\, p(\\theta_B \\mid \\mathcal{D}_B). The probability that B beats A is the volume of the joint distribution above the diagonal \\theta_B > \\theta_A."
+      },
+      {
+        "h": "Expected Loss (Bayes Risk)",
+        "tex": "\\mathcal{L}_B = \\mathbb{E}\\Big[\\max(0, \\, \\theta_A - \\theta_B) \\;\\Big|\\; \\mathcal{D}\\Big], \\qquad \\mathcal{L}_A = \\mathbb{E}\\Big[\\max(0, \\, \\theta_B - \\theta_A) \\;\\Big|\\; \\mathcal{D}\\Big]",
+        "p": "Expected Loss calculates the expected penalty incurred if you choose a given variant and that variant is suboptimal. Unlike p-values which only measure evidence against equality, Expected Loss directly measures economic risk."
+      }
+    ],
+    code: "\"\"\"\nBayesian A/B Testing Framework\nDemonstrating Beta-Binomial posterior updating, Probability of Superiority,\nExpected Loss (Bayes Risk), and threshold stopping rules.\n\"\"\"\n\nimport numpy as np\n\n# Experiment Setup:\n# Variant A (Control): 1,000 visitors, 120 conversions (12.0%)\n# Variant B (Treatment): 1,000 visitors, 145 conversions (14.5%)\nvisitors_a, conv_a = 1000, 120\nvisitors_b, conv_b = 1000, 145\n\n# Prior: Weakly informative Beta(alpha=10, beta=90) -> Prior Mean = 10%\nalpha_prior = 10.0\nbeta_prior = 90.0\n\n# Posterior Beta parameters\nalpha_post_a = alpha_prior + conv_a\nbeta_post_a = beta_prior + (visitors_a - conv_a)\n\nalpha_post_b = alpha_prior + conv_b\nbeta_post_b = beta_prior + (visitors_b - conv_b)\n\n# Monte Carlo Sampling from Posteriors\nnum_draws = 100000\ndraws_a = np.random.beta(alpha_post_a, beta_post_a, size=num_draws)\ndraws_b = np.random.beta(alpha_post_b, beta_post_b, size=num_draws)\n\n# 1. Probability of Superiority P(B > A)\nprob_b_better = np.mean(draws_b > draws_a)\n\n# 2. Relative Lift Distribution: (B - A) / A\nrelative_lift = (draws_b - draws_a) / draws_a\nexpected_lift = np.mean(relative_lift)\nlift_ci_lower = np.percentile(relative_lift, 2.5)\nlift_ci_upper = np.percentile(relative_lift, 97.5)\n\n# 3. Expected Loss (Bayes Risk)\n# Loss if we choose B: max(0, A - B)\nloss_choose_b = np.mean(np.maximum(0, draws_a - draws_b))\n# Loss if we choose A: max(0, B - A)\nloss_choose_a = np.mean(np.maximum(0, draws_b - draws_a))\n\n# Business Decision Rule: Stop and ship B if Expected Loss <= 0.001 (0.1% conversion rate)\nrisk_threshold = 0.0010\nship_b = loss_choose_b <= risk_threshold\n\nprint(f\"=== Bayesian A/B Test Analysis ===\")\nprint(f\"Variant A: {conv_a}/{visitors_a} ({conv_a/visitors_a:.1%}) -> Posterior Mean: {np.mean(draws_a):.3f}\")\nprint(f\"Variant B: {conv_b}/{visitors_b} ({conv_b/visitors_b:.1%}) -> Posterior Mean: {np.mean(draws_b):.3f}\")\n\nprint(f\"\\nProbability Variant B is Superior: P(B > A) = {prob_b_better:.1%}\")\nprint(f\"Expected Relative Lift: {expected_lift:.1%} [95% Credible Interval: {lift_ci_lower:.1%}, {lift_ci_upper:.1%}]\")\n\nprint(f\"\\nExpected Loss if choosing B: {loss_choose_b:.5f} ({loss_choose_b * 100:.3f}% conversion rate)\")\nprint(f\"Expected Loss if choosing A: {loss_choose_a:.5f} ({loss_choose_a * 100:.3f}% conversion rate)\")\n\nprint(f\"\\nDecision against Risk Threshold (epsilon = {risk_threshold}):\")\nif ship_b:\n    print(f\"  SHIP VARIANT B: Expected risk ({loss_choose_b:.5f}) is within acceptable threshold ({risk_threshold})!\")\nelse:\n    print(f\"  CONTINUE EXPERIMENT: Expected risk ({loss_choose_b:.5f}) exceeds threshold.\")\n",
+    keyPoints: [
+      "Bayesian A/B testing computes direct posterior probabilities of superiority: P(\\theta_B > \\theta_A | \\mathcal{D}).",
+      "Expected Loss (Bayes Risk) measures the economic cost of making the wrong decision, providing an actionable stopping criterion.",
+      "Historical priors easily incorporate baseline domain knowledge, anchoring small-sample experiments against extreme flukes.",
+      "Because posteriors represent cumulative updated evidence, Bayesian testing allows continuous monitoring without multiple testing inflation."
+    ],
+    pitfalls: [
+      "Relying solely on Probability of Superiority without checking Expected Loss: A variant might have P(B > A) = 95% but possess a heavy left tail that risks catastrophic financial losses if wrong.",
+      "Using overly strong subjective priors without validation: An aggressive prior requires substantial experimental evidence to overturn, potentially masking real treatment gains.",
+      "Confusing credible intervals with confidence intervals: A 95% Bayesian credible interval means there is a 95% probability the true parameter lies within the bounds; a frequentist confidence interval does not carry this interpretation."
+    ],
+    quiz: [
+      {
+        "q": "In Bayesian A/B testing, what does 'Expected Loss' measure?",
+        "o": [
+          "The expected reduction in conversion rate or financial metric if you deploy a variant that turns out to be inferior to the alternative",
+          "The cost of cloud server hosting for the experiment",
+          "The percentage of users who bounce from the landing page",
+          "The p-value multiplied by the sample size"
+        ],
+        "a": 0,
+        "why": "Expected Loss calculates E[max(0, \\theta_A - \\theta_B)]. It quantifies the expected margin of regret if you choose variant B and variant A was actually better."
+      },
+      {
+        "q": "Why is continuous monitoring permissible in Bayesian A/B testing without the classical 'peeking problem'?",
+        "o": [
+          "Because the posterior distribution at any point in time is a mathematically valid representation of total accumulated evidence, independent of how many times it was inspected",
+          "Because Bayesian statistics does not allow early stopping",
+          "Because Bayesian tests only use 10 samples",
+          "Because prior distributions eliminate all variance"
+        ],
+        "a": 0,
+        "why": "In Bayesian inference, probability is a measure of belief given data. The posterior distribution after n observations is identical whether you inspected it 100 times or zero times prior to step n."
+      },
+      {
+        "q": "What conjugate prior family is used to model conversion rates in binary A/B testing?",
+        "o": [
+          "Beta distribution (Beta-Binomial conjugate pair)",
+          "Gaussian distribution",
+          "Poisson distribution",
+          "Weibull distribution"
+        ],
+        "a": 0,
+        "why": "The Beta distribution is conjugate to the Binomial likelihood: updating Beta(\\alpha, \\beta) with y successes and n-y failures produces Beta(\\alpha + y, \\beta + n - y)."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "conjugate-priors-beta-binomial"
+    ],
+    related: [
+      "a-b-testing-end-to-end",
+      "sequential-testing-and-the-peeking-problem",
+      "map-and-bayesian-estimation",
+      "conjugate-priors-beta-binomial"
+    ],
+    keywords: "bayesian a b testing expected loss bayes risk probability of superiority beta binomial conjugate prior conversion rate"
+  },
+  {
+    id: "causal-graphs-dags-and-adjustment",
+    short: "Causal Graphs & Adjustment",
+    title: "Causal graphs (DAGs) and adjustment",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Causal Directed Acyclic Graphs (DAGs) and Pearl's structural causal framework provide the mathematical language to differentiate mere statistical correlation from genuine causal effect. By formalising causal assumptions as directional graphical models (X -> Y), causal DAGs systematically identify confounding, mediation, and collider structures. The Backdoor Criterion and d-separation establish exactly which set of covariates Z must be controlled for—and crucially, which variables must NOT be conditioned on (to avoid collider stratification bias)—to eliminate spurious confounding and identify causal effects from observational data.",
+    lead: "\"Correlation does not imply causation\"—every data scientist knows this axiom, yet when building predictive models, how do you decide which variables to include as regression controls? Adding more control variables is not always safe: controlling for the wrong variable can create massive spurious correlations that did not exist in the raw data! Pearl's causal DAGs provide the mathematical calculus to identify true causal pathways, avoid collider bias, and determine whether observational data can answer causal questions.",
+    intuition: [
+      "The Three Fundamental Causal Junctions: Any causal graph is built from three 3-node patterns:\n- Chain (Mediation): X -> M -> Y. X causes M, which causes Y. Conditioning on mediator M blocks the causal path between X and Y.\n- Fork (Confounder): X <- Z -> Y. Confounder Z causes both X and Y, creating a spurious non-causal association. Conditioning on Z blocks the spurious correlation.\n- Collider: X -> C <- Y. Both X and Y independently cause collider C. In the unconditioned data, X and Y are independent! But if you condition on collider C (or a descendant of C), you open a spurious path and induce artificial correlation between X and Y!",
+      "The Danger of Bad Controls (Collider Stratification Bias): Suppose being a brilliant actor (X) and having movie star looks (Y) are completely independent in the general population. But to be cast in Hollywood films (C), you need either talent or looks (X -> C <- Y). If you only analyse Hollywood actors (conditioning on C), you will find a strong negative correlation: talented actors seem less attractive, and attractive actors seem less talented! This is Berkson's fallacy / collider bias.",
+      "The Backdoor Criterion: To find the true causal effect of treatment X on outcome Y, you must block all \"backdoor paths\" (paths that start with an arrow pointing into X: X <- ... -> Y) by conditioning on a valid adjustment set Z, without conditioning on any collider or descendant of X."
+    ],
+    analogy: "Imagine water flowing through a plumbing pipe network from tap X to drain Y. A backdoor path is an accidental cross-connection through an upstream water tower Z that leaks into both pipes. Conditioning on a confounder is closing a valve on the leak so only water from tap X reaches drain Y. A collider is a shared flood sensor that is normally dry; if you tamper with it (condition on it), you inadvertently create an electrical short that connects two previously isolated pipe valves together.",
+    steps: [
+      {
+        "title": "Construct causal DAG encoding domain knowledge",
+        "desc": "Draw directed arrows representing causal mechanisms between variables.",
+        "detail": "Ensure the graph is acyclic (no feedback loops). Include unobserved latent confounders where unmeasured shared causes exist."
+      },
+      {
+        "title": "Identify all paths between treatment and outcome",
+        "desc": "Catalogue both directed causal paths (X -> ... -> Y) and backdoor paths (X <- ... -> Y).",
+        "detail": "A backdoor path is any undirected path connecting X and Y that starts with an arrow pointing into treatment X."
+      },
+      {
+        "title": "Classify all path junctions using d-separation",
+        "desc": "Identify forks (A <- B -> C), chains (A -> B -> C), and colliders (A -> B <- C).",
+        "detail": "Remember the golden d-separation rules: unconditioned colliders are naturally blocked; conditioning on a non-collider blocks a path; conditioning on a collider opens a path."
+      },
+      {
+        "title": "Select valid adjustment set via Backdoor Criterion",
+        "desc": "Find a set of covariates Z that blocks all backdoor paths without including descendants of X.",
+        "detail": "Conditioning on Z neutralises confounding without introducing collider stratification bias or blocking causal mediators."
+      },
+      {
+        "title": "Estimate causal effect using backdoor adjustment",
+        "desc": "Estimate P(Y | do(X=x)) = sum_z P(Y | X=x, Z=z) P(Z=z) via multivariable regression or matching.",
+        "detail": "Fit regression model including treatment X and adjustment set Z. The coefficient on X represents the true causal effect."
+      }
+    ],
+    math: [
+      {
+        "h": "The do-Operator and Causal Effect Identification",
+        "tex": "P(Y = y \\mid \\text{do}(X = x)) \\neq P(Y = y \\mid X = x), \\qquad P(Y = y \\mid \\text{do}(X = x)) = \\sum_{\\mathbf{z}} P(Y = y \\mid X = x, \\mathbf{Z} = \\mathbf{z}) \\, P(\\mathbf{Z} = \\mathbf{z})",
+        "p": "The do-operator \\text{do}(X=x) represents a physical intervention that severs all incoming arrows into X, setting X to value x. When the set of covariates \\mathbf{Z} satisfies the Backdoor Criterion, the causal effect is identified from purely observational data using the adjustment formula."
+      },
+      {
+        "h": "The Backdoor Criterion (Pearl)",
+        "tex": "\\mathbf{Z} \\text{ satisfies Backdoor Criterion for } (X, Y) \\iff \\begin{cases} (1) \\; \\text{No node in } \\mathbf{Z} \\text{ is a descendant of } X \\\\ (2) \\; \\mathbf{Z} \\text{ d-separates (blocks) every path } X \\leftarrow \\dots \\to Y \\end{cases}",
+        "p": "Condition (1) ensures that causal mechanisms mediated by X are not accidentally blocked. Condition (2) ensures that all spurious non-causal confounding associations are completely blocked."
+      },
+      {
+        "h": "Collider Conditioning Bias (Berkson's Paradox)",
+        "tex": "X \\perp Y \\quad \\text{but} \\quad X \\not\\perp Y \\mid C \\quad \\text{for collider junction } X \\to C \\leftarrow Y",
+        "p": "Two independent causes X and Y become conditionally dependent when conditioning on their common effect C (or any descendant of C). Conditioning on a collider induces spurious negative or positive correlation where none exists in the population."
+      }
+    ],
+    code: "\"\"\"\nCausal DAG Simulation: Confounding vs Collider Bias\nDemonstrating that adding control variables can eliminate confounding\nOR artificially introduce collider bias (Berkson's fallacy).\n\"\"\"\n\nimport numpy as np\n\n# Ground Truth Causal Data Generating Process:\n# Z (Confounder: Socioeconomic status) -> X (Education) and Y (Health)\n# True Causal Effect of Education on Health = 2.0\n# C (Collider: Hospital admission) <- X (Education) and Y (Health)\nnp.random.seed(42)\nN = 10000\n\n# 1. Confounder Z\nz_socioeconomic = np.random.normal(loc=0.0, scale=1.0, size=N)\n\n# 2. Treatment X (caused by Z + independent noise)\nx_education = 1.5 * z_socioeconomic + np.random.normal(0, 1, size=N)\n\n# 3. Outcome Y (caused by X with true effect beta=2.0 + Z + noise)\ntrue_causal_beta = 2.0\ny_health = true_causal_beta * x_education + 2.5 * z_socioeconomic + np.random.normal(0, 1, size=N)\n\n# 4. Collider C (caused by BOTH X and Y)\n# e.g. Admission to a specialised clinic: C = 1 if 0.8*X + 0.8*Y + noise > 2.0\ncollider_score = 0.8 * x_education + 0.8 * y_health + np.random.normal(0, 1, size=N)\nc_admitted = (collider_score > 1.5).astype(int)\n\ndef fit_ols(y_vec, *x_vecs):\n    \"\"\"Simple OLS solver returning slope coefficients.\"\"\"\n    X_mat = np.column_stack([np.ones(len(y_vec))] + list(x_vecs))\n    beta = np.linalg.inv(X_mat.T @ X_mat) @ (X_mat.T @ y_vec)\n    return beta\n\nprint(\"=== Causal Inference Demonstration: True Causal Effect beta = 2.00 ===\")\n\n# Model 1: Naive Regression (No controls: Y ~ X)\n# Confounded by Z!\nbeta_naive = fit_ols(y_health, x_education)\nprint(f\"1. Naive Regression (Y ~ X):                   Estimated beta = {beta_naive[1]:.3f} (Severely Confounded!)\")\n\n# Model 2: Valid Backdoor Adjustment (Y ~ X + Z)\n# Blocks the backdoor path X <- Z -> Y\nbeta_adjusted = fit_ols(y_health, x_education, z_socioeconomic)\nprint(f\"2. Valid Backdoor Adjustment (Y ~ X + Z):      Estimated beta = {beta_adjusted[1]:.3f} (Recovers True Effect!)\")\n\n# Model 3: Bad Control - Conditioning on Collider C (Y ~ X + Z + C)\n# Inadvertently opens the collider path X -> C <- Y!\nbeta_collider = fit_ols(y_health, x_education, z_socioeconomic, collider_score)\nprint(f\"3. Bad Control / Collider Bias (Y ~ X + Z + C):Estimated beta = {beta_collider[1]:.3f} (Biased by Collider!)\")\n\n# Model 4: Berkson's Fallacy (Analysing only the admitted subpopulation C == 1)\nmask = (c_admitted == 1)\nbeta_subpop = fit_ols(y_health[mask], x_education[mask], z_socioeconomic[mask])\nprint(f\"4. Stratified on Collider (Subset where C=1):   Estimated beta = {beta_subpop[1]:.3f} (Berkson's Bias!)\")\n",
+    keyPoints: [
+      "Causal DAGs represent causal mechanisms via directed acyclic graphs, distinguishing correlation from causation.",
+      "The three fundamental junctions are Chains (mediation), Forks (confounding), and Colliders (common effects).",
+      "Confounders must be controlled for to block spurious backdoor paths; colliders must NOT be conditioned on, as conditioning opens spurious association.",
+      "The Backdoor Criterion provides the graphical rules for identifying valid adjustment sets from observational data."
+    ],
+    pitfalls: [
+      "The 'kitchen sink' regression trap: Adding all available features as control variables often controls for colliders or mediators, destroying causal validity.",
+      "Controlling for post-treatment variables: Conditioning on an outcome of treatment (mediator) blocks the very causal mechanism being measured.",
+      "Assuming causal DAGs can be discovered purely from data without assumptions: Observational data can identify Markov equivalence classes, but orienting arrows requires domain knowledge or physical interventions."
+    ],
+    quiz: [
+      {
+        "q": "In a causal DAG, what happens when you condition on a collider node (X -> C <- Y)?",
+        "o": [
+          "You inadvertently open a spurious non-causal path between X and Y, inducing artificial correlation (collider stratification bias / Berkson's fallacy)",
+          "You completely eliminate all confounding in the dataset",
+          "You reverse the direction of time in the graph",
+          "The causal effect becomes impossible to calculate on a computer"
+        ],
+        "a": 0,
+        "why": "An unconditioned collider naturally blocks association between X and Y. Conditioning on the collider opens the path, creating an artificial statistical association between its independent causes."
+      },
+      {
+        "q": "What two conditions must a set of covariates Z satisfy to meet the Backdoor Criterion for (X, Y)?",
+        "o": [
+          "No variable in Z can be a descendant of treatment X, and Z must block (d-separate) every backdoor path from X to Y",
+          "Z must include every variable in the dataset",
+          "Z must be perfectly correlated with X",
+          "Z must be measured after outcome Y"
+        ],
+        "a": 0,
+        "why": "Pearl's Backdoor Criterion requires that Z blocks all confounding paths (X <- ... -> Y) without conditioning on any downstream consequence of treatment X (descendant)."
+      },
+      {
+        "q": "What is the difference between P(Y | X=x) and P(Y | do(X=x))?",
+        "o": [
+          "P(Y | X=x) represents passive observation which can be confounded, whereas P(Y | do(X=x)) represents physical intervention where incoming causes to X are severedd",
+          "They are identical in all statistical models",
+          "P(Y | do(X=x)) can only be evaluated in laboratory chemistry experiments",
+          "P(Y | X=x) is always equal to 1.0"
+        ],
+        "a": 0,
+        "why": "Observational conditioning P(Y | X=x) filters existing data (and includes confounding associations). The do-operator P(Y | do(X=x)) simulates an intervention that fixes X, establishing genuine causal impact."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding"
+    ],
+    related: [
+      "simpsons-paradox-and-confounding",
+      "a-b-testing-end-to-end",
+      "bayesian-a-b-testing",
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2"
+    ],
+    keywords: "causal graphs dags backdoor criterion d-separation colliders confounding berksons fallacy do-operator structural causal models"
+  },
+  {
+    id: "propensity-scores-and-matching",
+    short: "Propensity Scores & Matching",
+    title: "Propensity scores and matching",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Propensity score methods estimate causal treatment effects from observational data by addressing non-random treatment assignment and covariate imbalance. The propensity score e(\\mathbf{x}) = P(D = 1 | \\mathbf{X} = \\mathbf{x}) acts as a balancing score: conditional on e(\\mathbf{x}), the distribution of measured baseline covariates \\mathbf{X} is statistically independent of treatment assignment D. By pairing, stratifying, or weighting units via Inverse Probability Weighting (IPW), propensity methods emulate randomised controlled trials, isolating the Average Treatment Effect (ATE) and Average Treatment Effect on the Treated (ATT) under the assumption of unconfoundedness.",
+    lead: "Suppose you want to know whether a premium customer subscription increases annual spending. In observational logs, customers who purchase the subscription already spend vastly more than non-subscribers before ever buying the membership. Comparing raw averages is wildly confounded by selection bias. Randomised controlled trials are often impossible, unethical, or prohibitively expensive. How can we synthesise a fair \"apples-to-apples\" comparison from observational data? Propensity score matching creates balanced synthetic cohorts, pairing each subscriber with an identical non-subscriber who had the exact same propensity to subscribe.",
+    intuition: [
+      "The Balancing Score Property (Rosenbaum & Rubin, 1983): If you have 50 baseline covariates (age, income, browsing frequency, geography), matching on all 50 dimensions simultaneously suffers from the curse of dimensionality—no two humans are identical across 50 features. Rosenbaum and Rubin proved a remarkable theorem: you do not need to match on all 50 covariates. You only need to match on a single 1D scalar: the propensity score e(x) = P(D=1 | X=x)! Conditional on having the same probability of receiving treatment, the distribution of all 50 covariates is balanced between treated and control units.",
+      "Common Support and Positivity: For a valid causal comparison, there must be \"common support\" (positivity: 0 < e(x) < 1). If certain customers have a 100% probability of subscribing (e.g. enterprise accounts), no comparable control unit exists. Units outside the common support overlap region must be trimmed.",
+      "Matching vs Weighting (IPW):\n- Propensity Score Matching (PSM): For each treated unit, find the nearest control unit with the closest propensity score (e.g. within a caliper of 0.05).\n- Inverse Probability Weighting (IPW): Keep all data, but weight each unit by the inverse probability of receiving their actual treatment: w_i = D_i / e(x_i) + (1 - D_i) / (1 - e(x_i)). This upweights under-represented units to create a balanced pseudo-population."
+    ],
+    analogy: "Imagine comparing the driving performance of sports car owners versus minivan drivers. Sports car owners might speed more, but is it the car or the fact that sports car owners are younger and more aggressive? A propensity score model calculates each driver's probability of buying a sports car based on age, income, and lifestyle. Matching then pairs a 28-year-old sports car owner with a 28-year-old minivan driver who had the exact same 70% probability of buying a sports car but happened to buy a minivan instead. Comparing these matched twins isolates the true causal effect of the vehicle.",
+    steps: [
+      {
+        "title": "Estimate propensity scores from baseline covariates",
+        "desc": "Fit logistic regression or gradient-boosted trees to predict treatment probability e(x) = P(D=1 | X).",
+        "detail": "Include all pre-treatment covariates that affect both treatment selection and outcome. Check that model outputs well-calibrated probabilities."
+      },
+      {
+        "title": "Evaluate common support and trim non-overlapping regions",
+        "desc": "Plot propensity score distributions for treated and control cohorts.",
+        "detail": "Discard treated units with propensity scores higher than any control unit, and control units with scores lower than any treated unit to prevent extrapolation."
+      },
+      {
+        "title": "Perform cohort matching or calculate IPW weights",
+        "desc": "Execute nearest-neighbour caliper matching or calculate inverse probability weights.",
+        "detail": "Pair treated units with control units whose propensity scores fall within a defined caliper distance (e.g. 0.2 standard deviations of logit propensity)."
+      },
+      {
+        "title": "Assess post-matching covariate balance",
+        "desc": "Calculate Standardised Mean Differences (SMD) across all baseline covariates.",
+        "detail": "Confirm that SMD < 0.10 for all covariates. If imbalances persist, refine the propensity specification with polynomial or interaction terms."
+      },
+      {
+        "title": "Estimate treatment effect on balanced sample",
+        "desc": "Compute difference in outcomes between matched cohorts to obtain ATT or ATE.",
+        "detail": "Evaluate the treatment effect using paired t-tests or weighted regression with cluster-robust standard errors."
+      }
+    ],
+    math: [
+      {
+        "h": "The Propensity Score Balancing Property",
+        "tex": "e(\\mathbf{x}) \\equiv P(D = 1 \\mid \\mathbf{X} = \\mathbf{x}), \\qquad \\mathbf{X} \\perp D \\mid e(\\mathbf{x})",
+        "p": "The propensity score is the coarsest balancing score. Conditioning on e(\\mathbf{x}) renders the multi-dimensional covariate vector \\mathbf{X} statistically independent of treatment assignment D, removing all observable confounding."
+      },
+      {
+        "h": "Unconfoundedness (Conditional Independence Assumption)",
+        "tex": "\\big(Y(1), Y(0)\\big) \\perp D \\mid \\mathbf{X} \\implies \\big(Y(1), Y(0)\\big) \\perp D \\mid e(\\mathbf{x})",
+        "p": "If potential outcomes (Y(1), Y(0)) are independent of treatment conditional on \\mathbf{X} (no unmeasured confounders), then conditional independence holds given the one-dimensional propensity score e(\\mathbf{x})."
+      },
+      {
+        "h": "Inverse Probability Weighting (IPW) Estimator for ATE",
+        "tex": "\\hat{\\tau}_{\\text{ATE}} = \\frac{1}{N} \\sum_{i=1}^N \\left( \\frac{D_i Y_i}{\\hat{e}(\\mathbf{x}_i)} - \\frac{(1 - D_i) Y_i}{1 - \\hat{e}(\\mathbf{x}_i)} \\right)",
+        "p": "IPW reweights the sample so that both treated and control groups reflect the covariate distribution of the combined population. Treated units with low propensity and control units with high propensity receive higher weights."
+      }
+    ],
+    code: "\"\"\"\nPropensity Score Matching (PSM) vs Naive Comparison\nDemonstrating confounding correction, covariate balance diagnostics,\nand nearest-neighbour caliper matching on observational data.\n\"\"\"\n\nimport numpy as np\n\n# Simulate observational customer study\n# True Causal Effect of Premium Membership on Annual Spend = £50.00\nnp.random.seed(42)\nN = 1000\n\n# Confounders: Age and Prior Year Spending (in £)\nage = np.random.normal(38.0, 8.0, N)\nprior_spend = np.random.normal(300.0, 80.0, N)\n\n# Treatment assignment D (Premium Membership): Older and higher-spending users are far more likely to buy\n# Logit propensity = -6.0 + 0.08 * age + 0.012 * prior_spend\nlogit_prop = -6.0 + 0.08 * age + 0.012 * prior_spend\ntrue_propensity = 1.0 / (1.0 + np.exp(-logit_prop))\nmembership = np.random.binomial(1, true_propensity)\n\n# Observed Outcome Y (Annual Spend in £):\n# True effect is +£50, but prior spend and age strongly drive spending\ntrue_effect = 50.0\nannual_spend = 100.0 + true_effect * membership + 1.2 * prior_spend + 2.0 * age + np.random.normal(0, 25, N)\n\n# 1. Naive Comparison (Raw Difference in Means)\nnaive_treated_mean = np.mean(annual_spend[membership == 1])\nnaive_control_mean = np.mean(annual_spend[membership == 0])\nnaive_diff = naive_treated_mean - naive_control_mean\n\nprint(\"=== Observational Data Summary ===\")\nprint(f\"Total Customers: {N} | Treated (Members): {np.sum(membership)} | Control: {N - np.sum(membership)}\")\nprint(f\"Naive Observed Difference: £{naive_diff:.2f} (True Causal Effect is £{true_effect:.2f} -> Massively Overestimated!)\")\n\n# 2. Estimate Propensity Scores via Logistic Regression\n# Design matrix\nX_cov = np.column_stack([np.ones(N), age, prior_spend])\n# Quick Newton-Raphson logistic fit\nbeta_prop = np.zeros(3)\nfor _ in range(15):\n    p_hat = 1.0 / (1.0 + np.exp(-np.clip(X_cov @ beta_prop, -30, 30)))\n    w = np.maximum(p_hat * (1 - p_hat), 1e-10)\n    grad = X_cov.T @ (membership - p_hat)\n    hess = -X_cov.T @ (w[:, np.newaxis] * X_cov)\n    beta_prop += np.linalg.solve(-hess, grad)\n\nest_propensity = 1.0 / (1.0 + np.exp(-np.clip(X_cov @ beta_prop, -30, 30)))\n\n# 3. Nearest-Neighbour Caliper Matching (1:1 with replacement)\ntreated_indices = np.where(membership == 1)[0]\ncontrol_indices = np.where(membership == 0)[0]\ncaliper = 0.05\n\nmatched_pairs = []\nfor t_idx in treated_indices:\n    p_t = est_propensity[t_idx]\n    diffs = np.abs(est_propensity[control_indices] - p_t)\n    best_c_idx = control_indices[np.argmin(diffs)]\n    if diffs[np.argmin(diffs)] <= caliper:\n        matched_pairs.append((t_idx, best_c_idx))\n\nmatched_t = [pair[0] for pair in matched_pairs]\nmatched_c = [pair[1] for pair in matched_pairs]\n\n# 4. Covariate Balance Check: Standardised Mean Difference (SMD)\ndef calc_smd(feat, treat_mask):\n    m1, m0 = np.mean(feat[treat_mask]), np.mean(feat[~treat_mask])\n    v1, v0 = np.var(feat[treat_mask]), np.var(feat[~treat_mask])\n    return (m1 - m0) / np.sqrt((v1 + v0) / 2.0)\n\nsmd_age_before = calc_smd(age, membership == 1)\nsmd_spend_before = calc_smd(prior_spend, membership == 1)\n\nsmd_age_after = (np.mean(age[matched_t]) - np.mean(age[matched_c])) / np.std(age)\nsmd_spend_after = (np.mean(prior_spend[matched_t]) - np.mean(prior_spend[matched_c])) / np.std(prior_spend)\n\nprint(\"\\n=== Covariate Balance Diagnostics ===\")\nprint(f\"Age SMD:         Before Matching = {smd_age_before:+.3f} | After Matching = {smd_age_after:+.3f} (Balanced!)\")\nprint(f\"Prior Spend SMD: Before Matching = {smd_spend_before:+.3f} | After Matching = {smd_spend_after:+.3f} (Balanced!)\")\n\n# 5. Treatment Effect on Matched Sample (ATT)\nmatched_diff = np.mean(annual_spend[matched_t]) - np.mean(annual_spend[matched_c])\nprint(f\"\\nMatched Cohort Size: {len(matched_pairs)} pairs\")\nprint(f\"Propensity Matched ATT Estimate: £{matched_diff:.2f} (True: £{true_effect:.2f} -> Causal Effect Recovered!)\")\n",
+    keyPoints: [
+      "The propensity score e(x) collapses high-dimensional baseline covariates into a 1D scalar balancing score.",
+      "Conditional on the propensity score, treatment assignment is independent of measured baseline covariates: X \\perp D | e(x).",
+      "Propensity score matching creates balanced synthetic cohorts, isolating true causal effects from observational selection bias.",
+      "Standardised Mean Difference (SMD) < 0.10 confirms that matched treatment and control groups achieve satisfactory covariate balance."
+    ],
+    pitfalls: [
+      "Unmeasured confounding: Propensity scores only balance measured covariates; if an unobserved variable influences both treatment and outcome, estimates remain confounded.",
+      "Violating common support: Including treated units with extreme propensity scores that have zero counterpart controls forces dangerous extrapolation.",
+      "Extreme weights in IPW: When propensity scores approach 0 or 1, inverse probability weights explode, causing extreme variance; weight trimming or stabilised weights are required."
+    ],
+    quiz: [
+      {
+        "q": "What is the primary theorem proved by Rosenbaum and Rubin regarding propensity scores?",
+        "o": [
+          "Conditional on the propensity score e(x) = P(D=1 | X=x), baseline covariates X are statistically independent of treatment assignment D",
+          "Propensity scores are always equal to 0.5",
+          "Propensity score matching works even when confounders are unmeasured",
+          "Propensity scores eliminate the need for training data"
+        ],
+        "a": 0,
+        "why": "Rosenbaum & Rubin (1983) proved the balancing score property: adjusting for the 1D propensity score balances all underlying covariates simultaneously, overcoming the curse of dimensionality."
+      },
+      {
+        "q": "What threshold of Standardised Mean Difference (SMD) is widely accepted as indicating satisfactory covariate balance after matching?",
+        "o": [
+          "SMD < 0.10 (less than 10% of a standard deviation)",
+          "SMD = 1.0",
+          "SMD > 2.0",
+          "SMD = 0.50"
+        ],
+        "a": 0,
+        "why": "An SMD below 0.10 indicates that the difference in covariate means between treated and control cohorts is negligible, mirroring a randomised trial."
+      },
+      {
+        "q": "Why must units outside the common support overlap region be trimmed in propensity score analysis?",
+        "o": [
+          "Because treatment effects cannot be causally identified for individuals who have zero probability of receiving the alternative treatment",
+          "Because logistic regression cannot process negative numbers",
+          "To make the sample size an even number",
+          "Because p-values cannot be computed on unbalanced datasets"
+        ],
+        "a": 0,
+        "why": "The positivity assumption requires 0 < P(D=1 | X) < 1. If a unit has a propensity of 1.0, there are no comparable controls, making counterfactual comparison impossible without speculative extrapolation."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding",
+      "logistic_regression"
+    ],
+    related: [
+      "causal-graphs-dags-and-adjustment",
+      "difference-in-differences",
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding"
+    ],
+    keywords: "propensity scores matching psm ipw inverse probability weighting causal inference balancing score common support smd"
+  },
+  {
+    id: "difference-in-differences",
+    short: "Difference-in-Differences",
+    title: "Difference-in-differences",
+    task: "concepts",
+    module: "Experiments and causality",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Difference-in-Differences (DiD) is a quasi-experimental econometric methodology that estimates causal effects by comparing the pre- and post-treatment changes in outcomes between a treatment group and an untreated control group. By subtracting the control group's temporal trend from the treatment group's observed change, DiD eliminates both time-invariant unobserved confounders (e.g. fixed regional culture or baseline ability) and shared macro-temporal shocks (e.g. economic recessions or nationwide seasonal trends). The foundational cornerstone of DiD validity is the Parallel Trends Assumption.",
+    lead: "In 1992, New Jersey raised its state minimum wage while neighbouring Pennsylvania kept its minimum wage constant. Economists Card and Krueger famously evaluated this natural experiment: did employment fall as classical economic theory predicted? Simply comparing New Jersey to Pennsylvania after the law change ignores baseline state differences; comparing New Jersey before and after ignores national economic trends. By calculating the difference of the differences, Card and Krueger revolutionised empirical economics. How does DiD isolate causal effects across time, and what happens when the parallel trends assumption fails?",
+    intuition: [
+      "The 2x2 Grid:\n- Difference 1 (Within Treatment Group over Time): \\Delta_Treat = Y_Treat,Post - Y_Treat,Pre. This captures both the true treatment effect AND any broader macro-temporal trend (inflation, seasons).\n- Difference 2 (Within Control Group over Time): \\Delta_Control = Y_Control,Post - Y_Control,Pre. This captures the pure macro-temporal trend (since the control group never received treatment).\n- The Difference-in-Differences: \\tau_DiD = \\Delta_Treat - \\Delta_Control. Subtracting the control trend cancels out the secular time trend, leaving only the genuine causal treatment effect!",
+      "The Parallel Trends Assumption: DiD does NOT require the treatment and control groups to have the same baseline outcome level! It only requires that, in the absence of treatment, both groups would have followed parallel trajectories over time. If New Jersey normally grew by 2% per year and Pennsylvania normally grew by 2% per year, any deviation from that parallel path after the policy change is attributed to the policy.",
+      "Event Study Designs and Placebo Tests: How can we test whether parallel trends holds? We inspect pre-treatment periods! An event study plots regression coefficients for periods t-3, t-2, t-1 before treatment. If pre-treatment coefficients are statistically indistinguishable from zero, the parallel trends assumption is credible."
+    ],
+    analogy: "Imagine two fitness trainees, Alice and Bob. Alice is naturally fitter and can run 10 km/h, while Bob can run only 6 km/h. Alice starts taking a new nutrition supplement, and one month later she runs 13 km/h (+3 km/h). Bob does not take the supplement, but because both were training in the same warm summer weather, Bob improves to 7 km/h (+1 km/h). The DiD effect of the supplement is not 13 - 7 = 6 (naive cross-sectional), nor is it 13 - 10 = 3 (naive before-after). It is (13 - 10) - (7 - 6) = 3 - 1 = +2 km/h.",
+    steps: [
+      {
+        "title": "Define treatment cohort, control cohort, and intervention timing",
+        "desc": "Establish panel structure identifying treated units and the exact intervention date t_event.",
+        "detail": "Ensure that control units never received treatment and were not indirectly affected by spillover effects."
+      },
+      {
+        "title": "Verify pre-treatment parallel trends",
+        "desc": "Examine historical data across multiple pre-intervention periods.",
+        "detail": "Plot average outcome trajectories. Confirm that treatment and control groups tracked each other with parallel slopes prior to the intervention."
+      },
+      {
+        "title": "Formulate two-way fixed effects (TWFE) regression",
+        "desc": "Specify regression model: y_{it} = \\beta_0 + \\gamma Treat_i + \\lambda Post_t + \\tau (Treat_i * Post_t) + \\epsilon_{it}.",
+        "detail": "The coefficient \\tau on the interaction term represents the Difference-in-Differences treatment effect."
+      },
+      {
+        "title": "Execute event study lead-and-lag specification",
+        "desc": "Fit dynamic model estimating separate coefficients for each time period relative to treatment.",
+        "detail": "Verify that pre-treatment interaction leads are statistically zero (falsification test), while post-treatment lags reveal dynamic adoption curves."
+      },
+      {
+        "title": "Compute cluster-robust standard errors",
+        "desc": "Cluster standard errors at the group/regional level to correct for serial autocorrelation.",
+        "detail": "Bertrand, Duflo, and Mullainathan (2004) proved that unclustered OLS standard errors in DiD produce massive false positives due to serially correlated errors."
+      }
+    ],
+    math: [
+      {
+        "h": "The 2x2 Difference-in-Differences Estimator",
+        "tex": "\\hat{\\tau}_{\\text{DiD}} = \\left( \\bar{Y}_{\\text{Treat, Post}} - \\bar{Y}_{\\text{Treat, Pre}} \\right) - \\left( \\bar{Y}_{\\text{Control, Post}} - \\bar{Y}_{\\text{Control, Pre}} \\right)",
+        "p": "The sample estimator computes the difference in average growth rates between treatment and control cohorts across pre- and post-intervention epochs."
+      },
+      {
+        "h": "Two-Way Interaction Regression Model",
+        "tex": "y_{it} = \\beta_0 + \\gamma \\, \\text{Treat}_i + \\lambda \\, \\text{Post}_t + \\tau_{\\text{DiD}} \\left( \\text{Treat}_i \\times \\text{Post}_t \\right) + \\epsilon_{it}",
+        "p": "Here \\gamma captures time-invariant baseline differences between groups, \\lambda captures time trends common to all units, and \\tau_{\\text{DiD}} captures the interaction identifying the true causal treatment effect."
+      },
+      {
+        "h": "Counterfactual Parallel Trends Condition",
+        "tex": "\\mathbb{E}\\big[Y_{it}(0) - Y_{is}(0) \\mid \\text{Treat}\\big] = \\mathbb{E}\\big[Y_{it}(0) - Y_{is}(0) \\mid \\text{Control}\\big] \\quad \\forall t > t_{\\text{event}}, \\; s < t_{\\text{event}}",
+        "p": "The counterfactual expectation states that in the absence of treatment (potential outcome Y(0)), the expected change in outcome for the treated group would have exactly mirrored the observed change in the control group."
+      }
+    ],
+    code: "\"\"\"\nDifference-in-Differences (DiD) Econometric Simulation\nDemonstrates 2x2 DiD calculation, interaction regression,\nand pre-trend parallel trajectory verification.\n\"\"\"\n\nimport numpy as np\n\n# Simulate a policy intervention across two regions (Region A = Treated, Region B = Control)\n# Over 8 quarters: Quarters 1-4 are Pre-intervention, Quarters 5-8 are Post-intervention\n# True Causal Effect of Policy = +15.0 units\nnp.random.seed(42)\nn_per_group_per_qtr = 100\nquarters = np.arange(1, 9)\n\n# Baseline regional difference: Region A starts 20 units higher than Region B\nbase_a = 50.0\nbase_b = 30.0\ntrend_per_quarter = 2.5  # Common upward economic trend affecting both regions\ntrue_policy_shock = 15.0 # Introduced at Quarter >= 5 for Region A only\n\ndata_records = []\nfor q in quarters:\n    is_post = 1 if q >= 5 else 0\n    # Region A (Treated)\n    shock = true_policy_shock if is_post else 0.0\n    y_a = base_a + (trend_per_quarter * q) + shock + np.random.normal(0, 5, n_per_group_per_qtr)\n    for y in y_a:\n        data_records.append({\"y\": y, \"treat\": 1, \"post\": is_post, \"quarter\": q})\n        \n    # Region B (Control: Never treated)\n    y_b = base_b + (trend_per_quarter * q) + np.random.normal(0, 5, n_per_group_per_qtr)\n    for y in y_b:\n        data_records.append({\"y\": y, \"treat\": 0, \"post\": is_post, \"quarter\": q})\n\n# Convert to arrays\ny_all = np.array([r[\"y\"] for r in data_records])\ntreat_all = np.array([r[\"treat\"] for r in data_records])\npost_all = np.array([r[\"post\"] for r in data_records])\ninter_all = treat_all * post_all\n\n# 1. Classical 2x2 Cell Means\ny_treat_post = np.mean(y_all[(treat_all == 1) & (post_all == 1)])\ny_treat_pre  = np.mean(y_all[(treat_all == 1) & (post_all == 0)])\ny_ctrl_post  = np.mean(y_all[(treat_all == 0) & (post_all == 1)])\ny_ctrl_pre   = np.mean(y_all[(treat_all == 0) & (post_all == 0)])\n\ndiff_treat = y_treat_post - y_treat_pre\ndiff_ctrl  = y_ctrl_post - y_ctrl_pre\ndid_estimate_cell = diff_treat - diff_ctrl\n\nprint(\"=== 1. Classical 2x2 Cell Means Calculation ===\")\nprint(f\"Treatment Group: Pre = {y_treat_pre:5.2f} -> Post = {y_treat_post:5.2f} | Delta = {diff_treat:+5.2f}\")\nprint(f\"Control Group:   Pre = {y_ctrl_pre:5.2f} -> Post = {y_ctrl_post:5.2f} | Delta = {diff_ctrl:+5.2f}\")\nprint(f\"Difference-in-Differences Estimate: Delta_Treat - Delta_Ctrl = {did_estimate_cell:+.2f}\")\nprint(f\"True Causal Policy Effect:        +{true_policy_shock:.2f}\\n\")\n\n# 2. Regression Interaction Model: Y = beta0 + gamma*Treat + lambda*Post + tau*(Treat * Post)\nX_did = np.column_stack([np.ones(len(y_all)), treat_all, post_all, inter_all])\nbeta_did = np.linalg.inv(X_did.T @ X_did) @ (X_did.T @ y_all)\nresids = y_all - X_did @ beta_did\ns2 = np.sum(resids**2) / (len(y_all) - 4)\nse_did = np.sqrt(np.diagonal(s2 * np.linalg.inv(X_did.T @ X_did)))\n\nprint(\"=== 2. OLS Interaction Regression Model ===\")\nprint(f\"Intercept (beta0):              {beta_did[0]:6.2f} (SE: {se_did[0]:.3f})\")\nprint(f\"Region A Baseline (gamma):      {beta_did[1]:6.2f} (SE: {se_did[1]:.3f}) [Baseline Level Gap]\")\nprint(f\"Post-Period Time Trend (lambda):{beta_did[2]:6.2f} (SE: {se_did[2]:.3f}) [Macro Secular Trend]\")\nprint(f\"DiD Treatment Effect (tau):     {beta_did[3]:6.2f} (SE: {se_did[3]:.3f}) [CAUSAL SHOCK]\")\nprint(f\"\\n95% Confidence Interval on Causal Effect: [{beta_did[3] - 1.96*se_did[3]:.2f}, {beta_did[3] + 1.96*se_did[3]:.2f}]\")\n",
+    keyPoints: [
+      "Difference-in-Differences compares the change over time in a treated group to the change over time in a control group.",
+      "DiD eliminates time-invariant unobserved confounders and shared macro-temporal trends.",
+      "The validity of DiD depends on the Parallel Trends Assumption: in the absence of treatment, both groups would have evolved in parallel.",
+      "The interaction coefficient in a two-way regression model estimates the DiD causal effect directly."
+    ],
+    pitfalls: [
+      "Failing to test parallel pre-trends: If treatment and control groups had different growth trajectories prior to treatment, DiD conflates pre-existing divergent trends with the treatment effect.",
+      "Serial autocorrelation in standard errors: Ignoring autocorrelation across repeated time periods in panel data leads to severe underestimation of standard errors; cluster-robust standard errors are essential.",
+      "Staggered rollout bias in Two-Way Fixed Effects: When units adopt treatment at different times, traditional TWFE can assign negative weights to earlier-treated units, requiring modern staggered DiD estimators (Callaway & Sant'Anna)."
+    ],
+    quiz: [
+      {
+        "q": "What is the crucial assumption required for Difference-in-Differences to identify a valid causal effect?",
+        "o": [
+          "The Parallel Trends Assumption: in the absence of treatment, the treatment and control groups would have experienced identical temporal changes",
+          "Treatment and control groups must have identical baseline outcome levels prior to treatment",
+          "Sample sizes in both groups must be equal",
+          "Outcomes must follow a standard normal distribution"
+        ],
+        "a": 0,
+        "why": "DiD allows baseline levels to differ arbitrarily (\\gamma). Its validity relies solely on parallel trajectories: that the unobserved counterfactual trend in the treated group equals the observed trend in the control group."
+      },
+      {
+        "q": "How does Difference-in-Differences remove time-invariant omitted variable bias?",
+        "o": [
+          "By differencing each group's post-period outcome from its pre-period outcome, subtracting out all fixed regional or subject-specific baseline characteristics",
+          "By deleting unobserved variables from the dataset",
+          "By performing principal component analysis on the covariates",
+          "By transforming all data into logarithms"
+        ],
+        "a": 0,
+        "why": "Any factor that is constant over time (such as geographic geography or historical culture) is identical in pre- and post-periods; taking the first difference (Y_post - Y_pre) cancels it out completely."
+      },
+      {
+        "q": "In the regression model Y = beta0 + beta1*Treat + beta2*Post + beta3*(Treat * Post), which coefficient estimates the DiD causal effect?",
+        "o": [
+          "beta3 (the interaction term coefficient)",
+          "beta1 (the treatment group indicator)",
+          "beta2 (the post-period indicator)",
+          "beta0 (the intercept)"
+        ],
+        "a": 0,
+        "why": "The interaction term Treat * Post is 1 only for treated units in the post-treatment period; its coefficient beta3 measures the differential lift above the baseline group gap and macro time trend."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "a-b-testing-end-to-end"
+    ],
+    related: [
+      "causal-graphs-dags-and-adjustment",
+      "propensity-scores-and-matching",
+      "a-b-testing-end-to-end",
+      "simpsons-paradox-and-confounding"
+    ],
+    keywords: "difference in differences did parallel trends natural experiment quasi experiment panel data event study card krueger"
+  },
+  {
+    id: 'conjugate-priors-beta-binomial',
+    short: 'Beta–Binomial Conjugacy',
+    title: r`Conjugate Priors (Beta–Binomial)`,
+    task: 'concepts',
+    module: 'Bayesian and stochastic',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Update probability beliefs in closed form by combining Beta prior distributions with Binomial observations.`,
+    lead: r`In Bayesian statistics, updating beliefs via Bayes' theorem often involves intractable integrals that require complex Markov chain Monte Carlo (MCMC) simulations. Conjugate priors provide an elegant algebraic shortcut: when the prior and likelihood belong to a conjugate family, the posterior distribution belongs to the exact same family as the prior. The Beta–Binomial model serves as the canonical example of conjugacy, updating binary conversion beliefs by simply adding observed successes and failures to prior hyperparameters.`,
+    intuition: [
+      r`Imagine launching a brand-new website feature where you want to estimate the conversion rate $\theta$. Before collecting data, you have prior experience from dozens of similar features: conversions typically hover around 20%, but rarely drop below 5% or exceed 45%.`,
+      r`In Bayesian terms, we represent this initial uncertainty with a Beta distribution: $\text{Beta}(\alpha, \beta)$. The hyperparameters $\alpha$ and $\beta$ can be intuitively interpreted as "pseudo-observations": $\alpha$ prior successes and $\beta$ prior failures. Setting $\alpha = 4$ and $\beta = 16$ encodes a prior belief centred at $\frac{4}{4 + 16} = 20\%$, backed by the equivalent strength of 20 prior visitors.`,
+      r`Now, run a live experiment: 100 new visitors arrive, and 35 convert (35 successes, 65 failures). Because the Beta distribution is conjugate to the Binomial likelihood, computing the posterior does not require calculus or numerical integration. You simply add live counts directly to your prior counts: $\alpha_{\text{post}} = 4 + 35 = 39$ and $\beta_{\text{post}} = 16 + 65 = 81$. The updated posterior is $\text{Beta}(39, 81)$, with posterior mean $\frac{39}{39 + 81} = 32.5\%$ and 95% credible interval $[24.4\%, 41.1\%]$. The prior gently regularises the noisy raw sample rate of 35% toward baseline beliefs.`,
+    ],
+    analogy: r`Updating a Beta prior with Binomial data is like adding tallies to a score sheet: you start with a few pencil marks representing previous games, and each new game simply adds tally marks in the win and loss columns without having to redesign the sheet.`,
+    steps: [
+      r`Specify the parameter of interest: a success probability $\theta \in [0, 1]$ governing binary Bernoulli or Binomial trials.`,
+      r`Select prior hyperparameters $\alpha_0$ and $\beta_0$ to encode baseline domain knowledge (or set $\alpha_0 = \beta_0 = 1$ for a flat uniform prior).`,
+      r`Observe experimental data: record the number of successes $k$ out of $n$ independent trials (with $n - k$ failures).`,
+      r`Compute posterior hyperparameters in closed form: $\alpha_1 = \alpha_0 + k$ and $\beta_1 = \beta_0 + n - k$.`,
+      r`Calculate summary properties of the posterior $\text{Beta}(\alpha_1, \beta_1)$: posterior mean $\frac{\alpha_1}{\alpha_1 + \beta_1}$ and credible intervals via Beta quantiles.`,
+      r`Use the posterior distribution as the prior for subsequent incoming batches of data in a streaming, sequential learning pipeline.`,
+    ],
+    math: [
+      {
+        h: 'Beta Prior and Binomial Likelihood',
+        tex: r`$$P(\theta) = \frac{\theta^{\alpha - 1}(1 - \theta)^{\beta - 1}}{\text{B}(\alpha, \beta)}, \qquad P(k \mid \theta) = \binom{n}{k} \theta^k (1 - \theta)^{n - k}$$`,
+        p: r`Here $\theta$ is the success probability, $\text{B}(\alpha, \beta) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha + \beta)}$ is the Beta normalisation constant, and $\alpha, \beta > 0$ are shape hyperparameters. The Binomial likelihood gives the probability of observing $k$ successes in $n$ independent trials given rate $\theta$.`,
+      },
+      {
+        h: 'Posterior Derivation via Conjugacy',
+        tex: r`$$P(\theta \mid k) \propto P(k \mid \theta) P(\theta) \propto \theta^k (1 - \theta)^{n - k} \cdot \theta^{\alpha - 1}(1 - \theta)^{\beta - 1} = \theta^{(\alpha + k) - 1} (1 - \theta)^{(\beta + n - k) - 1}$$`,
+        p: r`Multiplying likelihood and prior preserves the exact algebraic functional form: the exponents sum directly. The posterior distribution is identically $\text{Beta}(\alpha + k, \, \beta + n - k)$, proving that the Beta family is conjugate to the Binomial likelihood.`,
+      },
+      {
+        h: 'Posterior Mean as a Weighted Average',
+        tex: r`$$E[\theta \mid k] = \frac{\alpha + k}{\alpha + \beta + n} = \left(\frac{\alpha + \beta}{\alpha + \beta + n}\right) \frac{\alpha}{\alpha + \beta} + \left(\frac{n}{\alpha + \beta + n}\right) \frac{k}{n}$$`,
+        p: r`The Bayesian posterior mean is a transparent convex combination of the prior mean $\frac{\alpha}{\alpha + \beta}$ and the empirical sample mean $\frac{k}{n}$. The relative weight assigned to each component is proportional to effective sample size: $(\alpha + \beta)$ for the prior versus $n$ for the data.`,
+      },
+    ],
+    keyPoints: [
+      r`Conjugacy occurs when the posterior distribution belongs to the exact same functional probability family as the prior distribution.`,
+      r`The Beta distribution is conjugate to the Binomial and Bernoulli likelihoods, reducing Bayesian updating to basic integer addition.`,
+      r`The posterior mean is an exact weighted average between prior belief and sample evidence, providing natural shrinkage regularisation.`,
+      r`Sequential updating is seamless: today's posterior becomes tomorrow's prior as streaming batches of data arrive.`,
+    ],
+    pitfalls: [
+      r`Setting hyperparameter counts $\alpha, \beta$ too large, which rigidly anchors the model and prevents it from learning from moderate sample sizes.`,
+      r`Confusing the posterior mode (MAP estimate, $\frac{\alpha - 1}{\alpha + \beta - 2}$) with the posterior mean ($\frac{\alpha}{\alpha + \beta}$).`,
+      r`Using Beta–Binomial conjugacy on time-varying conversion rates where underlying probabilities drift over time.`,
+      r`Assuming all likelihoods possess conjugate priors; complex neural networks and non-linear models lack conjugate priors and require MCMC or variational approximations.`,
+    ],
+    code: r`import scipy.stats as stats
+
+# Prior: Beta(4, 16) -> centered at 20% conversion
+alpha_0, beta_0 = 4, 16
+prior_mean = alpha_0 / (alpha_0 + beta_0)
+
+# Observed data: 35 conversions out of 100 visitors
+n_visitors = 100
+k_conversions = 35
+
+# Conjugate update: add successes and failures directly
+alpha_1 = alpha_0 + k_conversions
+beta_1 = beta_0 + (n_visitors - k_conversions)
+
+post_mean = alpha_1 / (alpha_1 + beta_1)
+post_mode = (alpha_1 - 1.0) / (alpha_1 + beta_1 - 2.0)
+ci_lower = stats.beta.ppf(0.025, alpha_1, beta_1)
+ci_upper = stats.beta.ppf(0.975, alpha_1, beta_1)
+
+print(f"Prior:     Beta({alpha_0}, {beta_0}), Mean: {prior_mean:.1%}")
+print(f"Observed:  {k_conversions}/{n_visitors} ({k_conversions/n_visitors:.1%})")
+print(f"Posterior: Beta({alpha_1}, {beta_1}), Mean: {post_mean:.1%}, Mode: {post_mode:.1%}")
+print(f"95% Credible Interval: [{ci_lower:.3f}, {ci_upper:.3f}]")`,
+    quiz: [
+      {
+        q: r`Why are conjugate priors computationally advantageous in Bayesian statistics?`,
+        o: [
+          r`They eliminate all uncertainty from parameter estimates`,
+          r`They allow posterior distributions to be calculated in closed form using simple algebra, avoiding costly numerical integration or MCMC sampling`,
+          r`They can only be used when sample sizes exceed 10,000`,
+          r`They guarantee that the prior distribution is always uniform`,
+        ],
+        a: 1,
+        why: r`Conjugacy ensures the posterior belongs to the same functional family as the prior, reducing Bayesian updates to simple parameter addition without numerical integration.`,
+      },
+      {
+        q: r`If you begin with a uniform prior $\text{Beta}(1, 1)$ and observe 7 heads and 3 tails in coin flips, what is the posterior distribution?`,
+        o: [
+          r`$\text{Beta}(7, 3)$`,
+          r`$\text{Beta}(8, 4)$`,
+          r`$\text{Beta}(10, 10)$`,
+          r`$\mathcal{N}(7, 3)$`,
+        ],
+        a: 1,
+        why: r`Adding observed counts to prior hyperparameters gives $\alpha' = 1 + 7 = 8$ and $\beta' = 1 + 3 = 4$, resulting in $\text{Beta}(8, 4)$.`,
+      },
+      {
+        q: r`In the Beta–Binomial model, what happens to the posterior distribution as the sample size $n \to \infty$?`,
+        o: [
+          r`The prior completely dominates the data`,
+          r`The posterior variance shrinks toward zero, and the posterior mean converges to the maximum likelihood sample proportion`,
+          r`The posterior distribution becomes uniform`,
+          r`The posterior mean becomes undefined`,
+        ],
+        a: 1,
+        why: r`As $n$ grows large, the weight $\frac{n}{\alpha + \beta + n}$ approaches 1.0, causing the posterior to concentrate around the sample mean with vanishing variance.`,
+      },
+      {
+        q: r`What intuitive interpretation do the hyperparameters $\alpha$ and $\beta$ carry in a Beta prior?`,
+        o: [
+          r`The number of iterations required for gradient descent`,
+          r`The effective number of pseudo-observations (prior successes and prior failures) before collecting live data`,
+          r`The degrees of freedom of a Student's t-test`,
+          r`The regularisation penalty $\lambda$`,
+        ],
+        a: 1,
+        why: r`The parameters $\alpha$ and $\beta$ act as virtual or pseudo-observations: $\alpha$ reflects prior successes and $\beta$ prior failures, with sum $\alpha + \beta$ representing prior sample strength.`,
+      },
+    ],
+    usedBy: ['bayesian_linear_regression', 'gaussian_naive_bayes'],
+    prereq: ['probability-rules-and-bayes-theorem', 'random-variables-and-distributions', 'sampling-and-standard-error'],
+    related: ['bayesian_linear_regression', 'confidence-intervals', 'maximum-likelihood-estimation'],
+    keywords: 'conjugate priors beta binomial bayesian updating posterior prior credible interval pseudo observations',
+  },
 ];
