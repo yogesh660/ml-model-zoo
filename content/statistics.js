@@ -3006,4 +3006,635 @@ print(f"Kruskal-Wallis H: stat={h_stat:.3f}, p={p_kruskal:.4e}")`,
     related: ['anova-and-post-hoc-tests', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling', 'bootstrap-and-jackknife'],
     keywords: 'non-parametric mann whitney wilcoxon signed rank kruskal wallis ranks median test distribution free',
   },
+  {
+    id: 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling',
+    short: 'Normality Tests',
+    title: r`Normality Tests: Shapiro–Wilk, Kolmogorov–Smirnov, Anderson–Darling`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Verify whether data satisfies Gaussian assumptions using the correlation-based Shapiro–Wilk test, empirical CDF Kolmogorov–Smirnov test, and tail-sensitive Anderson–Darling test.`,
+    lead: r`Many classical statistical procedures—from linear regression inference to Student's t-tests and ANOVA—rely on assumptions of underlying normality. Rather than relying on wishful thinking or visual inspection of histograms alone, formal normality tests quantify whether sample data deviates significantly from a Gaussian distribution. Understanding the distinct mathematical mechanics of Shapiro–Wilk, Kolmogorov–Smirnov, and Anderson–Darling tests enables practitioners to diagnose skewness, kurtosis, and tail anomalies accurately.`,
+    intuition: [
+      r`Imagine training a regression model and checking whether its residuals conform to the standard assumption of normally distributed errors. You generate 60 residual values. Visually, a histogram or Q-Q plot might look "roughly bell-shaped", but human eyes are notoriously prone to subjective bias.`,
+      r`How can we mathematically evaluate Gaussian adherence? There are three distinct perspectives:`,
+      r`First, correlation with normal order statistics: if data is truly normal, plotting sorted sample values against expected standard normal quantiles should form an almost perfect straight line. The Shapiro–Wilk test computes this exact correlation squared ($W$). For a genuine normal sample of size 60, $W \approx 0.982$ with $p = 0.502$ (no deviation detected). For exponential or skewed data, points curl away from the line, dropping $W$ to $0.833$ with $p \approx 10^{-6}$ (overwhelming rejection). Second, maximum gap between cumulative curves: the Kolmogorov–Smirnov (KS) test compares the empirical step-function distribution against the theoretical smooth normal cumulative curve, measuring the single largest vertical gap ($D$). Third, weighted tail sensitivity: the KS test is insensitive in the extreme tails because cumulative curves are anchored to 0 and 1 at the boundaries. The Anderson–Darling test solves this by weighting discrepancies by $1 / [F(x)(1 - F(x))]$, placing heavy mathematical emphasis on the tails where critical anomalies occur.`,
+    ],
+    analogy: r`Testing normality with these three methods is like inspecting a tailor-made suit: Shapiro–Wilk checks if the overall silhouette matches the pattern, Kolmogorov–Smirnov checks the single widest seam gap, and Anderson–Darling inspects the hems and cuffs where wear and tear happen first.`,
+    steps: [
+      r`Inspect the sample visually with a Q-Q (quantile-quantile) plot to develop an initial diagnostic intuition of skewness and tail weight.`,
+      r`State the formal null hypothesis $H_0$: the sample was drawn from a normally distributed population, versus $H_1$: the parent population is non-normal.`,
+      r`For general univariate data ($n \le 5,000$), run the Shapiro–Wilk test as the most statistically powerful omnibus test of normality.`,
+      r`If tail discrepancies or extreme events are the primary operational risk (such as latency SLAs), evaluate the Anderson–Darling test.`,
+      r`If parameters $(\mu, \sigma)$ are estimated from the sample data rather than known beforehand, do not use standard Kolmogorov–Smirnov tables; use the Lilliefors correction.`,
+      r`Synthesise test results with sample size: in very large samples, slight harmless departures trigger $p < 0.05$; in small samples, low power can mask severe non-normality.`,
+    ],
+    math: [
+      {
+        h: 'Shapiro–Wilk Test Statistic',
+        tex: r`$$W = \frac{\left(\sum_{i=1}^n a_i X_{(i)}\right)^2}{\sum_{i=1}^n (X_i - \bar{X})^2}$$`,
+        p: r`Here $X_{(1)} \le X_{(2)} \le \dots \le X_{(n)}$ are ordered sample statistics, and $\mathbf{a} = \frac{\mathbf{m}^T \mathbf{V}^{-1}}{\sqrt{\mathbf{m}^T \mathbf{V}^{-1}\mathbf{V}^{-1}\mathbf{m}}}$ incorporates the expected values $\mathbf{m}$ and covariance matrix $\mathbf{V}$ of standard normal order statistics. The statistic $W$ lies in $(0, 1]$, where $W = 1$ indicates perfect linearity between sample quantiles and normal quantiles.`,
+      },
+      {
+        h: 'Kolmogorov–Smirnov Test Statistic',
+        tex: r`$$D = \sup_{x} |F_n(x) - F_0(x)|$$`,
+        p: r`Here $F_n(x) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}_{X_i \le x}$ is the empirical cumulative distribution function, and $F_0(x)$ is the reference continuous cumulative distribution function. $D$ represents the supremum absolute vertical distance between the empirical step function and theoretical curve.`,
+      },
+      {
+        h: 'Anderson–Darling Test Statistic',
+        tex: r`$$A^2 = -n - \sum_{i=1}^n \frac{2i - 1}{n} \left[\ln F_0(X_{(i)}) + \ln(1 - F_0(X_{(n+1-i)}))\right]$$`,
+        p: r`The Anderson–Darling statistic weights squared discrepancies by the inverse variance function $[F_0(x)(1 - F_0(x))]^{-1}$. This weighting amplifies discrepancies in the lower and upper tails, making $A^2$ far more sensitive to heavy tails and skewness than the unweighted Kolmogorov–Smirnov statistic.`,
+      },
+    ],
+    keyPoints: [
+      r`The Shapiro–Wilk test exhibits the highest overall statistical power across a broad range of non-normal distributions for sample sizes up to several thousand.`,
+      r`Standard Kolmogorov–Smirnov assumes a fully specified reference distribution; plugging in sample mean and sample variance requires the Lilliefors correction to avoid conservative bias.`,
+      r`Anderson–Darling prioritises tail deviations, making it the preferred diagnostic when detecting heavy tails or extreme-value risk.`,
+      r`In huge datasets ($n > 10,000$), tiny, practically trivial deviations from Gaussian perfection will trigger $p < 0.001$; always combine formal tests with Q-Q plots.`,
+    ],
+    pitfalls: [
+      r`Plugging sample estimates of $\mu$ and $\sigma$ into the standard Kolmogorov–Smirnov test without using Lilliefors critical values, producing falsely inflated p-values.`,
+      r`Mistaking a non-significant normality test in a small sample ($n < 25$) as positive confirmation that the population is normal.`,
+      r`Discarding linear regression models when a massive sample fails a normality test, overlooking that regression coefficient estimators remain asymptotically normal via the central limit theorem.`,
+      r`Testing normality exclusively with numbers while skipping graphical Q-Q plots, missing the structural nature of departures (skewness vs kurtosis vs outliers).`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 60
+
+# Normal sample vs skewed exponential sample
+normal_data = rng.normal(loc=10.0, scale=2.5, size=n)
+skewed_data = rng.exponential(scale=2.5, size=n)
+
+# 1. Shapiro-Wilk test (highest omnibus power)
+w_norm, p_sw_norm = stats.shapiro(normal_data)
+w_skew, p_sw_skew = stats.shapiro(skewed_data)
+
+# 2. Kolmogorov-Smirnov test against fitted normal distribution
+ks_skew, p_ks_skew = stats.kstest(skewed_data, 'norm',
+    args=(np.mean(skewed_data), np.std(skewed_data, ddof=1)))
+
+# 3. Anderson-Darling test (tail-weighted)
+ad_skew = stats.anderson(skewed_data, dist='norm', method='interpolate')
+
+print(f"Normal data: Shapiro W={w_norm:.4f}, p={p_sw_norm:.4f}")
+print(f"Skewed data: Shapiro W={w_skew:.4f}, p={p_sw_skew:.4e}")
+print(f"Skewed data: KS stat={ks_skew:.4f}, p={p_ks_skew:.4f}")
+print(f"Skewed data: Anderson A2={ad_skew.statistic:.3f}, p={ad_skew.pvalue:.4f}")`,
+    quiz: [
+      {
+        q: r`Which normality test is empirically proven to deliver the highest statistical power against the widest variety of non-normal alternative distributions for moderate sample sizes?`,
+        o: [
+          r`Standard Kolmogorov–Smirnov test`,
+          r`Shapiro–Wilk test`,
+          r`Pearson's chi-square goodness-of-fit test`,
+          r`Student's t-test`,
+        ],
+        a: 1,
+        why: r`Extensive Monte Carlo studies confirm that the Shapiro–Wilk test, which evaluates the squared correlation between sample order statistics and normal quantiles, offers superior statistical power across diverse alternatives.`,
+      },
+      {
+        q: r`What occurs if you test normality with the standard Kolmogorov–Smirnov test after estimating $\mu$ and $\sigma$ from the sample?`,
+        o: [
+          r`The test becomes overly conservative, underestimating discrepancies and yielding p-values that are too large`,
+          r`The test statistic becomes undefined`,
+          r`The test automatically converts into an Anderson–Darling test`,
+          r`The p-value is always zero`,
+        ],
+        a: 0,
+        why: r`Estimating parameters from the sample forces the theoretical CDF closer to the empirical CDF than an independent reference curve would be, shrinking $D$ and inflating p-values unless the Lilliefors correction is applied.`,
+      },
+      {
+        q: r`What is the primary advantage of the Anderson–Darling test over the Kolmogorov–Smirnov test?`,
+        o: [
+          r`It requires no sample data`,
+          r`It places inverse variance weights on discrepancies, providing much greater sensitivity to departures in the distribution tails`,
+          r`It only applies to uniform distributions`,
+          r`It eliminates all Type I errors`,
+        ],
+        a: 1,
+        why: r`Anderson–Darling divides deviations by $F_0(x)(1 - F_0(x))$, which prevents tail discrepancies from being compressed to zero near the boundaries and magnifies sensitivity to heavy tails.`,
+      },
+      {
+        q: r`Why is a formal normality test often unhelpful when analysing huge datasets ($n = 100,000$)?`,
+        o: [
+          r`Computational algorithms fail on arrays larger than 1,000 items`,
+          r`The test becomes so powerful that trivial, practically inconsequential imperfections trigger $p < 0.0001$`,
+          r`Large samples can never follow normal distributions`,
+          r`The central limit theorem ceases to operate`,
+        ],
+        a: 1,
+        why: r`With huge sample sizes, test power approaches 100% for microscopic departures that have zero practical impact on downstream estimation or model validity.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'linear_discriminant_analysis'],
+    prereq: ['hypothesis-testing-and-p-values', 'random-variables-and-distributions', 'sampling-and-standard-error'],
+    related: ['non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis', 'z-test-and-t-tests', 'exploratory-data-analysis'],
+    keywords: 'normality tests shapiro wilk kolmogorov smirnov anderson darling goodness of fit gaussian q-q plot lilliefors',
+  },
+  {
+    id: 'multiple-testing-bonferroni-holm-benjamini-hochberg',
+    short: 'Multiple Testing Corrections',
+    title: r`Multiple Testing: Bonferroni, Holm, Benjamini–Hochberg`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Control family-wise error rates and false discovery rates across multiple hypothesis tests using Bonferroni, Holm step-down, and Benjamini–Hochberg procedures.`,
+    lead: r`When testing hundreds of features, genome variants, or concurrent A/B test variations, standard significance thresholds collapse under the weight of multiplicity. Testing 100 null hypotheses at $\alpha = 0.05$ produces an average of five false discoveries by pure chance. Multiple testing corrections adjust p-values to control either the strict probability of even a single false alarm (Family-Wise Error Rate) or the expected proportion of false alarms among all declared discoveries (False Discovery Rate).`,
+    intuition: [
+      r`Suppose a machine learning team evaluates 10 new candidate features for a credit scoring model, running an individual hypothesis test for each feature at the conventional $\alpha = 0.05$ threshold. The resulting raw p-values from smallest to largest are: $[0.001, 0.006, 0.012, 0.024, 0.038, 0.082, 0.150, 0.290, 0.440, 0.810]$. Without any adjustment, five features pass the threshold ($p \le 0.05$). But if all 10 candidate features were actually useless noise, the probability of finding at least one false positive is $1 - (1 - 0.05)^{10} \approx 40.1\%$.`,
+      r`To protect against false discoveries, we can choose between two paradigms:`,
+      r`First, Family-Wise Error Rate (FWER): if a single false claim is unacceptable (such as approving an ineffective drug), we require that the probability of any false positive across all 10 tests remains $\le 5\%$. The Bonferroni correction multiplies each p-value by $m = 10$. Now only the first feature survives ($0.001 \times 10 = 0.010 \le 0.05$), while the second becomes $0.006 \times 10 = 0.060 > 0.05$. The Holm step-down method improves on Bonferroni by stepping down the multiplier $(10, 9, 8, \dots)$, but still declares only 1 discovery. Second, False Discovery Rate (FDR): in exploratory data science and feature selection, demanding zero false positives is overly conservative and discards valuable signal. Benjamini and Hochberg (1995) proposed controlling the expected proportion of false positives among all declared discoveries. Applying the Benjamini–Hochberg procedure declares three discoveries ($p \le [0.010, 0.030, 0.040]$), recovering three legitimate features while strictly capping false discoveries.`,
+    ],
+    analogy: r`FWER methods are like a zero-tolerance airport security checkpoint where a single false alarm grounds all flights; FDR methods are like an automated spam filter that accepts a small, manageable percentage of spam in the inbox in exchange for never missing important emails.`,
+    steps: [
+      r`Assemble all $m$ raw p-values from the family of tests and sort them in ascending order: $p_{(1)} \le p_{(2)} \le \dots \le p_{(m)}$.`,
+      r`Choose the appropriate error control criterion: FWER for confirmatory decisions, or FDR for exploratory screening and feature selection.`,
+      r`For conservative FWER control, apply Bonferroni: reject hypotheses where $p_{(i)} \le \alpha / m$.`,
+      r`For uniformly superior FWER control without additional assumptions, apply Holm's step-down method: compare $p_{(i)}$ against $\alpha / (m - i + 1)$ sequentially, stopping at the first non-rejection.`,
+      r`For balanced FDR control, apply Benjamini–Hochberg: find the largest rank $k$ where $p_{(k)} \le \frac{k}{m} Q$, and reject all hypotheses from rank 1 through $k$.`,
+      r`Report adjusted p-values alongside original unadjusted statistics to maintain full scientific transparency.`,
+    ],
+    math: [
+      {
+        h: 'Family-Wise Error Rate and Bonferroni Inequality',
+        tex: r`$$\text{FWER} = P(V \ge 1) \le \sum_{i=1}^{m_0} P(\text{Reject } H_{0,i} \mid H_{0,i} \text{ true}) \le m_0 \frac{\alpha}{m} \le \alpha$$`,
+        p: r`Here $V$ is the number of false rejections (Type I errors), $m$ is total hypotheses tested, and $m_0 \le m$ is the number of true nulls. By Boole's union bound, testing each hypothesis at significance level $\alpha / m$ ensures the family-wise error rate remains $\le \alpha$ under any dependency structure.`,
+      },
+      {
+        h: 'Holm\'s Sequentially Rejective Step-Down Method',
+        tex: r`$$\text{Step } i: \quad p_{(i)} \le \frac{\alpha}{m - i + 1}$$`,
+        p: r`Holm's method sorts p-values in ascending order and tests sequentially: $p_{(1)}$ against $\alpha / m$, $p_{(2)}$ against $\alpha / (m - 1)$, and so on. As soon as a p-value fails its criterion, testing terminates and all remaining hypotheses are retained. Holm controls FWER at level $\alpha$ under arbitrary dependence while being strictly more powerful than Bonferroni.`,
+      },
+      {
+        h: 'Benjamini–Hochberg False Discovery Rate (FDR)',
+        tex: r`$$\text{FDR} = E\left[\frac{V}{\max(R, 1)}\right] \le Q \implies k = \max\left\{i : p_{(i)} \le \frac{i}{m} Q\right\}, \quad \text{Reject } H_{(1)}, \dots, H_{(k)}$$`,
+        p: r`Here $V$ is false rejections, $R$ is total rejections, and $Q$ is target FDR level. Sorting p-values and finding the largest index $k$ whose p-value falls below the rank line $\frac{i}{m} Q$ guarantees that the expected proportion of false discoveries does not exceed $Q$ under independent or positively dependent test statistics.`,
+      },
+    ],
+    keyPoints: [
+      r`The family-wise error rate (FWER) controls the probability of making at least one false discovery; the false discovery rate (FDR) controls the expected proportion of false discoveries among rejected hypotheses.`,
+      r`Bonferroni is universally valid under any dependence structure, but becomes severely underpowered when testing hundreds or thousands of hypotheses.`,
+      r`Holm's step-down procedure is always at least as powerful as Bonferroni and carries zero extra assumptions; there is virtually no statistical reason to use classic Bonferroni over Holm.`,
+      r`The Benjamini–Hochberg procedure dramatically increases statistical power in high-dimensional settings by tolerating a controlled rate of false positives.`,
+    ],
+    pitfalls: [
+      r`Using Bonferroni correction in large-scale feature selection ($m > 1,000$), which obliterates statistical power and results in severe Type II errors.`,
+      r`Failing to apply any multiplicity correction when examining dozens of subgroup breakdowns or metrics in A/B tests.`,
+      r`Interpreting FDR adjusted p-values as posterior probabilities that a specific hypothesis is null; FDR is a property of the collective discovery set.`,
+      r`Applying multiple testing corrections after cherry-picking which tests to report; corrections require knowing the total number of tests executed.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Raw p-values from 10 parallel A/B tests or candidate features
+p_vals = np.array([0.001, 0.006, 0.012, 0.024, 0.038, 0.082, 0.150, 0.290, 0.440, 0.810])
+m = len(p_vals)
+alpha = 0.05
+
+# 1. Bonferroni: multiply by total tests m
+p_bonf = np.minimum(p_vals * m, 1.0)
+
+# 2. Holm step-down: multiply by (m - rank) and enforce monotonicity
+p_holm = np.maximum.accumulate(np.minimum(p_vals * (m - np.arange(m)), 1.0))
+
+# 3. Benjamini-Hochberg (FDR control)
+p_bh = stats.false_discovery_control(p_vals, method='bh')
+
+print(f"Raw p-values:        {p_vals}")
+print(f"Bonferroni adjusted: {np.round(p_bonf, 3)}")
+print(f"Holm adjusted:       {np.round(p_holm, 3)}")
+print(f"BH adjusted (FDR):   {np.round(p_bh, 3)}")
+print(f"Discoveries at alpha={alpha} -> Unadjusted: {np.sum(p_vals <= alpha)}, "
+      f"Bonferroni: {np.sum(p_bonf <= alpha)}, Holm: {np.sum(p_holm <= alpha)}, "
+      f"Benjamini-Hochberg: {np.sum(p_bh <= alpha)}")`,
+    quiz: [
+      {
+        q: r`What is the crucial difference between Family-Wise Error Rate (FWER) and False Discovery Rate (FDR)?`,
+        o: [
+          r`FWER controls the probability of making at least one false positive, while FDR controls the expected fraction of false positives among declared discoveries`,
+          r`FWER is only for medical trials, while FDR is only for computer science`,
+          r`FWER always yields more discoveries than FDR`,
+          r`FDR assumes all null hypotheses are true`,
+        ],
+        a: 0,
+        why: r`FWER bounds $P(V \ge 1) \le \alpha$, demanding near-certainty of zero false discoveries. FDR bounds $E[V / \max(R, 1)] \le Q$, tolerating a small fraction of false discoveries to boost power.`,
+      },
+      {
+        q: r`Why should practitioners generally prefer Holm's step-down procedure over the classical Bonferroni correction?`,
+        o: [
+          r`Holm's method requires assuming normal distributions`,
+          r`Holm's method controls FWER at the exact same level $\alpha$ under arbitrary dependence while being strictly more powerful`,
+          r`Holm's method computes p-values faster`,
+          r`Holm's method can be run without sorting p-values`,
+        ],
+        a: 1,
+        why: r`Holm's step-down method guarantees the same FWER protection as Bonferroni without any additional assumptions, but uses smaller multipliers for subsequent ranks, making it uniformly more powerful.`,
+      },
+      {
+        q: r`In the Benjamini–Hochberg procedure with $m$ tests and target FDR $Q$, what is the rejection criterion for the sorted p-values $p_{(1)} \le \dots \le p_{(m)}$?`,
+        o: [
+          r`Reject all $p_{(i)} \le Q / m$`,
+          r`Find the largest rank $k$ such that $p_{(k)} \le \frac{k}{m} Q$, and reject all hypotheses from rank 1 to $k$`,
+          r`Reject only hypotheses with $p_{(i)} \le Q$`,
+          r`Reject the single smallest p-value`,
+        ],
+        a: 1,
+        why: r`The Benjamini–Hochberg step-up procedure identifies the largest index $k$ satisfying $p_{(k)} \le \frac{k}{m} Q$ and declares all hypotheses $1, \dots, k$ significant.`,
+      },
+      {
+        q: r`If you evaluate 20 orthogonal features with independent tests at $\alpha = 0.05$ without multiplicity correction, what is the probability of at least one false positive if all features are pure noise?`,
+        o: [
+          r`5.0%`,
+          r`20.0%`,
+          r`Approximately 64.2%`,
+          r`100%`,
+        ],
+        a: 2,
+        why: r`The probability of at least one false alarm across 20 independent true null tests is $1 - (1 - 0.05)^{20} = 1 - 0.95^{20} \approx 1 - 0.3585 = 0.6415$ (or 64.2%).`,
+      },
+    ],
+    usedBy: ['feature-selection', 'decision_tree_classifier'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'probability-rules-and-bayes-theorem'],
+    related: ['anova-and-post-hoc-tests', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling', 'cross-validation'],
+    keywords: 'multiple testing bonferroni holm benjamini hochberg fdr fwer false discovery rate family wise error p-value adjustment',
+  },
+  {
+    id: 'effect-sizes-cohens-d-cramers-v',
+    short: 'Effect Sizes: Cohen\'s d & V',
+    title: r`Effect Sizes: Cohen's d, Cramér's V`,
+    task: 'concepts',
+    module: 'Hypothesis testing',
+    level: 1,
+    minutes: 15,
+    noLab: true,
+    summary: r`Quantify the practical magnitude of experimental findings beyond mere p-values using standardised metrics for continuous and categorical differences.`,
+    lead: r`A tiny p-value tells you an effect is unlikely to be pure noise, but says nothing about whether it actually matters. Effect size metrics decouple statistical significance from sample size, quantifying the real-world strength of relationships on standardised scales. Cohen's d, Hedges' g, and Cramér's V provide universal, scale-free benchmarks for comparing continuous mean shifts and categorical associations across experiments.`,
+    intuition: [
+      r`Suppose an online education platform evaluates a new tutorial on test scores. In a massive sample of 100,000 students, the new tutorial improves the average score from 75.00 to 75.15 points (a 0.15 point lift out of 100), with a pooled standard deviation $s = 15.0$ points. Because the sample size is enormous ($N = 100,000$), the standard error is $\approx 0.067$, producing $z = 2.24$ and $p = 0.025$. A naive team might announce a "statistically significant breakthrough".`,
+      r`However, dividing the 0.15 point difference by the standard deviation of 15.0 yields a Cohen's $d$ of just $0.01$—a minuscule shift of one-hundredth of a standard deviation. Over 99% of student scores overlap completely between the two cohorts. The effect is practically indistinguishable from zero. Conversely, a tiny pilot study of 20 users might show a massive 12-point jump ($d = 0.80$), but have $p = 0.08$ due to low sample size.`,
+      r`Effect sizes protect teams from both traps. For continuous two-group comparisons, Cohen's $d$ expresses the difference in terms of pooled standard deviations ($0.2$ is small, $0.5$ is medium, $0.8$ is large). Hedges' $g$ applies an exact small-sample correction. For categorical contingency tables, Cramér's $V$ bounds association between 0 (complete independence) and 1 (perfect correlation), converting unscaled chi-square statistics into interpretable association strengths.`,
+    ],
+    analogy: r`A p-value is like a telescope telling you whether a celestial body exists; the effect size is the measurement that tells you whether it is a pebble or a planet.`,
+    steps: [
+      r`Determine the data type: continuous measurements between two groups (Cohen's $d$ or Hedges' $g$) or categorical counts in a contingency table (Cramér's $V$).`,
+      r`For continuous variables, compute the mean difference $\bar{X}_1 - \bar{X}_2$ and the pooled standard deviation $s_{\text{pooled}}$.`,
+      r`Divide the mean difference by $s_{\text{pooled}}$ to obtain Cohen's $d$; if $n < 20$, multiply by the Hedges correction factor $J \approx 1 - \frac{3}{4(n_1 + n_2) - 9}$.`,
+      r`For categorical contingency tables, compute the Pearson chi-square statistic $\chi^2$ and total sample size $N$.`,
+      r`Compute Cramér's $V = \sqrt{\frac{\chi^2}{N \min(R - 1, C - 1)}}$.`,
+      r`Interpret the magnitude against established domain standards rather than treating p-values as proxies for impact.`,
+    ],
+    math: [
+      {
+        h: 'Cohen\'s d and Pooled Standard Deviation',
+        tex: r`$$d = \frac{\bar{X}_1 - \bar{X}_2}{s_{\text{pooled}}}, \qquad s_{\text{pooled}} = \sqrt{\frac{(n_1 - 1)s_1^2 + (n_2 - 1)s_2^2}{n_1 + n_2 - 2}}$$`,
+        p: r`Here $\bar{X}_1, \bar{X}_2$ are group sample means, $s_1^2, s_2^2$ are sample variances, and $n_1, n_2$ are sample sizes. The pooled standard deviation $s_{\text{pooled}}$ weights variances by their degrees of freedom, standardising the mean difference into units of population standard deviations.`,
+      },
+      {
+        h: 'Hedges\' g Small-Sample Correction',
+        tex: r`$$g = d \cdot \left(1 - \frac{3}{4(n_1 + n_2) - 9}\right)$$`,
+        p: r`Cohen's $d$ exhibits a slight positive bias when estimated from small sample sizes ($n_1 + n_2 < 30$). Larry Hedges introduced this exact scaling factor to produce an unbiased estimator $g$, which converges to $d$ as sample sizes increase.`,
+      },
+      {
+        h: 'Cramér\'s V for Categorical Association',
+        tex: r`$$V = \sqrt{\frac{\chi^2}{N \cdot \min(R - 1, C - 1)}}$$`,
+        p: r`Here $\chi^2$ is Pearson's chi-square test statistic, $N$ is total observations, and $R$ and $C$ are the row and column dimensions of the contingency table. Dividing by $N \cdot \min(R - 1, C - 1)$ normalises the metric into the interval $[0, 1]$, where 0 indicates statistical independence and 1 indicates perfect complete association.`,
+      },
+    ],
+    keyPoints: [
+      r`Effect sizes measure the substantive magnitude of a difference or relationship completely independent of sample size.`,
+      r`A finding can achieve statistical significance ($p < 0.05$) while remaining practically negligible ($d < 0.05$), or carry huge real-world impact ($d > 0.80$) while lacking significance in a small study.`,
+      r`Jacob Cohen's classic thresholds ($0.2$ small, $0.5$ medium, $0.8$ large) provide general heuristics, but must always be interpreted in domain-specific context.`,
+      r`Reporting effect sizes with confidence intervals gives readers both the magnitude of an effect and the precision of its estimation.`,
+    ],
+    pitfalls: [
+      r`Equating a small p-value with a large effect size: with huge datasets, trivial noise differences yield $p < 0.0001$.`,
+      r`Using unpooled standard deviations when computing Cohen's $d$ on groups with unequal variances; use Glass's delta or Welch-standardised metrics instead.`,
+      r`Ignoring Hedges' small-sample correction ($g$) when reporting results from pilot studies with fewer than 20 observations per group.`,
+      r`Comparing raw Cramér's V values across tables of different dimensions without accounting for the degrees of freedom scaling factor.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+
+# Continuous comparison: tutorial vs control test scores
+scores_tut = rng.normal(loc=78.5, scale=12.0, size=25)
+scores_ctrl = rng.normal(loc=71.2, scale=11.5, size=25)
+n1, n2 = len(scores_tut), len(scores_ctrl)
+s1, s2 = np.std(scores_tut, ddof=1), np.std(scores_ctrl, ddof=1)
+s_pooled = np.sqrt(((n1 - 1) * s1**2 + (n2 - 1) * s2**2) / (n1 + n2 - 2))
+
+cohens_d = (np.mean(scores_tut) - np.mean(scores_ctrl)) / s_pooled
+hedges_g = cohens_d * (1.0 - 3.0 / (4.0 * (n1 + n2) - 9.0))
+
+# Categorical association: 2x3 contingency table
+table = np.array([[120, 80, 50], [180, 50, 20]])
+chi2_val, _, _, _ = stats.chi2_contingency(table)
+cramers_v = np.sqrt(chi2_val / (np.sum(table) * (min(table.shape) - 1)))
+
+print(f"Mean difference: {np.mean(scores_tut) - np.mean(scores_ctrl):.2f}")
+print(f"Cohen's d:       {cohens_d:.3f} (medium effect)")
+print(f"Hedges' g:       {hedges_g:.3f} (bias-corrected)")
+print(f"Cramér's V:      {cramers_v:.3f} (moderate association)")`,
+    quiz: [
+      {
+        q: r`Why is it dangerous to rely exclusively on p-values without reporting effect sizes?`,
+        o: [
+          r`Because p-values cannot be computed on continuous data`,
+          r`Because massive sample sizes can make minuscule, practically meaningless differences achieve $p < 0.001$`,
+          r`Because p-values only apply to non-parametric distributions`,
+          r`Because effect sizes eliminate experimental variance`,
+        ],
+        a: 1,
+        why: r`The p-value conflates effect size and sample size: with large enough $N$, even an imperceptible difference of 0.01 standard deviations will produce a tiny p-value.`,
+      },
+      {
+        q: r`Under Jacob Cohen's conventional benchmarks for continuous mean comparisons ($d$), what value represents a "medium" effect size?`,
+        o: [
+          r`0.1`,
+          r`0.5`,
+          r`0.8`,
+          r`1.5`,
+        ],
+        a: 1,
+        why: r`Cohen's widely adopted guidelines define $d = 0.2$ as small, $d = 0.5$ as medium, and $d = 0.8$ as large.`,
+      },
+      {
+        q: r`When should an analyst report Hedges' $g$ instead of Cohen's $d$?`,
+        o: [
+          r`When sample sizes are small ($N < 30$), to correct for positive small-sample bias in estimated pooled variance`,
+          r`When data is categorical`,
+          r`When comparing more than two groups simultaneously`,
+          r`When population standard deviations are known exactly`,
+        ],
+        a: 0,
+        why: r`Cohen's $d$ slightly overestimates the true effect size in small samples. Hedges' $g$ applies an exact correction factor that removes this small-sample bias.`,
+      },
+      {
+        q: r`What range of values can Cramér's $V$ take in an $R \times C$ contingency table?`,
+        o: [
+          r`$[-1, 1]$`,
+          r`$[0, 1]$`,
+          r`$[0, \infty)$`,
+          r`$[-0.5, 0.5]$`,
+        ],
+        a: 1,
+        why: r`Cramér's $V$ is normalised by dividing by $N \cdot \min(R - 1, C - 1)$, constraining the metric strictly to $[0, 1]$, where 0 reflects independence and 1 reflects complete association.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'logistic_regression'],
+    prereq: ['hypothesis-testing-and-p-values', 'type-i-ii-errors-power-and-sample-size', 'z-test-and-t-tests'],
+    related: ['chi-square-tests', 'anova-and-post-hoc-tests', 'confidence-intervals'],
+    keywords: 'effect size cohens d cramers v hedges g standardized difference magnitude practical significance',
+  },
+  {
+    id: "permutation-tests",
+    short: "Permutation Tests",
+    title: "Permutation tests",
+    task: "concepts",
+    module: "Hypothesis testing",
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: "Permutation tests (also called randomisation or exact re-randomisation tests) are non-parametric hypothesis tests that calculate exact, distribution-free p-values by exhaustively or randomly shuffling group labels under the null hypothesis. Unlike classical t-tests and ANOVA that rely on asymptotic central limit theorems and strict normality assumptions, permutation tests require only that observations are exchangeable under the null hypothesis H_0. They can evaluate arbitrary test statistics—including medians, trimmed means, ratios, and custom business metrics—with exact finite-sample Type I error guarantees.",
+    lead: "What should you do when evaluating an A/B test with 25 users per variant, where the metric is heavily skewed with extreme outliers and violates every assumption of the Student's t-test? Classical parametric formulas fall apart on small, non-normal samples. Permutation tests provide the gold standard solution: by shuffling the \"Variant A\" and \"Variant B\" labels thousands of times, they construct an exact empirical null distribution directly from the observed data without making any parametric distributional assumptions.",
+    intuition: [
+      "The Core Logic of Exchangeability: Under the null hypothesis H_0, the treatment has no effect on the outcome. Therefore, the group labels (\"Control\" vs \"Treatment\") assigned to each participant are completely arbitrary! If treatment had no impact, an observed revenue of £150 in group A was equally likely to have occurred in group B.",
+      "Building the Empirical Null by Shuffling: Pool all observations from groups A and B together. Randomly shuffle the labels and recompute your test statistic (e.g. difference in means x_bar_A - x_bar_B). Repeat this shuffling process 10,000 times. This builds an exact empirical reference distribution showing what differences arise purely from random chance.",
+      "Calculating the Exact p-Value: The two-sided p-value is simply the proportion of shuffled permutations where the test statistic is at least as extreme as the observed test statistic from the real experiment. No z-tables, t-tables, or degrees of freedom required!",
+      "Total Metric Flexibility: In classical tests, you are restricted to statistics with known analytical sampling distributions (like the mean). In a permutation test, you can test differences in medians, 90th percentiles, variance ratios, or custom profit formulas with identical mathematical validity."
+    ],
+    analogy: "Imagine dealing a deck of cards into two piles, Red and Blue, and noticing the Red pile has a higher total face value. Did the dealer cheat, or was it pure chance? To test this, you don't need a mathematical theorem about Gaussian curves. You simply gather the cards, shuffle them thoroughly, deal them into two piles again, and check the difference. If you repeat this shuffle 10,000 times and an advantage as large as the original deal appears only 12 times, the p-value is 12 / 10,000 = 0.0012, proving the original deal was extraordinarily unlikely to occur by random chance.",
+    steps: [
+      {
+        "title": "State the null hypothesis and exchangeability assumption",
+        "desc": "Formalise H_0: the probability distribution of outcomes is identical across groups.",
+        "detail": "Verify that observations are exchangeable under H_0 (e.g. independent samples assigned via randomisation)."
+      },
+      {
+        "title": "Choose an appropriate test statistic",
+        "desc": "Select a statistic T(D) that quantifies the difference between treatment and control.",
+        "detail": "Pick the difference in means, difference in medians, trimmed mean difference, or ratio of variances based on the metric most relevant to the business decision."
+      },
+      {
+        "title": "Compute the observed test statistic",
+        "desc": "Calculate T_obs on the original, unmodified experimental dataset.",
+        "detail": "Evaluate T_obs = T(group_A, group_B) and store it as the benchmark for significance."
+      },
+      {
+        "title": "Reshuffle group labels under the null hypothesis",
+        "desc": "Pool observations, permute assignments B times, and recalculate the statistic.",
+        "detail": "Draw B random permutations (typically B = 10,000). For each permutation b, reassign pooled observations to groups of size n_A and n_B, and record T^(b)."
+      },
+      {
+        "title": "Compute exact empirical p-value",
+        "desc": "Determine the fraction of permutations as extreme as T_obs, including the continuity correction.",
+        "detail": "Calculate p = (1 + sum I(|T^(b)| >= |T_obs|)) / (B + 1). The addition of 1 to numerator and denominator accounts for the observed data, ensuring strict Type I error control."
+      }
+    ],
+    math: [
+      {
+        "h": "Exact Permutation p-Value Formulation",
+        "tex": "p_{\\text{exact}} = \\frac{1}{\\binom{N}{n_A}} \\sum_{\\pi \\in \\Pi} \\mathbb{I}\\Big( \\big|T(\\pi(\\mathcal{D}))\\big| \\ge |T_{\\text{obs}}| \\Big)",
+        "p": "For sample sizes n_A and n_B with total N = n_A + n_B, there are \\binom{N}{n_A} possible ways to partition the observations into two groups. When N is small, all permutations \\Pi can be evaluated exhaustively to yield an exact finite-sample p-value."
+      },
+      {
+        "h": "Monte Carlo Permutation p-Value with Continuity Correction",
+        "tex": "\\hat{p} = \\frac{1 + \\sum_{b=1}^B \\mathbb{I}\\Big( |T^{(b)}| \\ge |T_{\\text{obs}}| \\Big)}{B + 1}",
+        "p": "When the total number of permutations is astronomically large, B random permutations are sampled uniformly with replacement. Including the original observed dataset as the (B+1)-th permutation ensures \\hat{p} is strictly conservative and guarantees exact Type I error control at level \\alpha."
+      },
+      {
+        "h": "Exchangeability Condition under Null Hypothesis",
+        "tex": "P(X_1 = x_1, \\dots, X_N = x_N) = P(X_{\\pi(1)} = x_1, \\dots, X_{\\pi(N)} = x_N) \\quad \\forall \\pi \\in \\mathcal{S}_N",
+        "p": "The fundamental assumption underpinning permutation testing is exchangeability: under H_0, the joint probability distribution of the pooled sample is invariant under all permutations \\pi in the symmetric group \\mathcal{S}_N. Independent and identically distributed (i.i.d.) observations satisfy this condition automatically."
+      }
+    ],
+    code: "\"\"\"\nTwo-Sample Permutation Test vs Student's t-test\nDemonstrating exact distribution-free hypothesis testing on skewed,\nheavy-tailed A/B test data with extreme outliers.\n\"\"\"\n\nimport numpy as np\n\n# Simulate skewed A/B test data (e.g. e-commerce purchase amounts in GBP)\n# Control: Log-normal(mu=2.5, sigma=1.0)\n# Treatment: Log-normal(mu=2.9, sigma=1.2) with extreme outliers\nnp.random.seed(42)\nn_control = 25\nn_treatment = 25\n\ncontrol_data = np.random.lognormal(mean=2.5, sigma=1.0, size=n_control)\ntreatment_data = np.random.lognormal(mean=2.9, sigma=1.2, size=n_treatment)\n# Introduce two extreme high-value spender outliers in treatment\ntreatment_data[0] *= 4.0\ntreatment_data[1] *= 5.0\n\nprint(f\"=== Sample Summary (n_control={n_control}, n_treatment={n_treatment}) ===\")\nprint(f\"Control:   Mean = £{np.mean(control_data):.2f} | Median = £{np.median(control_data):.2f}\")\nprint(f\"Treatment: Mean = £{np.mean(treatment_data):.2f} | Median = £{np.median(treatment_data):.2f}\")\n\ndef run_permutation_test(group_a: np.ndarray, group_b: np.ndarray, num_permutations: int = 10000, statistic_type: str = \"mean\"):\n    \"\"\"\n    Execute two-sided Monte Carlo permutation test for mean or median difference.\n    \"\"\"\n    n_a = len(group_a)\n    n_b = len(group_b)\n    pooled = np.concatenate([group_a, group_b])\n    total_n = len(pooled)\n\n    # 1. Observed test statistic\n    if statistic_type == \"mean\":\n        t_obs = np.mean(group_b) - np.mean(group_a)\n    elif statistic_type == \"median\":\n        t_obs = np.median(group_b) - np.median(group_a)\n    else:\n        raise ValueError(\"Unsupported statistic type\")\n\n    # 2. Monte Carlo shuffling under H0\n    permuted_diffs = np.empty(num_permutations)\n    for b in range(num_permutations):\n        shuffled = np.random.permutation(pooled)\n        new_a = shuffled[:n_a]\n        new_b = shuffled[n_a:]\n        if statistic_type == \"mean\":\n            permuted_diffs[b] = np.mean(new_b) - np.mean(new_a)\n        else:\n            permuted_diffs[b] = np.median(new_b) - np.median(new_a)\n\n    # 3. Two-sided p-value with continuity correction\n    count_extreme = np.sum(np.abs(permuted_diffs) >= np.abs(t_obs))\n    p_value = (1 + count_extreme) / (num_permutations + 1)\n\n    return t_obs, p_value, permuted_diffs\n\n# 1. Permutation Test on Difference in Means\nt_obs_mean, p_perm_mean, _ = run_permutation_test(control_data, treatment_data, num_permutations=10000, statistic_type=\"mean\")\n\n# 2. Permutation Test on Difference in Medians (Robust to outliers!)\nt_obs_med, p_perm_med, _ = run_permutation_test(control_data, treatment_data, num_permutations=10000, statistic_type=\"median\")\n\n# 3. Classical Student's t-test for comparison\nfrom scipy import stats\nt_stat, p_ttest = stats.ttest_ind(treatment_data, control_data, equal_var=False)\n\nprint(\"\\n=== Hypothesis Testing Results ===\")\nprint(f\"Student's Welch t-test:           Difference = £{np.mean(treatment_data) - np.mean(control_data):.2f} | p-value = {p_ttest:.4f}\")\nprint(f\"Permutation Test (Means):         Obs Diff   = £{t_obs_mean:.2f} | p-value = {p_perm_mean:.4f}\")\nprint(f\"Permutation Test (Medians):       Obs Diff   = £{t_obs_med:.2f} | p-value = {p_perm_med:.4f}\")\n\nalpha = 0.05\nprint(\"\\nConclusion at alpha = 0.05:\")\nprint(f\"  Permutation (Means):   {'Statistically Significant' if p_perm_mean < alpha else 'Fail to Reject H0'}\")\nprint(f\"  Permutation (Medians): {'Statistically Significant' if p_perm_med < alpha else 'Fail to Reject H0'}\")\n",
+    keyPoints: [
+      "Permutation tests generate exact, distribution-free p-values by shuffling group labels under the null hypothesis of exchangeability.",
+      "Unlike parametric t-tests or ANOVA, permutation tests require no assumptions of normality, homoscedasticity, or large sample sizes.",
+      "They allow testing arbitrary test statistics—including medians, percentiles, trimmed means, and custom revenue ratios.",
+      "The Monte Carlo formulation with continuity correction (1 + extreme) / (B + 1) guarantees strict finite-sample Type I error control."
+    ],
+    pitfalls: [
+      "Assuming permutation tests allow heteroscedasticity under general hypotheses: Under H_0, the entire outcome distribution must be invariant across groups, not just the mean.",
+      "Forgetting the +1 continuity correction: Omitting the +1 can produce a p-value of exactly 0.0 when no permuted sample exceeds T_obs, which is theoretically invalid under finite B.",
+      "High computational cost on large datasets: Reshuffling millions of rows 10,000 times is computationally prohibitive; in large samples, asymptotic tests or fast approximations should be used."
+    ],
+    quiz: [
+      {
+        "q": "What is the primary mathematical assumption required for a two-sample permutation test to be valid?",
+        "o": [
+          "Observations are exchangeable across groups under the null hypothesis H_0",
+          "Data must follow a Gaussian bell curve",
+          "Sample size must be greater than 1,000",
+          "Variances of both groups must be known exactly in advance"
+        ],
+        "a": 0,
+        "why": "The permutation test requires exchangeability: under H_0, swapping labels between observations does not alter their joint probability distribution."
+      },
+      {
+        "q": "Why is the continuity correction (1 + extreme) / (B + 1) used when calculating Monte Carlo permutation p-values?",
+        "o": [
+          "Because treating the observed experimental dataset as an additional valid permutation guarantees strict Type I error control and prevents p-values from erroneously equaling zero",
+          "Because Python arrays are zero-indexed",
+          "To convert the test statistic from a float to an integer",
+          "To correct for missing data in the control group"
+        ],
+        "a": 0,
+        "why": "The observed test statistic is itself one valid permutation of the pooled data under H_0. Counting it (+1 in numerator and denominator) guarantees that E[p-value] under H_0 is uniform and non-zero."
+      },
+      {
+        "q": "What major advantage do permutation tests offer over classical Student's t-tests in A/B testing?",
+        "o": [
+          "They do not assume normal distributions and can be computed on arbitrary non-linear statistics such as medians, percentiles, or ratios without deriving custom sampling distributions",
+          "They guarantee that every test reaches statistical significance",
+          "They eliminate the need for an A/B test control group",
+          "They run in zero CPU cycles"
+        ],
+        "a": 0,
+        "why": "Permutation tests construct the empirical null distribution by direct simulation, freeing analysts to test robust statistics (like medians or 95th percentiles) that have no closed-form analytical distribution."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "hypothesis-testing-and-p-values",
+      "non-parametric-tests-mann-whitney-wilcoxon-kruskal-wallis"
+    ],
+    related: [
+      "hypothesis-testing-and-p-values",
+      "bootstrap-and-jackknife",
+      "a-b-testing-end-to-end",
+      "z-test-and-t-tests"
+    ],
+    keywords: "permutation tests randomisation tests exact test exchangeability non-parametric resampling monte carlo a b testing"
+  },
+  {
+    id: "likelihood-ratio-wald-and-score-tests",
+    short: "LR, Wald & Score Tests",
+    title: "Likelihood-ratio, Wald and score tests",
+    task: "concepts",
+    module: "Hypothesis testing",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "The \"Holy Trinity\" of classical parametric hypothesis testing consists of the Likelihood-Ratio (LR) test, the Wald test, and the Score (Lagrange Multiplier / Rao) test. Derived from the geometry of the log-likelihood function \\ell(\\theta), all three tests evaluate null hypotheses of the form H_0: \\theta = \\theta_0 (or nested model restrictions) and share identical asymptotic chi-squared (\\chi^2) distributions under the null. However, they differ radically in computational cost: the Wald test requires fitting only the unconstrained model; the Score test requires fitting only the constrained model under H_0; and the Likelihood-Ratio test requires fitting both models, achieving optimal finite-sample invariance.",
+    lead: "Suppose you want to test whether adding 5 interaction terms to a logistic regression model significantly improves its predictive power. Should you compare the drop in log-likelihood (Likelihood-Ratio test), check how many standard errors the estimated parameters sit from zero (Wald test), or evaluate the gradient slope at the restricted baseline without fitting the full model at all (Score test)? Understanding the geometric relationship and computational trade-offs among the \"Holy Trinity\" is essential for modern statistical inference and econometric modelling.",
+    intuition: [
+      "The Three Views of the Likelihood Surface: Imagine the log-likelihood curve \\ell(\\theta) plotted against parameter \\theta, with the unconstrained maximum likelihood estimate at the peak \\hat{\\theta}, and the restricted null value at \\theta_0:\n- Likelihood-Ratio (LR) Test: Looks at vertical height: how much lower is the log-likelihood at the null compared to the peak? 2 * [\\ell(\\hat{\\theta}) - \\ell(\\theta_0)].\n- Wald Test: Looks at horizontal distance: how far is \\hat{\\theta} from \\theta_0, weighted by the estimated curvature (Fisher Information) at the peak? (\\hat{\\theta} - \\theta_0)^2 * I(\\hat{\\theta}).\n- Score (Rao) Test: Looks at slope (gradient): how steep is the slope of the log-likelihood evaluated at the null point \\theta_0? If \\theta_0 were truly the maximum, the slope would be zero.",
+      "Computational Asymmetry in Large Models:\n- When fitting the unconstrained model is trivial, the Wald test is fast and convenient (this is why software packages print Wald z-statistics next to every regression coefficient).\n- When the unconstrained model is massive, complex, or expensive to train (e.g. adding 10,000 genomic features), the Score test is brilliant because you never fit the full model! You only evaluate the gradient at the simple restricted baseline.\n- The Likelihood-Ratio test requires fitting both models, but achieves transformation invariance: reparameterising \\theta as log \\theta or e^\\theta leaves the LR test statistic identical, whereas the Wald test changes.",
+      "Asymptotic Equivalence under the Null: Under H_0 as sample size n approaches infinity, Taylor expansions show that all three test statistics converge to the exact same value and follow a chi-squared distribution with degrees of freedom equal to the number of parameter restrictions: LR ~ W ~ S ~ \\chi^2(r)."
+    ],
+    analogy: "Imagine trying to verify whether the summit of a mountain \\hat{\\theta} is significantly higher than a base camp \\theta_0. The LR test measures the vertical elevation drop between the summit and the camp. The Wald test measures the horizontal walking distance from the summit to the camp and multiplies by the summit's terrain curvature. The Score test stands at the base camp and measures the steepness of the upward slope pointing toward the summit without ever hiking up to the top.",
+    steps: [
+      {
+        "title": "Define unrestricted model and null hypothesis restrictions",
+        "desc": "Formalise the unrestricted parameter vector \\theta and r linear or non-linear constraints H_0: h(\\theta) = 0.",
+        "detail": "Determine the degrees of freedom r representing the dimensionality difference between unrestricted space \\Theta and restricted subspace \\Theta_0."
+      },
+      {
+        "title": "Fit unconstrained and constrained models",
+        "desc": "Obtain unrestricted MLE \\hat{\\theta} and restricted MLE \\tilde{\\theta}.",
+        "detail": "Maximise log-likelihood \\ell(\\theta) freely to get \\hat{\\theta}. Maximise under the constraint H_0 to get \\tilde{\\theta}."
+      },
+      {
+        "title": "Compute Likelihood-Ratio test statistic",
+        "desc": "Calculate twice the difference in log-likelihood values: \\Lambda = 2[\\ell(\\hat{\\theta}) - \\ell(\\tilde{\\theta})].",
+        "detail": "Evaluate log-likelihood at both optima. \\Lambda is strictly non-negative and invariant to continuous monotonic parameter transformations."
+      },
+      {
+        "title": "Compute Wald and Score test statistics",
+        "desc": "Calculate horizontal curvature distance (Wald) and gradient slope norm (Score).",
+        "detail": "Wald: W = (\\hat{\\theta} - \\theta_0)^\\top [Var(\\hat{\\theta})]^{-1} (\\hat{\\theta} - \\theta_0). Score: S = U(\\tilde{\\theta})^\\top [I(\\tilde{\\theta})]^{-1} U(\\tilde{\\theta}), where U is the score vector \\nabla_\\theta \\ell."
+      },
+      {
+        "title": "Evaluate p-values against Chi-Squared reference",
+        "desc": "Compare test statistics against \\chi^2(r) distribution with r degrees of freedom.",
+        "detail": "Compute p-value = P(\\chi^2(r) >= T). If p < \\alpha, reject the null hypothesis in favour of the unconstrained alternative."
+      }
+    ],
+    math: [
+      {
+        "h": "Likelihood-Ratio (LR) Test Statistic",
+        "tex": "\\text{LR} = 2 \\left[ \\ell(\\hat{\\theta}) - \\ell(\\tilde{\\theta}) \\right] \\xrightarrow{d} \\chi^2(r)",
+        "p": "The Wilks theorem proves that twice the difference in log-likelihood between the unrestricted maximum \\hat{\\theta} and restricted maximum \\tilde{\\theta} converges asymptotically to a chi-squared distribution with degrees of freedom r equal to the number of restrictions."
+      },
+      {
+        "h": "Wald Test Statistic",
+        "tex": "W = (\\hat{\\theta} - \\theta_0)^\\top \\left[ \\widehat{\\text{Var}}(\\hat{\\theta}) \\right]^{-1} (\\hat{\\theta} - \\theta_0) = (\\hat{\\theta} - \\theta_0)^\\top \\mathcal{I}_n(\\hat{\\theta}) (\\hat{\\theta} - \\theta_0) \\xrightarrow{d} \\chi^2(r)",
+        "p": "The Wald test evaluates the quadratic distance of the unconstrained estimate \\hat{\\theta} from the null hypothesis value \\theta_0, weighted by the observed Fisher Information matrix \\mathcal{I}_n(\\hat{\\theta}). It requires fitting only the unconstrained model."
+      },
+      {
+        "h": "Score (Lagrange Multiplier / Rao) Test Statistic",
+        "tex": "S = \\mathbf{U}(\\tilde{\\theta})^\\top \\left[ \\mathcal{I}_n(\\tilde{\\theta}) \\right]^{-1} \\mathbf{U}(\\tilde{\\theta}) \\xrightarrow{d} \\chi^2(r), \\qquad \\mathbf{U}(\\theta) = \\nabla_\\theta \\ell(\\theta)",
+        "p": "The Score test evaluates the score vector (gradient) \\mathbf{U} evaluated at the restricted estimate \\tilde{\\theta}. If the null hypothesis is true, \\tilde{\\theta} is close to the true maximum, so the gradient \\mathbf{U}(\\tilde{\\theta}) should be statistically indistinguishable from zero."
+      }
+    ],
+    code: "\"\"\"\nThe Holy Trinity of Hypothesis Testing: Likelihood-Ratio, Wald, and Score Tests\nDemonstrated on a Poisson Rate Parameter H0: lambda = lambda_0.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\n# Generate synthetic Poisson count data\nnp.random.seed(42)\ntrue_lambda = 4.8\nn_obs = 60\ndata = np.random.poisson(lam=true_lambda, size=n_obs)\nsum_x = np.sum(data)\n\n# Null hypothesis: lambda = lambda_0\nlambda_0 = 4.0\n\n# 1. Unconstrained Maximum Likelihood Estimate\n# For Poisson: log L(lambda) = -n*lambda + sum_x * log(lambda) - sum(log(x!))\n# MLE lambda_hat = sum_x / n\nlambda_hat = sum_x / n_obs\n\n# Fisher Information: I_n(lambda) = n / lambda\n# Log-likelihood function (dropping constant factorial terms)\ndef log_lik(lam):\n    return -n_obs * lam + sum_x * np.log(lam)\n\n# 2. Likelihood-Ratio Test\n# LR = 2 * [log L(lambda_hat) - log L(lambda_0)]\nlr_stat = 2 * (log_lik(lambda_hat) - log_lik(lambda_0))\np_lr = 1 - stats.chi2.cdf(lr_stat, df=1)\n\n# 3. Wald Test\n# W = (lambda_hat - lambda_0)^2 * I_n(lambda_hat) = (lambda_hat - lambda_0)^2 * (n / lambda_hat)\ni_wald = n_obs / lambda_hat\nwald_stat = ((lambda_hat - lambda_0) ** 2) * i_wald\np_wald = 1 - stats.chi2.cdf(wald_stat, df=1)\n\n# 4. Score (Rao / LM) Test\n# Score U(lambda) = d log L / d lambda = -n + sum_x / lambda\n# Evaluated at lambda_0: U(lambda_0) = -n + sum_x / lambda_0\n# Score Stat = [U(lambda_0)]^2 / I_n(lambda_0) = (-n + sum_x / lambda_0)^2 / (n / lambda_0)\nscore_u0 = -n_obs + (sum_x / lambda_0)\ni_score0 = n_obs / lambda_0\nscore_stat = (score_u0 ** 2) / i_score0\np_score = 1 - stats.chi2.cdf(score_stat, df=1)\n\nprint(f\"=== Hypothesis Test: H0: lambda = {lambda_0:.1f} vs H1: lambda != {lambda_0:.1f} ===\")\nprint(f\"Sample Size n = {n_obs} | Sample Mean (MLE) = {lambda_hat:.3f} | Sample Sum = {sum_x}\")\nprint(f\"\\n1. Likelihood-Ratio (LR) Test: Stat = {lr_stat:.4f} | p-value = {p_lr:.4f}\")\nprint(f\"2. Wald Test:                  Stat = {wald_stat:.4f} | p-value = {p_wald:.4f}\")\nprint(f\"3. Score (Rao) Test:           Stat = {score_stat:.4f} | p-value = {p_score:.4f}\")\n\nprint(\"\\n--- Practical Invariance Check ---\")\nprint(\"All three test statistics are asymptotically equivalent under H0.\")\nprint(f\"Difference |LR - Wald|:  {abs(lr_stat - wald_stat):.4f}\")\nprint(f\"Difference |LR - Score|: {abs(lr_stat - score_stat):.4f}\")\nprint(\"At alpha = 0.05, conclusion across all three tests:\", \"REJECT H0\" if p_lr < 0.05 else \"FAIL TO REJECT H0\")\n",
+    keyPoints: [
+      "The Likelihood-Ratio, Wald, and Score tests form the 'Holy Trinity' of classical parametric testing, all asymptotically chi-squared under H_0.",
+      "The LR test evaluates vertical log-likelihood difference, the Wald test evaluates horizontal parameter distance, and the Score test evaluates gradient slope at the null.",
+      "Computational trade-offs: Wald requires fitting only the unconstrained model; Score requires fitting only the constrained model; LR requires fitting both.",
+      "The Likelihood-Ratio test is invariant to parameter reparameterisation, whereas the Wald test can vary depending on parameter scaling."
+    ],
+    pitfalls: [
+      "The Hauck-Donner effect in Wald tests: When parameters are very large or separation occurs, estimated standard errors explode faster than coefficients, causing Wald statistics to erroneously shrink toward zero.",
+      "Assuming tests give identical finite-sample p-values: While asymptotically equivalent, their finite-sample numerical values often differ: typically Wald >= LR >= Score in linear regression.",
+      "Ignoring boundary constraints: If the null hypothesis lies on the boundary of the parameter space (e.g. variance sigma^2 = 0), the asymptotic distribution is a mixture of chi-squared distributions, not a standard chi-squared."
+    ],
+    quiz: [
+      {
+        "q": "Which of the three classical tests requires estimating ONLY the constrained model under the null hypothesis H_0?",
+        "o": [
+          "The Score (Rao / Lagrange Multiplier) test",
+          "The Wald test",
+          "The Likelihood-Ratio test",
+          "The Student's t-test"
+        ],
+        "a": 0,
+        "why": "The Score test evaluates the slope (gradient) of the log-likelihood at the restricted parameter estimate \\tilde{\\theta}. It requires no estimation of the unconstrained model."
+      },
+      {
+        "q": "What is the primary advantage of the Likelihood-Ratio test over the Wald test in non-linear models?",
+        "o": [
+          "The Likelihood-Ratio test is invariant to continuous monotonic reparameterisations of the model, whereas the Wald test statistic changes under non-linear transformations",
+          "The Likelihood-Ratio test runs in O(1) time",
+          "The Likelihood-Ratio test does not require the null hypothesis to be specified",
+          "The Likelihood-Ratio test never rejects the null hypothesis"
+        ],
+        "a": 0,
+        "why": "The height difference between the peak and restricted point on the likelihood surface is completely invariant to how parameters are scaled (e.g. \\theta vs \\log \\theta), whereas the curvature-weighted distance in Wald tests is sensitive to parameterisation."
+      },
+      {
+        "q": "Under the null hypothesis H_0 with r independent parameter restrictions, what is the asymptotic distribution of the Likelihood-Ratio test statistic?",
+        "o": [
+          "A Chi-Squared distribution with r degrees of freedom, \\chi^2(r)",
+          "A standard normal distribution \\mathcal{N}(0, 1)",
+          "A Student's t-distribution with n-1 degrees of freedom",
+          "A uniform distribution on [0, 1]"
+        ],
+        "a": 0,
+        "why": "Wilks' theorem guarantees that 2[\\ell(\\hat{\\theta}) - \\ell(\\tilde{\\theta})] converges asymptotically to \\chi^2(r), where r is the number of parameter restrictions."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "hypothesis-testing-and-p-values",
+      "maximum-likelihood-estimation"
+    ],
+    related: [
+      "hypothesis-testing-and-p-values",
+      "maximum-likelihood-estimation",
+      "generalised-linear-models",
+      "chi-square-tests"
+    ],
+    keywords: "likelihood ratio test wald test score test lagrange multiplier rao test wilks theorem holy trinity hypothesis testing"
+  },
 ];
