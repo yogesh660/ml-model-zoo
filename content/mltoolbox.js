@@ -6016,4 +6016,1073 @@ print(f"Kernel prediction: {[round(float(v), 3) for v in y_pred]}")`,
     related: ['support_vector_classifier', 'pca', 'convex-optimisation-and-duality'],
     keywords: 'kernel trick mercer condition rbf kernel gram matrix hilbert space support vector machines positive semidefinite',
   },
+  {
+  "id": "svm-dual-formulation",
+  "short": "SVM dual formulation",
+  "title": "Support Vector Machines: The Dual Formulation and KKT Conditions",
+  "task": "concepts",
+  "module": "Learning theory",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Derive the convex duality behind maximum-margin hyperplanes: master Lagrange multipliers, Wolfe dual, Karush–Kuhn–Tucker (KKT) conditions, and the kernel trick.",
+  "lead": "While the primal SVM problem searches over feature weights w in high-dimensional space, the dual problem searches over sample weights alpha, revealing that the optimal decision boundary depends exclusively on inner products between support vectors.",
+  "intuition": [
+    "The Support Vector Machine (SVM) is founded on the principle of Structural Risk Minimisation: rather than merely separating training data, it searches for the maximum-margin hyperplane that leaves the widest possible buffer zone between classes, guaranteeing the tightest theoretical bound on test generalisation error.",
+    "In its Primal formulation, the soft-margin SVM optimises weight vector $w \\in \\mathbb{R}^d$ and bias $b \\in \\mathbb{R}$: $\\min_{w, b, \\xi} \\frac{1}{2} \\|w\\|^2 + C \\sum_{i=1}^n \\xi_i$ subject to classification margin constraints $y_i (w^T x_i + b) \\ge 1 - \\xi_i$. However, when we map features non-linearly into infinite-dimensional Hilbert spaces (via Gaussian RBF kernels), weight vector $w$ has infinite dimension, making the primal problem impossible to solve directly.",
+    "Convex optimisation duality resolves this brilliantly. By formulating the Lagrangian function with Lagrange multipliers $\\alpha_i \\ge 0$ and $\\mu_i \\ge 0$, differentiating with respect to primal variables $(w, b, \\xi)$, and setting derivatives to zero, we derive the Wolfe Dual formulation.",
+    "The dual problem is an elegant concave quadratic program where the decision variables are the sample multipliers $\\alpha_i$, and feature vectors $x_i$ enter strictly via pairwise dot products $x_i^T x_j$. The Karush–Kuhn–Tucker (KKT) complementary slackness conditions prove that $\\alpha_i = 0$ for every sample comfortably outside the margin: the optimal decision boundary is defined exclusively by the sparse subset of training points with $\\alpha_i > 0$—the Support Vectors! Substituting a Mercer kernel $K(x_i, x_j)$ for the dot product unlocks non-linear boundaries in infinite dimensions."
+  ],
+  "analogy": "Imagine two rival medieval armies facing each other across a battlefield. The primal commander tries to construct a continuous defensive barrier across the entire width of the landscape. The dual general notices that only the front-line soldiers standing along the very edge of contact (the support vectors) determine where the battle line is drawn; all soldiers standing safely 500 metres behind the front line can turn around and go to sleep without shifting the boundary by a single millimetre.",
+  "steps": [
+    {
+      "title": "1. Formulate primal Lagrangian function",
+      "body": "Construct Lagrangian: $\\mathcal{L}(w, b, \\xi, \\alpha, \\mu) = \\frac{1}{2} \\|w\\|^2 + C \\sum_{i=1}^n \\xi_i - \\sum_{i=1}^n \\alpha_i [y_i(w^T \\phi(x_i) + b) - 1 + \\xi_i] - \\sum_{i=1}^n \\mu_i \\xi_i$."
+    },
+    {
+      "title": "2. Enforce KKT stationarity conditions",
+      "body": "Set partial derivatives to zero: $\\nabla_w \\mathcal{L} = w - \\sum \\alpha_i y_i \\phi(x_i) = 0 \\implies w = \\sum \\alpha_i y_i \\phi(x_i)$, $\\frac{\\partial \\mathcal{L}}{\\partial b} = -\\sum \\alpha_i y_i = 0$, and $\\frac{\\partial \\mathcal{L}}{\\partial \\xi_i} = C - \\alpha_i - \\mu_i = 0$."
+    },
+    {
+      "title": "3. Substitute stationarity back to obtain Wolfe Dual",
+      "body": "Substitute relations into $\\mathcal{L}$: maximise $\\mathcal{D}(\\alpha) = \\sum_{i=1}^n \\alpha_i - \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j y_i y_j K(x_i, x_j)$ subject to box constraints $0 \\le \\alpha_i \\le C$ and $\\sum_{i=1}^n \\alpha_i y_i = 0$."
+    },
+    {
+      "title": "4. Extract support vectors and compute bias b",
+      "body": "Identify support vectors with $\\alpha_i > 0$. For any unbounded support vector ($0 < \\alpha_k < C$), compute bias: $b = y_k - \\sum_{i=1}^n \\alpha_i y_i K(x_i, x_k)$. Score new sample: $f(x) = \\operatorname{sign}\\left(\\sum_{i \\in \\mathrm{SV}} \\alpha_i y_i K(x_i, x) + b\\right)$."
+    }
+  ],
+  "math": [
+    {
+      "h": "The Wolfe Dual Quadratic Program",
+      "tex": "\\max_\\alpha \\sum_{i=1}^n \\alpha_i - \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j y_i y_j K(x_i, x_j) \\quad \\text{subject to } 0 \\le \\alpha_i \\le C, \\; \\sum_{i=1}^n \\alpha_i y_i = 0",
+      "p": "The dual objective depends solely on pairwise kernel evaluations K(x_i, x_j) and scalar multipliers alpha_i, completely independent of the dimensionality of feature space."
+    },
+    {
+      "h": "KKT Complementary Slackness Conditions",
+      "tex": "\\alpha_i \\left[ y_i (w^T \\phi(x_i) + b) - 1 + \\xi_i \\right] = 0, \\quad \\mu_i \\xi_i = (C - \\alpha_i) \\xi_i = 0",
+      "p": "Proves sparsity: alpha_i > 0 occurs strictly when y_i f(x_i) <= 1 (support vectors on or inside the margin). Points with y_i f(x_i) > 1 have alpha_i = 0 and do not affect the boundary."
+    },
+    {
+      "h": "Primal Weight Recovery via Dual Multipliers",
+      "tex": "w = \\sum_{i=1}^n \\alpha_i y_i \\phi(x_i) = \\sum_{i \\in \\mathrm{SV}} \\alpha_i y_i \\phi(x_i)",
+      "p": "Weight vector w is a linear combination of support vectors alone, proving that SVM predictions are entirely memory-sparse."
+    }
+  ],
+  "code": "import numpy as np\nfrom scipy.optimise import minimise\n\n# Support Vector Machine Dual Solver via Quadratic Programming from scratch\nnp.random.seed(42)\nn_samples = 60\n\n# Generate linearly separable 2D data\nX1 = np.random.normal(loc=[-1.5, -1.5], scale=0.7, size=(n_samples // 2, 2))\nX2 = np.random.normal(loc=[1.5, 1.5], scale=0.7, size=(n_samples // 2, 2))\nX = np.vstack([X1, X2])\ny = np.array([-1]*(n_samples // 2) + [1]*(n_samples // 2), dtype=float)\n\n# Linear kernel: K(x_i, x_j) = x_i^T x_j\nK = X @ X.T\nC = 1.0  # Regularisation penalty\n\n# Dual Objective: min 0.5 * alpha^T (Y K Y) alpha - 1^T alpha\nY = np.outer(y, y)\nP = Y * K\n\ndef dual_objective(alpha):\n    return 0.5 * np.dot(alpha, P @ alpha) - np.sum(alpha)\n\ndef dual_grad(alpha):\n    return P @ alpha - np.ones_like(alpha)\n\n# Constraints: sum(alpha_i * y_i) = 0 and 0 <= alpha_i <= C\nconstraints = {'type': 'eq', 'fun': lambda alpha: np.dot(alpha, y), 'jac': lambda alpha: y}\nbounds = [(0.0, C) for _ in range(n_samples)]\nalpha_init = np.zeros(n_samples)\n\nres = minimise(\n    dual_objective,\n    x0=alpha_init,\n    jac=dual_grad,\n    bounds=bounds,\n    constraints=constraints,\n    method='SLSQP',\n    options={'ftol': 1e-9, 'maxiter': 500}\n)\n\nalphas = res.x\nalphas[alphas < 1e-5] = 0.0  # Numerical threshold for sparsity\n\n# Identify Support Vectors\nsv_mask = alphas > 0.0\nsupport_vectors = X[sv_mask]\nsv_alphas = alphas[sv_mask]\nsv_y = y[sv_mask]\n\n# Reconstruct primal weights: w = sum(alpha_i * y_i * x_i)\nw = np.sum((alphas * y)[:, None] * X, axis=0)\n\n# Compute bias b using an unbounded support vector (0 < alpha < C)\nunbounded_sv = (alphas > 1e-4) & (alphas < C - 1e-4)\nif np.any(unbounded_sv):\n    idx = np.where(unbounded_sv)[0][0]\n    b = y[idx] - np.dot(w, X[idx])\nelse:\n    b = np.mean(y[sv_mask] - X[sv_mask] @ w)\n\n# Margin width: 2 / ||w||\nmargin_width = 2.0 / np.linalg.norm(w)\n\nprint(f\"Total training points: {n_samples}\")\nprint(f\"Number of Support Vectors found: {len(support_vectors)} ({len(support_vectors)/n_samples*100:.1f}% sparsity!)\")\nprint(f\"Primal weight vector w: [{w[0]:.4f}, {w[1]:.4f}]\")\nprint(f\"Primal bias b:          {b:.4f}\")\nprint(f\"Geometric margin width: {margin_width:.4f}\")\n\n# Check complementary slackness\nmargins = y * (X @ w + b)\nprint(f\"Min margin for SVs: {np.min(margins[sv_mask]):.4f} (approx 1.0 on margin boundary)\")",
+  "keyPoints": [
+    "Convex duality transforms the primal $O(d)$ optimisation over weights into a dual $O(n)$ optimisation over sample multipliers $\\alpha_i$.",
+    "The dual depends solely on pairwise dot products $x_i^T x_j$, enabling the kernel trick $K(x_i, x_j)$ in infinite-dimensional Hilbert spaces.",
+    "KKT complementary slackness proves sparsity: points with $y_i f(x_i) > 1$ have $\\alpha_i = 0$ and exert zero influence on the decision boundary.",
+    "Only Support Vectors ($\\alpha_i > 0$) define the separating hyperplane and margin boundary.",
+    "Box constraint $0 \\le \\alpha_i \\le C$ controls the penalty: unbounded support vectors ($0 < \\alpha_i < C$) lie exactly on the margin boundary."
+  ],
+  "pitfalls": [
+    "Quadratic memory scaling: The Gram kernel matrix $K$ is $n \\times n$; standard QP solvers scale as $O(n^3)$ time and $O(n^2)$ memory, requiring Sequential Minimal Optimisation (SMO) for large datasets.",
+    "Numerical solver precision: Standard off-the-shelf QP solvers can yield small non-zero values ($10^{-7}$) for non-support vectors; thresholding $\\alpha_i$ is necessary to recover true sparsity.",
+    "Bias determination when all SVs are bounded: When all support vectors have $\\alpha_i = C$ (high misclassification), bias $b$ cannot be determined from a single point and requires averaging upper/lower bounds."
+  ],
+  "quiz": [
+    {
+      "q": "Why does the dual formulation of SVM make the kernel trick possible?",
+      "o": [
+        "The dual optimisation problem depends exclusively on inner products x_i^T x_j between training points, allowing replacement with a kernel function K(x_i, x_j)",
+        "The dual formulation eliminates all constraints",
+        "The dual formulation converts non-convex problems into linear equations",
+        "The dual formulation operates only on the labels y_i"
+      ],
+      "a": 0,
+      "why": "In the dual formulation, feature vectors x appear strictly inside pairwise inner products x_i^T x_j. By Mercer’s theorem, any positive semi-definite kernel K(x_i, x_j) computes this inner product in Hilbert space."
+    },
+    {
+      "q": "What do the KKT complementary slackness conditions imply about training points that lie safely outside the margin (y_i f(x_i) > 1)?",
+      "o": [
+        "Their dual multiplier alpha_i must be exactly zero, meaning they exert zero influence on the position of the separating hyperplane",
+        "Their dual multiplier alpha_i equals C",
+        "They are misclassified outliers",
+        "They must be deleted from the dataset"
+      ],
+      "a": 0,
+      "why": "From alpha_i [y_i f(x_i) - 1 + xi_i] = 0, when a point is safely on the correct side outside the margin (y_i f(x_i) > 1, xi_i = 0), alpha_i must be zero."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "support_vector_classifier",
+    "kernel-pca"
+  ],
+  "related": [
+    "support_vector_classifier",
+    "support_vector_regression",
+    "one-class-svm",
+    "kernel-pca"
+  ],
+  "keywords": "svm dual, support vector machines, lagrange multipliers, wolfe dual, kkt conditions, complementary slackness, kernel trick, quadratic programming"
+},
+  {
+  "id": "vc-dimension-and-pac-learning",
+  "short": "VC dimension & PAC",
+  "title": "VC Dimension and Probably Approximately Correct (PAC) Learning",
+  "task": "concepts",
+  "module": "Learning theory",
+  "level": 3,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Quantify the learning capacity of hypothesis classes and sample complexity: master Valiant’s PAC framework, shattering, and Vapnik–Chervonenkis (VC) dimension.",
+  "lead": "How many training samples are mathematically required to guarantee that a machine learning model will generalise out-of-sample? Computational learning theory formalises generalisation bounds using PAC learning and VC dimension.",
+  "intuition": [
+    "How do we know that a machine learning model with low training error will genuinely perform well on unseen future data, rather than having memorized noise? If a model achieves 0% training error on 50 samples, when does this guarantee true generalisation? Computational Learning Theory provides the mathematical foundation.",
+    "Leslie Valiant (1984) founded Probably Approximately Correct (PAC) Learning. The PAC framework defines what it means for an algorithm to \"learn\": given error tolerance $\\epsilon > 0$ and failure probability $\\delta > 0$, an algorithm is a PAC learner if, with high probability (at least $1 - \\delta$), it outputs a hypothesis whose true generalisation error is at most $\\epsilon$. The sample complexity $m$ is the minimum number of training examples required to guarantee this.",
+    "For finite hypothesis spaces (a discrete dictionary of $|\\mathcal{H}|$ possible models), PAC bounds show that sample complexity scales logarithmically: $m \\ge \\frac{1}{\\epsilon} \\left( \\ln |\\mathcal{H}| + \\ln \\frac{1}{\\delta} \\right)$. However, nearly all practical models—such as linear hyperplanes, logistic regression, support vector machines, and neural networks—have continuous real-valued parameters, meaning $|\\mathcal{H}| = \\infty$. When $|\\mathcal{H}| = \\infty$, the naive bound $\\ln |\\mathcal{H}|$ becomes infinite and useless.",
+    "Vladimir Vapnik and Alexey Chervonenkis resolved this by measuring the combinatorial expressiveness of continuous hypothesis classes through the Vapnik–Chervonenkis (VC) Dimension. A hypothesis class $\\mathcal{H}$ shatters a set of $m$ points if it can assign all $2^m$ possible binary labelings to those points. The VC dimension $d_{\\mathrm{VC}}$ is the maximum number of points that can be shattered. By Sauer’s Lemma, once sample size exceeds $d_{\\mathrm{VC}}$, the number of realizable labelings grows only polynomially, proving that generalisation bounds depend on $d_{\\mathrm{VC}}$ rather than the infinite cardinality of $\\mathcal{H}$."
+  ],
+  "analogy": "Imagine a teacher testing students with multiple-choice questions. A student who memorized a cheat sheet of 10 answers (finite hypothesis space) might pass a 10-question test purely by memorisation. But to guarantee they truly understand the underlying subject (PAC learning with error < 5%), you must test them on enough diverse questions that pure guessing or memorisation becomes statistically impossible. The VC dimension measures the student memorisation capacity: how many arbitrary questions they could pass by rote before genuine conceptual understanding is required.",
+  "steps": [
+    {
+      "title": "1. Specify PAC parameters and hypothesis class",
+      "body": "Select maximum allowable generalisation error $\\epsilon \\in (0, 1)$ and confidence parameter $\\delta \\in (0, 1)$ (guaranteeing $P(\\mathrm{Error} \\le \\epsilon) \\ge 1 - \\delta$)."
+    },
+    {
+      "title": "2. Determine shattering capacity",
+      "body": "Test whether hypothesis class $\\mathcal{H}$ can assign all $2^m$ binary labelings to $m$ points in general position. For 2D linear hyperplanes, 3 non-collinear points can be shattered."
+    },
+    {
+      "title": "3. Identify the VC dimension",
+      "body": "Find the largest integer $d$ such that a set of $d$ points can be shattered. For linear classifiers in $\\mathbb{R}^p$, $d_{\\mathrm{VC}} = p + 1$."
+    },
+    {
+      "title": "4. Compute PAC sample complexity and generalisation bound",
+      "body": "Evaluate the Vapnik generalisation bound: with probability $\\ge 1 - \\delta$, true risk satisfies $R(h) \\le R_{\\mathrm{emp}}(h) + \\sqrt{\\frac{8 d_{\\mathrm{VC}} \\ln(2e m / d_{\\mathrm{VC}}) + 8 \\ln(4/\\delta)}{m}}$."
+    }
+  ],
+  "math": [
+    {
+      "h": "PAC Sample Complexity (Finite Hypothesis Class)",
+      "tex": "m \\ge \\frac{1}{\\epsilon} \\left( \\ln |\\mathcal{H}| + \\ln \\frac{1}{\\delta} \\right)",
+      "p": "Minimum number of training samples required to guarantee true risk <= epsilon with probability >= 1 - delta for consistent learners in finite hypothesis spaces."
+    },
+    {
+      "h": "VC Dimension Definition and Growth Function",
+      "tex": "d_{\\mathrm{VC}}(\\mathcal{H}) = \\max \\left\\{ m : \\Pi_{\\mathcal{H}}(m) = 2^m \\right\\}, \\quad \\Pi_{\\mathcal{H}}(m) \\le \\sum_{i=0}^{d} \\binom{m}{i} \\le \\left(\\frac{em}{d}\\right)^d \\; (\\text{Sauer's Lemma})",
+      "p": "The maximum number of points that can be shattered. Sauer's Lemma proves that for m > d, the growth function is bounded polynomially by (em/d)^d."
+    },
+    {
+      "h": "Vapnik–Chervonenkis Generalisation Error Bound",
+      "tex": "R(h) \\le R_{\\mathrm{emp}}(h) + 2 \\sqrt{2 \\frac{d_{\\mathrm{VC}} \\ln\\left(\\frac{2e m}{d_{\\mathrm{VC}}}\\right) + \\ln\\left(\\frac{4}{\\delta}\\right)}{m}}",
+      "p": "Guarantees that true out-of-sample risk R(h) is bounded by empirical training risk plus a structural complexity penalty scaling as O(sqrt(d_VC / m))."
+    }
+  ],
+  "code": "import numpy as np\n\n# Demonstrating Shattering and VC Dimension in 2D Linear Classifiers\n# For a 2D line (w1*x1 + w2*x2 + b = 0), VC dimension is 2 + 1 = 3.\n# 3 points can be shattered in all 2^3 = 8 configurations.\n# 4 points cannot be shattered (XOR configuration always fails!)\n\ndef can_shatter(points, labels_list):\n    # Check if a linear classifier can perfectly separate each binary labeling\n    from sklearn.linear_model import LogisticRegression\n    shattered_count = 0\n    \n    for y in labels_list:\n        if len(np.unique(y)) == 1:\n            shattered_count += 1\n            continue\n        clf = LogisticRegression(penalty=None, solver='lbfgs')\n        clf.fit(points, y)\n        preds = clf.predict(points)\n        if np.array_equal(preds, y):\n            shattered_count += 1\n            \n    return shattered_count\n\n# 1. Test 3 non-collinear points in 2D\npoints_3 = np.array([\n    [0.0, 0.0],\n    [1.0, 0.0],\n    [0.0, 1.0]\n])\n\n# Generate all 2^3 = 8 binary labelings\nlabels_3 = []\nfor i in range(8):\n    binary_str = format(i, '03b')\n    labels_3.append(np.array([int(b) for b in binary_str]))\n\nshattered_3 = can_shatter(points_3, labels_3)\n\n# 2. Test 4 points forming an XOR square\npoints_4 = np.array([\n    [0.0, 0.0],\n    [1.0, 0.0],\n    [0.0, 1.0],\n    [1.0, 1.0]\n])\n\n# Generate all 2^4 = 16 binary labelings\nlabels_4 = []\nfor i in range(16):\n    binary_str = format(i, '04b')\n    labels_4.append(np.array([int(b) for b in binary_str]))\n\nshattered_4 = can_shatter(points_4, labels_4)\n\n# 3. Calculate VC Sample Complexity Bound\nd_vc = 3  # For 2D linear classifier\nepsilon = 0.10  # Max 10% generalisation error\ndelta = 0.05    # 95% confidence (delta = 5%)\n\n# Vapnik sample complexity approximation: m approx (d_vc + log(1/delta)) / eps\nm_approx = int(np.ceil((d_vc * np.log(1.0 / epsilon) + np.log(1.0 / delta)) / epsilon))\n\nprint(f\"--- VC Dimension Verification in 2D ---\")\nprint(f\"3 Points: Can shatter {shattered_3} / 8 labelings (100% shattered -> d_VC >= 3)\")\nprint(f\"4 Points: Can shatter {shattered_4} / 16 labelings (XOR fails -> d_VC < 4)\")\nprint(f\"Exact VC Dimension of 2D Linear Classifier: {d_vc}\")\n\nprint(f\"\\n--- PAC Learning Sample Complexity ---\")\nprint(f\"Target generalisation error (epsilon): {epsilon * 100:.1f}%\")\nprint(f\"Confidence level (1 - delta):           {(1 - delta) * 100:.1f}%\")\nprint(f\"Guaranteed sample complexity m:        {m_approx} samples required\")",
+  "keyPoints": [
+    "PAC learning formalises the conditions under which an algorithm produces low generalisation error with high probability.",
+    "For finite hypothesis spaces, sample complexity scales as $m = O\\left(\\frac{1}{\\epsilon} \\ln |\\mathcal{H}|\\right)$.",
+    "VC dimension measures the capacity of infinite continuous hypothesis classes by determining the maximum number of shatterable points.",
+    "For linear hyperplanes in $\\mathbb{R}^p$, the VC dimension is exactly $p + 1$.",
+    "Vapnik’s generalisation bounds prove that generalisation error decays as $O\\left(\\sqrt{d_{\\mathrm{VC}} / m}\\right)$, independent of ambient parameter space."
+  ],
+  "pitfalls": [
+    "Confusing parameter count with VC dimension: A model with only 1 parameter can have infinite VC dimension (e.g. $f(x) = \\operatorname{sign}(\\sin(\\theta x))$ can shatter infinitely many points).",
+    "Overly conservative theoretical bounds: VC generalisation bounds are worst-case upper bounds across all distributions, often requiring 10x to 100x more samples than empirical neural network practice.",
+    "Data-independent bounds: Standard VC dimension ignores the underlying data distribution $P(x)$; data lying on a low-dimensional manifold generalises with far fewer samples than raw VC dimension suggests."
+  ],
+  "quiz": [
+    {
+      "q": "What is the VC dimension of a linear hyperplane classifier operating in 2-dimensional space (R^2)?",
+      "o": [
+        "3 (it can shatter any 3 non-collinear points in all 8 labelings, but cannot shatter 4 points in an XOR configuration)",
+        "2 (matching the number of features)",
+        "Infinite",
+        "1 (it can only classify 1 point at a time)"
+      ],
+      "a": 0,
+      "why": "In R^p, a linear hyperplane has VC dimension p + 1. In 2D, 3 points can be shattered in all 8 labelings, but an XOR configuration of 4 points cannot be linearly separated."
+    },
+    {
+      "q": "Why does Sauer’s Lemma represent a crucial breakthrough in machine learning theory?",
+      "o": [
+        "It proves that once sample size m exceeds the VC dimension d, the number of realizable labelings grows polynomially O(m^d) rather than exponentially 2^m, enabling generalisation bounds",
+        "It proves that all neural networks converge in polynomial time",
+        "It shows that test error is always zero when training error is zero",
+        "It allows linear regression to solve classification problems"
+      ],
+      "a": 0,
+      "why": "Without Sauer's lemma, the combinatorial growth of labelings 2^m prevents generalisation bounds. Sauer's lemma establishes polynomial growth (em/d)^d for m > d_VC, proving PAC learnability."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "support_vector_classifier",
+    "bias-variance-tradeoff"
+  ],
+  "related": [
+    "svm-dual-formulation",
+    "no-free-lunch-and-inductive-bias",
+    "bias-variance-tradeoff"
+  ],
+  "keywords": "vc dimension, pac learning, vapnik chervonenkis, sauers lemma, shattering, sample complexity, generalisation bounds, learning theory"
+},
+  {
+  "id": "no-free-lunch-and-inductive-bias",
+  "short": "No free lunch & inductive bias",
+  "title": "The No Free Lunch Theorem and Inductive Bias",
+  "task": "concepts",
+  "module": "Learning theory",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Why no single machine learning algorithm outperforms all others: master Wolpert’s No Free Lunch theorems and the necessity of domain-specific inductive bias.",
+  "lead": "Is there a \"master algorithm\" that is universally superior to all other models? Wolpert and Macready proved that averaged over all possible data distributions, every learning algorithm performs identically to random guessing. Generalisation is possible only through inductive bias.",
+  "intuition": [
+    "Machine learning practitioners constantly search for the best model: comparing XGBoost, Random Forests, Neural Networks, and Support Vector Machines. A natural question arises: is there an ultimate machine learning algorithm that is theoretically superior to all other algorithms across all tasks?",
+    "In 1997, David Wolpert and William Macready delivered an astonishing mathematical proof: the No Free Lunch (NFL) Theorem for Supervised Learning. The theorem states that if we average out-of-sample performance across the uniform distribution of all conceivable mathematical target functions, every learning algorithm has the exact same expected error rate—matching a coin flip or random guessing!",
+    "If Algorithm A outperforms Algorithm B on a specific benchmark dataset, there is guaranteed to exist a complementary set of mathematical universes where Algorithm B outperforms Algorithm A by the exact same margin.",
+    "Why, then, does machine learning work so brilliantly in the real world? Because the real world is NOT drawn uniformly from all conceivable mathematical functions! In an unconstrained universe, the next observed data point could have a completely random label unrelated to preceding points. Real-world physical data exhibits profound regularity: spatial continuity, temporal persistence, compositional symmetry, and smooth energy landscapes. An algorithm generalises successfully if and only if its Inductive Bias—its built-in mathematical assumptions about what patterns are natural—matches the physical structure of the problem."
+  ],
+  "analogy": "Imagine a universal lock-picking tool. If a locksmith faces every conceivable lock mechanism that could ever be built across the multiverse (including locks where the keyhole rearranges its pins randomly after every turn), no single lock-pick is better than a random coat hanger. But in our actual world, human locksmiths build locks based on physical gravity and brass tumblers. A specialised rake pick works brilliantly not because it is universally supreme, but because its design matches the specific mechanical bias of real-world locks.",
+  "steps": [
+    {
+      "title": "1. Understand the uniform distribution over functions",
+      "body": "Recognise that over all possible binary functions on input space $\\mathcal{X}$, unobserved test points are equally likely to be labelled $0$ or $1$, regardless of observed training labels."
+    },
+    {
+      "title": "2. Formalise Wolpert No Free Lunch theorem",
+      "body": "For any two algorithms $A$ and $B$, $\\sum_{f} \\sum_{x \\notin \\mathcal{D}} \\mathbb{I}(A(\\mathcal{D}, x) \\neq f(x)) = \\sum_{f} \\sum_{x \\notin \\mathcal{D}} \\mathbb{I}(B(\\mathcal{D}, x) \\neq f(x))$. Expected off-training error is strictly equal."
+    },
+    {
+      "title": "3. Identify the model inductive bias",
+      "body": "Deconstruct model assumptions: linear models assume planar boundaries; kNN assumes metric distance locality; CNNs assume translation equivariance; Transformers assume permutation-equivariant token interaction."
+    },
+    {
+      "title": "4. Align inductive bias with problem domain",
+      "body": "Select architectures whose mathematical priors match physical reality: use CNNs for images (spatial locality), RNNs/LSTMs for sequences (temporal causality), and Tree ensembles for tabular data (axis-aligned thresholds)."
+    }
+  ],
+  "math": [
+    {
+      "h": "Wolpert No Free Lunch (NFL) Theorem for Supervised Learning",
+      "tex": "\\sum_f P(E \\mid f, m, A) = \\sum_f P(E \\mid f, m, B) \\quad \\forall A, B",
+      "p": "Averaged over all possible target functions f, the probability of off-training error E given m training examples is identical for any two algorithms A and B."
+    },
+    {
+      "h": "Expected Off-Training Error Equality",
+      "tex": "\\mathbb{E}_{f \\sim \\operatorname{Uniform}(\\mathcal{F})}\\left[ R_{\\mathrm{test}}(A) \\right] = 0.50",
+      "p": "Without prior assumptions restricting the function universe, no algorithm can outperform a random coin toss on unseen test data."
+    },
+    {
+      "h": "Formal Definition of Inductive Bias (Mitchell)",
+      "tex": "\\mathcal{D} \\wedge \\mathcal{B} \\vdash h(x) = y",
+      "p": "Inductive bias B is the minimal set of prior assumptions that, when logically conjoined with training data D, deductively entails the model predictions."
+    }
+  ],
+  "code": "import numpy as np\nfrom itertools import product\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.neighbours import KNeighborsClassifier\n\n# Empirical Simulation of the No Free Lunch Theorem\n# Consider a tiny discrete universe of 4 binary inputs: {00, 01, 10, 11}\n# There are 2^4 = 16 possible distinct binary functions f: {0, 1}^2 -> {0, 1}\n\nX_all = np.array([\n    [0, 0],\n    [0, 1],\n    [1, 0],\n    [1, 1]\n])\n\n# Training set: first 2 points; Test set: remaining 2 points\nX_train = X_all[:2]\nX_test = X_all[2:]\n\n# Enumerate all 16 possible mathematical truth functions\nall_possible_functions = list(product([0, 1], repeat=4))\n\n# Track total test errors across all 16 mathematical universes\nerrors_tree = 0\nerrors_knn = 0\nerrors_random = 0\n\nfor f in all_possible_functions:\n    y_all = np.array(f)\n    y_train = y_all[:2]\n    y_test = y_all[2:]\n    \n    # Algorithm 1: Decision Tree\n    tree = DecisionTreeClassifier(max_depth=2, random_state=42)\n    # If training labels are uniform, default to class 0\n    if len(np.unique(y_train)) == 1:\n        pred_tree = np.full(len(X_test), y_train[0])\n    else:\n        tree.fit(X_train, y_train)\n        pred_tree = tree.predict(X_test)\n        \n    # Algorithm 2: k-Nearest Neighbours (k=1)\n    knn = KNeighborsClassifier(n_neighbors=1)\n    knn.fit(X_train, y_train)\n    pred_knn = knn.predict(X_test)\n    \n    # Algorithm 3: Pure Random Guess (p = 0.5)\n    # Expected error on 2 test points across uniform functions is 1.0\n    errors_tree += np.sum(pred_tree != y_test)\n    errors_knn += np.sum(pred_knn != y_test)\n    errors_random += 1.0  # Theoretical expectation per universe\n\ntotal_test_evaluations = len(all_possible_functions) * len(X_test)  # 16 * 2 = 32\n\nprint(f\"Discrete Universe: {len(X_all)} points, {len(all_possible_functions)} total mathematical truth functions\")\nprint(f\"Total out-of-sample predictions evaluated: {total_test_evaluations}\")\nprint(f\"\\nTotal Test Errors Across All Universes:\")\nprint(f\"  Decision Tree Error Rate:     {errors_tree} / {total_test_evaluations} ({errors_tree / total_test_evaluations * 100:.1f}%)\")\nprint(f\"  1-Nearest Neighbour Error:    {errors_knn} / {total_test_evaluations} ({errors_knn / total_test_evaluations * 100:.1f}%)\")\nprint(f\"  Random Guessing Expected:     16 / 32 (50.0%)\")\nprint(\"\\nConclusion: Across all possible mathematical functions, Tree, kNN, and Random Guessing have EXACTLY IDENTICAL 50.0% error!\")",
+  "keyPoints": [
+    "Averaged across all conceivable target functions, every machine learning algorithm performs identically to random guessing.",
+    "There is no universally optimal \"master algorithm\": superior performance on one class of problems is paid for with inferior performance on complementary problems.",
+    "Generalisation is impossible without Inductive Bias: the prior mathematical assumptions built into an algorithm.",
+    "Machine learning succeeds in practice because real-world physical data is non-uniform, exhibiting spatial, temporal, and compositional regularities.",
+    "Model selection is the art of matching an architecture inductive bias (e.g. CNNs for images, Trees for tabular data) to the physical constraints of the domain."
+  ],
+  "pitfalls": [
+    "Believing deep learning violates No Free Lunch: Deep learning does not violate NFL; its colossal success stems from its hierarchical compositional inductive bias matching real-world perceptual data.",
+    "Selecting models purely by generic leaderboard rankings: A model that dominates a tabular Kaggle competition may fail catastrophically on streaming sensor data where its inductive bias is mismatched.",
+    "Over-reliance on zero-bias models: A model with zero inductive bias (capable of memorizing any arbitrary lookup table) cannot generalise beyond observed training points."
+  ],
+  "quiz": [
+    {
+      "q": "What is the central conclusion of the No Free Lunch Theorem for supervised learning?",
+      "o": [
+        "Averaged over all mathematically possible data distributions, all learning algorithms have identical expected generalisation performance matching random guessing",
+        "Deep learning is mathematically proven to outperform all other algorithms",
+        "Training error is always lower than test error",
+        "Models with more parameters always overfit"
+      ],
+      "a": 0,
+      "why": "Wolpert proved that across the uniform distribution of all conceivable functions, every algorithm has the exact same average out-of-sample error rate of 50%."
+    },
+    {
+      "q": "Why can Convolutional Neural Networks (CNNs) accurately classify images using far fewer parameters than fully connected networks?",
+      "o": [
+        "CNNs encode an inductive bias of translation equivariance and local spatial connectivity, which matches the physical structure of visual images",
+        "CNNs bypass the need for training data",
+        "CNNs do not use activation functions",
+        "CNNs invert the image covariance matrix"
+      ],
+      "a": 0,
+      "why": "CNNs bake in domain-specific inductive biases: pixels close together are correlated (local receptive fields) and visual objects retain meaning regardless of position (weight sharing/translation equivariance)."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "vc-dimension-and-pac-learning",
+    "bias-variance-tradeoff"
+  ],
+  "related": [
+    "vc-dimension-and-pac-learning",
+    "bias-variance-tradeoff",
+    "ensemble-theory-bagging-boosting-stacking-compared"
+  ],
+  "keywords": "no free lunch theorem, inductive bias, wolpert, generalisation, machine learning theory, domain adaptation, prior assumptions"
+},
+  {
+  "id": "label-propagation",
+  "short": "Label propagation",
+  "title": "Label Propagation and Graph-Based Semi-Supervised Learning",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Spread ground-truth labels across affinity graphs to unlabelled data: master transition matrices, harmonic functions, and Label Spreading.",
+  "lead": "In many real-world applications, labelling data requires expensive human domain experts, leaving 99% of data unlabelled. Label propagation constructs a nearest-neighbour affinity graph, propagating known labels across high-density manifolds.",
+  "intuition": [
+    "In modern machine learning, collecting unlabelled data is virtually free—scraping millions of web pages, sensor logs, or satellite images. However, obtaining high-quality ground truth labels requires human domain experts (e.g. radiologists annotating MRIs or fraud specialists reviewing transactions), which is slow and expensive. Semi-Supervised Learning (SSL) exploits the structure of unlabelled data to dramatically improve model accuracy from a tiny handful of labelled examples.",
+    "Graph-based semi-supervised learning rests on the Cluster / Manifold Assumption: high-density regions of data form continuous clusters or manifolds, and points lying on the same manifold are overwhelmingly likely to share the identical class label.",
+    "Pioneered by Xiaojin Zhu and Zoubin Ghahramani (2002), Label Propagation connects all data points (both labelled and unlabelled) into an undirected affinity graph $W$, where edge weights $W_{ij} = \\exp(-\\|x_i - x_j\\|^2 / (2\\sigma^2))$ reflect local similarity.",
+    "Label Propagation models probability diffusion: known labels act as source electrodes, pumping probability mass through graph edges into unlabelled nodes. At each iteration, unlabelled nodes update their belief to the weighted average of their neighbours beliefs, while labelled nodes are clamped to their ground-truth values. The process converges to a unique closed-form Harmonic Function satisfying the graph Laplace equation $\\Delta f = 0$. Zhou et al. introduced Label Spreading, which incorporates normalised Graph Laplacians and soft clamping to tolerate noisy labels."
+  ],
+  "analogy": "Imagine a network of dry irrigation canals connecting hundreds of rice fields in a valley. Only two fields at opposite ends have water pumps: one pumps blue fertilizer water, the other pumps yellow dye water. As water flows through the connecting canals, nearby fields quickly absorb the blue or yellow liquid. At equilibrium, every field settles into a stable shade of green, teal, or blue depending strictly on the network conductivity between them.",
+  "steps": [
+    {
+      "title": "1. Construct pairwise affinity graph matrix",
+      "body": "Given $l$ labelled samples and $u$ unlabelled samples, compute $n \\times n$ similarity matrix $W$ via Gaussian RBF kernel $W_{ij} = \\exp(-\\gamma \\|x_i - x_j\\|^2)$ (or $k$-NN graph) with zero diagonal $W_{ii} = 0$."
+    },
+    {
+      "title": "2. Formulate row-stochastic transition matrix",
+      "body": "Compute degree matrix $D = \\operatorname{diag}(W \\mathbf{1})$. Construct transition probability matrix $P = D^{-1} W$, where $P_{ij}$ is the probability of hopping from node $i$ to node $j$."
+    },
+    {
+      "title": "3. Partition matrix into labelled and unlabelled blocks",
+      "body": "Decompose $P = \\begin{bmatrix} P_{LL} & P_{LU} \\\\ P_{UL} & P_{UU} \\end{bmatrix}$ and label matrix $Y = \\begin{bmatrix} Y_L \\\\ Y_U \\end{bmatrix}$, where $Y_L$ contains one-hot ground-truth labels."
+    },
+    {
+      "title": "4. Compute harmonic equilibrium solution",
+      "body": "Iterate $Y_U \\leftarrow P_{UU} Y_U + P_{UL} Y_L$ until convergence, or evaluate exact closed-form harmonic solution: $Y_U^* = (I - P_{UU})^{-1} P_{UL} Y_L$. Assign classes via $\\hat{y}_i = \\arg\\max_k Y_{U, ik}$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Label Propagation Equilibrium Equation",
+      "tex": "Y_U = (I_u - P_{UU})^{-1} P_{UL} Y_L, \\quad P = D^{-1} W",
+      "p": "Closed-form solution for unlabelled node label distributions. The matrix inverse exists and is strictly positive because P_UU is sub-stochastic."
+    },
+    {
+      "h": "Harmonic Energy Minimisation",
+      "tex": "\\mathcal{E}(f) = \\frac{1}{2} \\sum_{i, j=1}^n W_{ij} (f_i - f_j)^2 = f^T L f \\quad \\text{subject to } f_L = y_L",
+      "p": "The equilibrium solution minimises Dirichlet harmonic energy on the graph Laplacian L = D - W, ensuring smooth variation along the data manifold."
+    },
+    {
+      "h": "Label Spreading Soft-Clamping Update (Zhou et al.)",
+      "tex": "F^{(t+1)} = \\alpha S F^{(t)} + (1 - \\alpha) Y, \\quad S = D^{-1/2} W D^{-1/2}",
+      "p": "Normalised graph Laplacian iteration with clamping parameter alpha in (0, 1) balancing neighbour diffusion with fidelity to initial labels, conferring robustness to label noise."
+    }
+  ],
+  "code": "import numpy as np\n\n# Label Propagation from scratch on Two Concentric Moons\n# We have 200 total samples, but ONLY 2 LABELLED SAMPLES (one per class)!\nnp.random.seed(42)\nn_samples = 100\n\n# Generate 2 moons dataset\ntheta = np.linspace(0, np.pi, n_samples)\nmoon1_x = np.cos(theta) + np.random.normal(0, 0.08, n_samples)\nmoon1_y = np.sin(theta) + np.random.normal(0, 0.08, n_samples)\n\nmoon2_x = 1.0 - np.cos(theta) + np.random.normal(0, 0.08, n_samples)\nmoon2_y = 0.5 - np.sin(theta) + np.random.normal(0, 0.08, n_samples)\n\nX = np.vstack([np.column_stack([moon1_x, moon1_y]),\n               np.column_stack([moon2_x, moon2_y])])\ny_true = np.array([0]*n_samples + [1]*n_samples)\nn_total = len(X)\n\n# Assign ONLY 2 KNOWN LABELS: sample 0 is Class 0, sample 100 is Class 1\n# All other 198 samples are unlabelled (-1)\ny_semi = np.full(n_total, -1)\ny_semi[0] = 0\ny_semi[n_samples] = 1\n\n# 1. Compute RBF Affinity Matrix W\ngamma = 20.0\ndists_sq = np.sum(X**2, axis=1)[:, None] + np.sum(X**2, axis=1)[None, :] - 2 * (X @ X.T)\nW = np.exp(-gamma * np.maximum(dists_sq, 0))\nnp.fill_diagonal(W, 0.0)  # No self-loops\n\n# 2. Row-normalise to create transition matrix P = D^{-1} W\nD = np.sum(W, axis=1)\nD[D == 0] = 1e-12\nP = W / D[:, None]\n\n# 3. Label matrix Y (one-hot encoding)\nY = np.zeros((n_total, 2))\nY[0, 0] = 1.0\nY[n_samples, 1] = 1.0\n\n# 4. Label Propagation Iteration\nlabelled_indices = [0, n_samples]\nunlabelled_indices = [i for i in range(n_total) if i not in labelled_indices]\n\nY_curr = Y.copy()\nfor it in range(50):\n    # Propagate: Y <- P * Y\n    Y_new = P @ Y_curr\n    # Clamp labelled points strictly to ground truth\n    Y_new[0] = [1.0, 0.0]\n    Y_new[n_samples] = [0.0, 1.0]\n    \n    if np.max(np.abs(Y_new - Y_curr)) < 1e-5:\n        break\n    Y_curr = Y_new\n\n# Predicted classes on unlabelled instances\npred_labels = np.argmax(Y_curr, axis=1)\naccuracy_unlabelled = np.mean(pred_labels[unlabelled_indices] == y_true[unlabelled_indices])\n\nprint(f\"Total dataset: {n_total} samples (Two Moons manifold)\")\nprint(f\"Number of labelled samples provided: 2 (1.0% supervision!)\")\nprint(f\"Number of unlabelled samples to infer: {len(unlabelled_indices)}\")\nprint(f\"Label Propagation Accuracy on Unlabelled Data: {accuracy_unlabelled * 100:.1f}%\")\nprint(\"Conclusion: Label propagation successfully navigated the curved manifold from 2 single points!\")",
+  "keyPoints": [
+    "Graph-based semi-supervised learning that propagates label probabilities from labelled seeds across the data manifold.",
+    "Rests on the Cluster/Manifold assumption: points connected by high-density paths share identical class labels.",
+    "Converges to a unique harmonic function minimising graph Dirichlet energy $\\mathcal{E}(f) = f^T L f$.",
+    "Label Spreading introduces normalised Graph Laplacians and soft clamping, conferring robustness against corrupted labels.",
+    "Achieves high classification accuracy on complex non-linear manifolds using less than 1% labelled training data."
+  ],
+  "pitfalls": [
+    "Affinity graph sensitivity: Highly sensitive to graph construction (RBF parameter $\\gamma$ or $k$-NN count); poor choice connects disconnected manifolds (short-circuiting) or fragments the graph.",
+    "Label imbalance bias: If one class has significantly more labelled seeds, its probability mass floods unlabelled nodes; class mass normalisation (CMN) is required.",
+    "Scalability bottleneck: Full graph propagation requires $O(n^2)$ memory and $O(n^3)$ inversion time, demanding sparse $k$-NN approximations or landmark graphs for large datasets."
+  ],
+  "quiz": [
+    {
+      "q": "Why can Label Propagation classify complex curved non-linear manifolds (like Two Moons) using only 2 labelled examples?",
+      "o": [
+        "It diffuses labels along high-density graph paths, respecting the underlying topological manifold structure without requiring linear separation",
+        "It assumes the data is normally distributed in 2D space",
+        "It projects data onto the coordinate axes",
+        "It discards all unlabelled points before fitting"
+      ],
+      "a": 0,
+      "why": "By constructing an affinity graph along dense geometric corridors, label probabilities flow naturally through the manifold curves, classifying points based on path connectivity."
+    },
+    {
+      "q": "What is the primary difference between Label Propagation and Zhou et al.’s Label Spreading?",
+      "o": [
+        "Label Spreading uses the symmetrically normalised Graph Laplacian and soft clamping, allowing labelled points to adapt and tolerate label noise",
+        "Label Spreading is a supervised regression algorithm",
+        "Label Propagation cannot handle binary classification",
+        "Label Spreading requires zero parameters"
+      ],
+      "a": 0,
+      "why": "Label Propagation strictly clamps labelled nodes to initial values. Label Spreading uses soft clamping with parameter alpha, allowing labelled nodes to update and filter noisy annotations."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "spectral_clustering",
+    "markov-chains-and-stationary-distributions"
+  ],
+  "related": [
+    "spectral_clustering",
+    "self-training-and-pseudo-labels",
+    "active-learning",
+    "markov-chains-and-stationary-distributions"
+  ],
+  "keywords": "label propagation, semi-supervised learning, label spreading, harmonic functions, manifold assumption, graph laplacian, transductive learning"
+},
+  {
+  "id": "self-training-and-pseudo-labels",
+  "short": "Self-training & pseudo-labels",
+  "title": "Self-Training and Pseudo-Labelling",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Bootstrapping classifiers on unlabelled data: master high-confidence pseudo-labelling, confirmation bias, curriculum pseudo-labelling, and FixMatch.",
+  "lead": "When large amounts of unlabelled data are available, self-training leverages the model’s own high-confidence predictions to iteratively expand its training dataset, pushing decision boundaries toward low-density regions.",
+  "intuition": [
+    "In production machine learning systems, data scientists frequently find themselves with a small labelled dataset $\\mathcal{D}_L$ and a massive pool of unlabelled instances $\\mathcal{D}_U$. While graph-based methods like label propagation require holding all data in memory, Self-Training (pseudo-labelling) offers an intuitive, scalable bootstrapping paradigm that works with any supervised model—from logistic regression to 100-million parameter vision transformers.",
+    "The core self-training loop operates in iterations: first, train a base model on the available labelled data $\\mathcal{D}_L$. Second, generate predicted class probabilities on unlabelled instances $u \\in \\mathcal{D}_U$. Third, filter the predictions using a strict confidence threshold $\\tau$ (e.g. $\\max_k P(y=k \\mid u) \\ge 0.95$). Fourth, convert confident predictions into hard \"pseudo-labels\" $\\hat{y} = \\arg\\max P(y \\mid u)$, append them to the training set, and retrain the model from scratch.",
+    "Why does training a model on its own predictions work? Mathematically, pseudo-labelling acts as an implicit form of Entropy Minimisation (Grandvalet & Bengio, 2004). By forcing model predictions on unlabelled data to become sharp, discrete one-hot vectors, self-training pushes the decision boundary out of high-density data clusters and into low-density boundary margins.",
+    "However, self-training contains an inherent danger: Confirmation Bias. If the initial model makes an incorrect prediction with high confidence (e.g. due to class imbalance or misleading noise), it pseudo-labels the sample incorrectly. In subsequent rounds, the model retrains on its own mistake, reinforcing and compounding the error. Modern algorithms like FixMatch prevent confirmation bias using data augmentation consistency: inferring pseudo-labels on weakly augmented images and enforcing loss on strongly augmented versions."
+  ],
+  "analogy": "Imagine an apprentice botanist learning to identify mushrooms with a guidebook containing only five confirmed photographs. The apprentice walks into a forest of 1,000 unlabelled mushrooms. When they encounter a mushroom that is 99% identical to the guidebook photo of a Chanterelle, they plant a wooden signpost labelled \"Chanterelle\". They use their newly expanded set of reference mushrooms to identify subtly more ambiguous specimens deeper in the forest, gradually mastering the species.",
+  "steps": [
+    {
+      "title": "1. Train teacher model on labelled dataset",
+      "body": "Train initial supervised model $f_\\theta$ on available labelled data $\\mathcal{D}_L = \\{(x_i, y_i)\\}_{i=1}^n$."
+    },
+    {
+      "title": "2. Generate predictions on unlabelled pool",
+      "body": "Evaluate predictive probabilities $p_u = f_\\theta(u)$ for all instances in unlabelled pool $\\mathcal{D}_U$."
+    },
+    {
+      "title": "3. Filter by confidence threshold and assign pseudo-labels",
+      "body": "Identify high-confidence subset: $\\mathcal{D}_{\\mathrm{pseudo}} = \\{(u, \\arg\\max p_u) : \\max_k p_{u, k} \\ge \\tau\\}$, typically setting $\\tau \\in [0.90, 0.98]$."
+    },
+    {
+      "title": "4. Augment training set and retrain",
+      "body": "Combine datasets $\\mathcal{D}_{\\mathrm{new}} = \\mathcal{D}_L \\cup \\mathcal{D}_{\\mathrm{pseudo}}$. Remove pseudo-labelled instances from $\\mathcal{D}_U$. Retrain model on combined pool. Repeat for multiple cycles."
+    }
+  ],
+  "math": [
+    {
+      "h": "Confidence Masking and Pseudo-Label Definition",
+      "tex": "q_b = \\mathbb{I}\\left( \\max_k p_{\\mathrm{model}}(y = k \\mid u_b) \\ge \\tau \\right), \\quad \\hat{y}_b = \\arg\\max_k p_{\\mathrm{model}}(y = k \\mid u_b)",
+      "p": "Binary mask q_b filters unlabelled instances, retaining only samples where maximum predicted class probability exceeds threshold tau."
+    },
+    {
+      "h": "Combined Supervised and Pseudo-Label Objective",
+      "tex": "\\mathcal{L}_{\\mathrm{total}} = \\frac{1}{B_L} \\sum_{i=1}^{B_L} H(y_i, p(x_i)) + \\lambda_u \\frac{1}{B_U} \\sum_{b=1}^{B_U} q_b H(\\hat{y}_b, p(u_b))",
+      "p": "Standard cross-entropy loss on labelled data combined with confidence-masked cross-entropy on pseudo-labelled unlabelled instances weighted by lambda_u."
+    },
+    {
+      "h": "Connection to Entropy Minimisation",
+      "tex": "\\mathcal{H}(p) = -\\sum_{k=1}^K p_k \\log p_k \\to 0",
+      "p": "Training on hard one-hot pseudo-labels forces class probabilities toward 0 or 1, minimising conditional entropy and driving decision boundaries into low-density margins."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Self-Training with Confidence Thresholding from scratch\nnp.random.seed(42)\n\n# Generate synthetic binary dataset (2 clusters in 2D space)\nn_samples = 400\nX1 = np.random.normal(loc=[-1.5, 0], scale=0.8, size=(n_samples // 2, 2))\nX2 = np.random.normal(loc=[1.5, 0], scale=0.8, size=(n_samples // 2, 2))\nX = np.vstack([X1, X2])\ny_true = np.array([0]*(n_samples // 2) + [1]*(n_samples // 2))\n\n# Tiny initial labelled seed: ONLY 10 SAMPLES (5 per class)\n# Remaining 390 samples are unlabelled!\nn_labelled = 10\nlabelled_idx = np.concatenate([np.random.choice(n_samples // 2, n_labelled // 2, replace=False),\n                               np.random.choice(np.arange(n_samples // 2, n_samples), n_labelled // 2, replace=False)])\nunlabelled_idx = np.setdiff1d(np.arange(n_samples), labelled_idx)\n\n# Initial baseline model trained on only 10 samples\nbaseline_model = LogisticRegression()\nbaseline_model.fit(X[labelled_idx], y_true[labelled_idx])\nacc_baseline = np.mean(baseline_model.predict(X[unlabelled_idx]) == y_true[unlabelled_idx])\n\n# Self-Training Loop\ncurrent_labelled_idx = labelled_idx.copy()\ncurrent_unlabelled_idx = unlabelled_idx.copy()\ncurrent_y = y_true.copy()\n\nconfidence_threshold = 0.90\nmax_cycles = 5\n\nfor cycle in range(max_cycles):\n    # 1. Fit model on currently labelled pool\n    clf = LogisticRegression()\n    clf.fit(X[current_labelled_idx], current_y[current_labelled_idx])\n    \n    # 2. Predict probabilities on unlabelled pool\n    if len(current_unlabelled_idx) == 0:\n        break\n    probs = clf.predict_proba(X[current_unlabelled_idx])\n    max_probs = np.max(probs, axis=1)\n    pseudo_labels = np.argmax(probs, axis=1)\n    \n    # 3. Filter by confidence threshold\n    confident_mask = max_probs >= confidence_threshold\n    if not np.any(confident_mask):\n        break\n        \n    newly_labelled_indices = current_unlabelled_idx[confident_mask]\n    current_y[newly_labelled_indices] = pseudo_labels[confident_mask]\n    \n    # 4. Update pools\n    current_labelled_idx = np.concatenate([current_labelled_idx, newly_labelled_indices])\n    current_unlabelled_idx = current_unlabelled_idx[~confident_mask]\n\n# Final model evaluation\nfinal_model = LogisticRegression()\nfinal_model.fit(X[current_labelled_idx], current_y[current_labelled_idx])\nacc_final = np.mean(final_model.predict(X[unlabelled_idx]) == y_true[unlabelled_idx])\n\nprint(f\"Dataset: {n_samples} total samples ({n_labelled} initial labelled, {len(unlabelled_idx)} unlabelled)\")\nprint(f\"Baseline Accuracy (10 labelled samples only): {acc_baseline * 100:.1f}%\")\nprint(f\"Self-Training Confident Pseudo-labels added:   {len(current_labelled_idx) - n_labelled} samples\")\nprint(f\"Final Self-Trained Accuracy:                   {acc_final * 100:.1f}%\")\nprint(f\"Accuracy Improvement: +{(acc_final - acc_baseline) * 100:.1f}% via self-training!\")",
+  "keyPoints": [
+    "Bootstraps models on unlabelled data by treating high-confidence predictions as ground-truth pseudo-labels.",
+    "Model-agnostic and highly scalable: works with any supervised base classifier without graph memory bottlenecks.",
+    "Enforces entropy minimisation: pushes classification decision boundaries into low-density regions between clusters.",
+    "Confidence thresholding $\\tau \\in [0.90, 0.98]$ prevents noisy ambiguous predictions from corrupting training data.",
+    "Forms the foundation of state-of-the-art semi-supervised deep learning frameworks like FixMatch and noisy student training."
+  ],
+  "pitfalls": [
+    "Confirmation bias: If an initial model makes a high-confidence erroneous prediction, it trains on its own blunder in subsequent iterations, entrenching the mistake.",
+    "Class imbalance amplification: Models tend to be more confident in dominant majority classes, pseudo-labelling more majority samples and starving minority classes; class-balanced thresholding is vital.",
+    "Static threshold collapse: A fixed threshold $\\tau = 0.95$ may be too strict in early epochs (zero pseudo-labels added) or too lenient in late epochs; curriculum pseudo-labelling dynamically adjusts $\\tau$."
+  ],
+  "quiz": [
+    {
+      "q": "What is \"confirmation bias\" in the context of self-training and pseudo-labelling?",
+      "o": [
+        "When a model makes a confident incorrect prediction on unlabelled data, retrains on that false label, and compounds its own mistake in subsequent iterations",
+        "When human annotators disagree with each other",
+        "When training loss increases instead of decreasing",
+        "When the learning rate is set too low"
+      ],
+      "a": 0,
+      "why": "Confirmation bias occurs when the model incorporates its own erroneous pseudo-labels into training, reinforcing the error and cementing corrupted decision boundaries."
+    },
+    {
+      "q": "Why does training on high-confidence pseudo-labels improve classification performance?",
+      "o": [
+        "It enforces entropy minimisation, driving the decision boundary away from high-density data clusters into low-density margins",
+        "It changes the underlying test distribution",
+        "It converts continuous features into binary features",
+        "It guarantees zero test error"
+      ],
+      "a": 0,
+      "why": "By forcing confident unlabelled predictions to hard one-hot pseudo-labels, the loss encourages low-entropy predictions, pushing boundaries into low-density gaps between clusters."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "label-propagation",
+    "active-learning",
+    "weak-supervision",
+    "cost-sensitive-learning"
+  ],
+  "keywords": "self-training, pseudo-labels, semi-supervised learning, confirmation bias, fixmatch, entropy minimisation, confidence thresholding, bootstrapping"
+},
+  {
+  "id": "active-learning",
+  "short": "Active learning",
+  "title": "Active Learning: Query Strategies and Human-in-the-Loop",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Maximise model accuracy while minimising labelling costs: master Uncertainty Sampling, Query-by-Committee, Expected Model Change, and diversity sampling.",
+  "lead": "Data is abundant, but expert annotation is expensive. Active learning flips passive learning on its head: the model actively queries human annotators for labels on the most informative, ambiguous instances.",
+  "intuition": [
+    "In conventional passive machine learning, practitioners collect a dataset, randomly sample thousands of instances for human labeling, and train a model. However, random sampling is notoriously wasteful: annotators spend hours labelling obvious, redundant instances (e.g. 5,000 nearly identical images of blue skies) that provide zero new information to the model.",
+    "Active Learning reverses the control loop: instead of passively receiving training data, the algorithm actively inspects the unlabelled data pool and selects the most informative, valuable instances to send to human annotators (\"oracles\"). By focusing annotation budgets exclusively on ambiguous edge cases, active learning often achieves the same accuracy as passive learning using 10% to 20% of the labelling budget.",
+    "The most widely deployed family of active learning algorithms is Uncertainty Sampling. The algorithm queries samples where the model current predictions are least certain: Least Confidence (querying points with the lowest top-1 probability), Margin Sampling (querying points where the gap between the top two class probabilities is smallest), and Entropy Sampling (querying points with maximal prediction entropy across all classes).",
+    "Beyond single-model uncertainty, Query-by-Committee (QBC) maintains an ensemble of models and queries instances with the greatest committee voting disagreement. To avoid wasting budget on isolated noise outliers, modern active learning couples uncertainty with density-weighted diversity sampling."
+  ],
+  "analogy": "Imagine a student preparing for a medical licensing exam with a professor. A passive student reads random textbook pages cover to cover, spending hours rereading basic definitions they already know cold. An active student solves a diagnostic test, identifies the five specific cardiovascular disease scenarios where their knowledge was most confused and hesitant, and brings precisely those five ambiguous cases to the professor office hours for clarification.",
+  "steps": [
+    {
+      "title": "1. Train initial seed model",
+      "body": "Train base model $f_\\theta$ on a small initial seed set of labelled samples $\\mathcal{D}_L$."
+    },
+    {
+      "title": "2. Evaluate query strategy across unlabelled pool",
+      "body": "Compute informativeness scores for all instances in unlabelled pool $\\mathcal{D}_U$ using an acquisition function (e.g. margin uncertainty or entropy)."
+    },
+    {
+      "title": "3. Query human oracle for top-K batch",
+      "body": "Select the batch of $K$ instances with the highest informativeness scores. Send them to human annotators to obtain ground-truth labels."
+    },
+    {
+      "title": "4. Update training set and retrain",
+      "body": "Move newly annotated batch from $\\mathcal{D}_U$ to $\\mathcal{D}_L$. Retrain model $f_\\theta$. Repeat the loop until the labelling budget is exhausted or target accuracy is reached."
+    }
+  ],
+  "math": [
+    {
+      "h": "Uncertainty Sampling Strategies",
+      "tex": "\\begin{aligned} \\text{Least Confidence: } & x_{\\mathrm{LC}}^* = \\arg\\max_x \\left( 1 - \\max_k P(y = k \\mid x) \\right) \\\\ \\text{Margin Sampling: } & x_{\\mathrm{M}}^* = \\arg\\min_x \\left( P(\\hat{y}_1 \\mid x) - P(\\hat{y}_2 \\mid x) \\right) \\\\ \\text{Entropy Sampling: } & x_{\\mathrm{Ent}}^* = \\arg\\max_x \\left( -\\sum_{k=1}^K P(y = k \\mid x) \\log P(y = k \\mid x) \\right) \\end{aligned}",
+      "p": "Three classic uncertainty metrics. Margin sampling focuses specifically on the boundary separating the top two competing classes, outperforming least confidence in multi-class problems."
+    },
+    {
+      "h": "Query-by-Committee (QBC) Vote Entropy",
+      "tex": "x_{\\mathrm{QBC}}^* = \\arg\\max_x \\left( -\\sum_{k=1}^K \\frac{V(k, x)}{C} \\log \\frac{V(k, x)}{C} \\right)",
+      "p": "Measures disagreement among a committee of C diverse models, where V(k, x) is the number of committee members predicting class k for instance x."
+    },
+    {
+      "h": "Density-Weighted Information Criterion",
+      "tex": "x^* = \\arg\\max_x \\left( \\phi_A(x) \\cdot \\left[\\frac{1}{|U|} \\sum_{u \\in U} \\operatorname{sim}(x, u)\\right]^\\beta \\right)",
+      "p": "Multiplies informativeness score phi_A(x) by an average similarity density term, preventing the algorithm from querying isolated noise outliers in unpopulated regions."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Active Learning: Margin Uncertainty Sampling vs Passive Random Sampling\nnp.random.seed(42)\n\n# Generate synthetic 2D classification dataset with overlapping margin\nn_total = 600\nX1 = np.random.normal(loc=[-1.0, -1.0], scale=1.0, size=(n_total // 2, 2))\nX2 = np.random.normal(loc=[1.0, 1.0], scale=1.0, size=(n_total // 2, 2))\nX = np.vstack([X1, X2])\ny = np.array([0]*(n_total // 2) + [1]*(n_total // 2))\n\n# Shuffle\nperm = np.random.permutation(n_total)\nX, y = X[perm], y[perm]\n\n# Test set for evaluation (200 samples)\nX_test, y_test = X[400:], y[400:]\nX_pool, y_pool = X[:400], y[:400]\n\n# Initial seed: 10 randomly labelled samples\ninitial_idx = np.random.choice(len(X_pool), size=10, replace=False)\n\ndef run_experiment(query_strategy='margin', n_rounds=8, batch_size=5):\n    labelled_idx = list(initial_idx)\n    pool_idx = [i for i in range(len(X_pool)) if i not in labelled_idx]\n    \n    accuracies = []\n    \n    for r in range(n_rounds):\n        # 1. Train model on current labelled set\n        clf = LogisticRegression()\n        clf.fit(X_pool[labelled_idx], y_pool[labelled_idx])\n        acc = np.mean(clf.predict(X_test) == y_test)\n        accuracies.append(acc)\n        \n        # 2. Query next batch\n        if query_strategy == 'random':\n            chosen = np.random.choice(pool_idx, size=batch_size, replace=False)\n        elif query_strategy == 'margin':\n            probs = clf.predict_proba(X_pool[pool_idx])\n            # Margin between top two classes: |P(class 1) - P(class 0)|\n            margins = np.abs(probs[:, 0] - probs[:, 1])\n            # Smallest margin = highest uncertainty\n            uncertain_order = np.argsort(margins)[:batch_size]\n            chosen = [pool_idx[idx] for idx in uncertain_order]\n            \n        # 3. Add to labelled set\n        labelled_idx.extend(chosen)\n        pool_idx = [i for i in pool_idx if i not in chosen]\n        \n    return accuracies\n\nacc_random = run_experiment(query_strategy='random')\nacc_active = run_experiment(query_strategy='margin')\n\nsample_sizes = [10 + i * 5 for i in range(len(acc_random))]\n\nprint(\"--- Active Learning vs Passive Random Sampling ---\")\nprint(f\"Initial Accuracy (10 samples): {acc_active[0]*100:.1f}%\\n\")\nfor sz, r_acc, a_acc in zip(sample_sizes[1:], acc_random[1:], acc_active[1:]):\n    print(f\"Sample Size {sz:2d} | Random: {r_acc*100:.1f}% | Active Margin: {a_acc*100:.1f}% (Advantage: +{(a_acc - r_acc)*100:+.1f}%)\")\n\nfinal_gap = acc_active[-1] - acc_random[-1]\nprint(f\"\\nFinal Accuracy Advantage of Active Learning: +{final_gap*100:.1f}% using identical annotation budget!\")",
+  "keyPoints": [
+    "Iterative human-in-the-loop framework: algorithm actively selects the most informative unlabelled instances for annotation.",
+    "Dramatically reduces labelling costs: frequently matches passive random sampling accuracy using 50% to 80% fewer annotations.",
+    "Uncertainty sampling queries instances near the decision boundary (least confidence, margin, entropy).",
+    "Query-by-Committee (QBC) selects instances with maximal disagreement across an ensemble of hypotheses.",
+    "Density-weighted criteria prevent the algorithm from wasting budget on isolated, uninformative outliers."
+  ],
+  "pitfalls": [
+    "Sampling bias and blind spots: If the initial seed model completely misses an entire isolated cluster, uncertainty sampling will never query points near it because the model is falsely confident.",
+    "Cold start problem: When initial labelled data is too sparse ($n < 5$), model predictions are noisy and uncertainty scores are meaningless.",
+    "Annotation batch correlations: Querying the top $K$ most uncertain points simultaneously often selects $K$ near-duplicate points; batch diversity sampling is required."
+  ],
+  "quiz": [
+    {
+      "q": "How does Margin Sampling select the next instance to query for human annotation?",
+      "o": [
+        "It selects the instance where the difference between the top two predicted class probabilities is smallest, indicating maximal boundary ambiguity",
+        "It selects the sample with the largest feature values",
+        "It draws a sample completely at random from the dataset",
+        "It selects instances that have already been annotated twice"
+      ],
+      "a": 0,
+      "why": "When the gap P(y_1|x) - P(y_2|x) is near zero, the model is balanced on the knife-edge between its top two choices; obtaining a label for this point provides maximal boundary information."
+    },
+    {
+      "q": "Why is density weighting combined with uncertainty sampling in active learning?",
+      "o": [
+        "To prevent the model from wasting annotation budget on isolated outliers and noise points that have high uncertainty but represent no other data points",
+        "To speed up model training by 100x",
+        "To eliminate the need for human annotators",
+        "To convert multi-class classification into binary classification"
+      ],
+      "a": 0,
+      "why": "An isolated outlier far from all other points naturally produces high uncertainty. Density weighting ensures queried points reside in populated regions where learning benefits many samples."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "self-training-and-pseudo-labels",
+    "label-propagation",
+    "weak-supervision",
+    "ensemble-theory-bagging-boosting-stacking-compared"
+  ],
+  "keywords": "active learning, human in the loop, uncertainty sampling, query by committee, margin sampling, annotation budget, informativeness, density weighting"
+},
+  {
+  "id": "weak-supervision",
+  "short": "Weak supervision",
+  "title": "Weak Supervision and Programmatic Labeling",
+  "task": "concepts",
+  "module": "Semi-supervised and active",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Label millions of data points programmatically using noisy heuristic functions: master Snorkel, label models, and generative matrix completion.",
+  "lead": "Hand-labelling training datasets is the primary bottleneck in production AI. Weak supervision replaces manual labelling with heuristic labeling functions (LFs), using an unsupervised generative label model to resolve conflicts.",
+  "intuition": [
+    "In modern machine learning, hand-labelling millions of training examples is often impossible: data changes dynamically, privacy laws forbid human annotators from viewing sensitive medical records or financial transactions, and expert wages are exorbitant.",
+    "Weak Supervision (pioneered by Alexander Ratner, Christopher Ré, and the Stanford Snorkel team in 2017) fundamentally re-engineers data creation: instead of manually hand-labelling individual samples, domain experts write programmatic Labeling Functions (LFs).",
+    "A Labeling Function is a short Python script encoding a noisy heuristic: a regular expression pattern, a keyword dictionary lookup, a heuristic threshold on metadata, a legacy third-party model, or distant supervision from an external database. Each LF inspects an unlabelled sample and either outputs a candidate label (e.g. $+1$ or $-1$) or abstains ($0$).",
+    "Because human heuristics are imperfect, LFs frequently overlap, conflict, and correlate. Weak supervision resolves these conflicts through a two-stage architecture: first, an unsupervised Generative Label Model observes how LFs agree and disagree across millions of unlabelled samples, estimating the unknown accuracy and correlation of each LF without needing ground-truth labels. The Label Model outputs calibrated probabilistic training labels $P(Y \\mid \\Lambda)$. Second, an arbitrary end-to-end deep neural network is trained on these probabilistic labels, generalising far beyond the heuristic rules."
+  ],
+  "analogy": "Imagine a murder trial with five flawed witnesses. Witness 1 has poor eyesight; Witness 2 dislikes the defendant; Witness 3 only saw what happened from a distance; Witness 4 heard a loud noise; Witness 5 heard a rumor. A wise judge does not take a simple show of hands. By cross-examining the witnesses and observing which details they consistently agree on across 100 questions, the judge deduces the reliability of each witness without having been at the crime scene, synthesising their testimonies into the truth.",
+  "steps": [
+    {
+      "title": "1. Author programmatic Labeling Functions (LFs)",
+      "body": "Write multiple heuristic Python functions $\\lambda_j(x) \\in \\{-1, 0, +1\\}$ encoding domain rules, regex patterns, or distant supervision. Each LF votes or abstains ($0$)."
+    },
+    {
+      "title": "2. Generate noisy label matrix Lambda",
+      "body": "Execute all $m$ labeling functions across $n$ unlabelled samples, constructing label matrix $\\Lambda \\in \\{-1, 0, +1\\}^{n \\times m}$."
+    },
+    {
+      "title": "3. Fit unsupervised Generative Label Model",
+      "body": "Estimate the unknown accuracy vector $\\theta$ and correlation structure of LFs without ground truth, using matrix completion on the covariance matrix $\\mathbb{E}[\\Lambda \\Lambda^T]$."
+    },
+    {
+      "title": "4. Train downstream discriminative model",
+      "body": "Infer probabilistic training labels $\\tilde{y}_i = P_\\theta(Y=1 \\mid \\Lambda_i)$. Train a downstream deep neural network or gradient boosted model using cross-entropy with soft probabilistic targets."
+    }
+  ],
+  "math": [
+    {
+      "h": "Label Matrix Definition",
+      "tex": "\\Lambda \\in \\{-1, 0, +1\\}^{n \\times m}, \\quad \\Lambda_{ij} = \\lambda_j(x_i)",
+      "p": "Matrix of weak labels from m labeling functions applied to n unlabelled samples. Zero denotes that the labeling function abstained on that sample."
+    },
+    {
+      "h": "Generative Label Model Factorisation",
+      "tex": "P_\\theta(\\Lambda, Y) = \\frac{1}{Z_\\theta} \\exp\\left( \\sum_{j=1}^m \\theta_j Y \\Lambda_j + \\sum_{j < k} \\theta_{jk} \\Lambda_j \\Lambda_k \\right)",
+      "p": "Ising/Markov Random Field model over latent true label Y and observed weak votes Lambda_j, parameterised by LF accuracies theta_j and pairwise correlations theta_{jk}."
+    },
+    {
+      "h": "Unsupervised Covariance Matching (Matrix Completion)",
+      "tex": "\\operatorname{Cov}(\\Lambda_j, \\Lambda_k) = \\mathbb{E}[\\Lambda_j \\Lambda_k] - \\mathbb{E}[\\Lambda_j] \\mathbb{E}[\\Lambda_k] = \\mu_j \\mu_k \\quad (\\text{for conditionally independent LFs})",
+      "p": "Because observable covariance between LFs factorises into the product of their latent accuracies mu_j = Cov(Lambda_j, Y), accuracy can be solved without true labels via rank-1 matrix completion."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Programmatic Weak Supervision (Snorkel-style Label Model) from scratch\nnp.random.seed(42)\nn_samples = 500\n\n# Synthetic spam classification problem\n# Ground truth: 1 = Spam, 0 = Ham\n# Features: [contains_link, has_dollar_sign, all_caps_title, sender_reputation]\nX = np.random.uniform(0, 1, (n_samples, 4))\ny_true = ((X[:, 0] * 1.5 + X[:, 1] * 2.0 + X[:, 2] * 1.0 - X[:, 3] * 2.5) > 0.5).astype(int)\n\n# 1. Define 3 noisy Labeling Functions (LFs)\n# Votes: 1 (Spam), 0 (Ham), -1 (Abstain)\ndef lf_dollar(x):\n    # If high dollar sign presence, vote Spam; else abstain\n    return 1 if x[1] > 0.6 else -1\n\ndef lf_link(x):\n    # If link present and low sender rep, vote Spam\n    if x[0] > 0.7 and x[3] < 0.4: return 1\n    if x[0] < 0.2 and x[3] > 0.7: return 0\n    return -1\n\ndef lf_caps(x):\n    # If all caps title, vote Spam\n    return 1 if x[2] > 0.8 else -1\n\n# 2. Build Label Matrix Lambda (n x m)\nlfs = [lf_dollar, lf_link, lf_caps]\nm_lfs = len(lfs)\nLambda = np.zeros((n_samples, m_lfs), dtype=int)\n\nfor i in range(n_samples):\n    for j in range(m_lfs):\n        Lambda[i, j] = lfs[j](X[i])\n\n# 3. Simple Generative Majority / Accuracy-Weighted Label Model\n# Calculate empirical agreement rates between LFs to weight reliability\nweights = np.zeros(m_lfs)\nfor j in range(m_lfs):\n    # Empirical accuracy estimate using inter-LF agreement\n    active_mask = Lambda[:, j] != -1\n    agreements = []\n    for k in range(m_lfs):\n        if j != k:\n            overlap = active_mask & (Lambda[:, k] != -1)\n            if np.sum(overlap) > 0:\n                agreements.append(np.mean(Lambda[overlap, j] == Lambda[overlap, k]))\n    weights[j] = np.mean(agreements) if agreements else 0.5\n\n# Compute soft probabilistic labels P(Y=1 | Lambda)\nsoft_labels = np.zeros(n_samples)\nfor i in range(n_samples):\n    votes = Lambda[i]\n    active = votes != -1\n    if np.any(active):\n        # Weighted log-odds combination\n        log_odds = np.sum(weights[active] * (votes[active] * 2 - 1))\n        soft_labels[i] = 1.0 / (1.0 + np.exp(-log_odds))\n    else:\n        soft_labels[i] = 0.50  # Default prior\n\n# 4. Train downstream discriminative model on soft pseudo-labels\ndownstream_model = LogisticRegression()\n# Convert soft labels to binary training targets (p > 0.5)\ny_weak = (soft_labels > 0.5).astype(int)\ndownstream_model.fit(X, y_weak)\n\npreds_downstream = downstream_model.predict(X)\nacc = np.mean(preds_downstream == y_true)\n\nlf_coverages = [np.mean(Lambda[:, j] != -1) * 100 for j in range(m_lfs)]\n\nprint(f\"Total unlabelled samples processed: {n_samples}\")\nprint(f\"LF 1 (Dollar) Coverage: {lf_coverages[0]:.1f}%\")\nprint(f\"LF 2 (Link)   Coverage: {lf_coverages[1]:.1f}%\")\nprint(f\"LF 3 (Caps)   Coverage: {lf_coverages[2]:.1f}%\")\nprint(f\"Overall Label Matrix Coverage: {np.mean(np.any(Lambda != -1, axis=1))*100:.1f}%\")\nprint(f\"Downstream Model Accuracy (trained on zero human labels!): {acc * 100:.1f}%\")",
+  "keyPoints": [
+    "Replaces expensive manual hand-labelling with programmatic Labeling Functions (LFs) encoding heuristics.",
+    "Unsupervised Generative Label Model learns the accuracy and correlation of each LF without ground-truth labels.",
+    "Label model aggregates noisy, conflicting, overlapping votes into calibrated probabilistic labels $P(Y \\mid \\Lambda)$.",
+    "Downstream discriminative model (neural network or boosted trees) generalises beyond heuristic rules via feature representations.",
+    "Foundational paradigm of data-centric AI (e.g. Snorkel), enabling rapid iteration and privacy-preserving training on sensitive data."
+  ],
+  "pitfalls": [
+    "Correlated labeling functions: If multiple LFs share common dependencies (e.g. three keyword variations of the same rule), naive independent label models double-count their evidence; correlation graphs are required.",
+    "Low coverage / high abstention: If LFs abstain on 90% of samples, the downstream model receives zero training signal on the majority of data.",
+    "Heuristic concept drift: As language or data distributions shift over time, hard-coded rules can degrade into high-error noise, requiring continuous LF monitoring."
+  ],
+  "quiz": [
+    {
+      "q": "How does a Weak Supervision label model estimate the accuracy of labeling functions without access to ground truth labels?",
+      "o": [
+        "By analysing the statistical covariance, agreement, and disagreement patterns across multiple labeling functions on unlabelled data",
+        "By asking human annotators to verify all samples",
+        "By assuming all labeling functions are 100% accurate",
+        "By taking the Fourier transform of the label matrix"
+      ],
+      "a": 0,
+      "why": "Observable covariance between pairs of LFs equals the product of their unknown accuracies under conditional independence. Rank-1 matrix completion solves for accuracies without true labels."
+    },
+    {
+      "q": "Why is a downstream deep neural network trained on weak labels rather than deploying the heuristic labeling functions directly as the production classifier?",
+      "o": [
+        "The downstream network learns rich continuous feature embeddings, allowing it to generalise to instances where all labeling functions abstained",
+        "Labeling functions cannot be executed in production",
+        "Neural networks are required by law for classification",
+        "Labeling functions only work on small datasets"
+      ],
+      "a": 0,
+      "why": "LFs only fire on specific keywords or patterns and abstain on everything else. A downstream neural network learns feature representations that generalise to samples the rules never anticipated."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "probability-rules-and-bayes-theorem"
+  ],
+  "related": [
+    "self-training-and-pseudo-labels",
+    "active-learning",
+    "label-propagation",
+    "markov-random-fields"
+  ],
+  "keywords": "weak supervision, snorkel, programmatic labeling, labeling functions, label model, generative model, data centric ai, pseudo labels"
+},
+  {
+    id: 'collaborative-filtering',
+    short: 'Collaborative filtering',
+    title: 'Collaborative Filtering',
+    task: 'concepts',
+    module: 'Recommender systems',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Predicting user preferences by pooling feedback patterns across an entire community, using user-based or item-based neighbourhood models.`,
+    lead: r`Collaborative filtering generates personalised recommendations without requiring item metadata, tags, or content descriptions. By mining historical ratings or interaction matrices, it identifies akin taste profiles (user-based) or co-rated items (item-based) to predict unseen preferences through neighbourhood aggregation.`,
+    intuition: [
+      r`Imagine visiting a vast library containing 100,000 novels. Rather than categorising books by genres or author biographies, you look at borrowers who read the same five eclectic titles you adored last month. When you find three other readers whose checkout logs overlap with yours 90% of the time, you can confidently read whatever novel they picked next. You did not need to know whether the book is a sci-fi thriller or historical non-fiction; their shared reading behaviour acts as the collective filter.`,
+      r`This is user-based collaborative filtering (UBCF). We build a matrix where rows are users and columns are items. To predict how Alice will rate a new film, we compute pairwise similarity scores between Alice and all other users using their co-rated items. We select Alice's nearest neighbours (the $k$ highest-scoring users) and calculate a weighted average of their ratings. Crucially, because Alice might be a stingy rater whose average score is 2.5 stars while Bob awards 5 stars to everything, we mean-centre ratings before averaging so personal rating baselines do not corrupt predictions.`,
+      r`When users dramatically outnumber items—such as millions of shoppers purchasing from an inventory of 20,000 products—computing user similarities becomes computationally prohibitive and volatile. Item-based collaborative filtering (IBCF) flips the perspective: it computes similarities between pairs of items based on how users rated them concurrently. Because item relationships reflect enduring characteristics rather than fleeting user moods, item similarity matrices can be precomputed offline, updated incrementally, and produce explainable recommendations ("Because you watched Inception...").`,
+    ],
+    analogy: r`Asking your culinary soulmate what they ordered off a foreign menu you cannot read, rather than attempting to decipher the ingredient list yourself.`,
+    steps: [
+      r`Construct the user-item interaction matrix $R \in \mathbb{R}^{m \times n}$, where observed cells record explicit ratings or implicit actions, and unobserved pairs form the sparse missing majority.`,
+      r`Compute user mean ratings $\bar{r}_u$ across observed items to calculate mean-centred ratings $r_{u, i} - \bar{r}_u$, isolating genuine deviations from individual baseline leniency.`,
+      r`Calculate pairwise item similarities (for IBCF) or user similarities (for UBCF) using adjusted cosine or Pearson correlation over mutually evaluated entries.`,
+      r`For a target user and unrated item, filter candidate neighbours to the top $k$ entities exhibiting positive similarity ($s > 0$).`,
+      r`Aggregate the neighbourhood ratings via a similarity-weighted sum added back to the user baseline, predicting the target interaction score.`,
+    ],
+    math: [
+      {
+        h: 'Pearson correlation similarity for user-based CF',
+        tex: r`$$s(u, v) = \frac{\sum_{i \in I_{uv}} (r_{u, i} - \bar{r}_u)(r_{v, i} - \bar{r}_v)}{\sqrt{\sum_{i \in I_{uv}} (r_{u, i} - \bar{r}_u)^2} \sqrt{\sum_{i \in I_{uv}} (r_{v, i} - \bar{r}_v)^2}}$$`,
+        p: r`Here $I_{uv} = I_u \cap I_v$ represents the subset of items evaluated by both user $u$ and user $v$. Subtracting user-specific means $\bar{r}_u$ and $\bar{r}_v$ centres each user's rating distribution around zero, preventing differences in personal rating scales from distorting the cosine angle.`,
+      },
+      {
+        h: 'Adjusted cosine similarity for item-based CF',
+        tex: r`$$s(i, j) = \frac{\sum_{u \in U_{ij}} (r_{u, i} - \bar{r}_u)(r_{u, j} - \bar{r}_u)}{\sqrt{\sum_{u \in U_{ij}} (r_{u, i} - \bar{r}_u)^2} \sqrt{\sum_{u \in U_{ij}} (r_{u, j} - \bar{r}_u)^2}}$$`,
+        p: r`In item-based filtering, $U_{ij}$ is the set of users who rated both item $i$ and item $j$. Unlike standard cosine similarity between item column vectors, adjusted cosine subtracts the respective user mean $\bar{r}_u$ from each interaction. This normalises across user rating tendencies before evaluating item co-occurrence.`,
+      },
+      {
+        h: 'Rating prediction via normalised neighbourhood aggregation',
+        tex: r`$$\hat{r}_{u, i} = \bar{r}_u + \frac{\sum_{j \in N_u(i)} s(i, j) \big(r_{u, j} - \bar{r}_u\big)}{\sum_{j \in N_u(i)} |s(i, j)|}$$`,
+        p: r`The predicted rating $\hat{r}_{u, i}$ starts from user $u$'s mean rating $\bar{r}_u$. It then adds the similarity-weighted offset from the top-$k$ nearest items $j \in N_u(i)$ that user $u$ has already rated. Dividing by the sum of absolute similarities ensures the aggregated deviation respects the original rating scale.`,
+      },
+    ],
+    keyPoints: [
+      r`Domain-free discovery: collaborative filtering requires no content metadata, discovering unexpected serendipitous connections across item categories.`,
+      r`Item-based stability: item-item similarities remain far more stable over time than user-user similarities, allowing large-scale precomputation and caching.`,
+      r`Mean-centring necessity: subtracting user averages removes individual bias, ensuring that harsh critics and generous raters contribute on equal terms.`,
+    ],
+    pitfalls: [
+      r`Cold-start vulnerability: completely new users without interaction history or new items with zero ratings cannot be recommended via collaborative signals alone.`,
+      r`Extreme sparsity: commercial catalogues typically exhibit $>99\%$ sparsity; two random users rarely co-rate items, collapsing the intersection size $|I_{uv}|$.`,
+      r`Popularity echo-chambers: universally popular blockbuster items dominate co-occurrence graphs, crowding out niche long-tail items unless explicit inverse-frequency penalties are applied.`,
+    ],
+    code: r`import numpy as np
+
+R = np.array([[5, 4, 1, 0], [4, 5, 1, 2], [1, 2, 5, 4], [2, 1, 4, 5], [5, 5, 2, 1]], dtype=float)
+means = np.array([row[row > 0].mean() for row in R])
+R_c = np.where(R > 0, R - means[:, None], 0.0)
+
+m, n = R.shape
+sim = np.eye(n)
+for i in range(n):
+    for j in range(i + 1, n):
+        co = (R[:, i] > 0) & (R[:, j] > 0)
+        if np.sum(co) >= 2:
+            ui, uj = R_c[co, i], R_c[co, j]
+            d = np.sqrt(np.sum(ui**2)) * np.sqrt(np.sum(uj**2))
+            sim[i, j] = sim[j, i] = np.sum(ui * uj) / d if d > 1e-9 else 0.0
+
+target_u, target_i, k = 0, 3, 2
+rated = np.where(R[target_u] > 0)[0]
+top_k = rated[np.argsort(sim[target_i, rated])[::-1][:k]]
+w = sim[target_i, top_k]
+
+pred = means[target_u] + np.sum(w * R_c[target_u, top_k]) / np.sum(np.abs(w))
+print(f"User 0 mean rating: {means[target_u]:.2f}")
+print(f"Item similarities to Item 3: {np.round(sim[target_i], 3)}")
+print(f"Predicted rating for User 0 on Item 3: {pred:.2f}")`,
+    quiz: [
+      {
+        q: r`Why is adjusted cosine similarity preferred over standard cosine similarity in item-based collaborative filtering?`,
+        o: [
+          r`It eliminates user scale differences by subtracting each user's mean rating from their reviews`,
+          r`It operates without requiring any observed ratings`,
+          r`It guarantees all similarity scores are strictly positive between 0 and 1`,
+          r`It converts the user-item matrix into an orthogonal basis`,
+        ],
+        a: 0,
+        why: r`Different users possess distinct internal rating scales (e.g. some hand out 5s easily, others reserve 5 for masterpieces). Adjusted cosine subtracts the user mean $\bar{r}_u$ from each rating, standardising ratings across users before computing item vector similarities.`,
+      },
+      {
+        q: r`In a production system with 50,000,000 registered users and 100,000 catalogue products, why is item-based collaborative filtering (IBCF) favoured over user-based (UBCF)?`,
+        o: [
+          r`Item catalogues are smaller and their relationships change slower, making similarity precomputation feasible`,
+          r`Item-based filtering requires zero memory and runs in $O(1)$ time`,
+          r`User-based filtering cannot use cosine similarity`,
+          r`Item-based filtering completely solves the cold-start problem for newly launched items`,
+        ],
+        a: 0,
+        why: r`Item similarity matrices are smaller ($10^5 \times 10^5$ vs $10^7 \times 10^7$) and item-item correlations remain stable over time, allowing item similarities to be precomputed and cached offline for sub-millisecond retrieval.`,
+      },
+      {
+        q: r`What is the primary manifestation of the "cold-start" problem in pure collaborative filtering?`,
+        o: [
+          r`The system cannot make personalised recommendations for new users or items lacking interaction history`,
+          r`Gradient descent diverges when learning rates are set too high`,
+          r`The similarity matrix cannot be inverted due to zero determinants`,
+          r`Ratings cannot be normalised when user scores are integers`,
+        ],
+        a: 0,
+        why: r`Collaborative filtering relies exclusively on past behavioural overlap. When a brand-new user joins or a new item is added, they have zero co-ratings, preventing neighbourhood models from calculating valid similarity scores.`,
+      },
+    ],
+    usedBy: ['matrix-factorisation-and-als'],
+    prereq: ['knn_regressor', 'correlation-pearson-spearman-kendall'],
+    related: ['matrix-factorisation-and-als', 'ranking-metrics-ndcg-map-learning-to-rank', 'knn_regressor'],
+    keywords: 'collaborative filtering recommender systems user based item based pearson correlation adjusted cosine cold start',
+  },
+  {
+    id: 'matrix-factorisation-and-als',
+    short: 'Matrix factorisation & ALS',
+    title: 'Matrix Factorisation and ALS',
+    task: 'concepts',
+    module: 'Recommender systems',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Decomposing sparse interaction matrices into low-rank latent user and item embeddings using regularised Alternating Least Squares.`,
+    lead: r`High-dimensional user-item interaction matrices are riddled with missing entries, confounding classical SVD and neighbourhood methods. Matrix factorisation projects both users and items into a shared $k$-dimensional latent vector space where inner products predict unobserved interactions. Alternating Least Squares (ALS) solves the non-convex joint optimisation problem by alternately fixing user vectors to solve for item vectors and vice versa via exact closed-form quadratic ridge regressions.`,
+    intuition: [
+      r`Imagine describing movies not by hundreds of messy genre tags, but along two fundamental psychological axes: seriousness versus comedy, and action versus cerebral dialogue. If we could assign every movie a 2-dimensional coordinate along these axes, and similarly position each moviegoer along the same preference axes, predicting whether a user will enjoy a film becomes as simple as a dot product: $\text{preference} \times \text{attribute}$. A viewer who loves high-octane comedy will score high positive values on films positioned at those exact coordinates.`,
+      r`In real applications, we do not hand-craft or label these latent dimensions. Instead, matrix factorisation discovers them automatically from the raw interaction matrix $R \approx U V^T$. For $m$ users and $n$ items, each user $u$ is mapped to a latent vector $p_u \in \mathbb{R}^k$ and each item $i$ to $q_i \in \mathbb{R}^k$, where $k \ll \min(m, n)$ (typically 20 to 100). The predicted rating is $\hat{r}_{u, i} = \mu + b_u + b_i + p_u^T q_i$, incorporating global, user, and item baseline biases to isolate true affinity from systematic scale differences.`,
+      r`Because 99% of entries in $R$ are unobserved, classical Singular Value Decomposition (SVD) cannot be directly applied without imputing zeros (which falsely asserts users hate everything they have not yet seen). Jointly optimising $U$ and $V$ over known entries is non-convex. However, when user vectors $U$ are held fixed, the objective function becomes strictly convex and quadratic in $V$—amounting to an independent ridge regression for every item. Alternating Least Squares (ALS) leverages this: hold $U$ constant and solve for $V$ in closed form, then hold $V$ constant and solve for $U$, rapidly converging to a high-quality local minimum.`,
+    ],
+    analogy: r`Solving a two-variable combination lock by turning dial A while dial B is clamped, then clamping dial A to turn dial B until both slots click into alignment.`,
+    steps: [
+      r`Initialise user latent matrix $U \in \mathbb{R}^{m \times k}$ and item latent matrix $V \in \mathbb{R}^{n \times k}$ with small random Gaussian values.`,
+      r`Compute the global mean $\mu$, user baseline biases $b_u$, and item baseline biases $b_i$ across all observed entries $\mathcal{K}$.`,
+      r`Fix the item embeddings $V$ and item biases $b_i$, and solve for each user's vector $p_u$ and bias $b_u$ via regularised ridge regression over the subset of items rated by user $u$.`,
+      r`Fix the user embeddings $U$ and user biases $b_u$, and solve for each item's vector $q_i$ and bias $b_i$ via regularised ridge regression over the subset of users who rated item $i$.`,
+      r`Repeat the alternating updates until the regularised mean squared error over observed interactions converges below a threshold $\epsilon$.`,
+    ],
+    math: [
+      {
+        h: 'Regularised matrix factorisation objective',
+        tex: r`$$\min_{U, V, b} \sum_{(u, i) \in \mathcal{K}} \Big(r_{u, i} - (\mu + b_u + b_i + p_u^T q_i)\Big)^2 + \lambda \sum_u \big(\|p_u\|_2^2 + b_u^2\big) + \lambda \sum_i \big(\|q_i\|_2^2 + b_i^2\big)$$`,
+        p: r`The objective minimises squared reconstruction error exclusively over the set of observed user-item interactions $\mathcal{K}$. The regularisation parameter $\lambda > 0$ penalises large latent weights and extreme biases, preventing overfitting on active users or items with scarce feedback.`,
+      },
+      {
+        h: 'Closed-form ALS user update step',
+        tex: r`$$p_u = \Big(V_{I_u}^T V_{I_u} + \lambda I_k\Big)^{-1} V_{I_u}^T \tilde{r}_{u, I_u}$$`,
+        p: r`Holding item matrix $V$ fixed turns user $u$'s optimisation into regularised linear regression. Here $I_u$ is the set of items rated by user $u$, $V_{I_u} \in \mathbb{R}^{|I_u| \times k}$ is the submatrix of corresponding item vectors, and $\tilde{r}_{u, I_u}$ contains residual ratings after subtracting $\mu + b_u + b_i$. The $k \times k$ matrix inversion is fast and parallelisable across users.`,
+      },
+      {
+        h: 'Implicit feedback formulation (Hu, Koren, Volinsky)',
+        tex: r`$$\mathcal{L}_{\text{implicit}} = \sum_{u=1}^m \sum_{i=1}^n c_{u, i} \big(p_{u, i} - p_u^T q_i\big)^2 + \lambda \sum_u \|p_u\|_2^2 + \lambda \sum_i \|q_i\|_2^2$$`,
+        p: r`For implicit feedback (clicks, watch time), binary preference $p_{u, i} = \mathbf{1}_{r_{u, i} > 0}$ is paired with confidence $c_{u, i} = 1 + \alpha r_{u, i}$. Crucially, the $O(m n)$ sum over all unobserved pairs simplifies because $V^T C^u V = V^T V + V^T (C^u - I) V$, allowing $V^T V$ to be computed once per iteration in $O(n k^2)$, keeping each user update at $O(|I_u| k^2 + k^3)$.`,
+      },
+    ],
+    keyPoints: [
+      r`Dense semantic representations: maps sparse interaction matrices into compact $k$-dimensional latent spaces that capture latent user tastes and item attributes.`,
+      r`Monotonic convergence: each alternating quadratic sub-step is strictly convex and solved in closed form, guaranteeing non-increasing loss at every iteration.`,
+      r`Scalable implicit feedback: reformulating the confidence-weighted objective allows training across billions of implicit missing pairs in polynomial time.`,
+    ],
+    pitfalls: [
+      r`SVD confusion: running standard SVD requires imputing unobserved matrix entries with zeros, corrupting representations by misinterpreting unobserved items as disliked items.`,
+      r`Neglecting baseline biases: omitting $b_u$ and $b_i$ forces the latent dot product $p_u^T q_i$ to absorb broad rating scale differences, degrading latent semantic geometry.`,
+      r`Overfitting sparse entities: users or items with only one or two ratings easily overfit unless heavy L2 regularisation $\lambda$ is enforced.`,
+    ],
+    code: r`import numpy as np
+
+np.random.seed(42)
+R = np.array([[5, 3, 0, 1], [4, 0, 0, 1], [1, 1, 0, 5], [1, 0, 4, 4], [0, 1, 5, 4]], dtype=float)
+m, n, k, reg = *R.shape, 2, 0.1
+mu, mask = R[R > 0].mean(), R > 0
+P, Q = np.random.normal(0, 0.1, (m, k)), np.random.normal(0, 0.1, (n, k))
+bu, bi = np.zeros(m), np.zeros(n)
+
+for _ in range(20):
+    for u in range(m):
+        idx = np.where(mask[u])[0]
+        if len(idx):
+            Vu, yu = Q[idx], R[u, idx] - mu - bi[idx]
+            bu[u] = np.sum(yu - Vu @ P[u]) / (len(idx) + reg)
+            P[u] = np.linalg.solve(Vu.T @ Vu + reg * np.eye(k), Vu.T @ (yu - bu[u]))
+    for i in range(n):
+        idx = np.where(mask[:, i])[0]
+        if len(idx):
+            Ui, yi = P[idx], R[idx, i] - mu - bu[idx]
+            bi[i] = np.sum(yi - Ui @ Q[i]) / (len(idx) + reg)
+            Q[i] = np.linalg.solve(Ui.T @ Ui + reg * np.eye(k), Ui.T @ (yi - bi[i]))
+
+R_pred = mu + bu[:, None] + bi[None, :] + P @ Q.T
+rmse = np.sqrt(np.mean((R[mask] - R_pred[mask])**2))
+print(f"Global mean: {mu:.2f}")
+print(f"Training RMSE on observed: {rmse:.4f}")
+print(f"Predicted unobserved rating R[0, 2]: {R_pred[0, 2]:.2f}")`,
+    quiz: [
+      {
+        q: r`Why does Alternating Least Squares (ALS) switch between updating user vectors $P$ and item vectors $Q$ rather than optimising both simultaneously via standard least squares?`,
+        o: [
+          r`Joint optimisation of $P$ and $Q$ is non-convex, but fixing one makes the objective strictly convex and quadratic in the other`,
+          r`Simultaneous least squares requires computing the determinant of non-square matrices`,
+          r`ALS is an online reinforcement learning algorithm that cannot process offline batches`,
+          r`Standard least squares cannot handle matrices with more than 100 rows`,
+        ],
+        a: 0,
+        why: r`The product $P Q^T$ couples the variables, making the joint loss surface non-convex with saddle points. Holding $Q$ fixed reduces the problem to an independent, strictly convex ridge regression for each row of $P$, solved exactly in closed form.`,
+      },
+      {
+        q: r`What is the role of the user bias $b_u$ and item bias $b_i$ in the formulation $\hat{r}_{u, i} = \mu + b_u + b_i + p_u^T q_i$?`,
+        o: [
+          r`They capture baseline rating tendencies (e.g. generous raters or critically acclaimed films) so latent vectors model pure interactions`,
+          r`They eliminate the need for L2 regularisation`,
+          r`They restrict all predictions to integer values between 1 and 5`,
+          r`They force the latent factor dimension $k$ to equal 1`,
+        ],
+        a: 0,
+        why: r`A 4-star rating on a movie whose average is 4.5 by a user whose average is 4.2 actually represents a negative relative preference. Baseline terms capture these systematic shifts, leaving the latent dot product to capture genuine affinity patterns.`,
+      },
+      {
+        q: r`How does implicit feedback matrix factorisation (Hu, Koren, Volinsky) handle items that a user has never clicked on or viewed?`,
+        o: [
+          r`It treats unobserved items as zero preference ($p_{u, i} = 0$) with a low baseline confidence weight ($c_{u, i} = 1$)`,
+          r`It removes all unobserved items from the loss function entirely`,
+          r`It marks them as negative infinity to prevent recommendations`,
+          r`It replaces missing values with the global mean $\mu$`,
+        ],
+        a: 0,
+        why: r`In implicit settings, non-interaction could mean the user dislikes the item or simply never saw it. The model assigns zero preference ($p_{ui} = 0$) to all unobserved pairs but assigns them minimal confidence ($c_{ui} = 1$), reserving higher confidence ($1 + \alpha r_{ui}$) for observed interactions.`,
+      },
+    ],
+    usedBy: ['ranking-metrics-ndcg-map-learning-to-rank'],
+    prereq: ['collaborative-filtering', 'ridge_regression'],
+    related: ['collaborative-filtering', 'ranking-metrics-ndcg-map-learning-to-rank', 'pca'],
+    keywords: 'matrix factorisation als alternating least squares latent factors recommender systems implicit feedback collaborative filtering',
+  },
+  {
+    id: 'ranking-metrics-ndcg-map-learning-to-rank',
+    short: 'Ranking metrics & LTR',
+    title: 'Ranking Metrics: NDCG, MAP, Learning to Rank',
+    task: 'concepts',
+    module: 'Recommender systems',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Evaluating ranked lists through position-discounted gains and mean average precision, and training models with learning-to-rank loss functions.`,
+    lead: r`Regression and classification metrics evaluate items in isolation, ignoring that search and recommendation systems present ordered lists where top positions command supreme attention. Ranking metrics like NDCG (Normalised Discounted Cumulative Gain) and MAP (Mean Average Precision) penalise relevant items relegated to lower slots. Learning to Rank (LTR) operationalises this principle by training pointwise, pairwise, or listwise models directly on rank orders.`,
+    intuition: [
+      r`Suppose a search engine returns five documents for the query "emergency plumber". If the single most relevant 24-hour service appears at position 1, the user is thrilled. If that exact same document appears at position 10, the user has likely abandoned the query in frustration. Mean squared error treats an error at rank 1 and an error at rank 10 identically ($(\hat{y} - y)^2$). In ranking systems, position is everything: a prediction error at the very top of the list carries catastrophic cost compared to a swap at position 50.`,
+      r`Discounted Cumulative Gain (DCG) reflects human visual browsing behaviour. It assigns each item a graded relevance score (e.g. 0 = irrelevant, 1 = relevant, 2 = highly relevant, 3 = perfect match) and divides that score by a logarithmic discount based on its display position: $\log_2(\text{rank} + 1)$. To allow fair comparison across queries with varying numbers of relevant results, Normalised DCG (NDCG) divides DCG by the Ideal DCG (IDCG)—the theoretical maximum score achieved by sorting all documents in perfect descending relevance order. An NDCG of 1.0 indicates perfect ranking.`,
+      r`Moving from evaluation to model training is non-trivial because rank positions are discrete step functions: shifting a prediction score slightly does not change rankings until an item crosses another, resulting in zero gradients almost everywhere. Learning to Rank (LTR) solves this through three paradigms. Pointwise models predict isolated relevance scores via standard regression. Pairwise models (e.g. RankNet, LambdaMART) train on document pairs $(A, B)$, penalising inversions where $A$ was preferred to $B$ but scored lower. Listwise models (e.g. ListNet, Softmax cross-entropy) treat the entire ranked slate as a probability distribution, directly optimising top-heavy list structures.`,
+    ],
+    analogy: r`Scoring an Olympic gymnastics final where winning a gold medal yields enormous points and finishing fourth receives nothing, rather than grading every athlete on a flat pass/fail test.`,
+    steps: [
+      r`Collect query-document interaction logs with relevance judgements: binary indicators ($y \in \{0, 1\}$) or graded scores ($y \in \{0, 1, 2, 3\}$).`,
+      r`For binary relevance, compute Precision@k across the top $k$ items and calculate Average Precision (AP), averaging across queries to evaluate Mean Average Precision (MAP).`,
+      r`For graded relevance, compute Discounted Cumulative Gain at truncation rank $k$ ($\text{DCG}@k$) using logarithmic rank discounts.`,
+      r`Sort true relevance scores in descending order to calculate Ideal DCG ($\text{IDCG}@k$), computing the ratio $\text{NDCG}@k = \text{DCG}@k / \text{IDCG}@k$.`,
+      r`Train ranking models using pointwise regression, pairwise logistic loss with dynamic lambda-gradients (LambdaMART), or listwise cross-entropy loss.`,
+    ],
+    math: [
+      {
+        h: 'Discounted Cumulative Gain (DCG) and NDCG',
+        tex: r`$$\text{DCG}@k = \sum_{i=1}^k \frac{2^{r_i} - 1}{\log_2(i + 1)}, \qquad \text{NDCG}@k = \frac{\text{DCG}@k}{\text{IDCG}@k}$$`,
+        p: r`Here $r_i$ is the graded relevance of the item displayed at position $i$. The exponential numerator $2^{r_i} - 1$ heavily rewards highly relevant items, while the logarithmic denominator $\log_2(i + 1)$ imposes a position discount. Dividing by $\text{IDCG}@k$ normalises the metric to $[0, 1]$, enabling meaningful averaging across queries of varying difficulty.`,
+      },
+      {
+        h: 'Average Precision (AP) and Mean Average Precision (MAP)',
+        tex: r`$$\text{AP}@k = \frac{1}{\min(m, k)} \sum_{i=1}^k P(i) \cdot y_i, \qquad \text{MAP} = \frac{1}{|Q|} \sum_{q \in Q} \text{AP}(q)$$`,
+        p: r`In binary ranking ($y_i \in \{0, 1\}$), $P(i)$ is the precision among the top $i$ retrieved items, and $m$ is the total count of relevant items for query $q$. Multiplying by $y_i$ ensures that precision is sampled only at ranks where a relevant item is retrieved. MAP averages AP across all evaluation queries $Q$.`,
+      },
+      {
+        h: 'LambdaMART virtual pairwise gradient',
+        tex: r`$$\lambda_{ij} = \frac{-\sigma}{1 + e^{\sigma(s_i - s_j)}} |\Delta \text{NDCG}_{ij}|$$`,
+        p: r`Because rank positions are non-differentiable, LambdaMART bypasses explicit differentiation by scaling the pairwise logistic gradient between items $i$ and $j$ by $|\Delta \text{NDCG}_{ij}|$—the exact absolute change in NDCG that would occur if the ranks of items $i$ and $j$ were swapped. Items near the top receive massive gradient forces, aligning tree boosting directly with ranking utility.`,
+      },
+    ],
+    keyPoints: [
+      r`Position discounting: logarithmic discounts model user eye-tracking decay, heavily weighting relevance at top ranks while diminishing returns down the page.`,
+      r`Relative order over absolute values: ranking models care exclusively about correctly sorting pairs ($s_i > s_j$), making absolute score calibration secondary.`,
+      r`LambdaMART gradient synthesis: multiplying pairwise classification gradients by $\Delta \text{NDCG}$ allows gradient boosted trees to directly optimise discrete ranking metrics.`,
+    ],
+    pitfalls: [
+      r`Evaluating beyond the user horizon: calculating NDCG@50 when mobile interfaces display only 3 items provides misleading offline optimism.`,
+      r`Position bias in training data: training directly on uncorrected user click logs reinforces historical presentation order rather than true relevance, requiring inverse propensity scoring.`,
+      r`Empty query dilution: including queries with zero relevant documents can distort unweighted macro-averaged MAP metrics.`,
+    ],
+    code: r`import numpy as np
+
+y_true_graded = np.array([3, 1, 2, 0, 3, 0])
+
+def dcg_at_k(r, k):
+    r = np.asarray(r, dtype=float)[:k]
+    return np.sum((2**r - 1) / np.log2(np.arange(len(r)) + 2)) if r.size else 0.0
+
+def ndcg_at_k(r, k):
+    idcg = dcg_at_k(np.sort(r)[::-1], k)
+    return dcg_at_k(r, k) / idcg if idcg > 0 else 0.0
+
+def average_precision_at_k(binary_rel, k):
+    b = np.asarray(binary_rel)[:k]
+    n_rel = np.sum(b)
+    if n_rel == 0: return 0.0
+    p = [np.sum(b[:i+1]) / (i + 1) for i in range(len(b)) if b[i] == 1]
+    return np.sum(p) / min(n_rel, k)
+
+q1_bin, q2_bin = np.array([1, 0, 1, 0, 0]), np.array([0, 1, 1, 0, 0])
+map_score = np.mean([average_precision_at_k(q1_bin, 5), average_precision_at_k(q2_bin, 5)])
+
+k = 5
+print(f"DCG@{k}:  {dcg_at_k(y_true_graded, k):.4f}")
+print(f"IDCG@{k}: {dcg_at_k(np.sort(y_true_graded)[::-1], k):.4f}")
+print(f"NDCG@{k}: {ndcg_at_k(y_true_graded, k):.4f}")
+print(f"MAP@5:   {map_score:.4f}")`,
+    quiz: [
+      {
+        q: r`What is the role of the Ideal Discounted Cumulative Gain (IDCG) in the computation of NDCG?`,
+        o: [
+          r`It serves as the normalising denominator, representing the maximum possible DCG achieved by perfect sorting`,
+          r`It penalises the model when irrelevant documents appear at the bottom of the list`,
+          r`It computes the inverse log discount for documents beyond rank 100`,
+          r`It converts graded relevance scores into continuous probabilities`,
+        ],
+        a: 0,
+        why: r`Different queries have different numbers of relevant documents, making raw DCG incomparable across queries. Dividing DCG by IDCG normalises the score to $[0, 1]$, where 1.0 represents a flawless ranking.`,
+      },
+      {
+        q: r`Why is Mean Squared Error (MSE) often a poor loss function when training search and recommendation ranking models?`,
+        o: [
+          r`MSE penalises prediction errors equally across all positions, ignoring that mistakes at rank 1 are far more damaging than mistakes at rank 50`,
+          r`MSE cannot be optimised using gradient descent`,
+          r`MSE requires binary labels and cannot handle continuous scores`,
+          r`MSE always predicts zero for sparse datasets`,
+        ],
+        a: 0,
+        why: r`Ranking utility is concentrated heavily in the first few displayed positions. Pointwise MSE penalises an error on an obscure item at the bottom of the catalogue identically to an error on the top displayed result.`,
+      },
+      {
+        q: r`How does LambdaMART overcome the mathematical challenge that NDCG is a non-differentiable step function with zero gradient?`,
+        o: [
+          r`It scales pairwise logistic gradients by the change in NDCG ($|\Delta \text{NDCG}|$) resulting from swapping the two items`,
+          r`It approximates NDCG by replacing all logarithmic discounts with linear functions`,
+          r`It converts the ranking problem into an unsupervised k-means clustering task`,
+          r`It trains trees using non-gradient random search`,
+        ],
+        a: 0,
+        why: r`Instead of defining an explicit smooth surrogate loss, LambdaMART directly defines virtual gradients ($\lambda$-gradients) for item pairs by weighting the logistic loss gradient by the actual discrete change in NDCG ($|\Delta \text{NDCG}|$) that would occur if their ranks were swapped.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['collaborative-filtering', 'matrix-factorisation-and-als'],
+    related: ['collaborative-filtering', 'matrix-factorisation-and-als', 'confusion-matrix'],
+    keywords: 'ranking metrics ndcg map learning to rank dcg lambdamart recommender systems average precision search ranking',
+  },
 ];
