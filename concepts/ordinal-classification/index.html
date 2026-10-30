@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvusf4m4">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvusf4m4">
+<link rel="stylesheet" href="../../assets/site.css?v=mvusmi1y">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvusmi1y">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -94,7 +94,7 @@
       <section class="reveal" id="code">
         <h2 class="h3"><span>05</span> In code</h2>
         <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> numpy <span class="k">as</span> np
-<span class="k">from</span> scipy.optimise <span class="k">import</span> minimise
+<span class="k">from</span> scipy.optimize <span class="k">import</span> minimize
 
 <span class="c"># Proportional Odds Ordinal Logistic Regression from scratch</span>
 np.random.<span class="f">seed</span>(<span class="n">42</span>)
@@ -141,7 +141,7 @@ K = <span class="n">3</span>  <span class="c"># Number of classes</span>
 
 <span class="c"># Initial guess: beta=[0, 0], theta_1=0, increment=0</span>
 init_params = np.<span class="f">array</span>([<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>])
-res = <span class="f">minimise</span>(negative_log_likelihood, init_params, args=(X, y), method=<span class="s">'BFGS'</span>)
+res = <span class="f">minimize</span>(negative_log_likelihood, init_params, args=(X, y), method=<span class="s">'BFGS'</span>)
 
 est_beta = res.x[:<span class="n">2</span>]
 est_thetas = np.<span class="f">array</span>([res.x[<span class="n">2</span>], res.x[<span class="n">2</span>] + np.<span class="f">exp</span>(res.x[<span class="n">3</span>])])
@@ -214,11 +214,11 @@ acc = np.<span class="f">mean</span>(y == pred_classes)
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvusf4m4" defer></script>
-<script src="../../assets/labs/core.js?v=mvusf4m4" defer></script>
-<script src="../../assets/labs/algos.js?v=mvusf4m4" defer></script>
-<script src="../../assets/labs/models.js?v=mvusf4m4" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvusf4m4" defer></script>
-<script src="../../assets/learn.js?v=mvusf4m4" defer></script>
+<script src="../../assets/site.js?v=mvusmi1y" defer></script>
+<script src="../../assets/labs/core.js?v=mvusmi1y" defer></script>
+<script src="../../assets/labs/algos.js?v=mvusmi1y" defer></script>
+<script src="../../assets/labs/models.js?v=mvusmi1y" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvusmi1y" defer></script>
+<script src="../../assets/learn.js?v=mvusmi1y" defer></script>
 </body>
 </html>

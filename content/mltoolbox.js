@@ -1338,7 +1338,7 @@ print("Platt Calibrated ECE:", round(float(ece_cal), 3), "Brier Score:", round(f
         "p": "Measures agreement between predicted and true ranks penalising large category discrepancies quadratically, serving as standard evaluation metric in automated grading and disease staging."
       }
     ],
-    code: "import numpy as np\nfrom scipy.optimise import minimise\n\n# Proportional Odds Ordinal Logistic Regression from scratch\nnp.random.seed(42)\nn_samples = 300\n\n# 1. Generate synthetic ordinal data (3 categories: Low, Medium, High)\nx1 = np.random.normal(0, 1, n_samples)\nx2 = np.random.uniform(-1, 1, n_samples)\nX = np.column_stack([x1, x2])\n\n# Latent variable y* = beta1*x1 + beta2*x2 + noise\ntrue_beta = np.array([1.5, -0.8])\nlatent_y = X @ true_beta + np.random.logistic(0, 1, n_samples)\n\n# True cut-points: theta_1 = -0.5, theta_2 = 1.2\ntrue_thetas = np.array([-0.5, 1.2])\ny = np.zeros(n_samples, dtype=int)\ny[latent_y > true_thetas[0]] = 1\ny[latent_y > true_thetas[1]] = 2\n\n# 2. Cumulative Logit Model Fitting via Maximum Likelihood\nK = 3  # Number of classes\ndef sigmoid(z):\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))\n\ndef negative_log_likelihood(params, X, y):\n    beta = params[:2]\n    # Parameterise thresholds with increments to enforce theta_1 < theta_2\n    theta = np.array([params[2], params[2] + np.exp(params[3])])\n    \n    linear_pred = X @ beta\n    n = len(y)\n    nll = 0.0\n    \n    for i in range(n):\n        k = y[i]\n        # P(Y <= k)\n        prob_k = sigmoid(theta[k] - linear_pred[i]) if k < K - 1 else 1.0\n        prob_prev = sigmoid(theta[k-1] - linear_pred[i]) if k > 0 else 0.0\n        prob = max(prob_k - prob_prev, 1e-12)\n        nll -= np.log(prob)\n        \n    return nll\n\n# Initial guess: beta=[0, 0], theta_1=0, increment=0\ninit_params = np.array([0.0, 0.0, 0.0, 0.0])\nres = minimise(negative_log_likelihood, init_params, args=(X, y), method='BFGS')\n\nest_beta = res.x[:2]\nest_thetas = np.array([res.x[2], res.x[2] + np.exp(res.x[3])])\n\n# Compute predictions\nlin_preds = X @ est_beta\npred_probs = np.zeros((n_samples, K))\nfor k in range(K):\n    p_k = sigmoid(est_thetas[k] - lin_preds) if k < K - 1 else 1.0\n    p_prev = sigmoid(est_thetas[k-1] - lin_preds) if k > 0 else 0.0\n    pred_probs[:, k] = p_k - p_prev\npred_classes = np.argmax(pred_probs, axis=1)\n\nmae = np.mean(np.abs(y - pred_classes))\nacc = np.mean(y == pred_classes)\n\nprint(f\"True beta:             {true_beta}\")\nprint(f\"Estimated beta:        {est_beta.round(3)}\")\nprint(f\"True cut-points:       {true_thetas}\")\nprint(f\"Estimated cut-points:  {est_thetas.round(3)}\")\nprint(f\"Classification accuracy: {acc * 100:.1f}%\")\nprint(f\"Mean Absolute Error (ranks): {mae:.3f} (captures distance on ordered scale)\")",
+    code: "import numpy as np\nfrom scipy.optimize import minimize\n\n# Proportional Odds Ordinal Logistic Regression from scratch\nnp.random.seed(42)\nn_samples = 300\n\n# 1. Generate synthetic ordinal data (3 categories: Low, Medium, High)\nx1 = np.random.normal(0, 1, n_samples)\nx2 = np.random.uniform(-1, 1, n_samples)\nX = np.column_stack([x1, x2])\n\n# Latent variable y* = beta1*x1 + beta2*x2 + noise\ntrue_beta = np.array([1.5, -0.8])\nlatent_y = X @ true_beta + np.random.logistic(0, 1, n_samples)\n\n# True cut-points: theta_1 = -0.5, theta_2 = 1.2\ntrue_thetas = np.array([-0.5, 1.2])\ny = np.zeros(n_samples, dtype=int)\ny[latent_y > true_thetas[0]] = 1\ny[latent_y > true_thetas[1]] = 2\n\n# 2. Cumulative Logit Model Fitting via Maximum Likelihood\nK = 3  # Number of classes\ndef sigmoid(z):\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))\n\ndef negative_log_likelihood(params, X, y):\n    beta = params[:2]\n    # Parameterise thresholds with increments to enforce theta_1 < theta_2\n    theta = np.array([params[2], params[2] + np.exp(params[3])])\n    \n    linear_pred = X @ beta\n    n = len(y)\n    nll = 0.0\n    \n    for i in range(n):\n        k = y[i]\n        # P(Y <= k)\n        prob_k = sigmoid(theta[k] - linear_pred[i]) if k < K - 1 else 1.0\n        prob_prev = sigmoid(theta[k-1] - linear_pred[i]) if k > 0 else 0.0\n        prob = max(prob_k - prob_prev, 1e-12)\n        nll -= np.log(prob)\n        \n    return nll\n\n# Initial guess: beta=[0, 0], theta_1=0, increment=0\ninit_params = np.array([0.0, 0.0, 0.0, 0.0])\nres = minimize(negative_log_likelihood, init_params, args=(X, y), method='BFGS')\n\nest_beta = res.x[:2]\nest_thetas = np.array([res.x[2], res.x[2] + np.exp(res.x[3])])\n\n# Compute predictions\nlin_preds = X @ est_beta\npred_probs = np.zeros((n_samples, K))\nfor k in range(K):\n    p_k = sigmoid(est_thetas[k] - lin_preds) if k < K - 1 else 1.0\n    p_prev = sigmoid(est_thetas[k-1] - lin_preds) if k > 0 else 0.0\n    pred_probs[:, k] = p_k - p_prev\npred_classes = np.argmax(pred_probs, axis=1)\n\nmae = np.mean(np.abs(y - pred_classes))\nacc = np.mean(y == pred_classes)\n\nprint(f\"True beta:             {true_beta}\")\nprint(f\"Estimated beta:        {est_beta.round(3)}\")\nprint(f\"True cut-points:       {true_thetas}\")\nprint(f\"Estimated cut-points:  {est_thetas.round(3)}\")\nprint(f\"Classification accuracy: {acc * 100:.1f}%\")\nprint(f\"Mean Absolute Error (ranks): {mae:.3f} (captures distance on ordered scale)\")",
     keyPoints: [
       "Preserves inherent rank ordering of discrete targets without assuming arbitrary metric Euclidean distance.",
       "Cumulative logit proportional odds model relates features to cumulative probability $P(Y \\le k \\mid x) = \\sigma(\\theta_k - x^T \\beta)$.",
@@ -4816,5 +4816,1204 @@ for n in train_sizes:
     prereq: ['bias-variance-tradeoff', 'cross-validation'],
     related: ['bias-variance-tradeoff', 'cross-validation', 'nested-cross-validation'],
     keywords: 'learning curves diagnosing fit bias variance underfitting overfitting model selection sample size validation error',
+  },
+  {
+    id: 'nested-cross-validation',
+    short: 'Nested cross-validation',
+    title: 'Nested Cross-Validation',
+    task: 'concepts',
+    module: 'Model selection',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Double cross-validation framework separating hyperparameter optimisation from performance estimation to eliminate optimistic selection bias.`,
+    lead: r`In standard cross-validation workflows, practitioners tune hyperparameters across validation folds and report the winning configuration's score as the model's expected future test performance. This common practice introduces optimistic selection bias—the winner's curse—because the reported score reflects the best of many random validation fluctuations. Nested cross-validation resolves this by enclosing hyperparameter tuning inside an outer performance-estimation loop, producing an honest, unbiased assessment of the entire model-building pipeline.`,
+    intuition: [
+      r`Imagine a financial fund manager testing 1,000 different automated trading strategies on historical stock market data from 2020 to 2023. By pure random chance, one strategy will emerge with an astonishing 95% annual return, even if all 1,000 strategies are based on random coin flips. If the manager advertises that 95% figure to investors as the fund's "expected return", investors will be sorely disappointed in 2024. The manager used the same historical data to pick the winning strategy and to evaluate how good the winning strategy was.`,
+      r`The exact same trap plagues standard machine learning workflows. When you evaluate 500 combinations of tree depth, learning rate, and regularisation penalties on your cross-validation folds, you pick the parameter set that achieved the lowest validation error. But part of that stellar score is inevitable overfitting to those specific validation splits. Reporting that winning validation score as your model's expected test accuracy guarantees that real-world deployment performance will fall short.`,
+      r`Nested cross-validation cures this by establishing two strictly separated loops: an inner loop and an outer loop. The outer loop splits the data into outer training and outer test sets. For each outer fold, the outer test set is locked away in a vault. The outer training data is handed to an inner cross-validation loop, which tunes and selects the best hyperparameters. Once chosen, that winning configuration is evaluated once on the untouched outer test set. By repeating this process across all outer folds, nested cross-validation provides an unpolluted, statistically rigorous estimate of how well the end-to-end modelling procedure generalises.`,
+    ],
+    analogy: r`Running a multi-round competitive tournament: inner qualification rounds select the team's best lineup, but the team's true skill is judged only by matches played against unencountered external opponents.`,
+    steps: [
+      r`Partition the full dataset into $K_{\text{outer}}$ folds (e.g. 5 folds) for the outer evaluation loop.`,
+      r`For each outer fold $k$, hold out fold $k$ as an untouched test set, and designate the remaining $K_{\text{outer}} - 1$ folds as the outer training set.`,
+      r`Partition the outer training set into $K_{\text{inner}}$ folds (e.g. 3 or 4 folds) for the inner tuning loop.`,
+      r`Within the inner loop, evaluate all candidate hyperparameter configurations across the inner folds and identify the configuration $\theta_k^*$ that minimises average inner validation error.`,
+      r`Fit a model on the entire outer training set using the selected hyperparameter $\theta_k^*$, and evaluate its performance on the held-out outer test set.`,
+      r`Compute the final generalisation estimate as the average test performance across all $K_{\text{outer}}$ outer test evaluations.`,
+      r`To ship a production model, run inner cross-validation across the entire dataset to select a final hyperparameter $\theta_{\text{final}}^*$ and fit on all available data.`,
+    ],
+    math: [
+      {
+        h: 'Selection bias in standard cross-validation',
+        tex: r`$$\hat{\theta} = \arg\min_{\theta \in \Theta} \operatorname{CV}(\theta), \qquad \mathbb{E}\big[\operatorname{CV}(\hat{\theta})\big] < \operatorname{Err}_{\text{true}}(\hat{\theta})$$`,
+        p: r`Because $\hat{\theta}$ is chosen as the minimum over many random empirical variables, Jensen's inequality and extreme value theory guarantee that $\min_\theta \operatorname{CV}(\theta)$ is a downward-biased estimator of true error $\operatorname{Err}_{\text{true}}$, especially when sample size $N$ is small and the search space $|\Theta|$ is large.`,
+      },
+      {
+        h: 'Nested cross-validation structure',
+        tex: r`$$\operatorname{CV}_{\text{nested}} = \frac{1}{K_{\text{out}}} \sum_{k=1}^{K_{\text{out}}} L\left(y_{\text{test}}^{(k)}, \, \hat{f}_{\hat{\theta}_k}\big(x_{\text{test}}^{(k)}\big)\right)$$`,
+        p: r`where each $\hat{\theta}_k = \arg\min_{\theta \in \Theta} \frac{1}{K_{\text{in}}} \sum_{j=1}^{K_{\text{in}}} L\big(y_{\text{val}}^{(k, j)}, \hat{f}_\theta(x_{\text{val}}^{(k, j)})\big)$. Because $x_{\text{test}}^{(k)}$ was never seen during the selection of $\hat{\theta}_k$, $\operatorname{CV}_{\text{nested}}$ is an unbiased estimator of expected generalisation error.`,
+      },
+      {
+        h: 'Computational complexity of nested cross-validation',
+        tex: r`$$\text{Cost} = K_{\text{outer}} \times \left( |\Theta| \cdot K_{\text{inner}} + 1 \right) \approx K_{\text{outer}} \cdot K_{\text{inner}} \cdot |\Theta|$$`,
+        p: r`A $5 \times 3$ nested cross-validation evaluating 100 hyperparameter configurations trains $5 \times (100 \times 3 + 1) = 1{,}505$ models, representing a $K_{\text{outer}}$-fold multiplier over standard non-nested cross-validation.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic noisy dataset: pure noise targets (true R^2 <= 0)
+rng = np.random.default_rng(42)
+n_samples, n_features = 80, 20
+X = rng.normal(0, 1, (n_samples, n_features))
+y = rng.normal(0, 1, n_samples)
+
+# Candidate Ridge regularisation penalties
+alphas = np.logspace(-3, 3, 20)
+k_outer, k_inner = 4, 3
+indices = np.arange(n_samples)
+outer_folds = np.array_split(indices, k_outer)
+
+nested_scores = []
+for i in range(k_outer):
+    test_idx = outer_folds[i]
+    train_idx = np.setdiff1d(indices, test_idx)
+    X_train, y_train = X[train_idx], y[train_idx]
+    X_test, y_test = X[test_idx], y[test_idx]
+    
+    # Inner CV loop for hyperparameter tuning
+    inner_folds = np.array_split(np.arange(len(train_idx)), k_inner)
+    inner_mses = []
+    for a in alphas:
+        fold_errs = []
+        for j in range(k_inner):
+            in_val = inner_folds[j]
+            in_tr = np.setdiff1d(np.arange(len(train_idx)), in_val)
+            w = np.linalg.solve(X_train[in_tr].T @ X_train[in_tr] + a * np.eye(n_features), X_train[in_tr].T @ y_train[in_tr])
+            fold_errs.append(np.mean((y_train[in_val] - X_train[in_val] @ w) ** 2))
+        inner_mses.append(np.mean(fold_errs))
+    
+    # Evaluate best inner hyperparameter on untouched outer test set
+    best_a = alphas[np.argmin(inner_mses)]
+    w_outer = np.linalg.solve(X_train.T @ X_train + best_a * np.eye(n_features), X_train.T @ y_train)
+    nested_scores.append(np.mean((y_test - X_test @ w_outer) ** 2))
+
+print(f"Outer fold test MSEs: {[round(float(s), 3) for s in nested_scores]}")
+print(f"Unbiased nested CV MSE: {np.mean(nested_scores):.4f}")`,
+    pitfalls: [
+      r`Believing nested CV outputs a single best model: Nested CV evaluates the performance of the model-building algorithm, not a single static model. Each outer fold may select slightly different optimal hyperparameters.`,
+      r`Computational expense on deep architectures: Multiplying hyperparameter trials by $K_{\text{outer}} \times K_{\text{inner}}$ is computationally prohibitive for deep neural networks taking days to train, where single validation splits are standard.`,
+      r`Preprocessing leakage outside the nested loops: Fitting feature scalers, encoders, or PCA on the full dataset before splitting into outer folds leaks test information and invalidates the unbiased estimate.`,
+      r`Reporting the final production model without refitting: The outer folds exist only to measure expected test error; the final production model must be trained on 100% of the dataset using the best hyperparameter selected from an overall inner loop.`,
+    ],
+    keyPoints: [
+      r`Completely eliminates optimistic selection bias (the winner's curse) in hyperparameter tuning.`,
+      r`Separates hyperparameter selection (inner loop) from model performance estimation (outer loop).`,
+      r`Essential for small to medium sample sizes ($n < 1{,}000$) where validation variance is high and selection bias is most severe.`,
+      r`Evaluates the generalisation capacity of the entire automated modelling pipeline rather than a single parameter configuration.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does standard (non-nested) cross-validation produce optimistically biased estimates of model error when tuning many hyperparameters?`,
+        o: [
+          r`Because cross-validation only works on classification problems`,
+          r`Because picking the minimum validation error across hundreds of configurations capitalises on random validation set noise (the winner's curse)`,
+          r`Because standard cross-validation evaluates test data before training`,
+          r`Because the number of folds must always equal the number of features`,
+        ],
+        a: 1,
+        why: r`When searching through many candidate configurations, some will achieve lower validation errors purely by chance. Reporting the winning score as expected future performance overestimates real-world accuracy due to selection bias.`,
+      },
+      {
+        q: r`In a $5 \times 3$ nested cross-validation, what is the role of the outer loop test sets?`,
+        o: [
+          r`They are used to tune the learning rate`,
+          r`They are used to perform recursive feature elimination`,
+          r`They serve as completely untouched test sets used solely to estimate the unbiased generalisation error of models tuned by the inner loop`,
+          r`They determine the optimal number of inner folds`,
+        ],
+        a: 2,
+        why: r`The outer loop's sole function is unbiased performance estimation. The outer test folds are completely isolated from the inner loop's hyperparameter search.`,
+      },
+      {
+        q: r`What does nested cross-validation actually produce as its final output?`,
+        o: [
+          r`An unbiased estimate of the generalisation error of the model-building procedure, after which a final model is refit on all data`,
+          r`A single neural network weight vector`,
+          r`A set of five different production models that must all be deployed simultaneously`,
+          r`A guaranteed 100% test accuracy score`,
+        ],
+        a: 0,
+        why: r`Nested CV is an evaluation protocol, not a training algorithm. It estimates how well the pipeline generalises. Once the evaluation is complete, the practitioner runs a single tuning loop on all data to produce the final deployable model.`,
+      },
+      {
+        q: r`If each outer fold in a 5-fold nested CV selects a slightly different optimal hyperparameter value (e.g. $\alpha \in \{0.1, 0.5, 0.1, 1.0, 0.5\}$), what does this indicate?`,
+        o: [
+          r`The nested cross-validation failed and must be restarted with different seeds`,
+          r`The dataset contains corrupted corrupted values`,
+          r`Ridge regression cannot be evaluated using nested cross-validation`,
+          r`This is normal behaviour reflecting sample variance across subsets; the objective landscape may be relatively flat across those values`,
+        ],
+        a: 3,
+        why: r`Optimal hyperparameters naturally vary across sample partitions, particularly when multiple configurations yield nearly equivalent validation error. This variation illustrates why nested CV evaluates the procedure rather than a single frozen setting.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['cross-validation', 'bias-variance-tradeoff'],
+    related: ['cross-validation', 'hyperparameter-search-grid-random-successive-halving', 'bayesian-optimisation-and-optuna'],
+    keywords: 'nested cross-validation double cv model selection selection bias hyperparameter tuning outer loop inner loop',
+  },
+  {
+  "id": "ensemble-theory-bagging-boosting-stacking-compared",
+  "short": "Ensemble theory",
+  "title": "Ensemble Theory: Bagging, Boosting, and Stacking Compared",
+  "task": "concepts",
+  "module": "Model selection",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Understand the mathematical foundations of ensemble learning: compare variance reduction in Bagging, bias reduction in Boosting, and meta-learning in Stacking.",
+  "lead": "Why do ensembles of diverse models consistently dominate competitive data science? Ensemble theory formalises how combining multiple learners manipulates the bias-variance trade-off.",
+  "intuition": [
+    "The foundational insight of ensemble learning traces back to the Condorcet Jury Theorem of 1785: if a group of independent decision-makers each has a probability $p > 0.5$ of being correct, the probability that a majority vote is correct approaches 1 as jury size grows. In machine learning, combining multiple individual learners produces predictions that are strictly superior to any single constituent model.",
+    "However, different ensemble paradigms attack the bias-variance trade-off through fundamentally different mathematical mechanisms. The three major pillars are Bagging, Boosting, and Stacking.",
+    "Bagging (Bootstrap Aggregation) attacks Variance. It trains high-variance, low-bias models (such as deep decision trees) independently in parallel on bootstrap resampled datasets. If each individual model has variance $\\sigma^2$ and pairwise prediction correlation $\\rho$, averaging $B$ models yields ensemble variance $\\rho \\sigma^2 + \\frac{1 - \\rho}{B} \\sigma^2$. Random Forests reduce $\\rho$ by randomly subsampling features at each split, driving variance down toward zero while preserving low bias.",
+    "Boosting attacks Bias. It trains shallow, high-bias \"weak learners\" sequentially. Each subsequent model is trained to predict the residual errors or reweighted mistakes of the preceding ensemble, effectively taking a step along the negative gradient of the loss function in function space.",
+    "Stacking (Stacked Generalisation) uses meta-learning. Instead of relying on hand-crafted voting rules, it trains heterogeneous base learners (e.g. a Support Vector Machine, a Random Forest, and a Neural Network) and uses their out-of-fold cross-validated predictions as input features to train a secondary \"meta-model\" (such as Ridge or Logistic regression)."
+  ],
+  "analogy": "Imagine diagnosing a complex medical illness. Bagging is consulting 20 independent cardiologists who each examine different subsets of the patient medical records; averaging their diagnoses cancels out individual eccentricities. Boosting is a consultation where Doctor 1 offers an initial assessment, Doctor 2 investigates only the symptoms Doctor 1 missed, and Doctor 3 resolves remaining ambiguities. Stacking is convening a cardiologist, a neurologist, and an oncologist, then having an experienced chief medical officer synthesise their divergent findings into a final diagnosis.",
+  "steps": [
+    {
+      "title": "1. Diagnose model error: bias vs variance",
+      "body": "Evaluate learning curves. If validation loss is high due to model underfitting, prioritise Boosting. If model exhibits severe overfitting, prioritise Bagging."
+    },
+    {
+      "title": "2. Bagging: train independent parallel learners",
+      "body": "Draw $B$ bootstrap samples $\\mathcal{D}_1, \\dots, \\mathcal{D}_B$ with replacement. Train deep trees independently. Average predictions (regression) or take majority vote (classification)."
+    },
+    {
+      "title": "3. Boosting: train sequential residual learners",
+      "body": "Fit base learner $h_1(x)$. Compute negative gradient residuals $r_i = -\\left[\\frac{\\partial L(y_i, f(x_i))}{\\partial f(x_i)}\\right]$. Fit subsequent learner $h_t(x)$ to predict residuals. Update $f_t(x) = f_{t-1}(x) + \\eta h_t(x)$."
+    },
+    {
+      "title": "4. Stacking: assemble out-of-fold meta-features",
+      "body": "Partition training data into $K$ folds. For each base learner, generate out-of-fold predictions. Assemble $n \\times M$ meta-feature matrix and fit a regularised blender model (e.g. Ridge or Logistic regression)."
+    }
+  ],
+  "math": [
+    {
+      "h": "Bagging Variance Reduction Formula",
+      "tex": "\\operatorname{Var}\\left(\\frac{1}{B} \\sum_{b=1}^B \\hat{f}_b(x)\\right) = \\rho(x) \\sigma^2(x) + \\frac{1 - \\rho(x)}{B} \\sigma^2(x)",
+      "p": "As ensemble size B -> infinity, the second term vanishes, leaving rho * sigma^2. Feature subsampling in Random Forests lowers correlation rho, drastically reducing irreducible ensemble variance."
+    },
+    {
+      "h": "Gradient Boosting Functional Gradient Step",
+      "tex": "f_m(x) = f_{m-1}(x) + \\eta \\arg\\min_{h} \\sum_{i=1}^n \\left( -\\left[\\frac{\\partial L(y_i, f_{m-1}(x_i))}{\\partial f_{m-1}(x_i)}\\right] - h(x_i) \\right)^2",
+      "p": "Each new weak learner h approximates the negative gradient of the loss function, performing functional gradient descent in prediction space."
+    },
+    {
+      "h": "Stacking Out-of-Fold Meta-Dataset",
+      "tex": "z_{i} = \\left[ \\hat{f}_1^{-k(i)}(x_i), \\; \\hat{f}_2^{-k(i)}(x_i), \\; \\dots, \\; \\hat{f}_M^{-k(i)}(x_i) \\right]^T, \\quad \\hat{y}_i = g(z_i)",
+      "p": "Meta-features z_i are generated strictly out-of-fold (using models trained on all folds except fold k containing sample i), preventing data leakage and target memorisation in meta-learner g."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.tree import DecisionTreeRegressor\nfrom sklearn.linear_model import Ridge\nfrom sklearn.model_selection import KFold\n\n# Comparing Bagging, Boosting, and Stacking from scratch\nnp.random.seed(42)\nn_samples = 400\n\n# Synthetic non-linear data with high noise\nX = np.random.uniform(-3, 3, (n_samples, 2))\ny = np.sin(X[:, 0]) * np.cos(X[:, 1]) + 0.5 * X[:, 0] + np.random.normal(0, 0.4, n_samples)\n\nn_train = 250\nX_train, X_test = X[:n_train], X[n_train:]\ny_train, y_test = y[:n_train], y[n_train:]\n\n# 1. Bagging (Variance Reduction)\nn_bags = 30\nbag_preds = np.zeros((len(X_test), n_bags))\nfor b in range(n_bags):\n    boot_idx = np.random.choice(n_train, size=n_train, replace=True)\n    tree = DecisionTreeRegressor(max_depth=8, random_state=b)\n    tree.fit(X_train[boot_idx], y_train[boot_idx])\n    bag_preds[:, b] = tree.predict(X_test)\npred_bagging = np.mean(bag_preds, axis=1)\n\n# 2. Gradient Boosting (Bias Reduction)\nn_boost_trees = 30\nlearning_rate = 0.1\npred_boost_train = np.full(n_train, np.mean(y_train))\npred_boost_test = np.full(len(X_test), np.mean(y_train))\n\nfor m in range(n_boost_trees):\n    residuals = y_train - pred_boost_train\n    shallow_tree = DecisionTreeRegressor(max_depth=3, random_state=m)\n    shallow_tree.fit(X_train, residuals)\n    pred_boost_train += learning_rate * shallow_tree.predict(X_train)\n    pred_boost_test += learning_rate * shallow_tree.predict(X_test)\n\n# 3. Stacking with Out-of-Fold Meta-Features\nkf = KFold(n_splits=5, shuffle=True, random_state=42)\noof_preds = np.zeros((n_train, 2))\ntest_base_preds = np.zeros((len(X_test), 2))\n\n# Base learner 1: Deep Tree; Base learner 2: Shallow Tree\nfor tr_idx, val_idx in kf.split(X_train):\n    m1 = DecisionTreeRegressor(max_depth=7, random_state=42)\n    m2 = DecisionTreeRegressor(max_depth=3, random_state=42)\n    m1.fit(X_train[tr_idx], y_train[tr_idx])\n    m2.fit(X_train[tr_idx], y_train[tr_idx])\n    oof_preds[val_idx, 0] = m1.predict(X_train[val_idx])\n    oof_preds[val_idx, 1] = m2.predict(X_train[val_idx])\n\n# Fit full base models on train, predict test\nm1_full = DecisionTreeRegressor(max_depth=7, random_state=42).fit(X_train, y_train)\nm2_full = DecisionTreeRegressor(max_depth=3, random_state=42).fit(X_train, y_train)\ntest_base_preds[:, 0] = m1_full.predict(X_test)\ntest_base_preds[:, 1] = m2_full.predict(X_test)\n\n# Meta-learner: Ridge regression on out-of-fold predictions\nmeta_learner = Ridge(alpha=1.0)\nmeta_learner.fit(oof_preds, y_train)\npred_stacking = meta_learner.predict(test_base_preds)\n\n# Single baseline tree\nsingle_tree = DecisionTreeRegressor(max_depth=5, random_state=42).fit(X_train, y_train)\npred_single = single_tree.predict(X_test)\n\ndef mse(y_true, y_pred): return np.mean((y_true - y_pred)**2)\n\nprint(\"--- Test Set MSE Comparison ---\")\nprint(f\"Single Decision Tree:  {mse(y_test, pred_single):.4f}\")\nprint(f\"Bagging (30 trees):    {mse(y_test, pred_bagging):.4f} (Variance reduced)\")\nprint(f\"Boosting (30 trees):   {mse(y_test, pred_boost_test):.4f} (Bias reduced)\")\nprint(f\"Stacking (Meta-Ridge): {mse(y_test, pred_stacking):.4f} (Optimal synthesis)\")",
+  "keyPoints": [
+    "Ensemble theory proves that combining diverse models produces predictions superior to any individual constituent.",
+    "Bagging attacks variance: averages independent models trained on bootstrap datasets; Random Forests reduce pairwise correlation $\\rho$.",
+    "Boosting attacks bias: trains weak learners sequentially along the negative gradient of the loss function.",
+    "Stacking combines heterogeneous models via a secondary meta-model trained on out-of-fold cross-validated predictions.",
+    "Diversity is paramount: combining identical or highly correlated models provides zero variance reduction and zero boosting gain."
+  ],
+  "pitfalls": [
+    "Target leakage in stacking: Training the meta-learner on in-sample predictions causes extreme overfitting; out-of-fold cross-validation is strictly mandatory.",
+    "Overfitting in boosting: Unlike bagging, running boosting for too many iterations continues driving training error to zero while test error explodes.",
+    "Computational latency: Ensembles require evaluating multiple models at inference time, increasing CPU and memory latency in real-time serving."
+  ],
+  "quiz": [
+    {
+      "q": "According to the bagging variance formula Var = rho * sigma^2 + ((1 - rho)/B) * sigma^2, why does Random Forest perform feature subsampling at each tree split?",
+      "o": [
+        "To reduce the correlation rho between individual trees, lowering the irreducible variance floor",
+        "To make the individual trees deeper",
+        "To convert regression trees into classification trees",
+        "To eliminate the need for training labels"
+      ],
+      "a": 0,
+      "why": "As tree count B -> infinity, the second term approaches zero, leaving rho * sigma^2. Randomly selecting feature subsets decorrelates trees (lowering rho), lowering overall ensemble variance."
+    },
+    {
+      "q": "Why must the meta-features in Stacking be generated strictly using out-of-fold cross-validation?",
+      "o": [
+        "If base models generate predictions on their own training data, the meta-model will overfit to the memorisation biases of the base learners",
+        "Because in-sample predictions cannot be stored in arrays",
+        "Because cross-validation eliminates the need for test sets",
+        "Because the meta-learner requires equal numbers of samples in each class"
+      ],
+      "a": 0,
+      "why": "In-sample predictions contain training memorisation artifacts. Out-of-fold predictions replicate true test-time behaviour, allowing the meta-learner to learn reliable weights without target leakage."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "bias-variance-tradeoff",
+    "cross-validation"
+  ],
+  "related": [
+    "random_forest_regressor",
+    "gradient_boosting_regressor",
+    "stacking_voting_classifiers",
+    "bagging-and-extra-trees"
+  ],
+  "keywords": "ensemble theory, bagging, boosting, stacking, bias variance tradeoff, out of fold, meta learning, condorcet jury theorem"
+},
+  {
+  "id": "conformal-prediction",
+  "short": "Conformal prediction",
+  "title": "Conformal Prediction and Distribution-Free Uncertainty",
+  "task": "concepts",
+  "module": "Model selection",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Construct prediction intervals with rigorous finite-sample coverage guarantees: master non-conformity scores, exchangeability, and inductive conformal prediction.",
+  "lead": "Standard confidence intervals rely on parametric Gaussian assumptions that fail when distributions are skewed or multimodal. Conformal prediction produces prediction sets with mathematically guaranteed 1 - alpha marginal coverage under any distribution, using any underlying model.",
+  "intuition": [
+    "Most machine learning models output point predictions: predicting a house price will be £450,000 or a patient will be diagnosed with Disease A. However, when deployed in medicine, finance, or automated hiring, point predictions hide risk: is the true house price guaranteed to lie between £440,000 and £460,000, or could it be anywhere from £200,000 to £700,000?",
+    "Traditional statistical methods construct confidence intervals using rigid parametric assumptions: assuming error residuals are identically normally distributed with constant variance. When real-world data is skewed, heteroscedastic, or multi-modal, these parametric intervals collapse and under-cover reality.",
+    "Pioneered by Vladimir Vovk, Alex Gammerman, and Glenn Shafer, Conformal Prediction provides a mathematically rigorous, distribution-free framework for uncertainty quantification. It constructs prediction intervals (in regression) or prediction sets (in classification) that satisfy an exact finite-sample coverage guarantee: $P(Y_{n+1} \\in C(X_{n+1})) \\ge 1 - \\alpha$, for any user-chosen significance level $\\alpha$ (e.g. 90% or 95%).",
+    "Astonishingly, conformal prediction requires zero parametric assumptions, works on top of any black-box machine learning model (Random Forests, XGBoost, or Deep Neural Networks), and holds for finite sample sizes $n$ without relying on asymptotic $n \\to \\infty$ limits. The only foundational mathematical assumption is exchangeability (satisfied whenever data is identically and independently distributed, i.i.d.)."
+  ],
+  "analogy": "Imagine a dart player practicing in an arcade. Rather than assuming the darts always land in a neat circular Gaussian bell curve around the bullseye, you watch the player throw 100 calibration darts and measure the exact physical distance of each dart from the bullseye. If you want a 90% guarantee for their next throw, you simply take the 90th largest throw distance. Drawing a circle with that exact radius around the next aimed target is guaranteed by pure permutation symmetry to contain the next dart 90% of the time.",
+  "steps": [
+    {
+      "title": "1. Partition data into training and calibration sets",
+      "body": "Split available data into a proper training set $\\mathcal{D}_{\\mathrm{train}}$ and an independent calibration set $\\mathcal{D}_{\\mathrm{cal}} = \\{(x_i, y_i)\\}_{i=1}^n$."
+    },
+    {
+      "title": "2. Train base predictive model",
+      "body": "Train any black-box model $\\hat{f}$ exclusively on $\\mathcal{D}_{\\mathrm{train}}$ (e.g. gradient-boosted trees or deep neural network)."
+    },
+    {
+      "title": "3. Compute non-conformity scores on calibration set",
+      "body": "For each calibration sample $i = 1, \\dots, n$, compute a non-conformity score $s_i$ measuring how unusual the true label is relative to model prediction (e.g. absolute residual $s_i = |y_i - \\hat{f}(x_i)|$)."
+    },
+    {
+      "title": "4. Compute calibrated empirical quantile and form intervals",
+      "body": "Calculate empirical quantile: $\\hat{q} = \\operatorname{Quantile}\\left(\\frac{\\lceil (n+1)(1-\\alpha) \\rceil}{n}, \\{s_1, \\dots, s_n\\}\\right)$. For any new test point $x_{n+1}$, form prediction interval $C(x_{n+1}) = [\\hat{f}(x_{n+1}) - \\hat{q}, \\; \\hat{f}(x_{n+1}) + \\hat{q}]$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Inductive Non-Conformity Score (Absolute Residual)",
+      "tex": "s_i = s(x_i, y_i) = |y_i - \\hat{f}(x_i)|",
+      "p": "Quantifies how poorly the model prediction matches the ground truth. Higher values denote points that conform poorly to model expectations."
+    },
+    {
+      "h": "Empirical Conformal Quantile Correction",
+      "tex": "\\hat{q} = \\operatorname{Quantile}\\left(\\frac{\\lceil(n + 1)(1 - \\alpha)\\rceil}{n}, \\; \\{s_1, \\dots, s_n\\}\\right)",
+      "p": "The finite-sample correction factor (n+1)/n accounts for the unobserved test sample, ensuring the theoretical coverage guarantee holds exactly in finite samples."
+    },
+    {
+      "h": "Conformal Validity Coverage Guarantee Theorem",
+      "tex": "1 - \\alpha \\le P\\left(Y_{n+1} \\in C(X_{n+1})\\right) \\le 1 - \\alpha + \\frac{1}{n + 1}",
+      "p": "Rigorous finite-sample mathematical guarantee. The true outcome falls inside the prediction set with probability at least 1 - alpha under exchangeability."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.ensemble import GradientBoostingRegressor\n\n# Split Conformal Prediction for Regression from scratch\nnp.random.seed(42)\nn_total = 1000\n\n# Synthetic non-linear data with heteroscedastic skewed noise\nx = np.random.uniform(0, 10, n_total)\n# Variance grows with x, and noise is heavily skewed (exponential)\ny_clean = 2.0 * np.sin(x) + 0.5 * x\nnoise = np.random.exponential(scale=0.3 * (1.0 + 0.2 * x)) - 0.3 * (1.0 + 0.2 * x)\ny = y_clean + noise\nX = x.reshape(-1, 1)\n\n# Split into: Train (50%), Calibration (25%), Test (25%)\nn_train = 500\nn_cal = 250\nX_train, y_train = X[:n_train], y[:n_train]\nX_cal, y_cal = X[n_train:n_train+n_cal], y[n_train:n_train+n_cal]\nX_test, y_test = X[n_train+n_cal:], y[n_train+n_cal:]\n\n# 1. Train black-box base model on training set\nmodel = GradientBoostingRegressor(n_estimators=100, random_state=42)\nmodel.fit(X_train, y_train)\n\n# 2. Compute non-conformity scores on calibration set\ncal_preds = model.predict(X_cal)\nnonconformity_scores = np.abs(y_cal - cal_preds)\n\n# 3. Calculate conformal quantile for 90% coverage (alpha = 0.10)\nalpha = 0.10\nn = len(X_cal)\n# Finite-sample index: ceil((n + 1) * (1 - alpha)) / n\nq_level = np.ceil((n + 1) * (1.0 - alpha)) / n\nq_hat = np.quantile(nonconformity_scores, q_level, method='higher')\n\n# 4. Form prediction intervals on test set\ntest_preds = model.predict(X_test)\nlower_bounds = test_preds - q_hat\nupper_bounds = test_preds + q_hat\n\n# Evaluate empirical coverage on test set\ncovered = (y_test >= lower_bounds) & (y_test <= upper_bounds)\nempirical_coverage = np.mean(covered)\n\nprint(f\"Target Coverage Level: { (1 - alpha) * 100:.1f}%\")\nprint(f\"Calibration set size:  {n_cal} samples\")\nprint(f\"Calibrated Conformal Margin (q_hat): ±{q_hat:.3f}\")\nprint(f\"Empirical Test Coverage: {empirical_coverage * 100:.1f}% (Guaranteed >= 90.0%!)\")\nprint(f\"Average Prediction Interval Width:   {2 * q_hat:.3f}\")",
+  "keyPoints": [
+    "Provides mathematically guaranteed finite-sample coverage $P(Y \\in C(X)) \\ge 1 - \\alpha$ without parametric assumptions.",
+    "Model-agnostic: wraps around any black-box machine learning model (neural nets, gradient boosting, random forests).",
+    "Relies solely on exchangeability (i.i.d. assumption), holding exactly for finite samples without asymptotic approximations.",
+    "In regression, outputs prediction intervals; in classification, outputs prediction sets of varying cardinality.",
+    "Adaptive non-conformity scores (e.g. Conformalised Quantile Regression, CQR) produce variable-width intervals reflecting local heteroscedasticity."
+  ],
+  "pitfalls": [
+    "Marginal coverage vs conditional coverage: Standard conformal prediction guarantees average coverage across the entire population, but may under-cover specific localised minority sub-populations.",
+    "Exchangeability violation in time series: If data exhibits temporal drift, non-stationarity, or autoregressive correlation, exchangeability fails and adaptive conformal prediction is required.",
+    "Calibration set data taxation: Split conformal prediction requires reserving a clean holdout calibration set, slightly reducing data available for model training."
+  ],
+  "quiz": [
+    {
+      "q": "What is the only foundational assumption required for Conformal Prediction coverage guarantees to hold?",
+      "o": [
+        "Data exchangeability (samples are identically and independently distributed or permutation symmetric)",
+        "Normally distributed Gaussian errors with homoscedastic variance",
+        "That the base model is a linear regression model",
+        "That the sample size approaches infinity"
+      ],
+      "a": 0,
+      "why": "Conformal prediction is distribution-free and finite-sample exact; its mathematical proof relies entirely on permutation symmetry (exchangeability) of the calibration and test instances."
+    },
+    {
+      "q": "Why is the quantile level calculated as ceil((n + 1)(1 - alpha)) / n rather than simply 1 - alpha?",
+      "o": [
+        "To account for the finite sample size and the fact that the unobserved test sample is the (n+1)-th observation in the exchangeable sequence",
+        "To round down to the nearest integer",
+        "To correct for heteroscedasticity in the features",
+        "To force the interval to be symmetric"
+      ],
+      "a": 0,
+      "why": "Because the calibration set has n samples and the test point is the (n+1)-th point, rank symmetry requires partitioning probability into n+1 intervals, yielding the exact finite-sample bound."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "confidence-intervals",
+    "cross-validation"
+  ],
+  "related": [
+    "confidence-intervals",
+    "ensemble-theory-bagging-boosting-stacking-compared",
+    "residual-diagnostics-and-heteroscedasticity"
+  ],
+  "keywords": "conformal prediction, distribution free uncertainty, prediction intervals, non conformity score, exchangeability, split conformal, finite sample coverage"
+},
+  {
+    id: 'permutation-and-impurity-feature-importance',
+    short: 'Permutation & impurity',
+    title: 'Permutation and Impurity Feature Importance',
+    task: 'concepts',
+    module: 'Interpretability and fairness',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Contrasting training-set impurity reduction (MDI) with held-out permutation testing (PFI) to measure genuine feature predictive power.`,
+    lead: r`When tree ensembles rank feature importances, practitioners frequently rely on default Mean Decrease in Impurity (MDI). However, MDI suffers from severe structural bias toward high-cardinality features and evaluates importance exclusively on training data, causing overfit noise to appear falsely critical. Permutation Feature Importance (PFI) measures the true drop in model performance when feature values are randomly shuffled on held-out validation data, breaking feature-target associations to quantify genuine generalisable signal.`,
+    intuition: [
+      r`Imagine an employer evaluating job candidates based on three criteria: university grades, relevant industry experience, and employee ID badge numbers. A complex decision tree can easily memorise the training records by splitting on the unique employee ID badge numbers, partitioning candidates perfectly into individual leaf nodes. If you ask the tree which feature reduced training classification errors most aggressively, it will proudly answer: the employee ID badge numbers (high impurity reduction). Yet in the real world, ID numbers carry zero predictive capability for future hires.`,
+      r`This flaw is the Achilles heel of Mean Decrease in Impurity (Gini importance). Because continuous variables and high-cardinality categoricals offer countless potential split thresholds, trees split on them disproportionately often. Furthermore, because MDI is computed entirely on training data, any feature that helps the tree memorise training noise is crowned as "important".`,
+      r`Permutation Feature Importance provides the scientific antidote by asking a simple question: "If I destroy the relationship between this feature and the target on unseen validation data, how badly does the model suffer?" By shuffling the values of one feature across validation rows while leaving all other columns intact, PFI preserves the feature's marginal distribution while obliterating its correlation with the outcome. If shuffling a column causes validation error to spike, the model genuinely relied on that feature. If shuffling causes zero change (or even improves performance), the feature was merely redundant noise.`,
+    ],
+    analogy: r`Assessing which engine component is essential to a car's speed by temporarily disconnecting each wire on a test track and measuring how much lap time degrades.`,
+    steps: [
+      r`Train the predictive model on the training dataset using standard cross-validation or hyperparameter tuning.`,
+      r`Evaluate the baseline performance metric (e.g. MSE, cross-entropy, or ROC-AUC) on an untouched held-out validation dataset: $L_{\text{base}} = L(y_{\text{val}}, \hat{f}(X_{\text{val}}))$.`,
+      r`For each feature column $j \in \{1, \dots, d\}$, generate a permuted validation set $X_{\text{val}}^{\text{perm}(j)}$ by randomly shuffling row values in column $j$ while keeping all other columns unchanged.`,
+      r`Pass the permuted matrix through the trained model to record the degraded performance metric: $L_{\text{perm}}(j) = L(y_{\text{val}}, \hat{f}(X_{\text{val}}^{\text{perm}(j)}))$.`,
+      r`Compute the importance score as the difference $\Delta L(j) = L_{\text{perm}}(j) - L_{\text{base}}$ (or ratio for bounded metrics); repeat across multiple random shuffles to compute confidence intervals.`,
+      r`Inspect correlated feature clusters: if two features are strongly collinear, group them together or evaluate conditional permutations to avoid underestimating shared influence.`,
+    ],
+    math: [
+      {
+        h: 'Mean Decrease in Impurity (MDI / Gini importance)',
+        tex: r`$$\operatorname{MDI}(j) = \frac{1}{T} \sum_{t=1}^T \sum_{n \in \mathcal{N}_t: v(n) = j} p(n) \, \Delta I(n)$$`,
+        p: r`where $T$ is the number of trees, $\mathcal{N}_t$ is the set of internal nodes in tree $t$, $v(n)$ denotes the feature split at node $n$, $p(n) = N_n / N_{\text{total}}$ is the proportion of training samples reaching node $n$, and $\Delta I(n) = I(n) - \frac{N_L}{N_n}I(n_L) - \frac{N_R}{N_n}I(n_R)$ is the reduction in impurity (Gini or variance). Because continuous features offer more split opportunities, MDI exhibits an inherent cardinality bias.`,
+      },
+      {
+        h: 'Permutation Feature Importance (PFI)',
+        tex: r`$$\operatorname{PFI}(j) = \mathbb{E}\left[ L\big(y, \, \hat{f}(X^{\pi_j})\big) \right] - \mathbb{E}\left[ L\big(y, \, \hat{f}(X)\big) \right]$$`,
+        p: r`where $X^{\pi_j}$ denotes the feature matrix where column $j$ has been randomly permuted, breaking the joint distribution $P(X_j, Y)$ while strictly preserving the marginal distribution $P(X_j)$. When evaluated on test data, uninformative features yield $\operatorname{PFI} \le 0$, while critical features yield large positive values.`,
+      },
+      {
+        h: 'Standard error of permutation importance across shuffles',
+        tex: r`$$\operatorname{SE}\big(\operatorname{PFI}(j)\big) = \frac{s_j}{\sqrt{B}}, \qquad s_j = \sqrt{\frac{1}{B - 1} \sum_{b=1}^B \big(\Delta L_b(j) - \overline{\Delta L}(j)\big)^2}$$`,
+        p: r`where $B$ is the number of independent random permutations (typically $B = 5$ to $10$). Computing the standard error over permutations verifies whether a feature's measured importance is statistically distinct from random baseline noise.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic dataset: x0 is predictive, x1 is noise, x2 is high-cardinality ID
+rng = np.random.default_rng(42)
+n = 200
+x0 = rng.normal(0, 1, n)
+x1 = rng.normal(0, 1, n)
+x2 = np.arange(n, dtype=float)
+y = 2.5 * x0 + rng.normal(0, 0.5, n)
+X = np.column_stack([x0, x1, x2])
+
+# Train / validation split
+X_tr, y_tr = X[:120], y[:120]
+X_val, y_val = X[120:], y[120:]
+w = np.linalg.lstsq(X_tr, y_tr, rcond=None)[0]
+
+# Baseline validation error
+base_mse = np.mean((y_val - X_val @ w) ** 2)
+
+# Compute Permutation Feature Importance (PFI) on held-out validation data
+pfi = []
+for j in range(3):
+    X_perm = X_val.copy()
+    X_perm[:, j] = rng.permutation(X_perm[:, j])
+    perm_mse = np.mean((y_val - X_perm @ w) ** 2)
+    pfi.append(perm_mse - base_mse)
+
+print(f"Baseline validation MSE: {base_mse:.4f}")
+print(f"PFI (x0 - true signal):  {pfi[0]:.4f}")
+print(f"PFI (x1 - noise):        {pfi[1]:.4f}")
+print(f"PFI (x2 - unique ID):    {pfi[2]:.4f}")`,
+    pitfalls: [
+      r`Misinterpreting correlated features: If two features are almost perfectly collinear (e.g. height in centimetres and height in inches), permuting one leaves the model able to use the other, causing PFI to artificially underestimate the importance of both.`,
+      r`Evaluating PFI on training data: Running permutation tests on training data rather than validation data reintroduces memorisation bias, failing to penalise overfit features.`,
+      r`Extrapolation into impossible feature spaces: Permuting correlated features can generate physically impossible combinations (e.g. an pregnant male or an 8-bedroom studio apartment), forcing the model to evaluate out-of-distribution regions.`,
+      r`Ignoring negative importance values: Features with slightly negative PFI scores indicate that permuting them actually reduced error, signalling noisy or overfitted inputs that should be pruned.`,
+    ],
+    keyPoints: [
+      r`MDI evaluates training split reductions and artificially favours high-cardinality variables like unique IDs or continuous noise.`,
+      r`PFI evaluates held-out validation loss degradation and reflects genuine generalisable predictive value.`,
+      r`Shuffling breaks feature-target association while preserving the empirical marginal distribution of the feature.`,
+      r`For correlated predictors, grouped permutation or conditional importance is necessary to avoid mutual dilution.`,
+    ],
+    quiz: [
+      {
+        q: r`Why is default Mean Decrease in Impurity (MDI / Gini importance) dangerous when evaluating tree ensembles on datasets with mixed feature types?`,
+        o: [
+          r`Because MDI cannot be computed for classification trees`,
+          r`Because MDI artificially inflates the importance of continuous and high-cardinality features that offer many split points to overfit training noise`,
+          r`Because MDI requires inverting high-dimensional covariance matrices`,
+          r`Because MDI values always sum to zero`,
+        ],
+        a: 1,
+        why: r`MDI evaluates impurity reduction strictly on training data. Continuous features and high-cardinality categoricals offer far more split candidates, allowing trees to split on them frequently to memorise noise, creating a severe false importance bias.`,
+      },
+      {
+        q: r`What is the core operational principle behind Permutation Feature Importance (PFI)?`,
+        o: [
+          r`It permanently sets the feature column to zero in the training dataset`,
+          r`It inverts the sign of the model coefficients`,
+          r`It randomly shuffles the feature values across held-out validation rows and measures the resulting increase in prediction error`,
+          r`It computes partial derivatives of the output with respect to tree depth`,
+        ],
+        a: 2,
+        why: r`By shuffling a feature column across validation instances, PFI breaks the correlation between that feature and the target while keeping its marginal distribution intact. The resulting drop in validation performance quantifies the model's true reliance on that feature.`,
+      },
+      {
+        q: r`If two input features $X_1$ and $X_2$ are nearly 100% correlated and both strongly drive the target $Y$, what does standard Permutation Feature Importance report for them?`,
+        o: [
+          r`Both will appear falsely unimportant because permuting either one allows the model to predict accurately using the other`,
+          r`Both will receive an importance score of exactly 1.0`,
+          r`The model will immediately crash due to multicollinearity`,
+          r`One will receive 100% importance and the other will receive -100% importance`,
+        ],
+        a: 0,
+        why: r`When two features carry redundant information, permuting $X_1$ leaves $X_2$ completely intact. The model compensates using $X_2$, resulting in a negligible increase in error and misleadingly low PFI scores for both features.`,
+      },
+      {
+        q: r`What does a negative Permutation Feature Importance score (e.g. $\operatorname{PFI} = -0.015$) indicate about a feature?`,
+        o: [
+          r`The feature has an inverse linear relationship with the target`,
+          r`The feature is the single most important variable in the model`,
+          r`The algorithm encountered a division by zero error`,
+          r`Permuting the feature actually improved validation performance, indicating the feature is pure noise or causing overfitting`,
+        ],
+        a: 3,
+        why: r`A negative score means validation error decreased when the feature was scrambled. This confirms that the model's reliance on that feature was harmful to generalisation, identifying it as a candidate for feature pruning.`,
+      },
+    ],
+    usedBy: ['random_forest_classifier', 'gradient_boosted_classifiers'],
+    prereq: ['random_forest_classifier', 'cross-validation'],
+    related: ['shap', 'pdp-ice-and-ale-plots', 'random_forest_classifier'],
+    keywords: 'permutation feature importance impurity mdi pfi gini importance model interpretability feature selection tree ensembles',
+  },
+  {
+    id: 'shap',
+    short: 'SHAP',
+    title: 'SHAP (SHapley Additive exPlanations)',
+    task: 'concepts',
+    module: 'Interpretability and fairness',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Unified game-theoretic framework explaining individual predictions by allocating fair additive credit across feature coalitions.`,
+    lead: r`Interpreting complex non-linear models requires answering not just what a model predicts, but exactly why it made that specific prediction for an individual instance. Rooted in cooperative game theory (Shapley values), SHAP (SHapley Additive exPlanations) provides the unique mathematical framework that satisfies foundational fairness axioms: local accuracy, missingness, and consistency. By calculating each feature's marginal contribution across all possible coalitions, SHAP unifies local feature attribution with global model interpretability.`,
+    intuition: [
+      r`Imagine three colleagues—Alice, Bob, and Charlie—collaborating on a freelance consulting project that earns a total bonus of £9,000. If Alice worked alone, the project would have earned £2,000. If Bob worked alone, £3,000. If Alice and Bob worked together, their synergy would have yielded £7,000. Charlie brings niche domain expertise that only becomes valuable when paired with Bob. How do you divide the £9,000 bonus fairly among the three team members?`,
+      r`In 1953, mathematician Lloyd Shapley solved this cooperative game theory dilemma by evaluating each player's marginal contribution across every possible coalition they could join. A player's Shapley value is the weighted average of how much value they add when stepping into a room containing any subset of the other players. In 2017, Scott Lundberg and Su-In Lee recognised that predicting an outcome in machine learning is identical to a cooperative game: the model's prediction is the total payout, and the features are the collaborating players.`,
+      r`For any individual prediction, SHAP calculates how much each feature value pushed the prediction away from the dataset's base expected value $\mathbb{E}[f(X)]$. If a patient has a predicted 35% risk of heart disease compared to the population baseline of 10%, SHAP might reveal that their blood pressure added +18%, their age added +12%, and their active exercise routine subtracted -5%, summing up exactly to the 25% discrepancy. Because SHAP guarantees mathematical additivity, these local explanations can be aggregated globally to create summary plots, interaction matrices, and dependence curves.`,
+    ],
+    analogy: r`Itemising a restaurant bill where friends shared overlapping appetizers and family-style mains: calculating each diner's fair share by averaging their marginal cost across all combinations of who sat at the table.`,
+    steps: [
+      r`Establish the baseline expectation: compute the base value $\phi_0 = \mathbb{E}[f(X)]$, representing the model's average prediction across the background training distribution.`,
+      r`Select a candidate instance $x$ whose individual model prediction $f(x)$ requires explanation.`,
+      r`Enumerate feature coalitions: evaluate model predictions across all $2^M$ subsets of features, substituting absent features with background expectation values.`,
+      r`Calculate marginal contributions: for feature $i$ and coalition $S$, compute the marginal lift $\Delta(S, i) = f(S \cup \{i\}) - f(S)$.`,
+      r`Compute the weighted Shapley average: weight each marginal contribution by the combinatorial probability of coalition size $|S|$ to yield $\phi_i(x)$.`,
+      r`Verify the efficiency axiom: ensure that the sum of attributions equals the total prediction offset: $\sum_{i=1}^M \phi_i(x) = f(x) - \phi_0$.`,
+      r`Aggregate across the population: stack individual SHAP vectors to construct global beeswarm summary plots, feature importance rankings, and dependency curves.`,
+    ],
+    math: [
+      {
+        h: 'Classical Shapley value formulation',
+        tex: r`$$\phi_i(x) = \sum_{S \subseteq F \setminus \{i\}} \frac{|S|! \, (|F| - |S| - 1)!}{|F|!} \Big( f_x(S \cup \{i\}) - f_x(S) \Big)$$`,
+        p: r`where $F$ is the total set of features, $S$ is a feature coalition excluding feature $i$, and $|S|!(|F| - |S| - 1)! / |F|!$ is the combinatorial probability that feature $i$ enters coalition $S$ under a uniformly random permutation of players. $f_x(S) = \mathbb{E}[f(X) \mid X_S = x_S]$ represents the conditional expectation with features in $S$ fixed at their instance values.`,
+      },
+      {
+        h: 'Additive feature attribution and efficiency axiom',
+        tex: r`$$f(x) = \phi_0 + \sum_{i=1}^M \phi_i(x), \qquad \phi_0 = \mathbb{E}\big[f(X)\big]$$`,
+        p: r`Local accuracy (efficiency) guarantees that the sum of all feature attributions $\phi_i(x)$ plus the base value $\phi_0$ recovers the exact model prediction $f(x)$. Unlike heuristic attribution methods (e.g. split counts), SHAP never loses or invents prediction credit.`,
+      },
+      {
+        h: 'The four fundamental Shapley axioms',
+        tex: r`$$\begin{aligned}
+\text{Efficiency:} & \quad \sum_{i=1}^M \phi_i(x) = f(x) - \mathbb{E}[f(X)] \\\\
+\text{Symmetry:} & \quad f(S \cup \{i\}) = f(S \cup \{j\}) \implies \phi_i = \phi_j \\\\
+\text{Dummy (Null):} & \quad f(S \cup \{i\}) = f(S) \implies \phi_i = 0 \\\\
+\text{Additivity:} & \quad \phi_i(f + g) = \phi_i(f) + \phi_i(g)
+\end{aligned}$$`,
+        p: r`Shapley proved that the Shapley formula is the unique attribution method satisfying all four axioms simultaneously. If an attribution method violates consistency, altering a model such that a feature contributes more can paradoxically lower that feature's assigned importance.`,
+      },
+    ],
+    code: r`import numpy as np
+import math
+from itertools import combinations
+
+# Model with interaction: f(x) = 2*x0 + 3*x1 + 4*x0*x1 (x2 is dummy)
+def f(x):
+    return 2.0 * x[0] + 3.0 * x[1] + 4.0 * x[0] * x[1]
+
+x_inst = np.array([1.0, 1.0, 0.5])
+base = np.array([0.0, 0.0, 0.0])
+M = 3
+phi = np.zeros(M)
+
+# Compute exact Shapley values across all 2^M coalitions
+for i in range(M):
+    rest = [j for j in range(M) if j != i]
+    for s_len in range(M):
+        for S in combinations(rest, s_len):
+            x_wo, x_w = base.copy(), base.copy()
+            for j in S:
+                x_wo[j] = x_inst[j]
+                x_w[j] = x_inst[j]
+            x_w[i] = x_inst[i]
+            w = math.factorial(len(S)) * math.factorial(M - len(S) - 1) / math.factorial(M)
+            phi[i] += w * (f(x_w) - f(x_wo))
+
+print(f"Prediction: {f(x_inst):.2f}")
+print(f"Baseline:   {f(base):.2f}")
+print(f"SHAP attributions [x0, x1, x2]: {phi.round(2)}")
+print(f"Sum of attributions: {np.sum(phi):.2f}")`,
+    pitfalls: [
+      r`Exponential complexity of exact Shapley values: Calculating exact attributions across $M$ features requires evaluating $2^M$ coalitions. For large $M$, models require polynomial TreeSHAP or sampled KernelSHAP approximations.`,
+      r`Feature correlation and unrealistic background coalitions: When features are strongly correlated, marginal expectation approximations can query models on impossible feature combinations (e.g. low weight, massive BMI), distorting attribution.`,
+      r`Conflating SHAP attributions with causal effects: SHAP explains how the statistical model uses features to make predictions; it does not prove that changing a feature in the real world will causally shift the outcome.`,
+      r`Choice of background dataset: In KernelSHAP and TreeSHAP, the baseline value $\phi_0$ depends directly on the chosen background distribution; using a biased reference sample shifts all attribution values.`,
+    ],
+    keyPoints: [
+      r`Grounded in cooperative game theory; uniquely satisfies efficiency, symmetry, dummy player, and additivity axioms.`,
+      r`Provides both local explanations (instance-level waterfall plots) and global insights (beeswarm summary plots).`,
+      r`TreeSHAP computes exact Shapley values in polynomial time $O(T L D^2)$ for tree ensembles.`,
+      r`Fairly divides the credit of non-linear feature interactions among participating features.`,
+    ],
+    quiz: [
+      {
+        q: r`What does the Efficiency axiom guarantee in SHAP feature attribution?`,
+        o: [
+          r`The model executes in $O(1)$ time`,
+          r`The sum of all feature SHAP values equals the difference between the model prediction $f(x)$ and the baseline expected value $\mathbb{E}[f(X)]$`,
+          r`All features have equal variance across training folds`,
+          r`The model achieves 100% training accuracy`,
+        ],
+        a: 1,
+        why: r`The efficiency (local accuracy) axiom guarantees that the sum of attributions $\sum \phi_i(x)$ perfectly bridges the gap between the expected baseline prediction $\phi_0$ and the instance prediction $f(x)$ with zero unaccounted credit.`,
+      },
+      {
+        q: r`Why is TreeSHAP widely preferred over KernelSHAP when explaining tree ensembles like XGBoost and LightGBM?`,
+        o: [
+          r`TreeSHAP only works on linear regression models`,
+          r`TreeSHAP ignores all interaction terms between features`,
+          r`TreeSHAP requires no training data whatsoever`,
+          r`TreeSHAP exploits tree graph structure to compute exact Shapley values in polynomial time $O(T L D^2)$ instead of exponential sampling`,
+        ],
+        a: 3,
+        why: r`While model-agnostic KernelSHAP must sample exponential coalitions ($2^M$), TreeSHAP recurses down decision tree paths, tracking conditional feature distributions in polynomial time relative to tree depth and leaf counts.`,
+      },
+      {
+        q: r`If a feature has zero marginal impact across every single coalition of features ($f(S \cup \{i\}) = f(S)$ for all $S$), what is its SHAP value according to the Dummy axiom?`,
+        o: [
+          r`Exactly 0`,
+          r`Equal to the baseline value $\phi_0$`,
+          r`Negative infinity`,
+          r`Equal to the average of all other features`,
+        ],
+        a: 0,
+        why: r`The Dummy (or Null player) axiom mandates that if a feature never contributes to altering model predictions in any context, its allocated credit must be strictly 0.`,
+      },
+      {
+        q: r`Why must SHAP explanations NOT be treated as direct causal statements about the real world?`,
+        o: [
+          r`Because SHAP values cannot be computed on continuous variables`,
+          r`Because SHAP reflects the predictive associations learned by the model, which can rely on confounding variables and proxy correlations rather than causal mechanisms`,
+          r`Because Shapley values are non-deterministic`,
+          r`Because SHAP values are always positive numbers`,
+        ],
+        a: 1,
+        why: r`SHAP explains the internal decision surface of the mathematical model. If a model predicts health outcomes using hospital visit counts as a correlation proxy, SHAP attributes high importance to visits, but hospital visits do not cause illness.`,
+      },
+    ],
+    usedBy: ['gradient_boosted_classifiers', 'random_forest_classifier'],
+    prereq: ['random_forest_classifier', 'gradient_boosted_classifiers'],
+    related: ['permutation-and-impurity-feature-importance', 'pdp-ice-and-ale-plots', 'random_forest_classifier'],
+    keywords: 'shap shapley values additive explanations model interpretability treeshap kernelshap feature attribution xai',
+  },
+  {
+    id: 'pdp-ice-and-ale-plots',
+    short: 'PDP, ICE and ALE plots',
+    title: 'Partial Dependence, ICE and ALE Plots',
+    task: 'concepts',
+    module: 'Interpretability and fairness',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Model-agnostic visualisations of feature effects: comparing global marginal averages (PDP), individual instance trajectories (ICE), and correlation-safe local differences (ALE).`,
+    lead: r`Global feature importance scores like PFI and SHAP reveal which features matter, but they do not show the direction or functional shape of those relationships. Partial Dependence Plots (PDP) and Individual Conditional Expectation (ICE) curves map how model predictions shift as a target feature varies across its domain. Accumulated Local Effects (ALE) plots resolve the catastrophic extrapolation errors that plague PDPs when features are strongly correlated, providing robust, unpolluted visualisations of complex machine learning models.`,
+    intuition: [
+      r`Suppose a real estate model predicts house prices using square footage and number of bedrooms. You want to understand: "If a house gains 500 square feet, how much does its predicted price increase?" A Partial Dependence Plot (PDP) answers this by taking every house in your dataset, artificially overwriting its square footage with a specific grid value (e.g. 2,000 sq ft), predicting all prices, and calculating the overall average. By repeating this across a grid of sizes, PDP draws a smooth curve showing the general relationship between area and price.`,
+      r`However, PDP has two major blind spots. First, it averages away individual differences. If an extra bedroom increases value for large suburban family homes but decreases value for urban studio flats, the upward and downward slopes cancel each other out, leaving PDP with a flat, deceptive horizontal line. Individual Conditional Expectation (ICE) fixes this by plotting a separate curve for every individual house. Instead of a single averaged line, ICE renders a bundle of trajectories, immediately revealing whether all houses react similarly or if distinct subgroups diverge.`,
+      r`The second flaw of PDP is extrapolation on correlated data. Square footage and bedroom count are tightly correlated: 5-bedroom homes are almost never 400 square feet. Yet PDP forces that exact combination into the model, generating nonsensical predictions that contaminate the curve. Accumulated Local Effects (ALE) eliminates this by computing prediction differences strictly within narrow local conditional slices of data (e.g. houses between 1,900 and 2,100 sq ft) and accumulating those differences along the axis, keeping the evaluation entirely within real-world data distributions.`,
+    ],
+    analogy: r`Inspecting medical treatment responses: PDP shows the average patient improvement, ICE plots each patient's individual vital trajectory to catch adverse subgroup reactions, and ALE evaluates responses strictly within appropriate age cohorts rather than dosing toddlers with adult regimens.`,
+    steps: [
+      r`Select the feature of interest $x_S$ (e.g. continuous predictor or low-cardinality discrete variable) and define a grid of evaluation values across its range.`,
+      r`Compute ICE trajectories: for each instance $i$ in the dataset, substitute its feature value with each grid point $z_k$ while preserving all other features $x_C^{(i)}$, and evaluate the model prediction $\hat{f}(z_k, x_C^{(i)})$.`,
+      r`Generate the PDP curve: compute the pointwise arithmetic mean of all ICE curves across each grid point: $\bar{f}_S(z_k) = \frac{1}{n} \sum_{i=1}^n \hat{f}(z_k, x_C^{(i)})$.`,
+      r`Detect interactions in ICE: look for non-parallel or crossing ICE curves; parallel trajectories confirm additive effects, while diverging lines indicate strong interactions with other features.`,
+      r`Compute ALE plots if features are correlated: partition $x_S$ into narrow intervals, calculate local prediction differences for instances falling inside each interval, and accumulate the average differences across bins.`,
+      r`Centre the curves: centre ALE at zero so the vertical axis reflects the deviation from the overall dataset mean prediction.`,
+    ],
+    math: [
+      {
+        h: 'Partial Dependence Plot (PDP) formulation',
+        tex: r`$$\hat{f}_{S}(x_S) = \mathbb{E}_{X_C}\big[ \hat{f}(x_S, X_C) \big] = \frac{1}{n} \sum_{i=1}^n \hat{f}\big(x_S, \, x_C^{(i)}\big)$$`,
+        p: r`where $x_S$ is the feature subset under inspection and $X_C$ represents all other conditioning features. By evaluating the sample average over all $n$ background instances $x_C^{(i)}$, PDP marginalises out the effect of conditioning variables. When $X_S$ and $X_C$ are correlated, this marginalisation forces predictions in unobserved feature spaces.`,
+      },
+      {
+        h: 'Individual Conditional Expectation (ICE) curves',
+        tex: r`$$\hat{f}_{S}^{(i)}(x_S) = \hat{f}\big(x_S, \, x_C^{(i)}\big), \qquad \hat{f}_S(x_S) = \frac{1}{n} \sum_{i=1}^n \hat{f}_S^{(i)}(x_S)$$`,
+        p: r`An ICE plot displays the $n$ individual lines $\hat{f}_S^{(i)}$ simultaneously. Centred ICE (c-ICE) anchors each line at zero at the minimum grid point: $\hat{f}_{S,\text{cent}}^{(i)}(x_S) = \hat{f}_S^{(i)}(x_S) - \hat{f}_S^{(i)}(x_{S,\min})$, removing baseline offset differences to highlight heterogeneous slopes.`,
+      },
+      {
+        h: 'Accumulated Local Effects (ALE) formulation',
+        tex: r`$$\hat{f}_{ALE}(x_S) = \int_{z_0}^{x_S} \mathbb{E}_{X_C \mid X_S = z_S}\left[ \frac{\partial \hat{f}}{\partial X_S}(z_S, X_C) \right] dz_S - c$$`,
+        p: r`where $c$ is a centring constant ensuring $\mathbb{E}[\hat{f}_{ALE}(X_S)] = 0$. ALE computes the conditional gradient (or finite differences in empirical bins) strictly among instances whose feature value $X_S$ actually lies near $z_S$, eliminating the unobserved extrapolation errors of PDP.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Model with interaction: f(x1, x2) = x1 * x2 (where x2 in {-1, +1})
+rng = np.random.default_rng(42)
+n = 60
+x1 = rng.uniform(-2, 2, n)
+x2 = rng.choice([-1.0, 1.0], size=n)
+y = x1 * x2
+
+# Evaluation grid for feature x1
+grid = np.linspace(-2, 2, 9)
+
+# Compute ICE curves for all instances
+ice_curves = np.zeros((n, len(grid)))
+for i in range(n):
+    for g_idx, val in enumerate(grid):
+        ice_curves[i, g_idx] = val * x2[i]
+
+# PDP is the pointwise average of ICE curves
+pdp = np.mean(ice_curves, axis=0)
+
+print(f"Grid values: {[round(float(v), 1) for v in grid]}")
+print(f"PDP values:  {[round(float(v), 2) for v in pdp]}")
+print(f"ICE curve instance 0 (x2={x2[0]:.0f}): {[round(float(v), 2) for v in ice_curves[0]]}")
+print(f"ICE curve instance 1 (x2={x2[1]:.0f}): {[round(float(v), 2) for v in ice_curves[1]]}")`,
+    pitfalls: [
+      r`PDP extrapolation on correlated features: Averaging predictions across synthetic combinations that cannot exist in reality distorts the partial dependence curve with nonsensical model extrapolations.`,
+      r`Hidden interactions in flat PDPs: A flat horizontal PDP line does not guarantee that a feature has no effect; equal numbers of positive and negative subgroup effects cancel out to zero unless inspected via ICE.`,
+      r`Computational cost of ICE: For large datasets ($n > 100{,}000$), computing predictions across $n$ instances for $K$ grid points requires $n \times K$ model inferences, requiring subsampling to 500 or 1,000 curves.`,
+      r`Misinterpreting ALE centring: ALE curves are centred around zero; the vertical axis represents difference from average prediction, not the absolute prediction scale.`,
+    ],
+    keyPoints: [
+      r`PDP reveals average marginal feature relationships; ICE exposes individual subgroup heterogeneity and interaction effects.`,
+      r`Parallel ICE lines indicate pure additive effects; intersecting or diverging lines indicate strong interactions.`,
+      r`ALE plots prevent dangerous extrapolation errors when features are correlated by evaluating local conditional differences.`,
+      r`Centred ICE (c-ICE) subtracts instance baselines to isolate heterogeneous response slopes.`,
+    ],
+    quiz: [
+      {
+        q: r`Why can a Partial Dependence Plot (PDP) show a completely flat horizontal line even when a feature has a massive impact on predictions?`,
+        o: [
+          r`Because the model is underfitting`,
+          r`Because PDP can only be calculated on linear regression models`,
+          r`Because opposing subgroup effects (e.g. positive impact on males and negative impact on females) cancel each other out during averaging`,
+          r`Because the feature values were not normalised`,
+        ],
+        a: 2,
+        why: r`PDP computes the average prediction across all instances. If a feature interacts with another variable such that it increases predictions for half the dataset and decreases them for the other half, the average remains flat. ICE plots unmask these hidden interactions.`,
+      },
+      {
+        q: r`What critical flaw in Partial Dependence Plots (PDP) does Accumulated Local Effects (ALE) solve?`,
+        o: [
+          r`PDP cannot run on GPU clusters`,
+          r`PDP creates unrealistic, out-of-distribution synthetic points when features are correlated, while ALE evaluates differences strictly within local conditional slices`,
+          r`PDP is non-deterministic, while ALE is exact`,
+          r`PDP requires training deep neural networks`,
+        ],
+        a: 1,
+        why: r`When features are correlated (such as height and weight), PDP pairs extreme values together that never appear in reality. ALE computes differences only within narrow local intervals of real data, avoiding out-of-distribution extrapolation.`,
+      },
+      {
+        q: r`How does an Individual Conditional Expectation (ICE) plot differ from a Partial Dependence Plot (PDP)?`,
+        o: [
+          r`ICE plots a separate prediction trajectory for every individual instance, whereas PDP averages those curves into a single line`,
+          r`ICE is evaluated on training data, while PDP is evaluated on test data`,
+          r`ICE only works for tree-based models`,
+          r`ICE evaluates classification accuracy rather than prediction outputs`,
+        ],
+        a: 0,
+        why: r`PDP is the point-by-point average of all individual ICE curves. Viewing the individual ICE curves exposes whether all samples follow the average trend or whether distinct clusters of instances diverge.`,
+      },
+      {
+        q: r`What visual pattern in an ICE plot indicates that a feature has purely additive effects with zero interactions with other features?`,
+        o: [
+          r`All ICE curves intersect at the origin`,
+          r`The ICE curves form a vertical wall`,
+          r`All ICE curves are perfectly parallel to one another`,
+          r`The curves form circular concentric rings`,
+        ],
+        a: 2,
+        why: r`If a feature operates additively ($f(x_1, x_2) = g(x_1) + h(x_2)$), changing $x_1$ shifts the prediction by the exact same amount regardless of $x_2$. This makes all ICE curves vertical translations of one another (parallel).`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['permutation-and-impurity-feature-importance', 'shap'],
+    related: ['shap', 'permutation-and-impurity-feature-importance', 'random_forest_classifier'],
+    keywords: 'pdp ice ale partial dependence individual conditional expectation accumulated local effects model interpretability xai',
+  },
+  {
+  "id": "lime",
+  "short": "LIME",
+  "title": "Local Interpretable Model-Agnostic Explanations",
+  "task": "concepts",
+  "module": "Interpretability and fairness",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Explain individual predictions of any black-box model using local surrogate linear models: master perturbation sampling, exponential kernels, and local fidelity.",
+  "lead": "Complex models like deep neural networks or gradient-boosted trees are globally non-linear and uninterpretable. LIME explains why a model made a specific prediction on sample x by approximating the local decision boundary with an interpretable surrogate model.",
+  "intuition": [
+    "Modern machine learning architectures—such as 100-tree gradient boosted ensembles or deep neural networks—excel at predictive accuracy by learning highly complex, convoluted non-linear decision boundaries. However, in credit risk underwriting, healthcare pathology, and judicial sentencing, stakeholders demand to know why a specific decision was reached: \"Why was this customer denied a loan?\"",
+    "While explaining the global behaviour of a black-box model across all of multi-dimensional feature space is practically impossible, explaining a single localised prediction is entirely feasible. Marco Tulio Ribeiro, Sameer Singh, and Carlos Guestrin (2016) introduced LIME: Local Interpretable Model-Agnostic Explanations.",
+    "LIME is grounded in the geometric observation that even the most tortuous non-linear manifold looks flat and linear if you zoom in closely enough onto a tiny local neighbourhood. To explain prediction $f(x)$, LIME draws random perturbations in the immediate vicinity of $x$, observes the black-box outputs for these perturbed samples, weights each sample by its exponential distance to $x$, and fits a simple, interpretable surrogate model (typically a sparse linear model).",
+    "The learned surrogate weights $w$ represent local feature importances: showing which features pushed the model toward the prediction, which features pushed against it, and by how much, providing human-understandable explanations for any black-box model."
+  ],
+  "analogy": "Imagine looking at a globe of the Earth. Globally, the Earth is an intricate curved sphere covered in mountains and ocean trenches (the complex global black-box model). But if you step out of your front door and look down at your local town square, the ground is so locally flat that you can map it with a simple 2D architectural blueprint (the local linear surrogate). LIME constructs that local flat blueprint for any specific decision.",
+  "steps": [
+    {
+      "title": "1. Select instance and draw neighbourhood perturbations",
+      "body": "Take instance $x \\in \\mathbb{R}^p$ to explain. Draw $M$ perturbed samples $z_k \\sim \\mathcal{N}(x, \\sigma^2)$ in the continuous feature space around $x$."
+    },
+    {
+      "title": "2. Query black-box predictions for perturbations",
+      "body": "Pass all perturbed samples through the black-box model to obtain predictions $y_k = f(z_k)$."
+    },
+    {
+      "title": "3. Compute exponential proximity weights",
+      "body": "Calculate proximity weights: $\\pi_x(z_k) = \\exp(-D(x, z_k)^2 / \\sigma^2)$, assigning high weights to perturbations nearest to $x$ and vanishing weights to distant points."
+    },
+    {
+      "title": "4. Fit weighted sparse linear surrogate model",
+      "body": "Fit a weighted linear regression: $\\min_w \\sum_{k=1}^M \\pi_x(z_k) (f(z_k) - w^T z_k)^2 + \\Omega(w)$. Output weights $w$ as local feature attributions."
+    }
+  ],
+  "math": [
+    {
+      "h": "LIME General Optimisation Objective",
+      "tex": "\\operatorname{explanation}(x) = \\arg\\min_{g \\in \\mathcal{G}} \\mathcal{L}(f, g, \\pi_x) + \\Omega(g)",
+      "p": "Balances local fidelity loss L (how accurately surrogate g approximates black-box f weighted by proximity pi_x) with model complexity Omega(g) (e.g. limiting to K non-zero features)."
+    },
+    {
+      "h": "Exponential Proximity Kernel",
+      "tex": "\\pi_x(z) = \\exp\\left(-\\frac{D(x, z)^2}{\\sigma^2}\\right)",
+      "p": "Assigns decaying importance to perturbed samples based on their Euclidean distance D(x, z) to instance x, governed by kernel width parameter sigma."
+    },
+    {
+      "h": "Weighted Least Squares Surrogate Fit",
+      "tex": "w^* = \\left( Z^T W Z \\right)^{-1} Z^T W y_{\\mathrm{blackbox}}, \\quad W = \\operatorname{diag}(\\pi_x(z_1), \\dots, \\pi_x(z_M))",
+      "p": "Closed-form weighted least squares solution for surrogate linear weights, where Z is the design matrix of perturbations and W contains proximity weights."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.ensemble import RandomForestClassifier\n\n# Tabular LIME from scratch\nclass SimpleTabularLIME:\n    def __init__(self, predict_fn, n_samples=1000, kernel_width=0.75):\n        self.predict_fn = predict_fn\n        self.n_samples = n_samples\n        self.kernel_width = kernel_width\n        \n    def explain_instance(self, x, feature_names=None):\n        p = len(x)\n        if feature_names is None:\n            feature_names = [f\"Feature_{i}\" for i in range(p)]\n            \n        # 1. Generate perturbations around x\n        perturbations = np.random.normal(loc=x, scale=0.5, size=(self.n_samples, p))\n        # Ensure exact instance is included\n        perturbations[0] = x\n        \n        # 2. Query black-box predictions (target class 1 probability)\n        blackbox_probs = self.predict_fn(perturbations)\n        if blackbox_probs.ndim > 1:\n            blackbox_probs = blackbox_probs[:, 1]\n            \n        # 3. Compute Euclidean distance and exponential proximity weights\n        dists = np.linalg.norm(perturbations - x, axis=1)\n        weights = np.exp(-(dists**2) / (self.kernel_width**2))\n        \n        # 4. Weighted Ridge/OLS Linear Regression\n        # Centred design matrix\n        Z = np.column_stack([np.ones(self.n_samples), perturbations])\n        W = np.diag(weights)\n        \n        # Solve (Z^T W Z + lambda I) w = Z^T W y\n        ZTW = Z.T @ W\n        ridge_reg = 1e-4 * np.eye(p + 1)\n        w_surrogate = np.linalg.solve(ZTW @ Z + ridge_reg, ZTW @ blackbox_probs)\n        \n        intercept = w_surrogate[0]\n        coefs = w_surrogate[1:]\n        \n        explanation = sorted(zip(feature_names, coefs), key=lambda item: abs(item[1]), reverse=True)\n        return explanation, intercept\n\n# Train a complex non-linear Random Forest on synthetic loan data\nnp.random.seed(42)\nn_train = 500\nfeatures = ['Income', 'DebtRatio', 'CreditScore', 'EmploymentYears']\n\n# Non-linear approval rule with interactions\nX_train = np.random.uniform(1, 10, (n_train, 4))\nlatent_score = 0.5 * X_train[:, 0] - 1.2 * X_train[:, 1] + 1.5 * np.log(X_train[:, 2]) + 0.3 * X_train[:, 3]\ny_train = (latent_score > np.median(latent_score)).astype(int)\n\nrf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)\nrf_model.fit(X_train, y_train)\n\n# Instance to explain: High income, but high debt ratio!\nx_applicant = np.array([8.5, 8.0, 4.0, 5.0])\nprob_approval = rf_model.predict_proba(x_applicant.reshape(1, -1))[0, 1]\n\nlime_explainer = SimpleTabularLIME(rf_model.predict_proba, n_samples=1500, kernel_width=1.0)\nexp, base = lime_explainer.explain_instance(x_applicant, feature_names=features)\n\nprint(f\"Applicant Black-Box Approval Probability: {prob_approval * 100:.1f}%\")\nprint(f\"Local Linear Surrogate Base Intercept:   {base:.3f}\")\nprint(\"\\nLocal Feature Importances (LIME Weights):\")\nfor feat, weight in exp:\n    direction = \"Supports (+)\" if weight > 0 else \"Opposes (-)\"\n    print(f\"  {feat:18s}: {weight:+.4f} -> {direction}\")",
+  "keyPoints": [
+    "Model-agnostic interpretability framework: explains individual predictions of any black-box classifier or regressor.",
+    "Grounded in local surrogate models: approximates complex global decision boundaries with a local linear surrogate model.",
+    "Generates synthetic perturbations in the vicinity of instance $x$, querying the black-box to observe boundary behaviour.",
+    "Exponential proximity kernel $\\pi_x(z) = \\exp(-D(x, z)^2 / \\sigma^2)$ ensures local fidelity by weighting near neighbours heavily.",
+    "Output weights provide localised feature attribution: showing how much each feature contributed to pushing the decision over the threshold."
+  ],
+  "pitfalls": [
+    "Sampling instability: Because perturbations are drawn randomly, running LIME multiple times on the same instance can produce slightly varying explanations.",
+    "Sensitivity to kernel width sigma: If $\\sigma$ is too small, the surrogate overfits a tiny neighbourhood; if too large, the surrogate tries to linearise a globally curved boundary, failing local fidelity.",
+    "Out-of-distribution perturbations: Drawing uniform or Gaussian perturbations around correlated tabular features can create impossible synthetic points (e.g. pregnant males or age 15 with 20 years work experience)."
+  ],
+  "quiz": [
+    {
+      "q": "Why does LIME fit a linear model on local perturbations rather than fitting a global linear model on the entire dataset?",
+      "o": [
+        "A complex black-box model is globally non-linear, but zooming into the microscopic vicinity of a single prediction reveals a locally flat linear boundary",
+        "Global linear models require infinite training data",
+        "LIME cannot compute matrix multiplications globally",
+        "Perturbations can only be generated in 2 dimensions"
+      ],
+      "a": 0,
+      "why": "Globally, black-box boundaries are non-linear and cannot be captured by a single hyperplane. Locally around an individual point, linear approximations achieve high fidelity."
+    },
+    {
+      "q": "What is the role of the exponential proximity kernel pi_x(z) in LIME?",
+      "o": [
+        "It assigns high regression weights to perturbations closest to instance x, ensuring the surrogate model prioritises local accuracy over distant points",
+        "It normalises all feature values to [0, 1]",
+        "It speeds up the black-box prediction speed",
+        "It converts continuous features into categorical features"
+      ],
+      "a": 0,
+      "why": "The proximity kernel ensures local fidelity: distant perturbations carry near-zero weight, forcing the linear surrogate to fit the boundary immediately surrounding x."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "ridge_regression"
+  ],
+  "related": [
+    "counterfactual-explanations",
+    "fairness-metrics-and-mitigation",
+    "random_forest_classifier",
+    "gradient_boosting_regressor"
+  ],
+  "keywords": "lime, local interpretable model agnostic explanations, interpretability, surrogate models, feature attribution, perturbations, local fidelity"
+},
+  {
+  "id": "counterfactual-explanations",
+  "short": "Counterfactuals",
+  "title": "Counterfactual Explanations and Recourse",
+  "task": "concepts",
+  "module": "Interpretability and fairness",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Provide actionable recourse to individuals affected by algorithmic decisions: master minimum-perturbation optimisation, proximity, sparsity, and plausibility.",
+  "lead": "When a bank loan is denied or job application rejected by an AI, knowing which features had the highest Shapley values does not tell the applicant what to do. Counterfactual explanations provide concrete, actionable recourse: what minimal changes would flip the decision from denied to approved?",
+  "intuition": [
+    "Traditional model interpretability tools (like feature importance, SHAP, and LIME) explain the past: they inform a user which features contributed most to a rejected mortgage application. However, telling an applicant that their \"Credit Score\" had a Shapley value of $-0.42$ offers zero actionable guidance. What the applicant needs is algorithmic recourse: \"What concrete steps must I take to get approved?\"",
+    "Sandra Wachter, Brent Mittelstadt, and Chris Russell (2017) formalised Counterfactual Explanations to satisfy the legal \"Right to Explanation\" under GDPR. A counterfactual explanation finds a hypothetical alternative instance $x^*$ that is as close as possible to original input $x$, but produces the desired target prediction: $f(x^*) = y^*$.",
+    "For example: \"If your monthly savings were £200 higher and your credit card debt were £1,500 lower, your loan would have been approved.\" This bridges the gap between passive attribution and actionable recourse.",
+    "Mathematically, counterfactual search is an optimisation problem balancing prediction loss (pushing $f(x^*)$ toward target class $y^*$) against a distance penalty $d(x, x^*)$ (ensuring changes are minimal). Crucially, valid recourse must enforce domain constraints: distinguishing between mutable features (income, debt) and immutable features (age, biological sex, birthplace), and ensuring the counterfactual lies on the plausible data manifold."
+  ],
+  "analogy": "Imagine a student who scored 48% on a final exam and failed by two marks. An attribution explanation tells them: \"You failed because of your weak history essay score.\" A counterfactual explanation gives actionable advice: \"If you had answered question 3 on the history essay correctly, your score would have been 51% and you would have passed.\" It identifies the minimum effort path across the passing threshold.",
+  "steps": [
+    {
+      "title": "1. Specify target outcome and define feature mutability",
+      "body": "Identify desired outcome $y^*$ (e.g. Loan Approved). Categorise features into immutable (age, race), actionable mutable (debt, savings), and directional mutable (education can increase, but not decrease)."
+    },
+    {
+      "title": "2. Formulate optimisation loss function",
+      "body": "Construct composite loss: $\\mathcal{L}(x^*) = \\ell_{\\mathrm{pred}}(f(x^*), y^*) + \\lambda \\cdot d(x, x^*)$, where $d$ measures distance using Manhattan $L_1$ or Median Absolute Deviation (MAD)."
+    },
+    {
+      "title": "3. Enforce domain constraints and plausibility",
+      "body": "Freeze immutable features by setting $x_j^* = x_j$. Constrain search to realistic feature bounds $[\\min_j, \\max_j]$."
+    },
+    {
+      "title": "4. Solve via gradient descent or Nelder–Mead",
+      "body": "Optimise $x^*$ iteratively. Increase penalty parameter $\\lambda$ until the decision flips ($f(x^*) = y^*$) while minimising total distance $\\|x^* - x\\|_1$. Present differences $(x^* - x)$ as actionable recommendations."
+    }
+  ],
+  "math": [
+    {
+      "h": "Wachter Counterfactual Optimisation Problem",
+      "tex": "\\arg\\min_{x^*} \\ell\\left(f(x^*), y^*\\right) + \\lambda d(x, x^*) \\quad \\text{subject to } x_j^* = x_j \\; \\forall j \\in \\mathcal{I}_{\\mathrm{immutable}}",
+      "p": "Finds counterfactual x* that minimises discrepancy to desired outcome y* while penalising distance from original instance x."
+    },
+    {
+      "h": "MAD-Normalised Manhattan Distance Metric",
+      "tex": "d(x, x^*) = \\sum_{j=1}^p \\frac{|x_j - x_j^*|}{\\operatorname{MAD}_j}, \\quad \\operatorname{MAD}_j = \\operatorname{median}\\left(|X_j - \\operatorname{median}(X_j)|\\right)",
+      "p": "Normalises distance by Median Absolute Deviation of each feature, making penalties scale-invariant and robust to outliers while promoting sparsity (changing few features)."
+    },
+    {
+      "h": "Data Manifold Plausibility Penalty (Mahalanobis / VAE)",
+      "tex": "\\mathcal{L}_{\\mathrm{plausible}}(x^*) = (x^* - \\mu)^T \\Sigma^{-1} (x^* - \\mu) \\quad \\text{or} \\quad \\|x^* - g(z^*)\\|^2",
+      "p": "Prevents adversarial or impossible counterfactuals by penalising points that fall off the empirical data manifold."
+    }
+  ],
+  "code": "import numpy as np\nfrom scipy.optimize import minimize\nfrom sklearn.linear_model import LogisticRegression\n\n# Counterfactual Explanations with Actionability Constraints from scratch\nnp.random.seed(42)\nn_train = 400\n\n# 4 Features: [Age (Immutable), AnnualIncome, CreditCardDebt, Savings]\n# Units: Age (years), Income (£k), Debt (£k), Savings (£k)\nfeature_names = ['Age (Immutable)', 'AnnualIncome (£k)', 'Debt (£k)', 'Savings (£k)']\nimmutable_indices = [0]  # Age cannot be changed!\n\n# Generate synthetic credit underwriting data\nX = np.random.normal(loc=[40, 50, 15, 10], scale=[10, 15, 6, 8], size=(n_train, 4))\nX = np.maximum(X, [18, 10, 0, 0])  # Realistic bounds\n\n# True underwriting rule: High income + high savings - high debt\nlatent = 0.08 * X[:, 1] - 0.15 * X[:, 2] + 0.12 * X[:, 3] - 1.5\ny = (latent > 0).astype(int)  # 1 = Approved, 0 = Denied\n\nclf = LogisticRegression()\nclf.fit(X, y)\n\n# Denied applicant to provide recourse for\n# 45 years old, £35k income, £22k debt, £3k savings -> Denied!\nx_denied = np.array([45.0, 35.0, 22.0, 3.0])\norig_prob = clf.predict_proba(x_denied.reshape(1, -1))[0, 1]\nprint(f\"Original Applicant Approval Probability: {orig_prob*100:.1f}% (DENIED)\")\n\n# Feature Median Absolute Deviations (MAD) for scale normalisation\nmads = np.median(np.abs(X - np.median(X, axis=0)), axis=0)\nmads[mads == 0] = 1.0\n\n# Counterfactual Optimisation Objective\ndef counterfactual_loss(x_candidate, x_orig, model, target_class=1, lambda_dist=0.5):\n    # 1. Prediction loss: binary cross-entropy to target class 1\n    prob = model.predict_proba(x_candidate.reshape(1, -1))[0, target_class]\n    pred_loss = -np.log(max(prob, 1e-12))\n    \n    # 2. Distance penalty: MAD-normalised Manhattan L1 distance\n    dist_loss = np.sum(np.abs(x_candidate - x_orig) / mads)\n    \n    return pred_loss + lambda_dist * dist_loss\n\n# Bounds and constraints\nbounds = [\n    (x_denied[0], x_denied[0]),  # Age is rigidly fixed (immutable!)\n    (10.0, 120.0),               # Income bound\n    (0.0, 50.0),                 # Debt bound\n    (0.0, 100.0)                 # Savings bound\n]\n\n# Run optimisation from x_denied starting point\nres = minimize(\n    counterfactual_loss,\n    x0=x_denied,\n    args=(x_denied, clf, 1, 0.3),\n    bounds=bounds,\n    method='L-BFGS-B'\n)\n\nx_cf = res.x\ncf_prob = clf.predict_proba(x_cf.reshape(1, -1))[0, 1]\n\nprint(f\"\\nCounterfactual Found! New Approval Probability: {cf_prob*100:.1f}% (APPROVED)\")\nprint(\"\\n--- Actionable Recourse Recommendations ---\")\nfor i, name in enumerate(feature_names):\n    delta = x_cf[i] - x_denied[i]\n    if abs(delta) > 0.1:\n        action = \"increase by\" if delta > 0 else \"reduce by\"\n        print(f\"  {name:20s}: Current = {x_denied[i]:5.1f} -> Target = {x_cf[i]:5.1f} ({action} {abs(delta):.1f})\")\n    else:\n        print(f\"  {name:20s}: No change required ({x_denied[i]:.1f})\")",
+  "keyPoints": [
+    "Provides actionable algorithmic recourse: identifies minimal perturbations required to flip an adverse model decision.",
+    "Optimises a composite objective balancing target prediction loss with normalised distance from the original instance.",
+    "Enforces domain constraints by distinguishing between mutable features (debt, savings) and immutable features (age, sex, ethnicity).",
+    "Normalised Manhattan distance ($L_1 / \\operatorname{MAD}$) induces sparsity, requiring changes across as few features as possible.",
+    "Crucial for regulatory compliance (e.g. EU GDPR Right to Explanation) in lending, employment, and medical diagnosis."
+  ],
+  "pitfalls": [
+    "Adversarial vulnerability: Gradient-based counterfactual search can discover adversarial noise perturbations that flip model output without representing genuine real-world plausibility.",
+    "Actionability violations: Proposing unachievable recourse (such as \"reduce age by 5 years\" or \"double income in 2 days\") invalidates practical utility.",
+    "Causal confounding: Features are rarely independent; increasing income might causally affect debt or tax brackets; pure geometric counterfactuals ignore causal dependencies."
+  ],
+  "quiz": [
+    {
+      "q": "Why are Counterfactual Explanations considered more actionable for loan applicants than SHAP or feature importance?",
+      "o": [
+        "Counterfactuals specify the exact minimal changes required to flip the rejection to an approval, rather than merely scoring past feature contributions",
+        "Counterfactuals eliminate the need for financial data",
+        "Counterfactuals guarantee that all applicants are approved",
+        "Counterfactuals only work on linear models"
+      ],
+      "a": 0,
+      "why": "Feature importances explain what caused the past decision, but do not provide actionable recourse. Counterfactuals provide concrete targets (e.g. reduce debt by £3,000) to reverse the decision."
+    },
+    {
+      "q": "Why must immutable features (like Age or Race) be constrained during counterfactual search?",
+      "o": [
+        "An applicant cannot physically change their age or ethnicity, so recommending alterations to immutable features provides meaningless recourse",
+        "Immutable features cause the loss function to divide by zero",
+        "Machine learning models cannot process immutable features",
+        "Immutable features always have zero variance"
+      ],
+      "a": 0,
+      "why": "Recourse must be humanly achievable. Recommending that an applicant become 10 years younger or alter their biological traits is impossible in reality."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "logistic-regression-inference-odds-ratios-wald-tests"
+  ],
+  "related": [
+    "lime",
+    "fairness-metrics-and-mitigation",
+    "cost-sensitive-learning",
+    "conformal-prediction"
+  ],
+  "keywords": "counterfactual explanations, algorithmic recourse, wachter, actionable recourse, interpretability, mad distance, immutable features, gdpr"
+},
+  {
+  "id": "fairness-metrics-and-mitigation",
+  "short": "Fairness metrics",
+  "title": "Algorithmic Fairness: Metrics and Bias Mitigation",
+  "task": "concepts",
+  "module": "Interpretability and fairness",
+  "level": 2,
+  "minutes": 18,
+  "noLab": true,
+  "summary": "Detect and mitigate demographic disparities in machine learning models: master Demographic Parity, Equalized Odds, Predictive Parity, and the impossibility theorem.",
+  "lead": "Machine learning models trained on historical data often inherit and amplify societal biases. Algorithmic fairness formalises fairness criteria into mathematical constraints, uncovering inherent trade-offs between competing definitions of fairness.",
+  "intuition": [
+    "When automated algorithms decide who receives a bank loan, who is interviewed for a job, who receives bail, or who is prioritised for organ transplants, biased decisions inflict grave societal harm. Because machine learning models are trained to optimise accuracy on historical data, they inevitably learn, internalise, and amplify historical prejudices, redlining, and demographic disparities present in the training corpus.",
+    "Algorithmic Fairness translates moral and legal concepts of equity into rigorous mathematical definitions, evaluated with respect to a sensitive or protected attribute $A \\in \\{0, 1\\}$ (e.g. race, gender, disability, or age).",
+    "Three major mathematical definitions dominate the literature. First, Demographic Parity (Statistical Parity) requires that the decision rate is identical across groups: $P(\\hat{Y}=1 \\mid A=0) = P(\\hat{Y}=1 \\mid A=1)$, formalised in US employment law as the Four-Fifths rule. Second, Equalized Odds requires that the model is equally accurate across groups, demanding identical True Positive Rates and False Positive Rates: $P(\\hat{Y}=1 \\mid A=0, Y=y) = P(\\hat{Y}=1 \\mid A=1, Y=y)$. Third, Predictive Parity (Calibration within groups) requires that predicted risk scores mean the same thing across groups: $P(Y=1 \\mid \\hat{Y}=1, A=0) = P(Y=1 \\mid \\hat{Y}=1, A=1)$.",
+    "In 2016, Alexandra Chouldechova and Jon Kleinberg independently proved a foundational impossibility theorem: unless the base rates of the positive outcome are identical across demographic groups ($P(Y=1 \\mid A=0) = P(Y=1 \\mid A=1)$), it is mathematically impossible for any model to simultaneously satisfy Demographic Parity, Equalized Odds, and Predictive Parity. Choosing a fairness metric is therefore an ethical and legal policy choice, not a purely statistical one."
+  ],
+  "analogy": "Imagine two high schools: School A and School B. At School A, 60% of students pass a national physics exam; at School B, only 30% pass due to historical underfunding of science laboratories. If a university adopts Demographic Parity, it admits the top 20% of students from both schools, ignoring the difference in exam pass rates. If the university adopts Equalized Odds, it ensures that every student who actually mastered the subject has an equal chance of admission regardless of school. If it adopts Predictive Parity, it ensures admitted students from both schools succeed at university with equal probability. You cannot achieve all three simultaneously.",
+  "steps": [
+    {
+      "title": "1. Identify protected attributes and specify legal framework",
+      "body": "Designate protected attribute $A$ (e.g. gender or race). Establish the applicable legal regime: Disparate Impact (Demographic Parity) vs Disparate Treatment (Equal Opportunity)."
+    },
+    {
+      "title": "2. Audit model for demographic disparities",
+      "body": "Compute Disparate Impact ratio $\\frac{P(\\hat{Y}=1 \\mid A=0)}{P(\\hat{Y}=1 \\mid A=1)}$, Equal Opportunity Difference $|\\mathrm{TPR}_1 - \\mathrm{TPR}_0|$, and False Positive Disparity $|\\mathrm{FPR}_1 - \\mathrm{FPR}_0|$."
+    },
+    {
+      "title": "3. Select mitigation intervention stage",
+      "body": "Choose between Pre-processing (reweighing training samples or Disparate Impact Remover), In-processing (adversarial debiasing or constrained empirical risk), or Post-processing (group-specific threshold tuning)."
+    },
+    {
+      "title": "4. Post-processing threshold shifting (Hardt et al.)",
+      "body": "Derive separate classification thresholds $\\tau_0$ and $\\tau_1$ for groups $A=0$ and $A=1$ that equalise true positive and false positive rates while maximising utility."
+    }
+  ],
+  "math": [
+    {
+      "h": "Demographic Parity Disparate Impact Ratio",
+      "tex": "\\mathrm{DI} = \\frac{P(\\hat{Y} = 1 \\mid A = 0)}{P(\\hat{Y} = 1 \\mid A = 1)} \\ge 0.80",
+      "p": "The four-fifths (80%) rule: if the selection rate for a protected minority group is less than 80% of the selection rate for the majority group, the model exhibits prima facie disparate impact."
+    },
+    {
+      "h": "Equalized Odds Definition",
+      "tex": "P(\\hat{Y} = 1 \\mid A = 0, \\; Y = y) = P(\\hat{Y} = 1 \\mid A = 1, \\; Y = y) \\quad \\forall y \\in \\{0, 1\\}",
+      "p": "Demands both equal False Positive Rates (FPR_0 = FPR_1) and equal True Positive Rates (TPR_0 = TPR_1) across demographic groups."
+    },
+    {
+      "h": "Kleinberg–Chouldechova Impossibility Theorem",
+      "tex": "P(Y = 1 \\mid A = 0) \\neq P(Y = 1 \\mid A = 1) \\implies \\neg \\left( \\text{Equalized Odds} \\wedge \\text{Predictive Parity} \\right)",
+      "p": "When true underlying prevalence differs between demographic groups, Equalized Odds and Predictive Parity (calibration within groups) are mutually exclusive."
+    }
+  ],
+  "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Algorithmic Fairness Audit and Post-Processing Threshold Tuning from scratch\nnp.random.seed(42)\nn_samples = 1000\n\n# Protected attribute A: 0 (Minority, 30%), 1 (Majority, 70%)\nA = np.random.binomial(1, 0.70, n_samples)\n\n# Features: Experience and Test Score\n# Historical disparity: Group 0 has slightly lower average test score due to systemic bias\nscore = np.where(A == 1, np.random.normal(65, 10, n_samples), np.random.normal(58, 10, n_samples))\nexperience = np.random.uniform(1, 10, n_samples)\nX = np.column_stack([score, experience])\n\n# Ground truth qualification: y depends purely on merit (score + experience)\nlatent_merit = 0.08 * score + 0.3 * experience - 6.5\ny = (latent_merit + np.random.normal(0, 0.5, n_samples) > 0).astype(int)\n\n# Train a standard logistic regression model (without explicit attribute A)\nclf = LogisticRegression()\nclf.fit(X, y)\nprobs = clf.predict_proba(X)[:, 1]\n\n# Baseline: Default single threshold at p = 0.50\npreds_default = (probs >= 0.50).astype(int)\n\ndef compute_fairness_audit(y_true, y_pred, sensitive_attr):\n    mask0 = (sensitive_attr == 0)\n    mask1 = (sensitive_attr == 1)\n    \n    # Selection Rates (Demographic Parity)\n    sr0 = np.mean(y_pred[mask0])\n    sr1 = np.mean(y_pred[mask1])\n    di_ratio = sr0 / max(sr1, 1e-12)\n    \n    # True Positive Rates (Equal Opportunity)\n    tpr0 = np.sum((y_true[mask0] == 1) & (y_pred[mask0] == 1)) / np.sum(y_true[mask0] == 1)\n    tpr1 = np.sum((y_true[mask1] == 1) & (y_pred[mask1] == 1)) / np.sum(y_true[mask1] == 1)\n    \n    # False Positive Rates\n    fpr0 = np.sum((y_true[mask0] == 0) & (y_pred[mask0] == 1)) / np.sum(y_true[mask0] == 0)\n    fpr1 = np.sum((y_true[mask1] == 0) & (y_pred[mask1] == 1)) / np.sum(y_true[mask1] == 0)\n    \n    return di_ratio, tpr0, tpr1, fpr0, fpr1\n\ndi_def, tpr0_def, tpr1_def, fpr0_def, fpr1_def = compute_fairness_audit(y, preds_default, A)\n\n# Post-Processing: Equal Opportunity Threshold Tuning (Hardt et al.)\n# Adjust threshold tau_0 for Group 0 so that TPR_0 matches TPR_1\ntarget_tpr = tpr1_def\nthresholds = np.linspace(0.1, 0.9, 200)\nbest_tau0 = 0.5\nbest_tpr_diff = float(\"inf\")\n\nmask0 = (A == 0)\nfor tau in thresholds:\n    preds_g0 = (probs[mask0] >= tau).astype(int)\n    tpr_g0 = np.sum((y[mask0] == 1) & (preds_g0 == 1)) / np.sum(y[mask0] == 1)\n    diff = abs(tpr_g0 - target_tpr)\n    if diff < best_tpr_diff:\n        best_tpr_diff = diff\n        best_tau0 = tau\n\n# Apply tuned group-specific thresholds\npreds_fair = np.zeros(n_samples, dtype=int)\npreds_fair[A == 1] = (probs[A == 1] >= 0.50).astype(int)\npreds_fair[A == 0] = (probs[A == 0] >= best_tau0).astype(int)\n\ndi_fair, tpr0_fair, tpr1_fair, fpr0_fair, fpr1_fair = compute_fairness_audit(y, preds_fair, A)\n\nprint(\"--- Standard Baseline Model (Threshold = 0.50) ---\")\nprint(f\"Disparate Impact Ratio: {di_def:.3f} (Violates 80% four-fifths rule!)\")\nprint(f\"Group 0 TPR: {tpr0_def*100:.1f}% vs Group 1 TPR: {tpr1_def*100:.1f}% (Equal Opportunity Gap: {abs(tpr0_def - tpr1_def)*100:.1f}%)\")\n\nprint(f\"\\n--- Post-Processed Fair Model (Tau_1 = 0.50, Tau_0 = {best_tau0:.2f}) ---\")\nprint(f\"Disparate Impact Ratio: {di_fair:.3f} (Improved)\")\nprint(f\"Group 0 TPR: {tpr0_fair*100:.1f}% vs Group 1 TPR: {tpr1_fair*100:.1f}% (Equal Opportunity Gap: {abs(tpr0_fair - tpr1_fair)*100:.1f}% -> Parity achieved!)\")",
+  "keyPoints": [
+    "Formalises ethical equity into mathematical metrics evaluated across protected demographic attributes.",
+    "Demographic Parity requires equal positive selection rates across groups ($P(\\hat{Y}=1 \\mid A=0) = P(\\hat{Y}=1 \\mid A=1)$).",
+    "Equalized Odds requires equal False Positive and True Positive rates across groups conditional on true label $Y$.",
+    "Kleinberg–Chouldechova Impossibility Theorem proves that when demographic base rates differ, competing fairness criteria cannot be satisfied simultaneously.",
+    "Mitigation spans pre-processing (reweighing data), in-processing (adversarial debiasing), and post-processing (group-specific threshold shifting)."
+  ],
+  "pitfalls": [
+    "Fairness through blindness: Merely dropping protected attributes (race, gender) from feature sets fails completely because correlated proxy features (zip code, university, hobbies) reconstruct the attribute.",
+    "Ignoring the impossibility theorem: Promising a client or regulator that a model will satisfy both calibration and equalised odds simultaneously is mathematically impossible when base rates differ.",
+    "Trade-off with global accuracy: Imposing fairness constraints shifts decision boundaries away from Bayes optimal risk minimisation, causing slight reductions in overall unconstrained accuracy."
+  ],
+  "quiz": [
+    {
+      "q": "Why does removing the sensitive attribute (e.g. Race or Gender) from the feature set fail to prevent algorithmic discrimination?",
+      "o": [
+        "Remaining correlated features (such as postal code, browser history, or school district) act as redundant proxies that allow the model to reconstruct the protected attribute",
+        "Machine learning algorithms automatically download sensitive data from the web",
+        "Removing features causes the model to crash",
+        "Sensitive attributes always have zero weight in linear models"
+      ],
+      "a": 0,
+      "why": "Known as \"fairness through blindness\", redundant encodings in high-dimensional datasets allow complex models to infer protected demographics indirectly from correlated proxy features."
+    },
+    {
+      "q": "What is established by the Kleinberg–Chouldechova Impossibility Theorem in algorithmic fairness?",
+      "o": [
+        "When true base rates differ between demographic groups, it is mathematically impossible for a predictive model to simultaneously satisfy Equalized Odds and Predictive Parity",
+        "Fairness can only be achieved using deep neural networks",
+        "All models have exactly 50% accuracy on minority groups",
+        "Biased training data can never be mitigated"
+      ],
+      "a": 0,
+      "why": "The theorem mathematically proves that calibration within groups (predictive parity) and equalised false positive/negative rates (equalised odds) cannot both hold when base rates P(Y=1|A) differ."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "confusion-matrix",
+    "type-i-ii-errors-power-and-sample-size"
+  ],
+  "related": [
+    "cost-sensitive-learning",
+    "confusion-matrix",
+    "counterfactual-explanations",
+    "lime"
+  ],
+  "keywords": "algorithmic fairness, demographic parity, equalised odds, predictive parity, disparate impact, chouldechova, kleinberg impossibility, bias mitigation"
+},
+  {
+    id: 'kernel-trick-and-mercers-condition',
+    short: 'Kernel trick & Mercer',
+    title: "Kernel Trick and Mercer's Condition",
+    task: 'concepts',
+    module: 'Learning theory',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Implicitly mapping data into high- or infinite-dimensional Hilbert spaces using positive semidefinite kernel functions without explicit coordinate transformations.`,
+    lead: r`Linear algorithms like Support Vector Machines, ridge regression, and PCA are computationally efficient but fail when data is separated by non-linear decision boundaries. Explicitly mapping features into higher-dimensional polynomial or exponential spaces incurs prohibitive memory and computational costs. The kernel trick replaces explicit transformations with pairwise inner-product evaluations, while Mercer's theorem provides the definitive mathematical condition guaranteeing that a symmetric kernel corresponds to a valid Hilbert feature space.`,
+    intuition: [
+      r`Imagine looking at a flat sheet of rubber where blue pebbles are arranged in a tight inner circle surrounded by a ring of red pebbles. No matter where you draw a straight line with a ruler across the sheet, you cannot separate the blue circle from the surrounding red ring (it is non-linearly separable in 2D). However, if you poke your finger upward beneath the centre of the rubber sheet, the blue pebbles rise into a 3D dome while the red ring remains on the table. You can now slide a flat sheet of cardboard horizontally underneath the dome, cleanly separating the two colours with a flat 2D plane.`,
+      r`This is the core insight of non-linear machine learning: data that is hopelessly entangled in low dimensions often becomes cleanly linearly separable when mapped into a higher-dimensional feature space. But mapping every point into a 10,000-dimensional or infinite-dimensional coordinate space is computationally impossible. You would run out of computer memory before computing the coordinates for a single vector.`,
+      r`The kernel trick performs mathematical sleight of hand. Many linear algorithms depend exclusively on the dot product between data points $\langle x, z \rangle$, never on individual coordinates in isolation. The kernel trick replaces that simple dot product with a kernel function $K(x, z) = \langle \phi(x), \phi(z) \rangle$ that directly evaluates the inner product in the high-dimensional space without ever calculating or storing the high-dimensional coordinates $\phi(x)$. Mercer's condition ensures that as long as the kernel function produces a positive semidefinite Gram matrix, a valid underlying Hilbert geometry is guaranteed to exist.`,
+    ],
+    analogy: r`Calculating the distance between two ships over the curvature of the Earth using latitude and longitude coordinates, without needing to excavate a physical 3D tunnel through the Earth's mantle.`,
+    steps: [
+      r`Identify the inner-product dependency: verify that the learning algorithm (e.g. SVM dual, Ridge regression, PCA) can be expressed purely in terms of pairwise dot products $\langle x_i, x_j \rangle$.`,
+      r`Select a kernel function $K(x, z)$ suited to the problem structure (e.g. polynomial, Radial Basis Function (RBF), or sigmoid).`,
+      r`Verify Mercer's condition: confirm that the candidate kernel is continuous, symmetric ($K(x, z) = K(z, x)$), and positive semidefinite (all Gram matrix eigenvalues $\lambda_i \ge 0$).`,
+      r`Compute the kernel Gram matrix $K \in \mathbb{R}^{n \times n}$ across training instances: $K_{ij} = K(x_i, x_j)$.`,
+      r`Solve the dual optimisation problem (e.g. dual ridge weights $\alpha = (K + \lambda I)^{-1} y$ or SVM dual multipliers).`,
+      r`Evaluate test instances using kernel evaluations against training support instances: $f(x) = \sum_{i=1}^n \alpha_i K(x_i, x) + b$.`,
+    ],
+    math: [
+      {
+        h: 'Mercer\'s Theorem and positive semidefiniteness',
+        tex: r`$$\iint K(x, z) \, g(x) \, g(z) \, dx \, dz \ge 0 \quad \forall \, g \in L_2, \qquad K(x, z) = \sum_{i=1}^\infty \lambda_i \, \psi_i(x) \, \psi_i(z)$$`,
+        p: r`Mercer's theorem (1909) states that a continuous, symmetric kernel $K(x, z)$ corresponds to an inner product in a Reproducing Kernel Hilbert Space (RKHS) if and only if it is positive semidefinite. The eigenfunctions $\psi_i(x)$ and non-negative eigenvalues $\lambda_i \ge 0$ define the implicit mapping $\phi(x) = \big[\sqrt{\lambda_1}\psi_1(x), \sqrt{\lambda_2}\psi_2(x), \dots\big]^T$.`,
+      },
+      {
+        h: 'Finite-sample Gram matrix condition',
+        tex: r`$$c^T K c = \sum_{i=1}^n \sum_{j=1}^n c_i c_j K(x_i, x_j) \ge 0 \quad \forall \, c \in \mathbb{R}^n$$`,
+        p: r`For any finite dataset $\{x_1, \dots, x_n\}$, the kernel Gram matrix $K \in \mathbb{R}^{n \times n}$ with entries $K_{ij} = K(x_i, x_j)$ must be positive semidefinite. All eigenvalues of $K$ must be non-negative, ensuring that the quadratic optimisation problem remains convex.`,
+      },
+      {
+        h: 'Radial Basis Function (RBF) infinite-dimensional expansion',
+        tex: r`$$K_{\text{RBF}}(x, z) = \exp\left(-\gamma \|x - z\|^2\right) = \exp(-\gamma \|x\|^2) \exp(-\gamma \|z\|^2) \sum_{k=0}^\infty \frac{(2\gamma)^k}{k!} (x^T z)^k$$`,
+        p: r`Applying Taylor series expansion to the cross-term $\exp(2\gamma x^T z)$ demonstrates that the RBF (Gaussian) kernel corresponds to an inner product in an infinite-dimensional feature space. The kernel trick computes this infinite dot product in a single closed-form scalar evaluation.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Non-linear 1D function: y = sin(x) + noise
+rng = np.random.default_rng(42)
+x_train = np.linspace(-3, 3, 25)[:, None]
+y_train = np.sin(x_train[:, 0]) + rng.normal(0, 0.1, 25)
+
+# RBF kernel function: K(x, z) = exp(-gamma * ||x - z||^2)
+gamma, lam = 1.0, 0.01
+D2_tr = (x_train - x_train.T) ** 2
+K_tr = np.exp(-gamma * D2_tr)
+
+# Verify Mercer's condition: Gram matrix eigenvalues must be >= 0
+eigvals = np.linalg.eigvalsh(K_tr)
+is_psd = np.all(eigvals >= -1e-10)
+
+# Dual solve for Kernel Ridge Regression: alpha = (K + lambda * I)^{-1} y
+alpha = np.linalg.solve(K_tr + lam * np.eye(len(x_train)), y_train)
+
+# Test evaluation via kernel trick: f(x_test) = sum alpha_i * K(x_i, x_test)
+x_test = np.array([[-1.5], [0.0], [1.5]])
+D2_te = (x_train - x_test.T) ** 2
+K_te = np.exp(-gamma * D2_te)
+y_pred = K_te.T @ alpha
+
+print(f"Gram matrix min eigenvalue: {np.min(eigvals):.6f} (Mercer PSD: {is_psd})")
+print(f"True sin(x_test):  {[round(float(v), 3) for v in np.sin(x_test[:, 0])]}")
+print(f"Kernel prediction: {[round(float(v), 3) for v in y_pred]}")`,
+    pitfalls: [
+      r`Quadratic memory and cubic computation: Storing the Gram matrix requires $O(n^2)$ memory, and inverting it requires $O(n^3)$ compute, making exact kernel methods unscalable to millions of samples without Nyström or random Fourier approximations.`,
+      r`Overfitting via excessive kernel bandwidth: In RBF kernels, setting $\gamma$ too high narrows the Gaussian bell curve into sharp isolated spikes around individual training points, collapsing generalisation.`,
+      r`Using non-Mercer kernels in convex solvers: Functions that do not produce positive semidefinite matrices (such as certain hyperbolic tangents) violate Mercer's theorem, destroying convexity and causing dual solvers to diverge.`,
+      r`Curse of dimensionality in kernel space: High-dimensional input spaces cause pairwise Euclidean distances in RBF kernels to concentrate, making all off-diagonal kernel entries decay to near-zero.`,
+    ],
+    keyPoints: [
+      r`Enables linear algorithms to learn non-linear boundaries by substituting dot products with kernel functions.`,
+      r`Avoids the computational bottleneck of explicitly constructing high- or infinite-dimensional feature spaces.`,
+      r`Mercer's condition requires the kernel Gram matrix to be positive semidefinite, guaranteeing a valid Hilbert space.`,
+      r`The RBF Gaussian kernel implicitly projects data into an infinite-dimensional feature space via its Taylor expansion.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the core mathematical premise of the "kernel trick"?`,
+        o: [
+          r`It converts continuous variables into discrete binary flags`,
+          r`It computes inner products in a high-dimensional feature space using a function evaluated directly on low-dimensional inputs, without explicitly computing feature coordinates`,
+          r`It removes all outliers from the training distribution`,
+          r`It inverts matrices using gradient descent instead of LU decomposition`,
+        ],
+        a: 1,
+        why: r`The kernel trick evaluates $K(x, z) = \langle \phi(x), \phi(z) \rangle$ directly on raw coordinates, bypassing the immense (or infinite) computational cost of computing the transformed feature vectors $\phi(x)$ and $\phi(z)$.`,
+      },
+      {
+        q: r`What does Mercer's theorem establish about a continuous, symmetric function $K(x, z)$?`,
+        o: [
+          r`It guarantees the function can be evaluated in $O(1)$ constant time`,
+          r`It proves the function corresponds to an inner product in a valid Hilbert space if and only if its Gram matrix is positive semidefinite`,
+          r`It ensures that all classification errors are strictly zero`,
+          r`It forces all eigenvalues of the feature matrix to equal 1.0`,
+        ],
+        a: 1,
+        why: r`Mercer's theorem proves that positive semidefiniteness ($\iint K(x, z) g(x) g(z) dx dz \ge 0$) is the necessary and sufficient condition for a continuous symmetric kernel to represent an inner product in a Reproducing Kernel Hilbert Space.`,
+      },
+      {
+        q: r`Into what dimensionality does the Radial Basis Function (RBF / Gaussian) kernel implicitly map input data?`,
+        o: [
+          r`Exactly twice the input dimension ($2d$)`,
+          r`A finite quadratic polynomial space ($d^2 / 2$)`,
+          r`An infinite-dimensional Hilbert space`,
+          r`One-dimensional scalar space`,
+        ],
+        a: 2,
+        why: r`The Taylor series expansion of $\exp(2\gamma x^T z)$ contains an infinite series of polynomial terms $(x^T z)^k / k!$, corresponding to an inner product in an infinite-dimensional feature space.`,
+      },
+      {
+        q: r`What is a primary computational limitation of exact kernel methods when scaling to very large datasets ($n > 100{,}000$)?`,
+        o: [
+          r`The Gram matrix requires $O(n^2)$ memory to store and $O(n^3)$ operations to invert`,
+          r`Kernels cannot process floating-point numbers`,
+          r`The kernel trick only works when the number of features exceeds the number of samples ($d > n$)`,
+          r`Mercer's theorem fails when $n$ is an even number`,
+        ],
+        a: 0,
+        why: r`Because the Gram matrix $K$ scales with the square of the sample size ($n \times n$), computing and storing it for large $n$ rapidly exceeds memory limits, requiring approximate methods like Random Fourier Features or Nyström sampling.`,
+      },
+    ],
+    usedBy: ['support_vector_classifier'],
+    prereq: ['support_vector_classifier', 'convex-optimisation-and-duality'],
+    related: ['support_vector_classifier', 'pca', 'convex-optimisation-and-duality'],
+    keywords: 'kernel trick mercer condition rbf kernel gram matrix hilbert space support vector machines positive semidefinite',
   },
 ];
