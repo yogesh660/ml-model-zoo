@@ -4,20 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#070709">
-<title>Forecast metrics: MAE, MASE, sMAPE, WAPE (planned) · Learn · Yogesh Awate</title>
-<meta name="description" content="Forecast metrics: MAE, MASE, sMAPE, WAPE: a planned lesson in the Data science path.">
-<meta property="og:title" content="Forecast metrics: MAE, MASE, sMAPE, WAPE (planned) · Learn · Yogesh Awate">
-<meta property="og:description" content="Forecast metrics: MAE, MASE, sMAPE, WAPE: a planned lesson in the Data science path.">
+<title>Forecast Metrics: MAE, MASE, sMAPE, WAPE · Learn · Yogesh Awate</title>
+<meta name="description" content="Evaluating time-series forecasts across varying demand scales, intermittent zeros, and directional asymmetries without scale distortion.">
+<meta property="og:title" content="Forecast Metrics: MAE, MASE, sMAPE, WAPE · Learn · Yogesh Awate">
+<meta property="og:description" content="Evaluating time-series forecasts across varying demand scales, intermittent zeros, and directional asymmetries without scale distortion.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://yogesh660.github.io/assets/yogesh-suit-cutout.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvuz056f">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvuz056f">
+<link rel="stylesheet" href="../../assets/site.css?v=mvuz5y5i">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvuz5y5i">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 <script>document.documentElement.classList.add('js')</script>
 </head>
-<body class="page-lesson">
+<body class="page-lesson" data-lesson="forecast-metrics-mae-mase-smape-wape">
 <a class="skip" href="#main">Skip to content</a>
 
 <nav id="nav">
@@ -40,28 +43,110 @@
   <header class="page-head lesson-head">
     <a class="back rise" style="--d:1" href="../../#curriculum"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All lessons</a>
     <span class="tag rise" style="--d:2"><a href="../../#path-data-science">Path 07 · Data science</a> / Forecasting at scale / Lesson 19 of 47</span>
-    <h1 class="case-title">Forecast metrics: MAE, MASE, sMAPE, WAPE</h1>
-    <p class="lede rise" style="--d:3">This lesson is planned but not written yet. When it lands it will follow the same steps as the others: the idea in plain words, the maths, the trade-offs, code and a short quiz.</p>
+    <h1 class="case-title">Forecast Metrics: MAE, MASE, sMAPE, WAPE</h1>
+    <p class="lede rise" style="--d:3">Evaluating time-series forecasts across varying demand scales, intermittent zeros, and directional asymmetries without scale distortion.</p>
     <div class="lesson-meta rise" style="--d:4">
-      <span class="tagline">Planned</span><span class="tagline">Core</span>
+      <span class="tagline"><span class="lvl" data-l="2"><i><b></b></i>Intermediate</span></span>
+      <span class="tagline">16 min</span>
+      
+      <span class="prereq">Before this: <a href="../../concepts/regression-metrics/">Regression metrics</a> <a href="../../concepts/lag-and-rolling-window-features/">Lag and rolling-window features</a></span>
     </div>
   </header>
+
   <div class="case-body lesson-body">
     <aside class="glance reveal">
       <h4>At a glance</h4>
       <dl>
-        <dt>Status</dt><dd>Planned</dd>
-        <dt>Path</dt><dd>Data science · Forecasting at scale</dd>
-        <dt>Tier</dt><dd>Core: written in the first pass.</dd>
+          <dt>Path</dt><dd>Data science · Forecasting at scale</dd>
+          <dt>Level</dt><dd>Intermediate</dd>
+          <dt>Used by</dt><dd>0 model lessons</dd>
       </dl>
+      <ol class="toc"><li><a href="#idea"><span>01</span>The idea</a></li><li><a href="#how"><span>02</span>Step by step</a></li><li><a href="#maths"><span>03</span>The maths</a></li><li><a href="#takeaways"><span>04</span>Key takeaways</a></li><li><a href="#code"><span>05</span>In code</a></li><li><a href="#quiz"><span>06</span>Check yourself</a></li><li><a href="#related"><span>07</span>Where it shows up</a></li></ol>
+      <button class="button ghost small complete" id="complete" type="button" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-label>Mark as complete</span></button>
     </aside>
+
     <div class="story">
-      <section class="reveal" id="module">
-        <h2 class="h3"><span>01</span> In this module</h2>
-        <ol class="soon-list"><li class="here"><a href="../../concepts/forecast-metrics-mae-mase-smape-wape/">Forecast metrics: MAE, MASE, sMAPE, WAPE</a><em>Planned</em></li><li><a href="../../concepts/time-series-cross-validation/">Time-series cross-validation</a><em>Planned</em></li><li><a href="../../concepts/global-vs-local-models-gradient-boosting-for-forecasting/">Global vs local models, gradient boosting for forecasting</a><em>Planned</em></li><li><a href="../../concepts/hierarchical-forecasting-and-reconciliation/">Hierarchical forecasting and reconciliation</a><em>Planned</em></li><li><a href="../../concepts/intermittent-demand-croston-and-tsb/">Intermittent demand: Croston and TSB</a><em>Planned</em></li><li><a href="../../concepts/prophet-and-trend-seasonality-decomposition/">Prophet and trend/seasonality decomposition</a><em>Planned</em></li><li><a href="../../concepts/probabilistic-forecasts-and-quantile-loss/">Probabilistic forecasts and quantile loss</a><em>Planned</em></li></ol>
+      <section class="reveal" id="idea">
+        <h2 class="h3"><span>01</span> The idea</h2>
+        <p class="lead-line">Evaluating time-series forecasts requires fundamentally different metrics than standard cross-sectional regression. Traditional percentage errors like MAPE explode or divide by zero when demand is intermittent, while scale-dependent metrics like RMSE penalize high-volume series while ignoring slow-moving items. Scale-independent metrics such as MASE, sMAPE, and WAPE provide robust, business-interpretable evaluations across massive forecasting hierarchies.</p>
+        <p>Imagine managing inventory for a national supermarket chain with 50,000 distinct items. For high-velocity goods like two-litre milk bottles, a single store sells 5,000 units weekly; your forecast of 4,800 units is off by 200 units, representing an error of 4%. For slow-moving specialty items like saffron or organic truffle oil, the store sells 1 unit every other week (average 0.5 units). If your model predicts 0 units when 1 unit is sold, the absolute error is just 1 unit, but the classic Mean Absolute Percentage Error (MAPE) is 100%. If actual sales are 0 and the model predicts 1, MAPE divides by zero and becomes mathematically undefined! Averaging MAPE across 50,000 items produces an infinite or completely distorted score dominated by slow movers.</p>
+        <p>To resolve scale disparities without dividing by zero, Rob Hyndman and Anne Koehler introduced Mean Absolute Scaled Error (MASE). MASE divides the model's test Mean Absolute Error (MAE) by the in-sample MAE of a naive baseline (predicting tomorrow using yesterday's actuals on historical training data). If MASE is less than 1.0, the forecast outperforms a trivial random-walk persistence baseline; if MASE exceeds 1.0, the forecast is literally worse than doing nothing. Because the scaling denominator comes from the training series, MASE never divides by zero on non-constant series and remains directly comparable across high-volume and low-volume products.</p>
+        <p>For supply chain executives and inventory planners, aggregate financial discrepancies matter more than unweighted item percentages. Weighted Absolute Percentage Error (WAPE) sums the absolute forecast errors across all time steps and items and divides by the total actual sales volume. Unlike unweighted MAPE, WAPE cannot divide by zero at individual item timestamps, and it automatically weights errors in proportion to each product's sales volume.</p>
+        <div class="analogy"><small class="kicker">In everyday terms</small><p>Scoring a golfer relative to par on different courses (MASE) rather than counting raw strokes, or measuring an entire company's budget accuracy by total revenue discrepancy (WAPE) rather than averaging departmental percentage errors.</p></div>
+      </section>
+      <section class="reveal" id="how">
+        <h2 class="h3"><span>02</span> Step by step</h2>
+        <ol class="steps"><li>Audit series for zero demand: identify sparsity, intermittency, or zeros that rule out standard percentage metrics like MAPE.</li><li>Establish naive baseline benchmark: compute the in-sample Mean Absolute Error of a one-step persistence forecast on training history.</li><li>Compute scale-free MASE: divide forecast test MAE by the training naive benchmark MAE to measure relative skill.</li><li>Calculate portfolio WAPE: sum absolute errors across all time points and SKUs, dividing by total actual volume to obtain a volume-weighted percentage error.</li><li>Inspect directional bias: calculate mean error or sMAPE to ensure the model does not systematically over-forecast or under-forecast demand.</li></ol>
+      </section>
+      <section class="reveal" id="maths">
+        <h2 class="h3"><span>03</span> The maths</h2>
+        <ol class="math-steps">
+          <li><h3>Mean Absolute Error (MAE) and Weighted Absolute Percentage Error (WAPE)</h3><div class="formula">\text{MAE} = \frac{1}{H} \sum_{t=1}^H |y_t - \hat{y}_t|, \qquad \text{WAPE} = \frac{\sum_{t=1}^H |y_t - \hat{y}_t|}{\sum_{t=1}^H y_t}</div><p>Where $H$ is the forecast horizon, $y_t$ is actual demand, and $\hat{y}_t$ is the forecast. WAPE aggregates errors across all time points and items before dividing by total volume, avoiding zero-division singularities and weighting errors by volume.</p></li>
+          <li><h3>Mean Absolute Scaled Error (MASE)</h3><div class="formula">\text{MASE} = \frac{\frac{1}{H}\sum_{t=1}^H |y_t - \hat{y}_t|}{\frac{1}{T-1} \sum_{t=2}^T |y_t - y_{t-1}|}</div><p>Where the denominator is the in-sample Mean Absolute Error of the naive persistence forecast computed across training history of length $T$. A value $\text{MASE} &lt; 1$ indicates that the forecast outperforms the trivial persistence baseline.</p></li>
+          <li><h3>Symmetric Mean Absolute Percentage Error (sMAPE)</h3><div class="formula">\text{sMAPE} = \frac{100\%}{H} \sum_{t=1}^H \frac{|y_t - \hat{y}_t|}{(|y_t| + |\hat{y}_t|) / 2}</div><p>sMAPE bounds percentage errors between $0\%$ and $200\%$ by normalising by the average of actual and predicted values, though it penalises under-forecasting more heavily than over-forecasting.</p></li>
+        </ol>
+      </section>
+      <section class="reveal" id="takeaways">
+        <h2 class="h3"><span>04</span> Key takeaways</h2>
+        <div class="box use"><ul><li>MASE normalises error by the in-sample naive persistence baseline, enabling unbiased comparisons across series with radically different scales.</li><li>WAPE weights errors by volume, providing a robust aggregate percentage metric that never divides by zero on intermittent demand.</li><li>Standard MAPE fails on intermittent demand series where actual values equal zero, producing infinities and heavily skewed portfolio summaries.</li></ul></div>
+      </section>
+      <section class="reveal" id="code">
+        <h2 class="h3"><span>05</span> In code</h2>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> <span class="f">mae</span>(actual, pred):
+    <span class="k">return</span> np.<span class="f">mean</span>(np.<span class="f">abs</span>(actual - pred))
+
+<span class="k">def</span> <span class="f">wape</span>(actual, pred):
+    <span class="k">return</span> np.<span class="f">sum</span>(np.<span class="f">abs</span>(actual - pred)) / np.<span class="f">sum</span>(actual)
+
+<span class="k">def</span> <span class="f">mase</span>(actual, pred, train_history):
+    naive_mae = np.<span class="f">mean</span>(np.<span class="f">abs</span>(np.<span class="f">diff</span>(train_history)))
+    <span class="k">return</span> <span class="f">mae</span>(actual, pred) / naive_mae
+
+<span class="k">def</span> <span class="f">smape</span>(actual, pred):
+    denom = (np.<span class="f">abs</span>(actual) + np.<span class="f">abs</span>(pred)) / <span class="n">2.0</span>
+    <span class="k">return</span> np.<span class="f">mean</span>(np.<span class="f">where</span>(denom == <span class="n">0</span>, <span class="n">0</span>, np.<span class="f">abs</span>(actual - pred) / denom)) * <span class="n">100</span>
+
+<span class="c"># Realistic intermittent retail demand series</span>
+train_history = np.<span class="f">array</span>([<span class="n">12</span>, <span class="n">15</span>, <span class="n">11</span>, <span class="n">14</span>, <span class="n">0</span>, <span class="n">8</span>, <span class="n">10</span>, <span class="n">13</span>, <span class="n">16</span>, <span class="n">12</span>, <span class="n">14</span>, <span class="n">15</span>], dtype=float)
+y_actual = np.<span class="f">array</span>([<span class="n">14</span>, <span class="n">0</span>, <span class="n">9</span>, <span class="n">12</span>, <span class="n">15</span>, <span class="n">0</span>], dtype=float)
+y_pred = np.<span class="f">array</span>([<span class="n">13</span>, <span class="n">2</span>, <span class="n">10</span>, <span class="n">11</span>, <span class="n">14</span>, <span class="n">1</span>], dtype=float)
+
+<span class="k">print</span>(<span class="s">f&quot;MAE:   {mae(y_actual, y_pred):.2f} units&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;WAPE:  {wape(y_actual, y_pred):.1%} of total volume&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;MASE:  {mase(y_actual, y_pred, train_history):.3f} (&lt; 1 beats naive baseline)&quot;</span>)
+<span class="k">print</span>(<span class="s">f&quot;sMAPE: {smape(y_actual, y_pred):.1f}%&quot;</span>)</code></pre></div>
+        <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Using traditional MAPE on datasets with zero actual values, resulting in division by zero or explosive values.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Computing the MASE naive benchmark denominator on the test set instead of the historical training set.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Overlooking sMAPE directional asymmetry: predicting 0 when actual is 100 yields 200% error, whereas predicting 200 when actual is 100 yields only 66.7% error.</span></li></ul>
+      </section>
+      <section class="reveal" id="quiz">
+        <h2 class="h3"><span>06</span> Check yourself</h2>
+        <div class="quiz">
+          <div class="q" data-answer="3">
+            <p><span>Q1</span>Why is Mean Absolute Scaled Error (MASE) preferred over Mean Absolute Percentage Error (MAPE) when evaluating intermittent demand forecasts with frequent zero sales?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>Because MASE converts all forecasts into negative probabilities</span></button><button class="opt" type="button"><b>B</b><span>Because MASE only works on integer values</span></button><button class="opt" type="button"><b>C</b><span>Because MAPE cannot be computed on more than 10 time periods</span></button><button class="opt" type="button"><b>D</b><span>Because MAPE divides by zero whenever actual demand is zero, producing undefined or explosive errors, whereas MASE normalises by the in-sample naive baseline</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> MAPE has actual demand in its denominator, creating division-by-zero singularities whenever sales are 0. MASE scales by the historical naive baseline error, avoiding zero division on non-trivial series.</div>
+          </div>
+          <div class="q" data-answer="3">
+            <p><span>Q2</span>A retail demand forecasting model achieves a MASE of 0.65 on a holdout test horizon. How should an analyst interpret this result?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>The model predicts negative demand for 65% of products</span></button><button class="opt" type="button"><b>B</b><span>The model has an error rate of 65%</span></button><button class="opt" type="button"><b>C</b><span>The model fails to beat a trivial persistence forecast</span></button><button class="opt" type="button"><b>D</b><span>The model reduces mean absolute error by 35% compared to a naive persistence random-walk baseline</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> A MASE below 1.0 indicates superior performance relative to the one-step naive baseline; a score of 0.65 means the model's error is 65% of the naive baseline error (a 35% error reduction).</div>
+          </div>
+          <div class="q" data-answer="1">
+            <p><span>Q3</span>In supply chain forecasting across multiple products, why is Weighted Absolute Percentage Error (WAPE) often preferred over unweighted portfolio MAPE?</p>
+            <div class="opts"><button class="opt" type="button"><b>A</b><span>WAPE does not require knowing the actual sales values</span></button><button class="opt" type="button"><b>B</b><span>WAPE weights errors proportionally by product sales volume, preventing low-volume items from dominating total business error</span></button><button class="opt" type="button"><b>C</b><span>WAPE squares all errors to heavily penalise outliers</span></button><button class="opt" type="button"><b>D</b><span>WAPE is strictly guaranteed to be zero for linear regression models</span></button></div>
+            <div class="why" hidden><strong>Why:</strong> Unweighted MAPE gives equal importance to an item selling 1 unit and an item selling 10,000 units. WAPE sums errors across all items before dividing by total volume, accurately reflecting overall business impact.</div>
+          </div>
+        </div>
+        <p class="quiz-score" id="quiz-score" aria-live="polite" style="margin-top:14px"></p>
+      </section>
+      <section class="reveal" id="related">
+        <h2 class="h3"><span>07</span> Where it shows up</h2>
+        <div class="related"><a href="../../concepts/train-validation-test-splits-group-and-time-based/"><small class="kicker">Concept</small><b>Splits: group and time-based</b></a><a href="../../concepts/data-leakage/"><small class="kicker">Concept</small><b>Data leakage</b></a><a href="../../concepts/outlier-handling/"><small class="kicker">Concept</small><b>Outlier handling</b></a></div>
       </section>
     </div>
   </div>
+
   <div class="pager" role="navigation" aria-label="Previous and next lesson">
     <a href="../../concepts/reproducibility/"><small><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Previous · Data science</small><b>Reproducibility</b></a>
     <a class="pager-next" href="../../concepts/time-series-cross-validation/"><small>Next · Data science <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></small><b>Time-series cross-validation</b></a>
@@ -87,7 +172,11 @@
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvuz056f" defer></script>
-<script src="../../assets/learn.js?v=mvuz056f" defer></script>
+<script src="../../assets/site.js?v=mvuz5y5i" defer></script>
+<script src="../../assets/labs/core.js?v=mvuz5y5i" defer></script>
+<script src="../../assets/labs/algos.js?v=mvuz5y5i" defer></script>
+<script src="../../assets/labs/models.js?v=mvuz5y5i" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvuz5y5i" defer></script>
+<script src="../../assets/learn.js?v=mvuz5y5i" defer></script>
 </body>
 </html>
