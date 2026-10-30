@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvuquxob">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvuquxob">
+<link rel="stylesheet" href="../../assets/site.css?v=mvur1jh0">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvur1jh0">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -80,19 +80,19 @@
       </section>
       <section class="reveal" id="how">
         <h2 class="h3"><span>02</span> Step by step</h2>
-        <ol class="steps"><li>Generate uncalibrated decision scores or raw probabilities $s_i$ on a dedicated held-out validation set (never calibrate on training data).</li><li>Construct a **Reliability Diagram (Calibration Curve)**: bin predictions into $M$ equal intervals (e.g. $[0, 0.1), [0.1, 0.2), \\dots$) and plot mean predicted confidence against observed fraction of positives.</li><li>Compute the **Expected Calibration Error (ECE)** and **Brier Score** to quantify baseline calibration error.</li><li>Select a calibrator: choose **Platt Scaling** if the miscalibration is sigmoidal or validation data is modest ($n &lt; 1,000$), or **Isotonic Regression** if the distortion is non-sigmoidal and validation data is plentiful.</li><li>Fit the post-processing calibration mapping $g(s)$ on validation scores using maximum likelihood or least squares.</li><li>Apply the fitted calibrator to test predictions, verifying that ECE and Brier score improve while ROC-AUC ranking discrimination remains preserved.</li></ol>
+        <ol class="steps"><li>Generate uncalibrated decision scores or raw probabilities $s_i$ on a dedicated held-out validation set (never calibrate on training data).</li><li>Construct a **Reliability Diagram (Calibration Curve)**: bin predictions into $M$ equal intervals (e.g. $[0, 0.1), [0.1, 0.2), \dots$) and plot mean predicted confidence against observed fraction of positives.</li><li>Compute the **Expected Calibration Error (ECE)** and **Brier Score** to quantify baseline calibration error.</li><li>Select a calibrator: choose **Platt Scaling** if the miscalibration is sigmoidal or validation data is modest ($n &lt; 1,000$), or **Isotonic Regression** if the distortion is non-sigmoidal and validation data is plentiful.</li><li>Fit the post-processing calibration mapping $g(s)$ on validation scores using maximum likelihood or least squares.</li><li>Apply the fitted calibrator to test predictions, verifying that ECE and Brier score improve while ROC-AUC ranking discrimination remains preserved.</li></ol>
       </section>
       <section class="reveal" id="maths">
         <h2 class="h3"><span>03</span> The maths</h2>
         <ol class="math-steps">
-          <li><h3>Definition of perfect calibration</h3><div class="formula">$$\\mathbb{P}\\big(Y = 1 \\mid \\hat{P} = p\\big) = p \\quad \\forall p \\in [0, 1]$$</div><p>$\\hat{P}$ is the model's predicted probability, and $Y \\in \\{0, 1\\}$ is the true binary label. Perfect calibration guarantees that among all instances assigned probability $p$, exactly a fraction $p$ are positive outcomes.</p></li>
-          <li><h3>Expected Calibration Error (ECE)</h3><div class="formula">$$\\operatorname{ECE} = \\sum_{m=1}^M \\frac{|B_m|}{n} \\Big| \\operatorname{acc}(B_m) - \\operatorname{conf}(B_m) \\Big|$$</div><p>Predictions are grouped into $M$ bins $B_m$. $|B_m|/n$ is the bin sample weight, $\\operatorname{acc}(B_m) = \\frac{1}{|B_m|}\\sum_{i \\in B_m} y_i$ is empirical bin accuracy, and $\\operatorname{conf}(B_m) = \\frac{1}{|B_m|}\\sum_{i \\in B_m} \\hat{p}_i$ is mean predicted confidence. ECE computes the weighted absolute divergence between confidence and reality.</p></li>
-          <li><h3>Platt scaling and Isotonic regression</h3><div class="formula">$$\\hat{P}_{\\text{Platt}} = \\frac{1}{1 + \\exp(A s + B)}, \\quad \\min_{g} \\sum_{i=1}^n \\big(y_i - g(s_i)\\big)^2 \\;\\; \\text{s.t.} \\;\\; g(s_i) \\le g(s_j) \\text{ for } s_i \\le s_j$$</div><p>Platt scaling optimises parameters $A$ and $B$ via negative log-likelihood on validation margins $s_i$. Isotonic regression fits a non-parametric monotonic step function $g(s)$ via the Pool Adjacent Violators Algorithm (PAVA), preserving rank order while minimising mean squared error.</p></li>
+          <li><h3>Definition of perfect calibration</h3><div class="formula">$$\mathbb{P}\big(Y = 1 \mid \hat{P} = p\big) = p \quad \forall p \in [0, 1]$$</div><p>$\hat{P}$ is the model's predicted probability, and $Y \in \\{0, 1\\}$ is the true binary label. Perfect calibration guarantees that among all instances assigned probability $p$, exactly a fraction $p$ are positive outcomes.</p></li>
+          <li><h3>Expected Calibration Error (ECE)</h3><div class="formula">$$\operatorname{ECE} = \sum_{m=1}^M \frac{|B_m|}{n} \Big| \operatorname{acc}(B_m) - \operatorname{conf}(B_m) \Big|$$</div><p>Predictions are grouped into $M$ bins $B_m$. $|B_m|/n$ is the bin sample weight, $\operatorname{acc}(B_m) = \frac{1}{|B_m|}\sum_{i \in B_m} y_i$ is empirical bin accuracy, and $\operatorname{conf}(B_m) = \frac{1}{|B_m|}\sum_{i \in B_m} \hat{p}_i$ is mean predicted confidence. ECE computes the weighted absolute divergence between confidence and reality.</p></li>
+          <li><h3>Platt scaling and Isotonic regression</h3><div class="formula">$$\hat{P}_{\text{Platt}} = \frac{1}{1 + \exp(A s + B)}, \quad \min_{g} \sum_{i=1}^n \big(y_i - g(s_i)\big)^2 \\;\\; \text{s.t.} \\;\\; g(s_i) \le g(s_j) \text{ for } s_i \le s_j$$</div><p>Platt scaling optimises parameters $A$ and $B$ via negative log-likelihood on validation margins $s_i$. Isotonic regression fits a non-parametric monotonic step function $g(s)$ via the Pool Adjacent Violators Algorithm (PAVA), preserving rank order while minimising mean squared error.</p></li>
         </ol>
       </section>
       <section class="reveal" id="takeaways">
         <h2 class="h3"><span>04</span> Key takeaways</h2>
-        <div class="box use"><ul><li>Discrimination vs Calibration: ROC-AUC evaluates ranking discrimination, whereas calibration evaluates whether probability magnitudes match empirical event frequencies.</li><li>Monotonicity preservation: monotonic calibrators (Platt scaling and Isotonic regression) do not alter prediction rank order, leaving ROC-AUC completely unchanged.</li><li>The Brier Score ($\\frac{1}{n}\\sum (y_i - \\hat{p}_i)^2$) decomposes mathematically into uncertainty, reliability (calibration error), and resolution (discrimination).</li><li>Always calibrate on held-out data: fitting calibration transformations on training sets perpetuates model overconfidence.</li></ul></div>
+        <div class="box use"><ul><li>Discrimination vs Calibration: ROC-AUC evaluates ranking discrimination, whereas calibration evaluates whether probability magnitudes match empirical event frequencies.</li><li>Monotonicity preservation: monotonic calibrators (Platt scaling and Isotonic regression) do not alter prediction rank order, leaving ROC-AUC completely unchanged.</li><li>The Brier Score ($\frac{1}{n}\sum (y_i - \hat{p}_i)^2$) decomposes mathematically into uncertainty, reliability (calibration error), and resolution (discrimination).</li><li>Always calibrate on held-out data: fitting calibration transformations on training sets perpetuates model overconfidence.</li></ul></div>
       </section>
       <section class="reveal" id="code">
         <h2 class="h3"><span>05</span> In code</h2>
@@ -199,11 +199,11 @@ brier_cal = np.<span class="f">mean</span>((p_cal - y)**<span class="n">2</span>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvuquxob" defer></script>
-<script src="../../assets/labs/core.js?v=mvuquxob" defer></script>
-<script src="../../assets/labs/algos.js?v=mvuquxob" defer></script>
-<script src="../../assets/labs/models.js?v=mvuquxob" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvuquxob" defer></script>
-<script src="../../assets/learn.js?v=mvuquxob" defer></script>
+<script src="../../assets/site.js?v=mvur1jh0" defer></script>
+<script src="../../assets/labs/core.js?v=mvur1jh0" defer></script>
+<script src="../../assets/labs/algos.js?v=mvur1jh0" defer></script>
+<script src="../../assets/labs/models.js?v=mvur1jh0" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvur1jh0" defer></script>
+<script src="../../assets/learn.js?v=mvur1jh0" defer></script>
 </body>
 </html>
