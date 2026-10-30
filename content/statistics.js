@@ -4272,4 +4272,666 @@ print(f"Mutual Information:    {mi_bits:.3f} bits")`,
     ],
     keywords: "wasserstein distance earth movers distance optimal transport kantorovich rubinstein duality wgan lipschitz continuity cdf coupling"
   },
+  {
+    id: "total-variation-hellinger-and-bhattacharyya-distances",
+    short: "TV, Hellinger & Bhattacharyya",
+    title: "Total variation, Hellinger and Bhattacharyya distances",
+    task: "concepts",
+    module: "Information theory",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "Total Variation distance, Hellinger distance, and Bhattacharyya distance form the foundational geometric family of probability metrics grounded in statistical distinguishability and f-divergences. While Total Variation quantifies the maximum possible difference in probability assigned to any measurable event, Hellinger distance provides a true metric on the unit Hilbert sphere via square-root density mappings, obeying the triangle inequality and establishing tight bounds on minimax estimation error via Le Cam's inequalities. The Bhattacharyya distance connects these metrics to optimal Bayes classification error bounds.",
+    lead: "How different are two probability distributions, and what is the absolute worst-case error you could make if you used model Q instead of true distribution P? While KL divergence is asymmetric, unbounded, and violates the triangle inequality, Total Variation distance is bounded in [0, 1] and directly measures the maximum discrepancy across all possible events. Hellinger distance turns probability densities into Euclidean vectors on a sphere. Mastering these classical metrics provides the theoretical foundation for differential privacy, Markov chain convergence, and statistical minimax theory.",
+    intuition: [
+      "Total Variation as Maximum Disagreement: Suppose an auditor inspects two probability models P and Q. The auditor is allowed to pick any conceivable event A (e.g. \"tomorrow's temperature exceeds 30C\"). The Total Variation distance D_TV(P, Q) is the maximum possible difference |P(A) - Q(A)| the auditor could ever find. If D_TV = 0.05, the two models will never differ by more than 5 percentage points on any forecast.",
+      "Hellinger Distance as Sphere Geometry: Probability densities integrate to 1: int p(x) dx = 1. If we take the square root sqrt(p(x)), then int (sqrt(p(x)))^2 dx = 1. This means sqrt(p(x)) is a unit vector on an infinite-dimensional hypersphere! The Hellinger distance is simply the standard Euclidean distance between these two square-root unit vectors, scaled by 1/sqrt(2). Because it is an actual metric space distance, it satisfies symmetry and the triangle inequality!",
+      "The Bhattacharyya Affinity: The inner product between the two square-root vectors is the Bhattacharyya coefficient rho(P, Q) = int sqrt(p(x) q(x)) dx in [0, 1]. If the distributions are identical, rho = 1; if they have disjoint supports, rho = 0. The Bhattacharyya distance -log rho provides an upper bound on Bayes classification error.",
+      "Le Cam's Inequalities and Minimax Rates: In statistical decision theory, Le Cam's lemmas prove that the ability of any algorithm to distinguish between two hypothetical data distributions is fundamentally bounded by their Total Variation and Hellinger distances: H^2(P, Q) <= D_TV(P, Q) <= sqrt(2) * H(P, Q)."
+    ],
+    analogy: "Think of two light beams shining through stained glass. Total Variation is the maximum difference in brightness you could see through any filter. Hellinger distance treats each light beam as an arrow pointing to the surface of a globe, measuring the straight-line physical distance between the two arrow tips through 3D space.",
+    steps: [
+      {
+        "title": "Evaluate point-wise absolute density difference",
+        "desc": "Compute |p(x) - q(x)| across the support space.",
+        "detail": "Total Variation evaluates L_1 norm discrepancy: D_TV(P, Q) = 0.5 * int |p(x) - q(x)| dx. It is bounded in [0, 1]."
+      },
+      {
+        "title": "Compute the Bhattacharyya affinity coefficient",
+        "desc": "Calculate the overlap integral of square-root densities \\rho(P, Q) = int \\sqrt{p(x) q(x)} dx.",
+        "detail": "The affinity \\rho \\in [0, 1] acts as a cosine similarity between square-root density vectors on the unit sphere."
+      },
+      {
+        "title": "Derive the Hellinger distance",
+        "desc": "Compute H^2(P, Q) = 1 - \\rho(P, Q).",
+        "detail": "Verify metric properties: non-negativity, symmetry H(P, Q) = H(Q, P), identity of indiscernibles, and triangle inequality H(P, R) <= H(P, Q) + H(Q, R)."
+      },
+      {
+        "title": "Calculate the Bhattacharyya distance and Bayes error bound",
+        "desc": "Compute D_B(P, Q) = -\\ln \\rho(P, Q) and assess classification separability.",
+        "detail": "Establish upper bound on minimum Bayes misclassification error: P_error <= 0.5 * exp(-D_B)."
+      },
+      {
+        "title": "Verify Le Cam's sandwich inequalities",
+        "desc": "Confirm H^2 <= D_TV <= \\sqrt{2 H^2 (1 - H^2/2)}.",
+        "detail": "These inequalities guarantee that bounding Hellinger distance automatically controls Total Variation distance."
+      }
+    ],
+    math: [
+      {
+        "h": "Total Variation Distance Formulation",
+        "tex": "D_{\\text{TV}}(P, Q) = \\sup_{A \\in \\mathcal{F}} \\big| P(A) - Q(A) \\big| = \\frac{1}{2} \\int_{\\mathcal{X}} \\big| p(x) - q(x) \\big| \\, dx = \\frac{1}{2} \\|p - q\\|_1",
+        "p": "Total Variation is the supremum difference over all measurable events A. It equals half the L_1 distance between the densities, bounded in [0, 1], where 0 indicates identical distributions and 1 indicates mutually singular distributions with disjoint supports."
+      },
+      {
+        "h": "Squared Hellinger Distance and Bhattacharyya Coefficient",
+        "tex": "H^2(P, Q) = \\frac{1}{2} \\int_{\\mathcal{X}} \\left( \\sqrt{p(x)} - \\sqrt{q(x)} \\right)^2 dx = 1 - \\int_{\\mathcal{X}} \\sqrt{p(x) q(x)} \\, dx = 1 - \\rho(P, Q)",
+        "p": "The Hellinger distance is a true metric satisfying the triangle inequality. The quantity \\rho(P, Q) = \\int \\sqrt{p(x) q(x)} \\, dx is the Bhattacharyya affinity coefficient. For product distributions P = \\prod P_i and Q = \\prod Q_i, the affinity factorises multiplicatively: \\rho(P, Q) = \\prod \\rho(P_i, Q_i)."
+      },
+      {
+        "h": "Le Cam's Sandwich Inequalities",
+        "tex": "H^2(P, Q) \\le D_{\\text{TV}}(P, Q) \\le H(P, Q) \\sqrt{2 - H^2(P, Q)} \\le \\sqrt{2} H(P, Q)",
+        "p": "Le Cam's inequalities connect Total Variation and Hellinger distance. Because Hellinger distance factorises cleanly across independent observations, it is widely used to prove minimax lower bounds in statistical estimation."
+      }
+    ],
+    code: "\"\"\"\nTotal Variation, Hellinger, and Bhattacharyya Distances\nCalculates exact distances for Gaussian distributions and verifies\nLe Cam's bounding inequalities.\n\"\"\"\n\nimport numpy as np\n\ndef compute_distances_gaussian(mu1: float, sig1: float, mu2: float, sig2: float):\n    \"\"\"\n    Compute analytical Bhattacharyya, Hellinger, and numerical Total Variation\n    between two univariate Gaussians N(mu1, sig1^2) and N(mu2, sig2^2).\n    \"\"\"\n    v1, v2 = sig1**2, sig2**2\n    \n    # 1. Bhattacharyya Distance for 1D Gaussians\n    # D_B = (1/4) * ln( (1/4)*(v1/v2 + v2/v1 + 2) ) + (1/4) * ( (mu1 - mu2)^2 / (v1 + v2) )\n    term1 = 0.25 * np.log(0.25 * (v1/v2 + v2/v1 + 2.0))\n    term2 = 0.25 * ((mu1 - mu2)**2 / (v1 + v2))\n    d_bhattacharyya = term1 + term2\n    \n    # Bhattacharyya affinity rho = exp(-D_B)\n    rho = np.exp(-d_bhattacharyya)\n    \n    # 2. Hellinger Distance: H^2 = 1 - rho\n    h_squared = 1.0 - rho\n    h_distance = np.sqrt(h_squared)\n    \n    # 3. Total Variation Distance via numerical integration\n    x_grid = np.linspace(min(mu1 - 4*sig1, mu2 - 4*sig2), max(mu1 + 4*sig1, mu2 + 4*sig2), 20000)\n    dx = x_grid[1] - x_grid[0]\n    p_dens = (1.0 / (np.sqrt(2 * np.pi) * sig1)) * np.exp(-0.5 * ((x_grid - mu1) / sig1)**2)\n    q_dens = (1.0 / (np.sqrt(2 * np.pi) * sig2)) * np.exp(-0.5 * ((x_grid - mu2) / sig2)**2)\n    tv_distance = 0.5 * np.sum(np.abs(p_dens - q_dens)) * dx\n    \n    return {\n        \"bhattacharyya_dist\": round(d_bhattacharyya, 4),\n        \"affinity_rho\": round(rho, 4),\n        \"hellinger_squared\": round(h_squared, 4),\n        \"hellinger_dist\": round(h_distance, 4),\n        \"total_variation\": round(tv_distance, 4),\n    }\n\n# Experiment: P ~ N(0, 1), Q ~ N(mu, 1) as mu shifts\nprint(\"=== Metric Comparison for N(0, 1) vs N(mu, 1) ===\")\nfor mu in [0.0, 0.5, 1.0, 2.0, 3.5]:\n    m = compute_distances_gaussian(0.0, 1.0, mu, 1.0)\n    h2 = m[\"hellinger_squared\"]\n    tv = m[\"total_variation\"]\n    upper_bound = np.sqrt(2 * h2)\n    print(f\"Shift mu = {mu:3.1f} | TV: {tv:6.4f} | H^2: {h2:6.4f} | Bhattacharyya: {m['bhattacharyya_dist']:6.4f}\")\n    print(f\"    Le Cam Bounds Check: H^2 ({h2:.4f}) <= TV ({tv:.4f}) <= sqrt(2)*H ({upper_bound:.4f}) -> {h2 <= tv <= upper_bound + 1e-4}\")\n",
+    keyPoints: [
+      "Total Variation distance quantifies the maximum possible difference in probability assigned to any measurable event, bounded in [0, 1].",
+      "Hellinger distance is a true metric obeying the triangle inequality, measuring Euclidean distance between square-root density vectors on the unit Hilbert sphere.",
+      "The Bhattacharyya distance directly establishes an upper bound on the minimum Bayes classification error rate.",
+      "Le Cam's inequalities tightly sandwich Total Variation between H^2 and sqrt(2)*H, enabling minimax sample complexity proofs."
+    ],
+    pitfalls: [
+      "Confusing Total Variation with total variance: Total Variation is a bounded probability divergence, whereas variance measures second-order dispersion around the mean.",
+      "Assuming Bhattacharyya distance satisfies the triangle inequality: The Bhattacharyya distance -ln(\\rho) is not a true metric (it violates the triangle inequality); only Hellinger distance is a true metric.",
+      "Overlooking product factorisation: For multi-dimensional independent variables, the Bhattacharyya affinity \\rho factorises as a simple product, making Hellinger distance vastly easier to compute than Total Variation."
+    ],
+    quiz: [
+      {
+        "q": "What is the maximum possible value of the Total Variation distance between two probability distributions?",
+        "o": [
+          "1.0 (indicating that the distributions have completely disjoint supports and disagree with certainty on some event)",
+          "Positive infinity",
+          "0.5",
+          "2.0"
+        ],
+        "a": 0,
+        "why": "Total Variation is defined as the supremum difference in event probabilities |P(A) - Q(A)|. Since probabilities are bounded in [0, 1], D_TV is strictly bounded in [0, 1]."
+      },
+      {
+        "q": "Why is Hellinger distance preferred over KL divergence in statistical minimax lower bound proofs?",
+        "o": [
+          "Because Hellinger distance is a true metric that satisfies the triangle inequality and factorises cleanly over independent product distributions",
+          "Because Hellinger distance is always equal to 1",
+          "Because KL divergence cannot be computed for Gaussian distributions",
+          "Because Hellinger distance does not require integration"
+        ],
+        "a": 0,
+        "why": "KL divergence is asymmetric and violates the triangle inequality. Hellinger distance is a genuine metric on the unit sphere whose affinity factorises multiplicatively across independent dimensions, facilitating Le Cam's minimax bounds."
+      },
+      {
+        "q": "How does the Bhattacharyya distance D_B relate to the minimum achievable Bayes classification error rate?",
+        "o": [
+          "It provides an analytical upper bound on the Bayes error: P_error <= 0.5 * exp(-D_B)",
+          "It is equal to the training set accuracy",
+          "It guarantees zero false positives",
+          "It has no relation to classification error"
+        ],
+        "a": 0,
+        "why": "The Bhattacharyya bound is a celebrated result in statistical pattern recognition: the probability of misclassification under the optimal Bayes classifier is bounded above by (1/2) * exp(-D_B)."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "entropy-and-cross-entropy",
+      "kl-divergence"
+    ],
+    related: [
+      "wasserstein-earth-movers-distance",
+      "kl-divergence",
+      "jensen-shannon-divergence",
+      "hypothesis-testing-and-p-values"
+    ],
+    keywords: "total variation hellinger distance bhattacharyya distance le cam inequalities f-divergence probability metrics bayes error"
+  },
+  {
+    id: 'ols-inference-t-tests-f-test-r2-and-adjusted-r2',
+    short: 'OLS Inference: t, F & R-Squared',
+    title: r`OLS Inference: t-Tests, F-Test, R² and Adjusted R²`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 1,
+    minutes: 18,
+    noLab: true,
+    summary: r`Conduct rigorous hypothesis tests on regression coefficients with t-tests, evaluate overall model significance with the F-test, and penalise overfitting with adjusted R².`,
+    lead: r`Fitting an ordinary least squares (OLS) regression line is only the first step in linear modelling. To determine whether estimated slopes represent genuine population relationships rather than sampling noise, we must perform statistical inference. Individual coefficient t-tests evaluate specific predictors, the omnibus F-test assesses whether the model explains more variance than a simple average, and adjusted R² prevents the deceptive inflation of goodness-of-fit as redundant variables are added.`,
+    intuition: [
+      r`Suppose an analyst fits an OLS regression predicting house prices using three features: square footage, number of bedrooms, and the homeowner's lucky lottery number. Least squares outputs estimated slopes: square footage has $\hat{\beta}_1 = 3.350$ (£3,350 per unit), bedrooms has $\hat{\beta}_2 = 12.901$ (£12,900 per bedroom), and lucky number has $\hat{\beta}_3 = -0.031$.`,
+      r`Did the owner's lucky number genuinely influence property price? The estimated slope is $-0.031$, but its standard error is $0.036$. Dividing the coefficient by its standard error gives a $t$-statistic of $t = -0.856$, producing a p-value of $p = 0.394$. Because this p-value is far above the conventional significance threshold $\alpha = 0.05$, we fail to reject the null hypothesis $\beta_3 = 0$ and conclude that lucky number has zero statistical relationship with house prices. Conversely, square footage achieves $t = 25.91$ ($p < 10^{-15}$), demonstrating an overwhelmingly reliable effect.`,
+      r`Next, look at the overall model: the coefficient of determination $R^2$ indicates that the model accounts for $90.7\%$ of total price variance ($R^2 = 0.907$). However, least squares mathematically guarantees that adding any extra variable—even pure random noise—will never decrease $R^2$. Adjusted $R^2$ corrects for this by penalising model complexity: for our model, adjusted $R^2$ is $0.904$. Finally, the omnibus $F$-test evaluates whether all three predictors jointly explain significant variance compared to an intercept-only baseline: an $F$-statistic of $310.4$ ($p < 10^{-15}$) decisively rejects the global null hypothesis.`,
+    ],
+    analogy: r`The coefficient t-test is like interviewing individual job candidates to verify each person pulls their weight; the omnibus F-test checks whether the team as a whole beats random noise; and adjusted R² penalises the manager for hiring unnecessary staff.`,
+    steps: [
+      r`Fit the OLS regression model $\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\epsilon}$ via normal equations: $\hat{\boldsymbol{\beta}} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y}$.`,
+      r`Compute the residual variance estimate $s^2 = \frac{\mathbf{e}^T\mathbf{e}}{n - p - 1}$ and the covariance matrix $\widehat{\text{Var}}(\hat{\boldsymbol{\beta}}) = s^2 (\mathbf{X}^T\mathbf{X})^{-1}$.`,
+      r`Extract standard errors $\text{SE}(\hat{\beta}_j) = s\sqrt{[(\mathbf{X}^T\mathbf{X})^{-1}]_{jj}}$ and compute $t$-statistics $t_j = \hat{\beta}_j / \text{SE}(\hat{\beta}_j)$ with $n - p - 1$ degrees of freedom.`,
+      r`Calculate the unadjusted coefficient of determination $R^2 = 1 - SS_{\text{res}} / SS_{\text{tot}}$.`,
+      r`Calculate adjusted $R^2 = 1 - \left(1 - R^2\right)\frac{n - 1}{n - p - 1}$ to penalise over-parameterisation.`,
+      r`Compute the omnibus $F$-statistic $F = \frac{(SS_{\text{tot}} - SS_{\text{res}}) / p}{SS_{\text{res}} / (n - p - 1)}$ to assess the collective significance of all predictors.`,
+    ],
+    math: [
+      {
+        h: 'Coefficient t-Statistic and Standard Errors',
+        tex: r`$$t_j = \frac{\hat{\beta}_j - 0}{\text{SE}(\hat{\beta}_j)} = \frac{\hat{\beta}_j}{s \sqrt{[(\mathbf{X}^T\mathbf{X})^{-1}]_{jj}}} \sim t(n - p - 1)$$`,
+        p: r`Here $\hat{\beta}_j$ is the estimated slope, $s = \sqrt{SS_{\text{res}} / (n - p - 1)}$ is the residual standard error, and $[(\mathbf{X}^T\mathbf{X})^{-1}]_{jj}$ is the $j$-th diagonal element of the inverted Gram matrix. Under the null hypothesis $H_0: \beta_j = 0$, $t_j$ follows Student's $t$-distribution with $n - p - 1$ degrees of freedom ($n$ observations, $p$ predictors, 1 intercept).`,
+      },
+      {
+        h: 'R-Squared and Adjusted R-Squared',
+        tex: r`$$R^2 = 1 - \frac{SS_{\text{res}}}{SS_{\text{tot}}}, \qquad R_{\text{adj}}^2 = 1 - \left(1 - R^2\right)\frac{n - 1}{n - p - 1}$$`,
+        p: r`Here $SS_{\text{res}} = \sum (y_i - \hat{y}_i)^2$ is the residual sum of squares and $SS_{\text{tot}} = \sum (y_i - \bar{y})^2$ is the total sum of squares. Unadjusted $R^2$ measures the proportion of variance explained by the model, but monotonically increases whenever a new feature is added. Adjusted $R^2$ divides sums of squares by their degrees of freedom, increasing only if the added feature improves model fit by more than expected by chance ($t^2 > 1$).`,
+      },
+      {
+        h: 'Omnibus F-Statistic',
+        tex: r`$$F = \frac{(SS_{\text{tot}} - SS_{\text{res}}) / p}{SS_{\text{res}} / (n - p - 1)} = \frac{R^2 / p}{(1 - R^2) / (n - p - 1)} \sim F(p, \, n - p - 1)$$`,
+        p: r`The omnibus $F$-test evaluates the joint null hypothesis $H_0: \beta_1 = \beta_2 = \dots = \beta_p = 0$ against the alternative that at least one coefficient is non-zero. It tests whether the regression model as a whole explains significantly more variance than a flat horizontal line through the sample mean.`,
+      },
+    ],
+    keyPoints: [
+      r`Individual $t$-tests assess the marginal contribution of each predictor given that all other predictors are already included in the model.`,
+      r`$R^2$ never decreases when adding variables; adjusted $R^2$ penalises degrees of freedom to protect against spurious model complexity.`,
+      r`The omnibus $F$-test guards against false discovery by evaluating whether all explanatory variables jointly explain significant outcome variance.`,
+      r`In the presence of multicollinearity, the omnibus $F$-test can be highly significant even if no individual $t$-test achieves significance.`,
+    ],
+    pitfalls: [
+      r`Mistaking high $R^2$ for causal validity: an overfitted model with 50 irrelevant polynomial terms can achieve $R^2 > 0.98$ while failing completely on new data.`,
+      r`Interpreting a non-significant $t$-test as proof that a feature has no relationship with $Y$; collinearity with another feature can inflate standard errors.`,
+      r`Comparing unadjusted $R^2$ values across models with different numbers of predictors.`,
+      r`Trusting standard OLS p-values when errors are heteroscedastic or serially correlated, which violates Gauss–Markov assumptions.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 100
+p = 3
+
+# Predict house prices using sqft (x1), bedrooms (x2), and lucky number (x3)
+x1 = rng.uniform(10.0, 40.0, size=n)
+x2 = rng.integers(1, 6, size=n)
+x3 = rng.uniform(1.0, 100.0, size=n)  # Pure noise variable
+y = 50.0 + 3.5 * x1 + 12.0 * x2 + rng.normal(0.0, 10.0, size=n)
+
+# OLS normal equations: beta = (X^T X)^(-1) X^T y
+X = np.column_stack([np.ones(n), x1, x2, x3])
+beta = np.linalg.inv(X.T @ X) @ X.T @ y
+residuals = y - X @ beta
+
+# Inference: standard errors, t-statistics, p-values
+s2 = np.sum(residuals**2) / (n - p - 1)
+se_beta = np.sqrt(np.diag(s2 * np.linalg.inv(X.T @ X)))
+t_stats = beta / se_beta
+p_vals = 2.0 * (1.0 - stats.t.cdf(np.abs(t_stats), df=n - p - 1))
+
+# Goodness-of-fit: R2, Adjusted R2, F-statistic
+ss_tot = np.sum((y - np.mean(y))**2)
+ss_res = np.sum(residuals**2)
+r2 = 1.0 - ss_res / ss_tot
+r2_adj = 1.0 - (ss_res / (n - p - 1)) / (ss_tot / (n - 1))
+f_stat = ((ss_tot - ss_res) / p) / (ss_res / (n - p - 1))
+
+print(f"R2: {r2:.3f}, Adjusted R2: {r2_adj:.3f}, F-stat: {f_stat:.1f}")
+print(f"SqFt:   beta={beta[1]:.3f}, SE={se_beta[1]:.3f}, t={t_stats[1]:.2f}, p={p_vals[1]:.4e}")
+print(f"Lucky:  beta={beta[3]:.3f}, SE={se_beta[3]:.3f}, t={t_stats[3]:.2f}, p={p_vals[3]:.3f}")`,
+    quiz: [
+      {
+        q: r`Why does adding a completely random noise feature to a linear regression model always increase (or leave unchanged) the unadjusted $R^2$?`,
+        o: [
+          r`Because random noise always correlates with the target variable`,
+          r`Because least squares minimises residual sum of squares over an expanded parameter space, making $SS_{\text{res}}$ weakly decrease`,
+          r`Because degrees of freedom increase`,
+          r`Because the F-statistic forces $R^2$ upward`,
+        ],
+        a: 1,
+        why: r`Adding any column to $\mathbf{X}$ gives least squares an extra dimension to fit the training points, so $SS_{\text{res}}$ cannot increase and $R^2 = 1 - SS_{\text{res}} / SS_{\text{tot}}$ never decreases.`,
+      },
+      {
+        q: r`What does a non-significant coefficient t-test ($p = 0.45$) for predictor $X_1$ strictly indicate in a multiple regression model?`,
+        o: [
+          r`$X_1$ has zero correlation with the response variable $Y$`,
+          r`Given the other predictors already in the model, $X_1$ provides no statistically significant marginal explanatory power`,
+          r`The entire regression model is statistically invalid`,
+          r`$X_1$ should be replaced with its logarithm`,
+        ],
+        a: 1,
+        why: r`Regression $t$-tests measure marginal significance conditioned on all other included variables; $X_1$ might have strong univariate correlation with $Y$, but be redundant in the presence of other features.`,
+      },
+      {
+        q: r`Under what condition does adding a new explanatory variable cause the adjusted $R^2$ to increase?`,
+        o: [
+          r`Whenever the new variable has a positive slope`,
+          r`Only when the new variable's individual $t$-statistic has $|t| > 1$`,
+          r`Whenever sample size $n > 100$`,
+          r`Adjusted $R^2$ always increases when features are added`,
+        ],
+        a: 1,
+        why: r`Mathematically, adjusted $R^2$ increases if and only if the absolute $t$-statistic of the added variable exceeds 1.0 (or its partial $F$-statistic exceeds 1.0).`,
+      },
+      {
+        q: r`In an OLS regression with 100 observations and 3 predictors (plus intercept), how many degrees of freedom does the residual variance estimator possess?`,
+        o: [
+          r`100`,
+          r`97`,
+          r`96`,
+          r`3`,
+        ],
+        a: 2,
+        why: r`Residual degrees of freedom are $n - p - 1 = 100 - 3 - 1 = 96$, where $p = 3$ is the number of predictors and 1 accounts for the intercept.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'polynomial_regression', 'regression-metrics'],
+    prereq: ['hypothesis-testing-and-p-values', 'z-test-and-t-tests', 'anova-and-post-hoc-tests'],
+    related: ['ols_linear_regression', 'residual-diagnostics-and-heteroscedasticity', 'multicollinearity-and-vif'],
+    keywords: 'ols linear regression inference t-test f-test r-squared adjusted r-squared coefficients standard errors p-value',
+  },
+  {
+    id: 'residual-diagnostics-and-heteroscedasticity',
+    short: 'Residuals & Heteroscedasticity',
+    title: r`Residual Diagnostics and Heteroscedasticity`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Diagnose regression failure modes with residual plots, detect non-constant variance using the Breusch–Pagan test, and correct inference with robust standard errors.`,
+    lead: r`The Gauss–Markov theorem guarantees that ordinary least squares estimators are the Best Linear Unbiased Estimator (BLUE) only when errors are homoscedastic and uncorrelated. When residual variance expands or contracts across predictor ranges (heteroscedasticity), OLS coefficient estimates remain unbiased, but standard errors become severely distorted, invalidating confidence intervals and hypothesis tests. Systematic residual diagnostics and White's heteroscedasticity-consistent standard errors restore valid statistical inference.`,
+    intuition: [
+      r`Imagine predicting annual household expenditure on restaurant dining based on household income. For families earning £25,000 per year, dining spending is tightly constrained between £500 and £1,500 (small error variance). For affluent families earning £250,000 per year, dining spending varies wildly: some families cook gourmet meals at home and spend £2,000, while others dine out constantly and spend £30,000 (huge error variance).`,
+      r`If you plot residuals ($y - \hat{y}$) against fitted values $\hat{y}$, the points do not form a uniform horizontal band. Instead, they fan outward like an opening megaphone—classic heteroscedasticity.`,
+      r`What is the danger? Standard OLS assumes every single data point has identical error variance $\sigma^2$. It treats high-income households (where noise is £15,000) with the exact same credibility as low-income households (where noise is £300). While the estimated slope is still unbiased on average, the standard OLS formula underestimates the true standard error, producing artificially narrow confidence intervals and falsely low p-values. A formal test like the Breusch–Pagan test regresses squared residuals against predictors: if variance scales with income, it yields a significant chi-square statistic ($p < 0.001$). Switching to Huber–White heteroscedasticity-robust standard errors (HC1) corrects the standard error without needing to throw away the linear model.`,
+    ],
+    analogy: r`Fitting standard OLS under heteroscedasticity is like judging an archer's skill on windy days and calm days equally: it mistakes erratic, windblown shots for reliable evidence unless you account for changing conditions.`,
+    steps: [
+      r`Fit the OLS regression model and compute raw residuals $e_i = y_i - \hat{y}_i$.`,
+      r`Plot residuals against fitted values $\hat{y}_i$ to visually check for non-linearity (curved patterns) and heteroscedasticity (fan shapes).`,
+      r`Plot standardised residuals against theoretical normal quantiles (Q-Q plot) to check for heavy-tailed or skewed errors.`,
+      r`Perform the Breusch–Pagan test: regress squared residuals $e_i^2$ on predictors and compute the LM test statistic $n R^2 \sim \chi^2(p)$.`,
+      r`If heteroscedasticity is detected, compute Huber–White heteroscedasticity-consistent (HC) sandwich covariance matrices (e.g. HC1).`,
+      r`Alternatively, apply variance-stabilising transforms (such as $\log y$) or Weighted Least Squares (WLS) if variance weights are known.`,
+    ],
+    math: [
+      {
+        h: 'The Homoscedasticity Assumption vs Heteroscedasticity',
+        tex: r`$$\text{Homoscedasticity: } \text{Var}(\epsilon_i \mid \mathbf{x}_i) = \sigma^2, \qquad \text{Heteroscedasticity: } \text{Var}(\epsilon_i \mid \mathbf{x}_i) = \sigma_i^2$$`,
+        p: r`Under homoscedasticity, the covariance matrix of disturbances is $\boldsymbol{\Sigma} = \sigma^2 \mathbf{I}$, producing the classic textbook variance formula $\text{Var}(\hat{\boldsymbol{\beta}}) = \sigma^2 (\mathbf{X}^T\mathbf{X})^{-1}$. Under heteroscedasticity, the diagonal elements $\sigma_i^2$ vary, turning the true variance into the sandwich form $(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\boldsymbol{\Sigma}\mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1}$.`,
+      },
+      {
+        h: 'The Breusch–Pagan Lagrange Multiplier Test',
+        tex: r`$$e_i^2 = \gamma_0 + \gamma_1 x_{i1} + \dots + \gamma_p x_{ip} + u_i \implies \text{LM} = n R_{e^2}^2 \sim \chi^2(p)$$`,
+        p: r`The Breusch–Pagan test fits an auxiliary regression of squared residuals $e_i^2$ on the original predictors. Under the null hypothesis of homoscedasticity ($H_0: \gamma_1 = \dots = \gamma_p = 0$), the sample size $n$ multiplied by the auxiliary determination coefficient $R_{e^2}^2$ converges asymptotically to a chi-square distribution with $p$ degrees of freedom.`,
+      },
+      {
+        h: 'Huber–White Heteroscedasticity-Consistent (HC1) Standard Errors',
+        tex: r`$$\widehat{\text{Var}}_{\text{HC1}}(\hat{\boldsymbol{\beta}}) = \frac{n}{n - p - 1} (\mathbf{X}^T\mathbf{X})^{-1} \left(\sum_{i=1}^n e_i^2 \mathbf{x}_i \mathbf{x}_i^T\right) (\mathbf{X}^T\mathbf{X})^{-1}$$`,
+        p: r`The White sandwich estimator places squared sample residuals along the diagonal of the central "meat" matrix. Multiplying by degrees-of-freedom correction $\frac{n}{n - p - 1}$ yields HC1. This estimator converges asymptotically to the true covariance matrix without requiring knowledge of the functional form of heteroscedasticity.`,
+      },
+    ],
+    keyPoints: [
+      r`Heteroscedasticity does not bias OLS slope estimates; it invalidates standard error formulas, making confidence intervals and p-values untrustworthy.`,
+      r`Residual-versus-fitted scatter plots serve as the primary diagnostic: homoscedastic errors display an even horizontal cloud with constant vertical spread.`,
+      r`The Breusch–Pagan test provides an objective hypothesis test for linear variance dependence on predictors.`,
+      r`Huber–White robust standard errors (HC1) fix inferential hypothesis testing without altering point estimates or discarding data.`,
+    ],
+    pitfalls: [
+      r`Believing that heteroscedasticity makes regression coefficients biased; coefficients remain completely unbiased and consistent.`,
+      r`Throwing away linear regression models upon detecting heteroscedasticity instead of reporting heteroscedasticity-robust standard errors.`,
+      r`Running standard Breusch–Pagan tests on non-normal errors without Koenker's studentisation, which inflates false positive rates.`,
+      r`Confusing non-linearity with heteroscedasticity: an omitted quadratic term often produces both a curved residual pattern and apparent variance changes.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 150
+
+# Heteroscedastic data: error variance scales proportionally with x
+x = rng.uniform(1.0, 10.0, size=n)
+y = 2.0 + 3.0 * x + rng.normal(0.0, 0.8 * x, size=n)
+X = np.column_stack([np.ones(n), x])
+
+# OLS point estimates
+beta = np.linalg.inv(X.T @ X) @ X.T @ y
+e = y - X @ beta
+
+# 1. Breusch-Pagan test for heteroscedasticity
+e2 = e**2
+beta_aux = np.linalg.inv(X.T @ X) @ X.T @ e2
+r2_aux = 1.0 - np.sum((e2 - X @ beta_aux)**2) / np.sum((e2 - np.mean(e2))**2)
+lm_stat = n * r2_aux
+p_bp = 1.0 - stats.chi2.cdf(lm_stat, df=1)
+
+# 2. Standard OLS SE vs Huber-White HC1 robust SE
+cov_ols = (np.sum(e**2) / (n - 2)) * np.linalg.inv(X.T @ X)
+cov_hc1 = (n / (n - 2)) * np.linalg.inv(X.T @ X) @ (X.T @ np.diag(e2) @ X) @ np.linalg.inv(X.T @ X)
+
+se_ols = np.sqrt(np.diag(cov_ols))[1]
+se_hc1 = np.sqrt(np.diag(cov_hc1))[1]
+
+print(f"Breusch-Pagan LM: {lm_stat:.2f} (p-value: {p_bp:.4e})")
+print(f"Slope beta_1:     {beta[1]:.3f}")
+print(f"Standard OLS SE:  {se_ols:.3f}")
+print(f"Robust HC1 SE:    {se_hc1:.3f}")`,
+    quiz: [
+      {
+        q: r`What is the primary statistical consequence of ignoring heteroscedasticity in an OLS regression model?`,
+        o: [
+          r`The estimated regression coefficients become biased and inconsistent`,
+          r`Standard errors are computed incorrectly, invalidating t-tests, confidence intervals, and p-values`,
+          r`The model cannot compute fitted values`,
+          r`The $R^2$ becomes negative`,
+        ],
+        a: 1,
+        why: r`OLS coefficient estimates remain unbiased under heteroscedasticity, but the textbook formula for $\text{Var}(\hat{\boldsymbol{\beta}})$ is wrong, distorting standard errors and hypothesis tests.`,
+      },
+      {
+        q: r`How does a classic residual-versus-fitted values plot look when heteroscedasticity is present?`,
+        o: [
+          r`A uniform rectangular band with constant vertical thickness`,
+          r`A widening cone or funnel shape where vertical scatter expands across fitted values`,
+          r`A single straight 45-degree diagonal line`,
+          r`A circle centered at the origin`,
+        ],
+        a: 1,
+        why: r`A widening cone (megaphone shape) indicates that error variance is not constant, but scales with the magnitude of predictions.`,
+      },
+      {
+        q: r`What does the Breusch–Pagan test evaluate?`,
+        o: [
+          r`Whether the errors are normally distributed`,
+          r`Whether squared residuals can be predicted by the independent variables, indicating non-constant variance`,
+          r`Whether two predictors are collinear`,
+          r`Whether the true relationship is non-linear`,
+        ],
+        a: 1,
+        why: r`The Breusch–Pagan test regresses squared residuals on the explanatory variables; a significant $R^2$ demonstrates that error variance depends on predictor values.`,
+      },
+      {
+        q: r`How do Huber–White robust standard errors (HC1) resolve the problem of heteroscedasticity?`,
+        o: [
+          r`They delete outliers from the dataset`,
+          r`They recalculate the parameter covariance matrix using a sandwich estimator that provides asymptotically consistent standard errors without changing point estimates`,
+          r`They force residuals to follow a normal distribution`,
+          r`They apply a polynomial transformation to $Y$`,
+        ],
+        a: 1,
+        why: r`Huber–White sandwich estimators substitute squared sample residuals into the covariance calculation, restoring consistent standard errors without altering regression coefficients.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'robust_regression'],
+    prereq: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'normality-tests-shapiro-wilk-kolmogorov-smirnov-anderson-darling'],
+    related: ['ols_linear_regression', 'multicollinearity-and-vif', 'robust_regression'],
+    keywords: 'residual diagnostics heteroscedasticity breusch pagan test robust standard errors huber white hc1 sandwich estimator homoscedasticity',
+  },
+  {
+    id: 'multicollinearity-and-vif',
+    short: 'Multicollinearity & VIF',
+    title: r`Multicollinearity and VIF`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Diagnose redundant predictor correlations in regression models using the Variance Inflation Factor and condition indices.`,
+    lead: r`When two or more explanatory variables in a multiple regression model are strongly correlated with each other, ordinary least squares faces multicollinearity. While multicollinearity does not reduce the model's overall predictive capacity, it inflates coefficient variances dramatically, turning regression estimates erratic, unstable, and uninterpretable. The Variance Inflation Factor (VIF) quantifies how much parameter variance is magnified by linear dependencies among predictors.`,
+    intuition: [
+      r`Imagine an athletic trainer building a regression model to predict sprinting speed using two features: left leg length and right leg length. Naturally, an athlete's left leg and right leg lengths are almost perfectly correlated ($r = 0.957$).`,
+      r`When both variables enter the regression simultaneously, least squares attempts to answer: "What is the effect of lengthening the left leg while keeping the right leg length strictly fixed?" Because this scenario is physically impossible in the data, the algorithm cannot partition credit between the two limbs. The model might assign $+15.0$ to the left leg and $-14.2$ to the right leg. The overall model predicts sprint speed reasonably well, but the standard errors on both coefficients balloon dramatically. Both $t$-statistics drop to near zero, giving non-significant p-values.`,
+      r`An analyst inspecting the p-values might naively conclude that neither leg matters for sprinting! This is the essence of multicollinearity. It does not mean the features lack predictive power; it means the features share redundant information, making it impossible to isolate individual effects. The Variance Inflation Factor (VIF) measures how much the variance of an estimated slope is inflated compared to when predictors are orthogonal. A VIF of 1 means zero collinearity; a VIF of 11.77 means variance is inflated nearly twelve-fold. Dropping one redundant leg from the model instantly collapses VIF and restores stable, significant estimates.`,
+    ],
+    analogy: r`Multicollinearity is like two singers harmonizing into the exact same microphone: the audience hears a rich sound, but the sound engineer cannot determine which singer was singing louder.`,
+    steps: [
+      r`Examine the pairwise correlation matrix of all predictors to identify obvious bivariate correlations ($|r| > 0.8$).`,
+      r`For each predictor $X_j$, fit an auxiliary OLS regression predicting $X_j$ from all remaining $p - 1$ predictors.`,
+      r`Extract the auxiliary determination coefficient $R_j^2$ from the auxiliary regression.`,
+      r`Compute the Variance Inflation Factor: $\text{VIF}_j = \frac{1}{1 - R_j^2}$.`,
+      r`Evaluate VIF against diagnostic thresholds: $\text{VIF} = 1$ is orthogonal, $\text{VIF} > 5$ warrants caution, and $\text{VIF} > 10$ indicates severe, harmful multicollinearity.`,
+      r`Remediate collinearity: remove redundant features, combine correlated features via dimensionality reduction, or apply ridge regularisation.`,
+    ],
+    math: [
+      {
+        h: 'Variance Inflation Factor Formula',
+        tex: r`$$\text{Var}(\hat{\beta}_j) = \frac{\sigma^2}{(n - 1)s_j^2} \cdot \frac{1}{1 - R_j^2} = \frac{\sigma^2}{(n - 1)s_j^2} \cdot \text{VIF}_j$$`,
+        p: r`Here $\sigma^2$ is the residual variance, $s_j^2$ is the sample variance of predictor $X_j$, and $R_j^2$ is the coefficient of determination obtained by regressing $X_j$ on all other predictors. $\text{VIF}_j$ directly measures the factor by which the variance of $\hat{\beta}_j$ is multiplied due to correlation with other explanatory variables.`,
+      },
+      {
+        h: 'Tolerance and Condition Number',
+        tex: r`$$\text{Tolerance}_j = \frac{1}{\text{VIF}_j} = 1 - R_j^2, \qquad \kappa(\mathbf{X}^T\mathbf{X}) = \sqrt{\frac{\lambda_{\max}}{\lambda_{\min}}}$$`,
+        p: r`Tolerance expresses the fraction of variance in $X_j$ that is unique and independent of all other predictors; a tolerance below $0.10$ signifies $\text{VIF} > 10$. The condition number $\kappa$ evaluates the ratio of maximum to minimum eigenvalues of $\mathbf{X}^T\mathbf{X}$; $\kappa > 30$ indicates severe ill-conditioning and numerical instability in matrix inversion.`,
+      },
+      {
+        h: 'Regularisation as a Collinearity Remedy',
+        tex: r`$$\hat{\boldsymbol{\beta}}_{\text{ridge}} = \left(\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}\right)^{-1}\mathbf{X}^T\mathbf{y}$$`,
+        p: r`When predictors are collinear, $\mathbf{X}^T\mathbf{X}$ is nearly singular with eigenvalues near zero, causing $(\mathbf{X}^T\mathbf{X})^{-1}$ to explode. Ridge regression adds a positive constant $\lambda$ along the diagonal, bounding eigenvalues away from zero and dramatically contracting parameter variance.`,
+      },
+    ],
+    keyPoints: [
+      r`Multicollinearity does not bias OLS slope estimates or reduce overall $R^2$; it inflates standard errors and makes individual coefficients erratic and uninterpretable.`,
+      r`High pairwise correlation signals collinearity, but multi-variable collinearity can also emerge from linear combinations of three or more variables with low pairwise correlations.`,
+      r`VIF quantifies the degree of variance inflation; $\text{VIF} > 10$ is the standard empirical threshold denoting severe collinearity.`,
+      r`Regularisation techniques like [[ridge_regression]] directly resolve multicollinearity by trading small bias for large variance reduction.`,
+    ],
+    pitfalls: [
+      r`Dropping important control variables from a causal model without verifying whether their omission creates omitted variable bias.`,
+      r`Relying exclusively on pairwise correlation matrices, failing to detect multi-variable collinearity where $X_1 \approx X_2 + X_3$.`,
+      r`Believing that multicollinearity degrades out-of-sample prediction accuracy when test data follows the same joint predictor distribution.`,
+      r`Confusing multicollinearity (linear dependence among features) with high correlation between features and the target label.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 100
+
+# Collinear features x1 and x2 (r ~ 0.968) and independent feature x3
+x1 = rng.normal(loc=10.0, scale=2.0, size=n)
+x2 = x1 + rng.normal(loc=0.0, scale=0.5, size=n)
+x3 = rng.normal(loc=5.0, scale=1.5, size=n)
+
+X_all = np.column_stack([x1, x2, x3])
+vifs = []
+
+# Compute VIF for each predictor via auxiliary regressions
+for j in range(3):
+    y_aux = X_all[:, j]
+    X_others = np.column_stack([np.ones(n), np.delete(X_all, j, axis=1)])
+    b_aux = np.linalg.inv(X_others.T @ X_others) @ X_others.T @ y_aux
+    res_aux = y_aux - X_others @ b_aux
+    r2_j = 1.0 - np.sum(res_aux**2) / np.sum((y_aux - np.mean(y_aux))**2)
+    vifs.append(1.0 / (1.0 - r2_j))
+
+r_12, _ = stats.pearsonr(x1, x2)
+print(f"Pairwise correlation r(x1, x2): {r_12:.3f}")
+print(f"VIF x1: {vifs[0]:.2f} (severe collinearity)")
+print(f"VIF x2: {vifs[1]:.2f} (severe collinearity)")
+print(f"VIF x3: {vifs[2]:.2f} (orthogonal)")`,
+    quiz: [
+      {
+        q: r`What is the primary consequence of multicollinearity in an ordinary least squares regression?`,
+        o: [
+          r`The model's overall $R^2$ collapses to zero`,
+          r`Coefficient variances and standard errors are inflated, making individual slope estimates erratic and unstable`,
+          r`The regression coefficients become systematically biased`,
+          r`Residuals no longer sum to zero`,
+        ],
+        a: 1,
+        why: r`Multicollinearity does not bias estimates or reduce $R^2$, but inflates coefficient variances, leading to wide confidence intervals and non-significant t-tests.`,
+      },
+      {
+        q: r`If an auxiliary regression of predictor $X_j$ on all other predictors yields $R_j^2 = 0.90$, what is the Variance Inflation Factor $\text{VIF}_j$?`,
+        o: [
+          r`0.9`,
+          r`1.0`,
+          r`10.0`,
+          r`90.0`,
+        ],
+        a: 2,
+        why: r`$\text{VIF}_j = \frac{1}{1 - R_j^2} = \frac{1}{1 - 0.90} = \frac{1}{0.10} = 10.0$.`,
+      },
+      {
+        q: r`Why does Ridge regression effectively resolve numerical problems caused by severe multicollinearity?`,
+        o: [
+          r`It removes correlated variables from the dataset completely`,
+          r`It adds a penalty $\lambda \mathbf{I}$ to $\mathbf{X}^T\mathbf{X}$, bounding eigenvalues away from zero and stabilising matrix inversion`,
+          r`It converts continuous variables into discrete categories`,
+          r`It forces all slopes to be positive`,
+        ],
+        a: 1,
+        why: r`Adding $\lambda \mathbf{I}$ guarantees that the eigenvalues of $\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}$ are at least $\lambda > 0$, preventing matrix singularity and shrinking inflated variances.`,
+      },
+      {
+        q: r`Why is inspecting only the pairwise correlation matrix insufficient to rule out multicollinearity?`,
+        o: [
+          r`Because correlation matrices cannot be computed for more than two variables`,
+          r`Because multicollinearity can arise from linear combinations of three or more variables even when all pairwise correlations are moderate`,
+          r`Because Pearson correlation is insensitive to linear relationships`,
+          r`Because pairwise correlation depends on sample size`,
+        ],
+        a: 1,
+        why: r`Three or more variables can be almost perfectly collinear ($X_1 \approx X_2 + X_3$) even when each individual pairwise correlation is modest (e.g. $r \approx 0.5$). VIF detects this multi-variable dependence.`,
+      },
+    ],
+    usedBy: ['ols_linear_regression', 'ridge_regression'],
+    prereq: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'correlation-pearson-spearman-kendall'],
+    related: ['ols_linear_regression', 'ridge_regression', 'feature-selection'],
+    keywords: 'multicollinearity vif variance inflation factor tolerance condition number ridge regression collinear predictors auxiliary regression',
+  },
+  {
+    id: 'generalised-linear-models',
+    short: 'Generalised Linear Models',
+    title: r`Generalised Linear Models`,
+    task: 'concepts',
+    module: 'Regression inference',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Extend linear regression beyond Gaussian errors to binary, count and skewed outcomes using the exponential dispersion family and link functions.`,
+    lead: r`Ordinary least squares assumes continuous, normally distributed responses with constant variance—an assumption that fails catastrophically for click counts, hospital lengths of stay, or failure probabilities. Generalised Linear Models (GLMs) unify regression by connecting a linear predictor to any distribution in the exponential dispersion family via a monotonic link function. This flexible framework powers Poisson regression for event counts, Gamma regression for positive right-skewed durations, and logistic regression for binary classification.`,
+    intuition: [
+      r`Suppose an online streaming service predicts the number of support tickets $Y$ a customer submits per month based on their subscription tenure and monthly usage hours. Because ticket counts are discrete non-negative integers ($0, 1, 2, \dots$), fitting a standard linear regression model produces nonsensical predictions: for low-usage users, the line predicts negative tickets! Furthermore, count variance naturally scales with the mean (Poisson dispersion), violating the constant variance assumption of OLS.`,
+      r`GLMs solve this with three modular components: a random component choosing an outcome distribution from the exponential dispersion family (such as Poisson for counts or Bernoulli for binary outcomes); a systematic linear predictor $\eta = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p$; and a link function $g(\mu) = \eta$ that bridges expected response $\mu = E[Y]$ onto the unbounded real line $(-\infty, \infty)$.`,
+      r`For count data, the log link $g(\mu) = \ln(\mu)$ ensures that the expected count $\mu = \exp(\mathbf{x}^T\boldsymbol{\beta})$ remains strictly positive for every possible input. Exponentiating coefficients transforms additive changes in $x$ into multiplicative rate ratios: an estimated slope of $\hat{\beta}_1 = 0.417$ means each additional unit of $x$ multiplies expected ticket volume by $\exp(0.417) \approx 1.517$ (a 51.7% increase).`,
+    ],
+    analogy: r`A GLM is like an electrical transformer: the linear predictor produces raw voltage across the real line, and the link function transforms it down into the exact physical voltage (probability, count, or positive duration) required by the appliance.`,
+    steps: [
+      r`Identify the response variable's data type and support: binary ($y \in \{0, 1\}$), integer counts ($y \in \{0, 1, 2, \dots\}$), or positive continuous durations ($y > 0$).`,
+      r`Select an appropriate distribution from the exponential dispersion family: Bernoulli, Poisson, Negative Binomial, or Gamma.`,
+      r`Choose a monotonic link function $g(\mu)$ that maps the expected mean domain onto $(-\infty, \infty)$ (e.g. logit for binary, log for counts).`,
+      r`Formulate the log-likelihood function across observations: $\ell(\boldsymbol{\beta}) = \sum \ln f(y_i; \theta_i, \phi)$.`,
+      r`Estimate parameters via Iteratively Reweighted Least Squares (IRLS) using Fisher scoring until convergence.`,
+      r`Assess model goodness-of-fit using deviance statistics and evaluate individual predictor significance via Wald or likelihood-ratio tests.`,
+    ],
+    math: [
+      {
+        h: 'The Exponential Dispersion Family',
+        tex: r`$$f(y; \theta, \phi) = \exp\left(\frac{y\theta - b(\theta)}{a(\phi)} + c(y, \phi)\right)$$`,
+        p: r`Here $\theta$ is the natural parameter, $b(\theta)$ is the cumulant generator function, $\phi$ is the dispersion parameter, and $a(\phi)$ and $c(y, \phi)$ are known scaling functions. The mean and variance follow directly: $E[Y] = \mu = b'(\theta)$ and $\text{Var}(Y) = b''(\theta) a(\phi) = V(\mu) a(\phi)$, where $V(\mu)$ is the characteristic variance function.`,
+      },
+      {
+        h: 'The Three GLM Components and Link Functions',
+        tex: r`$$\eta_i = \mathbf{x}_i^T\boldsymbol{\beta}, \qquad g(\mu_i) = \eta_i \iff \mu_i = g^{-1}(\mathbf{x}_i^T\boldsymbol{\beta})$$`,
+        p: r`The systematic component $\eta_i$ is a linear combination of explanatory features. The link function $g(\cdot)$ maps the expected mean $\mu_i$ onto the linear predictor. Common canonical links include the identity link $g(\mu) = \mu$ for Gaussian OLS, the logit link $g(\mu) = \ln\left(\frac{\mu}{1-\mu}\right)$ for Bernoulli classification, and the log link $g(\mu) = \ln(\mu)$ for Poisson count regression.`,
+      },
+      {
+        h: 'Iteratively Reweighted Least Squares (IRLS)',
+        tex: r`$$\boldsymbol{\beta}^{(t+1)} = (\mathbf{X}^T\mathbf{W}_t\mathbf{X})^{-1}\mathbf{X}^T\mathbf{W}_t\mathbf{z}_t, \qquad W_{ii} = \frac{1}{V(\mu_i)(g'(\mu_i))^2}$$`,
+        p: r`GLMs are fitted using Fisher scoring, which simplifies to weighted least squares with weights $W_{ii}$ inversely proportional to variance and squared link derivative. The working response vector $\mathbf{z}_t = \boldsymbol{\eta}_t + (\mathbf{y} - \boldsymbol{\mu}_t) \odot g'(\boldsymbol{\mu}_t)$ updates parameters iteratively until log-likelihood changes drop below tolerance.`,
+      },
+    ],
+    keyPoints: [
+      r`GLMs unify linear regression, logistic regression, and Poisson regression under a single rigorous maximum-likelihood framework.`,
+      r`The link function transforms the expected value $\mu = E[Y]$, NOT the raw response variable $y$; regressing $\ln(y)$ in OLS produces biased estimates compared to a log-link GLM.`,
+      r`GLM parameters are estimated via Iteratively Reweighted Least Squares (IRLS), which converges rapidly to the global maximum likelihood estimator for canonical links.`,
+      r`Overdispersion occurs when count variance exceeds the Poisson mean ($\text{Var}(Y) > \mu$); it must be addressed using Negative Binomial or quasi-Poisson models.`,
+    ],
+    pitfalls: [
+      r`Log-transforming counts with zeros ($\ln(y + 1)$) and fitting OLS instead of fitting a Poisson GLM, which introduces substantial bias and heteroscedasticity.`,
+      r`Failing to check for overdispersion in Poisson models, leading to severely deflated standard errors and inflated false positive rates.`,
+      r`Confusing link functions with response transformations: $g(E[Y]) \ne E[g(Y)]$.`,
+      r`Using identity links on non-negative count data, leading to negative rate predictions and convergence failures during IRLS optimisation.`,
+    ],
+    code: r`import numpy as np
+
+rng = np.random.default_rng(42)
+n = 120
+
+# Synthetic count data: true log-linear rate log(mu) = 0.5 + 0.4*x
+x = rng.uniform(0.0, 5.0, size=n)
+true_beta = np.array([0.5, 0.4])
+X = np.column_stack([np.ones(n), x])
+mu_true = np.exp(X @ true_beta)
+y = rng.poisson(mu_true)
+
+# Fit Poisson GLM using IRLS (Newton-Raphson with log link)
+beta = np.array([0.0, 0.0])
+for iteration in range(10):
+    eta = X @ beta
+    mu = np.exp(eta)
+    W = np.diag(mu)
+    z = eta + (y - mu) / mu
+    beta = np.linalg.inv(X.T @ W @ X) @ X.T @ W @ z
+
+rate_ratio = np.exp(beta[1])
+print(f"True beta:      {true_beta}")
+print(f"Estimated beta: [{beta[0]:.3f}, {beta[1]:.3f}]")
+print(f"Rate ratio exp(beta_1): {rate_ratio:.3f} (per unit increase in x)")`,
+    quiz: [
+      {
+        q: r`What is the crucial mathematical difference between fitting a GLM with a log link versus fitting OLS on $\ln(Y)$?`,
+        o: [
+          r`A log-link GLM models $\ln(E[Y])$, preserving the expectation scale, whereas OLS on transformed data models $E[\ln(Y)]$, which introduces Jensen's inequality bias`,
+          r`There is zero mathematical difference`,
+          r`OLS on $\ln(Y)$ only works for negative numbers`,
+          r`GLMs do not use maximum likelihood estimation`,
+        ],
+        a: 0,
+        why: r`Because the logarithm is concave, $E[\ln(Y)] \le \ln(E[Y])$ by Jensen's inequality. Log-transforming the response biases predictions downward, whereas a log-link GLM models $\ln(E[Y])$ directly.`,
+      },
+      {
+        q: r`In a Poisson GLM with a log link, how is a slope coefficient $\hat{\beta}_1 = 0.30$ substantively interpreted?`,
+        o: [
+          r`Each unit increase in $x$ adds $0.30$ to the expected count`,
+          r`Each unit increase in $x$ multiplies the expected count by $\exp(0.30) \approx 1.35$ (a 35% increase)`,
+          r`The probability of success increases by 30 percentage points`,
+          r`The response variance decreases by 30%`,
+        ],
+        a: 1,
+        why: r`Because $\ln(\mu) = \beta_0 + \beta_1 x$, exponentiating gives $\mu = e^{\beta_0} e^{\beta_1 x}$. An increase of 1 in $x$ multiplies $\mu$ by $e^{\beta_1}$.`,
+      },
+      {
+        q: r`Which canonical link function pairs with the Bernoulli distribution in generalised linear modelling?`,
+        o: [
+          r`Identity link $g(\mu) = \mu$`,
+          r`Log link $g(\mu) = \ln(\mu)$`,
+          r`Logit link $g(\mu) = \ln\left(\frac{\mu}{1 - \mu}\right)$`,
+          r`Inverse link $g(\mu) = 1 / \mu$`,
+        ],
+        a: 2,
+        why: r`The logit link maps probability $\mu \in (0, 1)$ to unbounded log-odds $(-\infty, \infty)$ and serves as the canonical link for the Bernoulli distribution.`,
+      },
+      {
+        q: r`What numerical algorithm is universally employed to compute maximum likelihood parameter estimates in GLMs?`,
+        o: [
+          r`Ordinary least squares`,
+          r`Iteratively Reweighted Least Squares (IRLS)`,
+          r`K-means clustering`,
+          r`Markov chain Monte Carlo exclusively`,
+        ],
+        a: 1,
+        why: r`IRLS implements Fisher scoring for exponential families, transforming maximum likelihood optimisation into a sequence of weighted least squares regressions that converge in few iterations.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'ols_linear_regression'],
+    prereq: ['ols-inference-t-tests-f-test-r2-and-adjusted-r2', 'sigmoid-and-link-functions', 'maximum-likelihood-estimation'],
+    related: ['logistic_regression', 'residual-diagnostics-and-heteroscedasticity', 'loss-functions'],
+    keywords: 'glm generalised linear models poisson regression link function exponential family irls deviance overdispersion',
+  },
 ];
