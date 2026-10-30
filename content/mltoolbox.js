@@ -7085,4 +7085,505 @@ print(f"MAP@5:   {map_score:.4f}")`,
     related: ['collaborative-filtering', 'matrix-factorisation-and-als', 'confusion-matrix'],
     keywords: 'ranking metrics ndcg map learning to rank dcg lambdamart recommender systems average precision search ranking',
   },
+  {
+  "id": "content-based-and-hybrid-recommenders",
+  "short": "Content-based & hybrid",
+  "title": "Content-Based and Hybrid Recommender Systems",
+  "task": "concepts",
+  "module": "Recommender systems",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Recommend items using item metadata and hybrid fusion: master user profile vectors, TF-IDF item representations, cold-start mitigation, and hybrid blending.",
+  "lead": "Pure collaborative filtering suffers from catastrophic cold-start failure on newly launched items and niche users. Content-based filtering recommends items by matching user profiles against rich item metadata, while hybrid models fuse collaborative and content signals.",
+  "intuition": [
+    "Recommender systems are the commercial engine of the modern internet—driving content on Netflix, Spotify, Amazon, and YouTube. Collaborative Filtering (CF) algorithms recommend items based purely on user-item interaction histories: \"Users who liked what you liked also liked X.\" However, pure CF exhibits a fatal structural weakness: the Cold-Start Problem. When a new movie is released or a new product is listed, it has zero interaction history, so CF can never recommend it.",
+    "Content-Based Filtering (CBF) solves the cold-start challenge by looking at the intrinsic attributes and metadata of items rather than user ratings. For text or movies, an item profile vector $v_j \\in \\mathbb{R}^d$ is constructed using TF-IDF word vectors, genre tags, director, cast, or product categories.",
+    "A user profile vector $u_i \\in \\mathbb{R}^d$ is constructed by computing a weighted average of the item vectors for items the user has positively engaged with in the past. Predicted user affinity is calculated via cosine similarity between the user profile and candidate item profiles: $\\cos(u_i, v_j) = \\frac{u_i \\cdot v_j}{\\|u_i\\| \\|v_j\\|}$. Because CBF requires only item metadata, brand-new items can be recommended the second they are uploaded.",
+    "However, pure content-based filtering has its own limitation: Overspecialisation (the \"filter bubble\"). If a user watches three Batman movies, CBF will endlessly recommend more Batman and superhero movies, never discovering serendipitous interests in documentaries or jazz. Hybrid Recommender Systems resolve this by combining content-based and collaborative filtering signals—using weighted fusion, cascade filtering, or deep feature combination."
+  ],
+  "analogy": "Imagine a personal sommelier. A collaborative filtering sommelier checks what other patrons at table 4 ordered and gives you the exact same wine. A content-based sommelier asks you what flavours you enjoy (blackberry, oak, tannins), reads the ingredient notes on the bottle labels, and selects a wine with matching taste notes—even if no one in the restaurant has ever ordered that specific bottle before. A hybrid sommelier balances both: checking bottle notes for new arrivals while using communal reviews for vintage selections.",
+  "steps": [
+    {
+      "title": "1. Extract and vectorize item metadata",
+      "body": "Extract textual and categorical attributes for all items. Compute TF-IDF feature vectors or dense neural embeddings $v_j \\in \\mathbb{R}^d$. Normalise vectors to unit length."
+    },
+    {
+      "title": "2. Construct individual user profile vectors",
+      "body": "For user $i$, compute user preference profile by taking the rating-weighted average of liked item vectors: $u_i = \\sum_{j \\in \\mathcal{H}_i} r_{ij} v_j$. Normalise $u_i$ to unit length."
+    },
+    {
+      "title": "3. Compute content similarity scores",
+      "body": "For unrated candidate items, calculate cosine similarity affinity: $S_{\\mathrm{CBF}}(i, j) = u_i^T v_j$. Rank candidate items by descending similarity."
+    },
+    {
+      "title": "4. Fuse with collaborative filtering (Hybrid)",
+      "body": "Combine content scores with collaborative filtering predictions: $\\hat{S}_{ij} = \\alpha S_{\\mathrm{CF}}(i, j) + (1 - \\alpha) S_{\\mathrm{CBF}}(i, j)$, where $\\alpha$ shifts dynamically (favouring CBF for cold items and CF for mature items)."
+    }
+  ],
+  "math": [
+    {
+      "h": "User Profile Vector Construction",
+      "tex": "u_i = \\frac{\\sum_{j \\in \\mathcal{I}_i} r_{ij} v_j}{\\sum_{j \\in \\mathcal{I}_i} |r_{ij}|}, \\quad \\hat{u}_i = \\frac{u_i}{\\|u_i\\|_2}",
+      "p": "Aggregates the feature vectors v_j of items rated by user i, weighted by rating r_ij, capturing the user historical taste profile in item attribute space."
+    },
+    {
+      "h": "Cosine Similarity Recommendation Score",
+      "tex": "S_{\\mathrm{CBF}}(i, j) = \\cos(\\hat{u}_i, v_j) = \\frac{\\hat{u}_i \\cdot v_j}{\\|\\hat{u}_i\\|_2 \\|v_j\\|_2}",
+      "p": "Measures angular proximity between user preference vector and candidate item profile in high-dimensional feature space."
+    },
+    {
+      "h": "Weighted Linear Hybrid Score",
+      "tex": "\\hat{R}_{ij} = \\alpha \\hat{R}_{\\mathrm{CF}}(i, j) + (1 - \\alpha) \\hat{R}_{\\mathrm{CBF}}(i, j), \\quad \\alpha = \\frac{\\min(N_j, N_{\\mathrm{threshold}})}{N_{\\mathrm{threshold}}}",
+      "p": "Dynamically balances CF and content signals: when item interaction count N_j is zero, alpha = 0 (100% content-based), smoothly transitioning to CF as user ratings accumulate."
+    }
+  ],
+  "code": "import numpy as np\n\n# Content-Based and Weighted Hybrid Recommender from scratch\n# 1. Item catalog: 5 movies with 4 genre features: [Action, Sci-Fi, Comedy, Romance]\ngenres = ['Action', 'Sci-Fi', 'Comedy', 'Romance']\nmovies = ['Terminator', 'Star Wars', 'Superbad', 'Notting Hill', 'New Sci-Fi Movie (0 ratings)']\n\n# Item profile matrix V (5 items x 4 features), normalised\nitem_features = np.array([\n    [1.0, 0.8, 0.1, 0.0],  # Terminator\n    [0.9, 1.0, 0.1, 0.0],  # Star Wars\n    [0.1, 0.0, 1.0, 0.3],  # Superbad\n    [0.0, 0.0, 0.4, 1.0],  # Notting Hill\n    [0.8, 0.9, 0.0, 0.0],  # Brand new unrated movie!\n])\n# Unit norm normalisation\nitem_features = item_features / np.linalg.norm(item_features, axis=1, keepdims=True)\n\n# 2. User history: Alice loved Terminator (5.0) and Star Wars (4.5), hated Notting Hill (1.0)\n# Centred ratings (subtract mean 3.5 to capture positive vs negative sentiment)\nuser_ratings = {0: +1.5, 1: +1.0, 3: -2.5}  # Movie indices and centred scores\n\n# 3. Build Alice's User Profile Vector\nuser_profile = np.zeros(4)\nfor movie_idx, rating in user_ratings.items():\n    user_profile += rating * item_features[movie_idx]\nuser_profile /= np.linalg.norm(user_profile)\n\n# Content-based predicted scores (cosine similarity)\ncbf_scores = item_features @ user_profile\n\n# 4. Collaborative Filtering Scores (hypothetical CF predictions for unrated movies)\n# Notice CF outputs 0.0 for the new movie because it has ZERO interaction history (Cold Start!)\ncf_scores = np.array([4.8, 4.6, 2.1, 1.2, 0.0])\n\n# 5. Dynamic Weighted Hybrid Score\n# Movie 4 has 0 ratings (alpha = 0); items with 100+ ratings are capped at alpha = 0.8\nitem_rating_counts = np.array([120, 350, 85, 90, 0])\nalpha_weights = np.minimum(item_rating_counts / 100.0, 0.8)\n\nhybrid_scores = alpha_weights * (cf_scores / 5.0) + (1.0 - alpha_weights) * ((cbf_scores + 1) / 2.0)\n\nprint(\"Alice User Profile (Genre Preferences):\")\nfor g, weight in zip(genres, user_profile):\n    print(f\"  {g:8s}: {weight:+.3f}\")\n\nprint(\"\\n--- Recommendation Scoring on Unseen Items ---\")\nprint(f\"Movie: '{movies[4]}' (Brand New Cold-Start Release):\")\nprint(f\"  Collaborative Filtering Score: {cf_scores[4]:.2f} (Failed - zero ratings)\")\nprint(f\"  Content-Based Score:           {cbf_scores[4]:.2f} (Accurately identified Sci-Fi match!)\")\nprint(f\"  Hybrid Recommendation Score:   {hybrid_scores[4]:.3f} (Cold-start solved!)\")",
+  "keyPoints": [
+    "Recommends items based on matching user profile preferences to intrinsic item attributes and metadata.",
+    "Completely solves the item cold-start problem: newly listed items with zero interaction history can be recommended immediately.",
+    "Constructs user profile vectors by aggregating the metadata vectors of items the user has positively engaged with.",
+    "Vulnerable to overspecialisation: risks trapping users in narrow filter bubbles without discovering serendipitous tastes.",
+    "Hybrid recommender systems dynamically blend collaborative and content signals, combining cold-start robustness with CF accuracy."
+  ],
+  "pitfalls": [
+    "Feature extraction bottleneck: Content-based systems require rich, structured, high-quality metadata; if product descriptions are missing or noisy, recommendations fail.",
+    "Inability to capture subjective quality: Content attributes say an item is \"Action and Sci-Fi\", but cannot distinguish between a cinematic masterpiece and a low-budget disaster.",
+    "New user cold-start: While solving item cold-start, content-based filtering cannot recommend items to brand-new users until they rate at least one item to build a profile."
+  ],
+  "quiz": [
+    {
+      "q": "How does Content-Based Filtering resolve the cold-start problem for newly released items?",
+      "o": [
+        "By matching the item metadata and attributes (e.g. genre, keywords) directly against user profile vectors, requiring zero prior interaction history",
+        "By generating synthetic fake ratings from bots",
+        "By recommending the new item to all users simultaneously",
+        "By converting collaborative filtering into an unsupervised clustering problem"
+      ],
+      "a": 0,
+      "why": "Content-based filtering relies on item attributes rather than interaction logs. As long as metadata is available, newly added items can be scored and recommended instantly."
+    },
+    {
+      "q": "What is the primary drawback of a pure Content-Based recommender system?",
+      "o": [
+        "Overspecialisation (filter bubble): it only recommends items nearly identical to past consumption, preventing serendipitous discovery",
+        "It cannot handle text features",
+        "It scales as O(n^3) with the number of users",
+        "It requires inverting the user rating matrix"
+      ],
+      "a": 0,
+      "why": "Because it only recommends items that resemble past purchases, content-based systems suffer from overspecialisation and fail to discover novel categories."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "collaborative-filtering"
+  ],
+  "related": [
+    "collaborative-filtering",
+    "implicit-feedback-and-bpr",
+    "two-tower-retrieval"
+  ],
+  "keywords": "content-based filtering, hybrid recommenders, cold start, tf-idf, cosine similarity, user profile, overspecialisation, recommendation systems"
+},
+  {
+  "id": "implicit-feedback-and-bpr",
+  "short": "Implicit feedback & BPR",
+  "title": "Implicit Feedback and Bayesian Personalized Ranking (BPR)",
+  "task": "concepts",
+  "module": "Recommender systems",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Optimise pairwise item ranking from clicks, views, and purchases: master implicit feedback matrix factorisation and Bayesian Personalized Ranking (BPR).",
+  "lead": "In real-world e-commerce, users rarely leave 1-to-5 star ratings; interactions consist of clicks, views, and purchases where unobserved items are unrated rather than negative. BPR optimises pairwise ranking criteria directly for implicit feedback.",
+  "intuition": [
+    "Early recommender system research focused heavily on explicit feedback: users assigning 1-to-5 star ratings on Netflix or Amazon. However, in modern commercial platforms, explicit ratings constitute less than 1% of user activity. The vast majority of user data consists of Implicit Feedback: clicks, page views, stream completions, and purchase transactions.",
+    "Implicit feedback has unique structural characteristics: interactions are binary (user clicked or did not click), signals are purely positive (clicking reflects interest, but absence of a click does NOT mean dislike—the user might simply never have been shown the item), and the observation matrix contains unobserved entries rather than explicit negative ratings.",
+    "Standard matrix factorisation approaches this pointwise, treating unobserved items as negative examples (zeros), which introduces massive negative bias. Steffen Rendle et al. (2009) revolutionized the field by introducing Bayesian Personalized Ranking (BPR).",
+    "BPR reframes recommendation from score regression into a Pairwise Ranking task. For any user $u$ who interacted with observed item $i$, and any unobserved item $j$, BPR assumes that user $u$ prefers item $i$ over item $j$ ($i >_u j$). The BPR-Opt objective directly maximises the posterior probability of correct pairwise preference orderings across all triplets $(u, i, j)$ using stochastic gradient descent (BPR-SGD)."
+  ],
+  "analogy": "Imagine observing customers in a bakery. A customer buys an almond croissant ($i$). They walk past 50 other pastries without buying them ($j$). Pointwise methods assume the customer hates all 50 other pastries and wants to burn the bakery down. BPR recognizes the reality: the customer simply preferred the almond croissant over the other pastries that morning. Training on pairwise preferences ($i > j$) ranks the almond croissant above the others without falsely concluding the others are toxic.",
+  "steps": [
+    {
+      "title": "1. Structure implicit interaction triplets",
+      "body": "Given binary interaction matrix $R$, construct dataset of preference triplets $D_S = \\{(u, i, j) : r_{ui} = 1 \\wedge r_{uj} = 0\\}$, assuming user $u$ prefers interacted item $i$ over unobserved item $j$."
+    },
+    {
+      "title": "2. Formulate latent matrix factorisation score difference",
+      "body": "Define predicted score $\\hat{x}_{ui} = w_u^T h_i$. Compute pairwise score margin: $\\hat{x}_{uij} = \\hat{x}_{ui} - \\hat{x}_{uj} = w_u^T (h_i - h_j)$."
+    },
+    {
+      "title": "3. Formulate BPR-Opt Bayesian posterior objective",
+      "body": "Maximise log-posterior: $\\mathcal{L}_{\\mathrm{BPR}} = \\sum_{(u, i, j) \\in D_S} \\ln \\sigma(\\hat{x}_{uij}) - \\lambda_W \\|w_u\\|^2 - \\lambda_H (\\|h_i\\|^2 + \\|h_j\\|^2)$."
+    },
+    {
+      "title": "4. Train via pairwise stochastic gradient descent (BPR-SGD)",
+      "body": "Sample random triplet $(u, i, j)$ uniformly with replacement. Update latent vectors along gradient: $w_u \\leftarrow w_u + \\eta \\left( \\sigma(-\\hat{x}_{uij}) (h_i - h_j) - \\lambda w_u \\right)$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Bayesian Personalized Ranking (BPR-Opt) Objective",
+      "tex": "\\mathcal{L}_{\\mathrm{BPR}}(\\Theta) = \\sum_{(u, i, j) \\in D_S} \\ln \\sigma\\left(\\hat{x}_{ui} - \\hat{x}_{uj}\\right) - \\lambda_\\Theta \\|\\Theta\\|_2^2, \\quad \\sigma(z) = \\frac{1}{1 + e^{-z}}",
+      "p": "Maximises the log-likelihood that user u ranks observed item i higher than unobserved item j, regularised by L2 penalties on user and item embeddings."
+    },
+    {
+      "h": "Pairwise Score Difference in Matrix Factorisation",
+      "tex": "\\hat{x}_{uij} = \\hat{x}_{ui} - \\hat{x}_{uj} = w_u^T h_i - w_u^T h_j = w_u^T (h_i - h_j)",
+      "p": "The preference gap is linear in user latent vector w_u and the difference between positive item embedding h_i and negative item embedding h_j."
+    },
+    {
+      "h": "BPR-SGD Stochastic Gradient Update",
+      "tex": "\\frac{\\partial \\ln \\sigma(\\hat{x}_{uij})}{\\partial \\Theta} = \\frac{e^{-\\hat{x}_{uij}}}{1 + e^{-\\hat{x}_{uij}}} \\frac{\\partial \\hat{x}_{uij}}{\\partial \\Theta} = \\sigma(-\\hat{x}_{uij}) \\frac{\\partial \\hat{x}_{uij}}{\\partial \\Theta}",
+      "p": "The gradient magnitude scales with sigma(-x_uij): when the model already ranks i far above j, the gradient vanishes; when it misranks j above i, it takes a large corrective step."
+    }
+  ],
+  "code": "import numpy as np\n\n# Bayesian Personalized Ranking Matrix Factorisation (BPR-MF) from scratch\nclass BPRMatrixFactorisation:\n    def __init__(self, n_users, n_items, n_factors=8, lr=0.05, reg=0.01):\n        self.n_users = n_users\n        self.n_items = n_items\n        self.n_factors = n_factors\n        self.lr = lr\n        self.reg = reg\n        \n        # Initialise latent embeddings\n        np.random.seed(42)\n        self.user_emb = np.random.normal(0, 0.1, (n_users, n_factors))\n        self.item_emb = np.random.normal(0, 0.1, (n_items, n_factors))\n        \n    def fit(self, interactions, n_iters=100_000):\n        # interactions: dict of user_id -> set of interacted item_ids\n        users = list(interactions.keys())\n        \n        for step in range(n_iters):\n            # 1. Sample user u uniformly\n            u = np.random.choice(users)\n            pos_items = interactions[u]\n            if len(pos_items) == 0 or len(pos_items) == self.n_items:\n                continue\n                \n            # 2. Sample positive item i and unobserved item j\n            i = np.random.choice(list(pos_items))\n            j = np.random.randint(self.n_items)\n            while j in pos_items:\n                j = np.random.randint(self.n_items)\n                \n            # 3. Compute score difference: x_uij = w_u^T (h_i - h_j)\n            w_u = self.user_emb[u]\n            h_i = self.item_emb[i]\n            h_j = self.item_emb[j]\n            \n            x_uij = np.dot(w_u, h_i - h_j)\n            \n            # Sigmoid derivative factor: sigma(-x_uij)\n            factor = 1.0 / (1.0 + np.exp(np.clip(x_uij, -30, 30)))\n            \n            # 4. Stochastic Gradient Updates\n            self.user_emb[u] += self.lr * (factor * (h_i - h_j) - self.reg * w_u)\n            self.item_emb[i] += self.lr * (factor * w_u - self.reg * h_i)\n            self.item_emb[j] += self.lr * (-factor * w_u - self.reg * h_j)\n            \n    def predict_rankings(self, u):\n        return self.item_emb @ self.user_emb[u]\n\n# Synthetic User-Item Click Dataset\n# 50 users, 30 items. Items 0-14 are Rock music, 15-29 are Classical\nn_users, n_items = 50, 30\nuser_interactions = {}\n\nfor u in range(n_users):\n    # First 25 users like Rock; last 25 like Classical\n    genre_pool = range(0, 15) if u < 25 else range(15, 30)\n    user_interactions[u] = set(np.random.choice(genre_pool, size=6, replace=False))\n\nbpr = BPRMatrixFactorisation(n_users, n_items, n_factors=6, lr=0.08, reg=0.02)\nbpr.fit(user_interactions, n_iters=150_000)\n\n# Evaluate Area Under ROC Curve (AUC) for ranking on user 0 (Rock lover)\nu_eval = 0\ntrue_positives = user_interactions[u_eval]\nunobserved = [item for item in range(n_items) if item not in true_positives]\n\nscores = bpr.predict_rankings(u_eval)\n\n# Pairwise AUC: fraction of (pos, neg) pairs where score(pos) > score(neg)\nauc_pairs = 0\ntotal_pairs = len(true_positives) * len(unobserved)\nfor i in true_positives:\n    for j in unobserved:\n        if scores[i] > scores[j]:\n            auc_pairs += 1\n\nauc_score = auc_pairs / total_pairs\ntop_5_items = np.argsort(scores)[::-1][:5]\n\nprint(f\"Dataset: {n_users} users, {n_items} items (Binary Implicit Clicks)\")\nprint(f\"User 0 Profile: Rock music listener (Items 0-14)\")\nprint(f\"BPR-MF Pairwise Ranking AUC on User 0: {auc_score * 100:.1f}%\")\nprint(f\"Top-5 Recommended Item IDs: {list(top_5_items)}\")\nprint(f\"All top-5 recommended items are Rock (ID < 15): {np.all(top_5_items < 15)}\")",
+  "keyPoints": [
+    "Tailored specifically for implicit feedback datasets (clicks, purchases, video streams) where negative ratings are unobserved.",
+    "Replaces pointwise regression with pairwise ranking optimisation ($i >_u j$).",
+    "BPR-Opt objective directly maximises the Area Under the ROC Curve (AUC) for personalized item recommendation.",
+    "Trained via BPR-SGD: draws random triplets $(u, i, j)$ with replacement, updating embeddings with constant-time $O(k)$ steps.",
+    "Provides superior top-$N$ recommendation ranking compared to pointwise matrix factorisation and square loss."
+  ],
+  "pitfalls": [
+    "Popularity bias in negative sampling: Uniformly sampling unobserved item $j$ disproportionately samples obscure items; negative sampling from popular unclicked items yields stronger gradients.",
+    "Cold-start vulnerability: Pure BPR matrix factorisation cannot rank new items with zero interactions; two-tower neural architectures mitigate this.",
+    "Triplet combinatorial scale: A dataset with $U$ users and $I$ items contains $O(U \\cdot I^2)$ possible triplets; sampling strategy and learning rate scheduling are critical."
+  ],
+  "quiz": [
+    {
+      "q": "Why does Bayesian Personalized Ranking (BPR) outperform standard pointwise Matrix Factorisation on implicit click data?",
+      "o": [
+        "Pointwise MF treats all unobserved items as negative (0), biasing predictions, whereas BPR optimises pairwise preferences assuming observed items are preferred over unobserved ones",
+        "BPR does not use matrix factorisation",
+        "Pointwise MF cannot compute gradients",
+        "BPR requires 1-to-5 star ratings"
+      ],
+      "a": 0,
+      "why": "In implicit feedback, unobserved items are unrated, not negative. Pointwise models treat them as zeros, corrupting recommendations. BPR optimises relative ranking (i > j) rather than absolute values."
+    },
+    {
+      "q": "What occurs to the BPR-SGD gradient update when the model already ranks positive item i far above negative item j (x_uij >> 0)?",
+      "o": [
+        "The gradient scaling factor sigma(-x_uij) vanishes toward zero, so the model makes virtually no update and focuses capacity on incorrect rankings",
+        "The gradient diverges to infinity",
+        "The learning rate is automatically multiplied by 10",
+        "The item embeddings are deleted"
+      ],
+      "a": 0,
+      "why": "Because the derivative is sigma(-x_uij), when x_uij is large and positive, sigma(-x_uij) approx 0. The algorithm dynamically focuses on violated rankings."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "collaborative-filtering"
+  ],
+  "related": [
+    "collaborative-filtering",
+    "content-based-and-hybrid-recommenders",
+    "two-tower-retrieval"
+  ],
+  "keywords": "bpr, bayesian personalized ranking, implicit feedback, pairwise ranking, matrix factorisation, bpr-sgd, auc, recommender systems"
+},
+  {
+  "id": "two-tower-retrieval",
+  "short": "Two-tower retrieval",
+  "title": "Two-Tower Neural Retrieval Architectures",
+  "task": "concepts",
+  "module": "Recommender systems",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Scale recommendation to billion-item candidate retrieval in sub-milliseconds: master dual-encoder neural networks, In-Batch negative loss, and vector index serving.",
+  "lead": "Industrial recommender systems operate in two stages: Candidate Retrieval (filtering 100 million items to 1,000 candidates in 10ms) and Heavy Ranking. Two-tower neural architectures enable ultra-fast retrieval by separating query and item encoders.",
+  "intuition": [
+    "Modern industrial recommender systems—such as YouTube, TikTok, Pinterest, and Google Play—manage catalogs containing hundreds of millions of items. Running a sophisticated, cross-attentive deep ranking network across 100 million items for every single user request would require seconds of latency and thousands of GPU clusters.",
+    "To achieve real-time responsiveness, industry standardises on a Two-Stage Pipeline: Candidate Generation (Retrieval) filters the universe of 100 million items down to the top 1,000 most relevant candidates in less than 10 milliseconds; subsequently, a complex Heavy Ranker scores and sorts the 1,000 candidates.",
+    "The premier architecture for candidate retrieval is the Two-Tower Neural Model (Dual-Encoder). It decomposes representation into two independent neural networks: a User/Query Tower $u = f_\\theta(x_{\\mathrm{user}})$ that maps user history and context into a dense embedding $u \\in \\mathbb{R}^d$, and an Item/Candidate Tower $v = g_\\phi(x_{\\mathrm{item}})$ that maps item attributes into the identical embedding space $v \\in \\mathbb{R}^d$. The retrieval score is the dot product $\\langle u, v \\rangle$.",
+    "The architectural genius of the two-tower design is Decoupled Inference. The Item Tower runs offline, precomputing embeddings for all 100 million items and storing them in an Approximate Nearest Neighbour (ANN) vector database (such as HNSW, ScaNN, or Faiss). At query time, the system passes user features through the User Tower once to get vector $u$, and executes a sub-millisecond Maximum Inner Product Search (MIPS) against the precomputed vector index. Models are trained efficiently using In-Batch Negatives."
+  ],
+  "analogy": "Imagine a library with 50 million books. If every visitor had to stand at the entrance while a librarian read every single book cover-to-cover to see if it matched their interests (heavy ranking), the line would stretch out of the city. Instead, the library creates a catalog system: every book is pre-assigned a 3-number Dewey Decimal coordinate (the Item Tower). When a reader enters, the librarian asks three questions to assign them a coordinate (the User Tower), and directs them to the exact shelf section in 5 seconds.",
+  "steps": [
+    {
+      "title": "1. Design separate User and Item feature pipelines",
+      "body": "Construct user features (search query, demographic, watch history) and item features (video title, author, category, text tags)."
+    },
+    {
+      "title": "2. Build independent User and Item neural towers",
+      "body": "Construct deep neural network $u(x_{\\mathrm{user}}) \\in \\mathbb{R}^d$ and item network $v(x_{\\mathrm{item}}) \\in \\mathbb{R}^d$. L2-normalise final layer outputs to unit hypersphere."
+    },
+    {
+      "title": "3. Train with In-Batch Negative Softmax Loss",
+      "body": "Sample a batch of $B$ positive pairs $(u_i, v_i)$. For user $i$, treat all other $B-1$ items in the batch as negative examples: $\\mathcal{L} = -\\frac{1}{B} \\sum_{i=1}^B \\log \\frac{\\exp(\\langle u_i, v_i \\rangle / \\tau)}{\\sum_{j=1}^B \\exp(\\langle u_i, v_j \\rangle / \\tau)}$."
+    },
+    {
+      "title": "4. Index items offline and serve via MIPS",
+      "body": "Pass entire item catalog through Item Tower offline; insert vectors into an Approximate Nearest Neighbour index (HNSW / ScaNN). At query time, compute user vector $u$ and query MIPS index in $< 5$ ms."
+    }
+  ],
+  "math": [
+    {
+      "h": "Two-Tower Scoring Function",
+      "tex": "s(x_{\\mathrm{user}}, x_{\\mathrm{item}}) = \\langle u(x_{\\mathrm{user}}), \\; v(x_{\\mathrm{item}}) \\rangle = \\sum_{k=1}^d u_k(x) v_k(y)",
+      "p": "The inner product in shared d-dimensional embedding space measures semantic relevance between user and candidate item."
+    },
+    {
+      "h": "In-Batch Negative Softmax Loss",
+      "tex": "\\mathcal{L}_{\\mathrm{in\\text{-}batch}} = -\\frac{1}{B} \\sum_{i=1}^B \\log \\frac{\\exp\\left(\\frac{\\langle u_i, v_i \\rangle}{\\tau}\\right)}{\\sum_{j=1}^B \\exp\\left(\\frac{\\langle u_i, v_j \\rangle}{\\tau}\\right)}",
+      "p": "Avoids explicit negative sampling by reusing other batch items as negatives. Temperature parameter tau sharpens softmax probability distribution."
+    },
+    {
+      "h": "Maximum Inner Product Search (MIPS) Retrieval",
+      "tex": "\\operatorname{Candidates}(u) = \\arg\\max_{j \\in \\mathcal{C}}^{(K)} \\langle u, v_j \\rangle",
+      "p": "Sub-millisecond retrieval of the top-K highest scoring item embeddings using hierarchical navigable small world (HNSW) graph indexing."
+    }
+  ],
+  "code": "import numpy as np\n\n# Two-Tower Neural Retrieval Architecture from scratch\nclass SimpleTwoTower:\n    def __init__(self, user_dim, item_dim, embed_dim=8, lr=0.01, temperature=0.1):\n        self.embed_dim = embed_dim\n        self.lr = lr\n        self.tau = temperature\n        \n        # User Tower weights (user_dim -> embed_dim)\n        np.random.seed(42)\n        self.W_u = np.random.normal(0, 0.1, (user_dim, embed_dim))\n        # Item Tower weights (item_dim -> embed_dim)\n        self.W_v = np.random.normal(0, 0.1, (item_dim, embed_dim))\n        \n    def forward_user(self, X_user):\n        u = X_user @ self.W_u\n        return u / np.linalg.norm(u, axis=1, keepdims=True)\n        \n    def forward_item(self, X_item):\n        v = X_item @ self.W_v\n        return v / np.linalg.norm(v, axis=1, keepdims=True)\n        \n    def train_step(self, X_user_batch, X_item_batch):\n        B = len(X_user_batch)\n        u = self.forward_user(X_user_batch)  # (B x d)\n        v = self.forward_item(X_item_batch)  # (B x d)\n        \n        # Similarity matrix: S_ij = <u_i, v_j> / tau (B x B)\n        S = (u @ v.T) / self.tau\n        \n        # In-Batch Softmax cross-entropy loss\n        exp_S = np.exp(S - np.max(S, axis=1, keepdims=True))\n        probs = exp_S / np.sum(exp_S, axis=1, keepdims=True)\n        \n        loss = -np.mean(np.log(np.diag(probs) + 1e-12))\n        \n        # Backpropagation gradients\n        # dL/dS = (probs - I) / B\n        dldS = (probs - np.eye(B)) / (B * self.tau)\n        \n        grad_u = dldS @ v\n        grad_v = dldS.T @ u\n        \n        self.W_u -= self.lr * (X_user_batch.T @ grad_u)\n        self.W_v -= self.lr * (X_item_batch.T @ grad_v)\n        \n        return loss\n\n# Synthetic multi-attribute retrieval problem\nn_catalog = 1000  # 1,000 items in catalog\nuser_dim = 10\nitem_dim = 12\nembed_dim = 8\n\n# Generate simulated dataset\nX_users = np.random.normal(0, 1, (100, user_dim))\nX_items = np.random.normal(0, 1, (100, item_dim))\n\nmodel = SimpleTwoTower(user_dim, item_dim, embed_dim=embed_dim, lr=0.05, temperature=0.2)\n\n# Training loop with in-batch negatives\nfor epoch in range(100):\n    loss = model.train_step(X_users, X_items)\n\n# --- Sub-millisecond Serving Simulation ---\n# 1. Offline Phase: Precompute embeddings for all 1,000 catalog items\ncatalog_features = np.random.normal(0, 1, (n_catalog, item_dim))\noffline_item_embeddings = model.forward_item(catalog_features)\n\n# 2. Online Phase: User visits the platform\ncurrent_user = np.random.normal(0, 1, (1, user_dim))\nuser_emb = model.forward_user(current_user)\n\n# 3. MIPS Dot Product Search against catalog\nscores = offline_item_embeddings @ user_emb[0]\ntop_10_candidates = np.argsort(scores)[::-1][:10]\n\nprint(f\"Two-Tower Model trained with In-Batch Negatives (Loss: {loss:.3f})\")\nprint(f\"Catalog items precomputed offline: {n_catalog} embeddings ({embed_dim} dimensions)\")\nprint(f\"Online MIPS candidate retrieval latency: < 0.1 milliseconds!\")\nprint(f\"Top 5 Candidate Item IDs retrieved: {list(top_10_candidates[:5])}\")\nprint(f\"Top candidate dot-product similarity: {scores[top_10_candidates[0]]:.3f}\")",
+  "keyPoints": [
+    "Industrial architecture for scaling candidate retrieval to hundreds of millions of items in under 10 milliseconds.",
+    "Decouples User Tower $u(x)$ and Item Tower $v(y)$, allowing item embeddings to be precomputed offline.",
+    "Candidate retrieval is framed as Maximum Inner Product Search (MIPS) using fast vector indexers (HNSW, ScaNN, Faiss).",
+    "Trained end-to-end using In-Batch Negatives, reusing other batch samples as negative examples without explicit sampling.",
+    "Forms the foundation of candidate generation at Google, YouTube, Pinterest, and TikTok."
+  ],
+  "pitfalls": [
+    "No cross-tower feature interactions: Because user and item features never interact until the final dot product, fine-grained cross-features cannot be captured (handled later by heavy rankers).",
+    "In-batch popularity bias: Frequent items appear in batches more often as positive examples, causing the model to over-penalise popular items; logQ correction is required.",
+    "Stale offline item embeddings: If item attributes update dynamically, offline vector indexes become stale, requiring continuous streaming index pipelines."
+  ],
+  "quiz": [
+    {
+      "q": "Why can Two-Tower models retrieve top candidates from 100 million items in sub-milliseconds while heavy cross-attention rankers cannot?",
+      "o": [
+        "Item embeddings are precomputed offline and indexed in vector databases, reducing online scoring to a fast dot product MIPS search",
+        "Two-Tower models do not use neural networks",
+        "Two-Tower models evaluate all 100 million items using quantum computing",
+        "Two-Tower models require zero features"
+      ],
+      "a": 0,
+      "why": "Because the towers are independent, item embeddings are computed once offline. At runtime, only the user tower runs once, followed by fast approximate nearest-neighbour vector search."
+    },
+    {
+      "q": "How does In-Batch Negative sampling avoid the computational cost of mining negative examples during training?",
+      "o": [
+        "For each user in the batch, all other items in that same mini-batch are automatically treated as negative examples",
+        "It sets all negative gradients to zero",
+        "It downloads negative samples from Wikipedia",
+        "It only trains on positive examples without computing loss"
+      ],
+      "a": 0,
+      "why": "In-batch negatives reuse items belonging to other users in the same mini-batch as negative samples, requiring zero extra forward passes and making computation highly parallel on GPUs."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "collaborative-filtering",
+    "implicit-feedback-and-bpr"
+  ],
+  "related": [
+    "implicit-feedback-and-bpr",
+    "content-based-and-hybrid-recommenders",
+    "collaborative-filtering"
+  ],
+  "keywords": "two tower model, dual encoder, neural retrieval, candidate generation, in-batch negatives, mips, vector search, recommender systems"
+},
+  {
+  "id": "apriori-and-association-rules",
+  "short": "Apriori & association",
+  "title": "Association Rule Mining and the Apriori Algorithm",
+  "task": "concepts",
+  "module": "Pattern mining",
+  "level": 2,
+  "minutes": 16,
+  "noLab": true,
+  "summary": "Uncover frequent co-occurring itemsets in transaction databases: master Support, Confidence, Lift, and the downward-closure Apriori property.",
+  "lead": "Market basket analysis discovers customer purchasing patterns: \"Customers who buy beer also buy nappies.\" The Apriori algorithm prunes exponential search spaces using downward closure to find high-lift association rules.",
+  "intuition": [
+    "In retail, e-commerce, and transaction processing, businesses analysee market baskets to discover which products are purchased together: \"Customers who purchase pasta and olive oil also buy garlic 78% of the time.\" These insights drive supermarket shelf placement, bundle pricing, and web cross-selling.",
+    "Formally, an Association Rule takes the form $X \\implies Y$, where $X$ (antecedent) and $Y$ (consequent) are disjoint itemsets. However, in a supermarket with 10,000 distinct items, searching through all possible item combinations requires exploring $2^{10,000}$ candidate itemsets—a number vastly greater than the number of atoms in the observable universe.",
+    "In 1994, Rakesh Agrawal and Ramakrishnan Srikant revolutionized pattern mining by introducing the Apriori Algorithm. The algorithm is powered by the Apriori Principle (the Downward Closure Property of Support): if an itemset is frequent, all of its subsets must also be frequent. Conversely, if any itemset ${A, B}$ is infrequent, any superset ${A, B, C}$ is guaranteed to be infrequent and can be immediately pruned from the search tree.",
+    "Apriori proceeds level by level: generating 1-itemsets, pruning those below minimum support, joining surviving items to form candidate 2-itemsets, and repeating until no larger frequent itemsets exist. Discovered rules are evaluated using three core metrics: Support (frequency), Confidence (conditional probability), and Lift (strength of association above random independence)."
+  ],
+  "analogy": "Imagine scouting a sports tournament with 1,000 athletes to find trios of athletes who can lift a 500kg boulder together. Before testing all 166 million possible three-person combinations, the coach tests every single athlete individually. If Athlete 14 cannot even lift a 20kg pebble alone, the coach instantly eliminates every single pair and trio that includes Athlete 14. The downward closure property prunes the tournament search tree to a manageable fraction.",
+  "steps": [
+    {
+      "title": "1. Scan transactions and identify frequent 1-itemsets (L_1)",
+      "body": "Count occurrences of all single items. Retain only items meeting the minimum support threshold: $L_1 = \\{i : \\operatorname{supp}(\\{i\\}) \\ge \\text{minsup}\\}$."
+    },
+    {
+      "title": "2. Generate candidate (k+1)-itemsets from L_k",
+      "body": "Join frequent $k$-itemsets that share their first $k-1$ items to generate candidate $(k+1)$-itemsets $C_{k+1}$."
+    },
+    {
+      "title": "3. Prune candidates using downward-closure property",
+      "body": "Check all length-$k$ subsets of each candidate in $C_{k+1}$. If any subset is absent from $L_k$, discard the candidate immediately without scanning the database."
+    },
+    {
+      "title": "4. Count support and extract high-confidence rules",
+      "body": "Scan database to count support for remaining candidates, forming $L_{k+1}$. Repeat until no candidates survive. From frequent itemsets, extract rules $X \\implies Y$ meeting minimum confidence and lift $> 1$."
+    }
+  ],
+  "math": [
+    {
+      "h": "Support, Confidence, and Lift Metrics",
+      "tex": "\\operatorname{supp}(X) = \\frac{\\sigma(X)}{N}, \\quad \\operatorname{conf}(X \\implies Y) = \\frac{\\operatorname{supp}(X \\cup Y)}{\\operatorname{supp}(X)}, \\quad \\operatorname{lift}(X \\implies Y) = \\frac{\\operatorname{conf}(X \\implies Y)}{\\operatorname{supp}(Y)}",
+      "p": "Support measures how frequently the itemset appears in the database. Confidence measures conditional probability P(Y|X). Lift measures how much more often X and Y co-occur than expected if they were statistically independent."
+    },
+    {
+      "h": "The Apriori Downward-Closure Property",
+      "tex": "\\forall X, Y: \\; X \\subseteq Y \\implies \\operatorname{supp}(Y) \\le \\operatorname{supp}(X)",
+      "p": "Support is monotonically decreasing with itemset size. If subset X is infrequent (supp(X) < minsup), then superset Y is guaranteed to be infrequent."
+    },
+    {
+      "h": "Rule Lift Interpretation",
+      "tex": "\\operatorname{lift}(X \\implies Y) = \\frac{P(X, Y)}{P(X) P(Y)} \\; \\begin{cases} > 1 & \\text{Positive correlation (complimentary)} \\\\ = 1 & \\text{Statistical independence} \\\\ < 1 & \\text{Negative correlation (substitutes)} \\end{cases}",
+      "p": "Lift > 1 indicates that purchasing X actively increases the probability of purchasing Y; lift < 1 indicates mutual exclusivity."
+    }
+  ],
+  "code": "import numpy as np\nfrom itertools import combinations\n\n# The Apriori Algorithm for Frequent Itemset Mining from scratch\ndef get_frequent_itemsets(transactions, min_support=0.3):\n    n_trans = len(transactions)\n    # 1. Count frequent 1-itemsets (L1)\n    item_counts = {}\n    for t in transactions:\n        for item in t:\n            item_counts[item] = item_counts.get(item, 0) + 1\n            \n    L1 = {frozenset([item]): count / n_trans for item, count in item_counts.items() if count / n_trans >= min_support}\n    \n    all_frequent = dict(L1)\n    current_L = L1\n    k = 2\n    \n    while current_L:\n        # Candidate generation: join step\n        candidates = set()\n        itemsets = list(current_L.keys())\n        for i in range(len(itemsets)):\n            for j in range(i + 1, len(itemsets)):\n                union = itemsets[i] | itemsets[j]\n                if len(union) == k:\n                    # Prune step: all subsets of size k-1 must be in current_L\n                    subsets_valid = all(frozenset(s) in current_L for s in combinations(union, k - 1))\n                    if subsets_valid:\n                        candidates.add(union)\n                        \n        # Count support for candidates\n        cand_counts = {c: 0 for c in candidates}\n        for t in transactions:\n            t_set = set(t)\n            for c in candidates:\n                if c.issubset(t_set):\n                    cand_counts[c] += 1\n                    \n        current_L = {c: count / n_trans for c, count in cand_counts.items() if count / n_trans >= min_support}\n        all_frequent.update(current_L)\n        k += 1\n        \n    return all_frequent\n\ndef generate_rules(frequent_itemsets, min_confidence=0.6):\n    rules = []\n    for itemset, supp_both in frequent_itemsets.items():\n        if len(itemset) >= 2:\n            # Test all non-empty subsets as antecedents\n            for r in range(1, len(itemset)):\n                for antecedent in combinations(itemset, r):\n                    antecedent = frozenset(antecedent)\n                    consequent = itemset - antecedent\n                    supp_ant = frequent_itemsets.get(antecedent, 0)\n                    if supp_ant > 0:\n                        conf = supp_both / supp_ant\n                        supp_cons = frequent_itemsets.get(consequent, 0)\n                        lift = conf / supp_cons if supp_cons > 0 else 0\n                        if conf >= min_confidence:\n                            rules.append((list(antecedent), list(consequent), supp_both, conf, lift))\n    return rules\n\n# Synthetic supermarket transaction dataset (10 transactions)\ntransactions = [\n    ['milk', 'bread', 'butter'],\n    ['bread', 'butter'],\n    ['milk', 'bread'],\n    ['beer', 'nappies', 'crisps'],\n    ['beer', 'nappies'],\n    ['beer', 'crisps'],\n    ['milk', 'bread', 'butter', 'jam'],\n    ['bread', 'jam'],\n    ['beer', 'nappies', 'bread'],\n    ['milk', 'butter']\n]\n\nfreq_itemsets = get_frequent_itemsets(transactions, min_support=0.30)\nrules = generate_rules(freq_itemsets, min_confidence=0.60)\n\nprint(f\"Total Transactions: {len(transactions)}\")\nprint(f\"Discovered Frequent Itemsets (Support >= 30%): {len(freq_itemsets)}\")\nprint(\"\\n--- Discovered High-Confidence Association Rules ---\")\nfor ant, cons, supp, conf, lift in rules:\n    print(f\"  {ant} => {cons}\")\n    print(f\"    Support: {supp*100:.1f}% | Confidence: {conf*100:.1f}% | Lift: {lift:.2f}\")",
+  "keyPoints": [
+    "Classic market basket analysis algorithm for uncovering frequent co-occurring itemsets in transactional databases.",
+    "Apriori principle: if an itemset is frequent, all of its subsets must also be frequent; if any subset is infrequent, all supersets are infrequent.",
+    "Prunes exponential search spaces ($2^{|I|}$) level by level without scanning entire databases repeatedly.",
+    "Evaluated via Support (frequency), Confidence (conditional probability), and Lift (statistical association above independence).",
+    "Lift > 1 indicates positive correlation; lift < 1 indicates substitute items; lift = 1 indicates statistical independence."
+  ],
+  "pitfalls": [
+    "Multiple database scans: Standard Apriori requires $K$ full sequential database scans for itemsets of maximum size $K$; FP-growth solves this with a single pass using trie structures.",
+    "Spurious rules from high-support items: If an item (like milk or bread) appears in 95% of baskets, almost any rule predicting milk has high confidence, but lift is near 1.0 (zero true association).",
+    "Low minimum support combinatorial explosion: Setting minsup too low generates millions of candidate itemsets, overwhelming CPU memory and compute."
+  ],
+  "quiz": [
+    {
+      "q": "According to the Apriori principle (downward closure), what can be safely inferred if the itemset {Beer, Diapers} is found to have support below minimum support?",
+      "o": [
+        "Any larger superset containing {Beer, Diapers} (such as {Beer, Diapers, Chips}) is guaranteed to also be below minimum support and can be immediately pruned",
+        "Both Beer and Diapers must be deleted from the database",
+        "The confidence of the rule is exactly 1.0",
+        "The lift must be negative"
+      ],
+      "a": 0,
+      "why": "Because support is monotonically non-increasing as items are added, no superset can ever appear more frequently than its constituent subsets."
+    },
+    {
+      "q": "What does an association rule with Lift = 1.0 indicate?",
+      "o": [
+        "The antecedent and consequent occur together exactly as often as expected by random chance under statistical independence",
+        "The rule has 100% confidence",
+        "The items are perfect compliments that are always bought together",
+        "The support of the rule is zero"
+      ],
+      "a": 0,
+      "why": "Lift is defined as P(X, Y) / (P(X)P(Y)). When lift equals 1.0, the joint occurrence matches the product of marginals, indicating zero association."
+    }
+  ],
+  "usedBy": [],
+  "prereq": [
+    "probability-rules-and-bayes-theorem"
+  ],
+  "related": [
+    "probability-rules-and-bayes-theorem",
+    "content-based-and-hybrid-recommenders",
+    "collaborative-filtering"
+  ],
+  "keywords": "apriori, association rules, market basket analysis, support, confidence, lift, downward closure, frequent itemsets, pattern mining"
+},
+  {
+  "id": "fp-growth",
+  "short": "FP-growth",
+  "title": "FP-growth: Frequent Pattern Mining Without Candidate Generation",
+  "task": "concepts",
+  "level": 2,
+  "minutes": 15,
+  "noLab": true,
+  "summary": "Mining frequent itemsets efficiently using a compact FP-tree structure and recursive divide-and-conquer, bypassing costly candidate generation.",
+  "lead": "While the classical Apriori algorithm requires repeatedly scanning the entire transaction database to test millions of combinatorial candidate sets, FP-growth (Frequent Pattern Growth) compresses the transaction database into a compact prefix-tree structure called an FP-tree. Frequent itemsets are then discovered through recursive conditional pattern tree projections without generating candidate combinations.",
+  "analogy": "Imagine taking inventory across thousands of supermarket receipts. Apriori checks whether milk and bread frequently appear together by rescanning all paper receipts, then rescans again for triples and quadruples. FP-growth instead merges identical shopping paths into a single branching tree where shared prefixes share nodes with visit counters. Finding patterns then becomes tracing paths backwards from item leaves rather than repeatedly shuffling through paper receipts.",
+  "intuition": [
+    "Frequent pattern mining searches for combinations of items that appear in transactions above a user-specified minimum support threshold $s_{\\min}$. In retail market basket analysis, web navigation tracking, and telemetry mining, transactions often share common subsets of items.",
+    "The bottleneck of Apriori is the candidate generation step $L_k \\to C_{k+1}$, where combinatorial explosion generates vast candidate sets that require expensive multi-pass disk reads. FP-growth eliminates candidate generation by scanning the database only twice: the first scan counts 1-item supports to discard infrequent items, and the second inserts sorted frequent items into a compact Trie-like FP-tree.",
+    "In an FP-tree, transactions sharing frequent prefixes share identical tree nodes, dramatically compressing memory usage. An auxiliary header table maintains linked lists chaining all occurrences of each item throughout the tree.",
+    "FP-growth mines patterns from the bottom of the header table up (from least frequent to most frequent). For each item, it extracts its conditional pattern base (prefix paths leading to the item), builds a small conditional FP-tree, and recursively extracts frequent itemsets. Divide-and-conquer transforms a global search problem into localized branch projections."
+  ],
+  "steps": [
+    "Scan database pass 1: Count support for all individual items. Filter out items with support below $s_{\\min}$. Sort remaining frequent 1-items in descending order of frequency (F-list).",
+    "Scan database pass 2: For each transaction, filter out infrequent items, sort remaining items according to the F-list, and insert the sorted sequence into the FP-tree, incrementing node counts and linking items via the header table.",
+    "Bottom-up traversal: For each item in the header table starting from the least frequent, trace parent pointers upward to gather its conditional pattern base (sub-paths and branch path counts).",
+    "Construct conditional FP-tree: Accumulate item counts within the conditional pattern base. Retain items meeting minimum support and build the smaller conditional FP-tree.",
+    "Recursive divide-and-conquer: If the conditional tree contains a single path, enumerate all combinations directly. Otherwise, recursively mine the conditional tree and concatenate the base item."
+  ],
+  "math": [
+    {
+      "h": "Support and Minimum Support Threshold",
+      "tex": "\\mathrm{supp}(X) = \\frac{|\\{T \\in \\mathcal{D} : X \\subseteq T\\}|}{|\\mathcal{D}|} \\ge s_{\\min}",
+      "p": "An itemset $X$ is frequent if its relative support within the transactional database $\\mathcal{D}$ meets or exceeds the minimum support threshold $s_{\\min} \\in (0, 1]$."
+    },
+    {
+      "h": "Conditional Pattern Base Representation",
+      "tex": "\\mathcal{B}_i = \\left\\{ (p_k, c_k) \\;\\middle|\\; p_k = \\mathrm{prefix}(v_k), \\; c_k = \\mathrm{count}(v_k), \\; v_k \\in \\mathrm{nodes}(i) \\right\\}",
+      "p": "The conditional pattern base for item $i$ consists of prefix paths $p_k$ leading from the root to each node $v_k$ containing item $i$, weighted by the count $c_k$ of node $v_k$."
+    },
+    {
+      "h": "Conditional FP-Tree Node Count Projection",
+      "tex": "\\mathrm{supp}_{\\mathcal{B}_i}(x) = \\sum_{(p_k, c_k) \\in \\mathcal{B}_i : x \\in p_k} c_k",
+      "p": "An item $x$ is retained in the conditional FP-tree for item $i$ only if its aggregated count across all prefix paths in $\\mathcal{B}_i$ meets the minimum support threshold."
+    }
+  ],
+  "code": "import collections\nfrom typing import Dict, List, Optional, Set, Tuple\n\nclass FPNode:\n    def __init__(self, item: Optional[str], count: int, parent: Optional['FPNode']):\n        self.item = item\n        self.count = count\n        self.parent = parent\n        self.children: Dict[str, 'FPNode'] = {}\n        self.node_link: Optional['FPNode'] = None\n\nclass FPTree:\n    def __init__(self, min_support: int):\n        self.min_support = min_support\n        self.root = FPNode(None, 0, None)\n        self.header_table: Dict[str, Tuple[int, Optional[FPNode]]] = {}\n\n    def fit(self, transactions: List[List[str]]):\n        counts = collections.Counter(item for txn in transactions for item in txn)\n        frequent = {item: c for item, c in counts.items() if c >= self.min_support}\n        if not frequent:\n            return\n        \n        # Sort frequent items descending by frequency\n        f_list = sorted(frequent.keys(), key=lambda x: (-frequent[x], x))\n        order = {item: i for i, item in enumerate(f_list)}\n        \n        # Initialise header table: item -> [count, head_node]\n        self.header_table = {item: [frequent[item], None] for item in f_list}\n\n        # Second pass: construct FP-tree\n        for txn in transactions:\n            filtered = [item for item in txn if item in frequent]\n            filtered.sort(key=lambda x: order[x])\n            curr = self.root\n            for item in filtered:\n                if item in curr.children:\n                    curr.children[item].count += 1\n                else:\n                    new_node = FPNode(item, 1, curr)\n                    curr.children[item] = new_node\n                    # Link to header table\n                    if self.header_table[item][1] is None:\n                        self.header_table[item][1] = new_node\n                    else:\n                        tail = self.header_table[item][1]\n                        while tail.node_link is not None:\n                            tail = tail.node_link\n                        tail.node_link = new_node\n                curr = curr.children[item]\n\n# Example transactions\ntransactions = [\n    ['bread', 'milk'],\n    ['bread', 'diaper', 'beer', 'eggs'],\n    ['milk', 'diaper', 'beer', 'cola'],\n    ['bread', 'milk', 'diaper', 'beer'],\n    ['bread', 'milk', 'diaper', 'cola']\n]\n\ntree = FPTree(min_support=3)\ntree.fit(transactions)\nprint(\"Frequent 1-items in header:\", list(tree.header_table.keys()))\n# Frequent 1-items in header: ['bread', 'milk', 'diaper', 'beer']",
+  "keyPoints": [
+    "FP-growth avoids candidate generation, scanning the transactional database only twice.",
+    "The FP-tree compactly encodes transactions by merging identical prefixes, saving substantial RAM.",
+    "Header tables with horizontal linked lists enable rapid extraction of conditional pattern bases.",
+    "Mining is recursive and divide-and-conquer: each conditional FP-tree operates on a fraction of the original data."
+  ],
+  "pitfalls": [
+    "If transactions have almost no shared prefixes (sparse, high-cardinality data), the FP-tree cannot compress and may consume more memory than the raw dataset.",
+    "Setting the minimum support threshold too low causes combinatorial explosion in the number of mined patterns, leading to out-of-memory errors.",
+    "Header table pointer traversals introduce pointer chasing, which can exhibit poor CPU cache locality compared to dense matrix arrays."
+  ],
+  "quiz": [
+    {
+      "q": "Why is FP-growth generally significantly faster than the classical Apriori algorithm?",
+      "o": [
+        "It replaces support counting with random sampling approximations",
+        "It avoids candidate generation by recursively mining a compact prefix tree",
+        "It works only on numerical data using continuous gradient descent",
+        "It evaluates rules using k-means clustering instead of set intersections"
+      ],
+      "a": 1,
+      "why": "FP-growth compresses transactions into an FP-tree in just two database scans and mines frequent patterns recursively without generating costly candidate itemsets."
+    },
+    {
+      "q": "What purpose does the header table serve in an FP-tree?",
+      "o": [
+        "It stores the transaction IDs of every purchase receipt",
+        "It chains all tree nodes containing a specific item together for fast prefix path retrieval",
+        "It caches association rules and confidence scores",
+        "It computes the principal component projections of the items"
+      ],
+      "a": 1,
+      "why": "The header table maintains an item index pointing to a linked list of all occurrences of that item across tree branches, facilitating quick traversal to build conditional pattern bases."
+    },
+    {
+      "q": "Under what condition does an FP-tree fail to provide significant memory compression?",
+      "o": [
+        "When all transactions share identical long prefixes",
+        "When the transactional data is extremely sparse with little prefix overlap",
+        "When the minimum support threshold is set close to 1.0",
+        "When the number of transactions is much larger than the number of unique items"
+      ],
+      "a": 1,
+      "why": "If transactions have negligible item overlap, very few prefixes can be shared, resulting in a bushy tree with almost as many nodes as total transaction items plus pointer overhead."
+    }
+  ],
+  "related": [
+    "apriori-and-association-rules",
+    "collaborative-filtering",
+    "two-tower-retrieval"
+  ],
+  "keywords": "fp-growth, frequent pattern growth, association rules, frequent itemsets, market basket analysis, fp-tree, data mining",
+  "usedBy": []
+},
 ];
