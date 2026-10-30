@@ -3637,4 +3637,639 @@ print(f"Cramér's V:      {cramers_v:.3f} (moderate association)")`,
     ],
     keywords: "likelihood ratio test wald test score test lagrange multiplier rao test wilks theorem holy trinity hypothesis testing"
   },
+  {
+    id: 'entropy-and-cross-entropy',
+    short: 'Entropy and Cross-Entropy',
+    title: r`Entropy and Cross-Entropy`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Quantify information content, uncertainty and coding cost with Shannon entropy, and optimise probabilistic classifiers using cross-entropy loss.`,
+    lead: r`Information theory formalises uncertainty by measuring how many bits are required to encode events drawn from a probability distribution. Shannon entropy quantifies the intrinsic unpredictability of a system, while cross-entropy measures the expected coding length when events from a true distribution are encoded using an estimated model. Cross-entropy serves as the standard loss function for training modern classification models and neural networks.`,
+    intuition: [
+      r`Imagine receiving daily weather forecasts for the Sahara Desert in July, where it is sunny 99% of days and rains 1%. A message stating "Tomorrow will be sunny" carries almost zero surprise—you could have guessed it with 99% accuracy before opening the email. But a message stating "Tomorrow will rain" carries enormous surprise and high information value.`,
+      r`Claude Shannon formalised this in 1948: an event with probability $p$ yields surprise (information content) proportional to $\log_2(1/p) = -\log_2(p)$ bits. A fair coin flip has $p = 0.5$, providing exactly $-\log_2(0.5) = 1$ bit of surprise. The expected surprise over all possible outcomes is the distribution's entropy $H(P)$. For a fair coin, entropy is $1.0$ bit (maximum uncertainty for two states). For a heavily biased coin with 90% heads and 10% tails, entropy drops to $-0.90\log_2(0.90) - 0.10\log_2(0.10) \approx 0.469$ bits. If a coin lands heads 100% of the time, entropy is $0$ bits—complete certainty.`,
+      r`Now suppose the true coin has $P(\text{Heads}) = 0.90$, but a machine learning model predicts $Q(\text{Heads}) = 0.60$. If we design a communication code optimised for the model's beliefs $Q$, the average number of bits required to transmit outcomes from reality $P$ is the cross-entropy $H(P, Q) = -0.90\log_2(0.60) - 0.10\log_2(0.40) \approx 0.796$ bits. Notice that $0.796 > 0.469$: using the wrong probability model wastes $0.327$ bits per message. Minimising cross-entropy forces the model $Q$ to match ground reality $P$.`,
+    ],
+    analogy: r`Entropy is the minimum storage space required to pack an uncompressed file; cross-entropy is the actual storage consumed when you compress the file using a compression dictionary tailored for a different language.`,
+    steps: [
+      r`Define a discrete probability distribution $P$ over $K$ outcomes, ensuring non-negativity and $\sum p_k = 1$.`,
+      r`Compute Shannon information content for each event: $I(x) = -\log_2(p(x))$ bits (or nats using natural logarithm).`,
+      r`Calculate Shannon entropy $H(P) = -\sum p(x) \log p(x)$ as the expected information content across the distribution.`,
+      r`For classification models predicting probabilities $Q$, compute cross-entropy $H(P, Q) = -\sum p(x) \log q(x)$.`,
+      r`For one-hot ground truth labels where $p_c = 1$ for true class $c$, simplify cross-entropy to the negative log-likelihood $-\log q_c$.`,
+      r`Compute gradients of cross-entropy loss with respect to model logits to train neural networks via gradient descent.`,
+    ],
+    math: [
+      {
+        h: 'Shannon Entropy',
+        tex: r`$$H(P) = -\sum_{x \in \mathcal{X}} P(x) \log_2 P(x) = E_P[-\log_2 P(X)]$$`,
+        p: r`Here $P(x)$ is the probability mass function. When using base 2 logarithm, entropy is measured in bits (shannons); when using natural logarithm $\ln$, it is measured in nats. For $K$ discrete outcomes, entropy is bounded: $0 \le H(P) \le \log_2 K$, achieving zero for deterministic events and maximum entropy for a uniform distribution.`,
+      },
+      {
+        h: 'Cross-Entropy',
+        tex: r`$$H(P, Q) = -\sum_{x \in \mathcal{X}} P(x) \log_2 Q(x) = E_P[-\log_2 Q(X)]$$`,
+        p: r`Here $P(x)$ is the true reference distribution and $Q(x)$ is the approximating model distribution. Cross-entropy quantifies the average number of bits required to encode data from $P$ when using an encoding scheme optimised for $Q$. By Gibbs' inequality, $H(P, Q) \ge H(P)$, with equality if and only if $Q = P$.`,
+      },
+      {
+        h: 'Categorical Cross-Entropy Loss in Machine Learning',
+        tex: r`$$\mathcal{L}_{\text{CE}} = -\sum_{k=1}^K y_k \ln \hat{y}_k = -\ln \hat{y}_{\text{true}}$$`,
+        p: r`In supervised classification, the ground truth distribution $\mathbf{y}$ is a one-hot vector where $y_c = 1$ for the true class and $y_k = 0$ for all $k \ne c$. Cross-entropy simplifies directly to the negative log-likelihood of the true class under model softmax predictions $\hat{\mathbf{y}}$, establishing that minimising cross-entropy is equivalent to maximum likelihood estimation.`,
+      },
+    ],
+    keyPoints: [
+      r`Entropy measures the fundamental unpredictability of a probability distribution; uniform distributions maximise entropy, while deterministic outcomes minimise it to zero.`,
+      r`Cross-entropy measures the expected coding length when reality follows $P$ but messages are compressed using a model distribution $Q$.`,
+      r`In machine learning, minimising cross-entropy loss is mathematically identical to maximising the likelihood of the training labels.`,
+      r`The difference between cross-entropy and entropy is the Kullback–Leibler divergence: $H(P, Q) = H(P) + D_{\text{KL}}(P \parallel Q)$.`,
+    ],
+    pitfalls: [
+      r`Taking the logarithm of zero when model predicted probabilities reach exact 0.0; always clamp probabilities with an epsilon $\epsilon \approx 10^{-15}$.`,
+      r`Mixing up base 2 logarithms (bits) with natural logarithms (nats); machine learning libraries universally compute losses in nats.`,
+      r`Confusing entropy with variance: high-variance continuous variables can have low differential entropy if concentrated into disjoint sharp spikes.`,
+      r`Assuming cross-entropy is symmetric: $H(P, Q) \ne H(Q, P)$ because expectations are taken with respect to different reference distributions.`,
+    ],
+    code: r`import numpy as np
+
+# True distribution P vs approximating model Q
+p = np.array([0.70, 0.20, 0.10])
+q = np.array([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0])
+
+# Shannon entropy H(P) in bits
+entropy_p = -np.sum(p * np.log2(p))
+
+# Cross-entropy H(P, Q) in bits
+cross_entropy_pq = -np.sum(p * np.log2(q))
+divergence_bits = cross_entropy_pq - entropy_p
+
+# Binary cross-entropy in nats (standard ML classification loss)
+y_true = np.array([1, 0, 1, 1])
+y_prob = np.array([0.92, 0.15, 0.78, 0.65])
+bce = -np.mean(y_true * np.log(y_prob) + (1 - y_true) * np.log(1.0 - y_prob))
+
+print(f"Entropy H(P):         {entropy_p:.4f} bits")
+print(f"Cross-Entropy H(P,Q): {cross_entropy_pq:.4f} bits")
+print(f"Excess code length:   {divergence_bits:.4f} bits")
+print(f"Sample Binary CE loss: {bce:.4f} nats")`,
+    quiz: [
+      {
+        q: r`What probability distribution over $K$ discrete outcomes achieves the maximum possible Shannon entropy?`,
+        o: [
+          r`A deterministic distribution with probability 1.0 on a single state`,
+          r`A uniform distribution where every outcome has probability $1/K$`,
+          r`A Poisson distribution`,
+          r`A Gaussian distribution`,
+        ],
+        a: 1,
+        why: r`When all $K$ outcomes are equally likely, uncertainty is maximised and entropy reaches its upper bound $H(P) = \log_2 K$.`,
+      },
+      {
+        q: r`Why is minimising categorical cross-entropy the standard objective for training classification neural networks?`,
+        o: [
+          r`Because cross-entropy ignores incorrect predictions`,
+          r`Because minimising cross-entropy is mathematically equivalent to maximising the log-likelihood of the true classes`,
+          r`Because cross-entropy is always strictly negative`,
+          r`Because it eliminates the need for gradient descent`,
+        ],
+        a: 1,
+        why: r`For one-hot target vectors, cross-entropy reduces to $-\ln \hat{y}_{\text{true}}$, which is the negative log-likelihood. Minimising it is exact maximum likelihood estimation.`,
+      },
+      {
+        q: r`What is the relationship connecting entropy $H(P)$, cross-entropy $H(P, Q)$, and Kullback–Leibler divergence $D_{\text{KL}}(P \parallel Q)$?`,
+        o: [
+          r`$H(P, Q) = H(P) + D_{\text{KL}}(P \parallel Q)$`,
+          r`$H(P, Q) = H(P) - D_{\text{KL}}(P \parallel Q)$`,
+          r`$D_{\text{KL}}(P \parallel Q) = H(P) \times H(P, Q)$`,
+          r`$H(P) = H(P, Q) + D_{\text{KL}}(P \parallel Q)$`,
+        ],
+        a: 0,
+        why: r`Cross-entropy decomposes into the intrinsic entropy of reality $H(P)$ plus the inefficiency penalty $D_{\text{KL}}(P \parallel Q)$ caused by approximating $P$ with $Q$.`,
+      },
+      {
+        q: r`If a fair coin flip has entropy $H = 1.0$ bit, what is the entropy of a completely rigged coin that always lands heads?`,
+        o: [
+          r`0.5 bits`,
+          r`0 bits`,
+          r`-1.0 bit`,
+          r`Infinite bits`,
+        ],
+        a: 1,
+        why: r`When an outcome is certain ($p = 1$), there is zero surprise: $-1 \log_2(1) = 0$ bits.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'decision_tree_classifier'],
+    prereq: ['random-variables-and-distributions', 'probability-rules-and-bayes-theorem'],
+    related: ['kl-divergence', 'jensen-shannon-divergence', 'loss-functions'],
+    keywords: 'entropy cross-entropy shannon information theory bits nats log-loss surprise uncertainty negative log-likelihood',
+  },
+  {
+    id: 'kl-divergence',
+    short: 'Kullback–Leibler Divergence',
+    title: r`KL Divergence`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 2,
+    minutes: 17,
+    noLab: true,
+    summary: r`Measure the informational divergence and excess code length between probability distributions with relative entropy.`,
+    lead: r`How much information is lost when an estimated probability distribution is substituted for ground truth? The Kullback–Leibler (KL) divergence, or relative entropy, quantifies the asymmetric statistical distance between two probability distributions over the same sample space. It acts as the mathematical cornerstone of variational autoencoders, Bayesian inference, and modern policy gradient reinforcement learning algorithms.`,
+    intuition: [
+      r`Imagine transmitting messages about daily financial market movements where the true probabilities are 70% Bull market, 20% Neutral, and 10% Bear market ($P = [0.70, 0.20, 0.10]$). The optimal Shannon code length for these true states requires an average of $H(P) = -0.7\log_2(0.7) - 0.2\log_2(0.2) - 0.1\log_2(0.1) \approx 1.157$ bits per message.`,
+      r`Now suppose an inexperienced analyst assumes a uniform prior, believing all three outcomes are equally likely at 33.3% each ($Q = [1/3, 1/3, 1/3]$). If you build your transmission code using the analyst's uniform model $Q$, each outcome requires $-\log_2(1/3) \approx 1.585$ bits. When reality sends messages drawn from $P$, the expected message length is $1.585$ bits.`,
+      r`The excess storage wasted per transmission is $1.585 - 1.157 = 0.428$ bits. This exact excess cost—the penalty for using an incorrect distribution $Q$ instead of true distribution $P$—is the Kullback–Leibler divergence $D_{\text{KL}}(P \parallel Q)$. Notice what happens if we reverse the roles: if reality were uniform $Q$, but we mistakenly coded with the analyst's skewed beliefs $P$, the penalty would be $D_{\text{KL}}(Q \parallel P) \approx 0.468$ bits. Because $0.428 \ne 0.468$, KL divergence is not a true mathematical distance metric: it is strictly asymmetric and violates the triangle inequality.`,
+    ],
+    analogy: r`KL divergence is like the fuel penalty of navigating a ship with an outdated nautical map: if the map slightly misjudges open waters the penalty is modest, but if the map assumes deep ocean where a reef exists, disaster strikes.`,
+    steps: [
+      r`Define discrete probability distributions $P$ and $Q$ over the identical support set $\mathcal{X}$.`,
+      r`Verify absolute continuity: ensure $Q(x) > 0$ whenever $P(x) > 0$; if $P(x) > 0$ and $Q(x) = 0$, $D_{\text{KL}}$ is infinite.`,
+      r`Calculate the log-likelihood ratio (information gain) for each state: $\ln(P(x) / Q(x))$.`,
+      r`Compute the expected log-ratio under distribution $P$: $D_{\text{KL}}(P \parallel Q) = \sum P(x) \ln(P(x) / Q(x))$.`,
+      r`Check Gibbs' inequality: verify that $D_{\text{KL}}(P \parallel Q) \ge 0$, with equality if and only if $P = Q$ almost everywhere.`,
+      r`Use $D_{\text{KL}}$ to regularise model posteriors towards priors, such as in variational autoencoders and trust-region policy optimisation.`,
+    ],
+    math: [
+      {
+        h: 'Discrete and Continuous KL Divergence',
+        tex: r`$$D_{\text{KL}}(P \parallel Q) = \sum_{x \in \mathcal{X}} P(x) \ln\left(\frac{P(x)}{Q(x)}\right) = \int_{-\infty}^{\infty} p(x) \ln\left(\frac{p(x)}{q(x)}\right) dx$$`,
+        p: r`Here $P(x)$ is the true or target reference distribution and $Q(x)$ is the approximating distribution. KL divergence can be rewritten as the cross-entropy minus the entropy: $D_{\text{KL}}(P \parallel Q) = H(P, Q) - H(P)$. When using base 2 logarithms, the result is in bits; when using natural logarithms, it is in nats.`,
+      },
+      {
+        h: 'Gibbs\' Inequality and Non-Negativity',
+        tex: r`$$D_{\text{KL}}(P \parallel Q) \ge 0, \qquad D_{\text{KL}}(P \parallel Q) = 0 \iff P = Q \text{ almost everywhere}$$`,
+        p: r`By Jensen's inequality and the strict convexity of $-\ln(t)$, $E_P[-\ln(Q/P)] \ge -\ln(E_P[Q/P]) = -\ln(1) = 0$. This fundamental property guarantees that approximating a distribution never reduces expected coding length below the true entropy.`,
+      },
+      {
+        h: 'KL Divergence Between Univariate Gaussians',
+        tex: r`$$D_{\text{KL}}\left(\mathcal{N}(\mu_1, \sigma_1^2) \parallel \mathcal{N}(\mu_2, \sigma_2^2)\right) = \ln\left(\frac{\sigma_2}{\sigma_1}\right) + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac{1}{2}$$`,
+        p: r`For continuous Gaussian distributions, KL divergence has a closed-form analytic solution. In Variational Autoencoders (VAEs), this formula measures the divergence between an encoder's latent Gaussian posterior $\mathcal{N}(\mu, \sigma^2)$ and a standard Gaussian prior $\mathcal{N}(0, 1)$, simplifying to $\frac{1}{2}(\sigma^2 + \mu^2 - 1 - \ln \sigma^2)$.`,
+      },
+    ],
+    keyPoints: [
+      r`KL divergence measures the expected excess surprise or coding inefficiency of using distribution $Q$ to model reality $P$.`,
+      r`KL divergence is strictly non-negative ($D_{\text{KL}} \ge 0$) and equals zero if and only if the two distributions are identical.`,
+      r`KL divergence is asymmetric: $D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)$, meaning it cannot serve as a true distance metric.`,
+      r`Forward KL ($D_{\text{KL}}(P \parallel Q)$) penalises $Q$ heavily where $P > 0$, forcing $Q$ to cover all modes (mean-seeking); reverse KL ($D_{\text{KL}}(Q \parallel P)$) penalises $Q > 0$ where $P = 0$, forcing $Q$ to concentrate on a single mode (mode-seeking).`,
+    ],
+    pitfalls: [
+      r`Dividing by zero when $Q(x) = 0$ while $P(x) > 0$, causing divergence to explode to infinity.`,
+      r`Treating KL divergence as a symmetric distance metric, causing errors in generative modelling and loss design.`,
+      r`Confusing forward KL (zero-avoiding) with reverse KL (zero-forcing) in variational inference and policy optimisation.`,
+      r`Overlooking that continuous KL divergence is invariant under coordinate reparameterisation, whereas differential entropy is coordinate-dependent.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+# Discrete distributions: true market states vs uniform belief
+p = np.array([0.70, 0.20, 0.10])
+q = np.array([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0])
+
+# Forward and reverse KL divergence in bits
+kl_forward = stats.entropy(p, q, base=2)
+kl_reverse = stats.entropy(q, p, base=2)
+
+# Analytic KL divergence between two univariate Gaussians (nats)
+mu1, sig1 = 0.0, 1.0
+mu2, sig2 = 1.0, 1.5
+kl_gauss = np.log(sig2 / sig1) + (sig1**2 + (mu1 - mu2)**2) / (2.0 * sig2**2) - 0.5
+
+print(f"Forward KL D(P || Q): {kl_forward:.4f} bits")
+print(f"Reverse KL D(Q || P): {kl_reverse:.4f} bits")
+print(f"Asymmetry delta:      {abs(kl_forward - kl_reverse):.4f} bits")
+print(f"Gaussian KL divergence: {kl_gauss:.4f} nats")`,
+    quiz: [
+      {
+        q: r`Why is the Kullback–Leibler divergence not considered a true distance metric in mathematics?`,
+        o: [
+          r`Because it can take negative values`,
+          r`Because it is asymmetric ($D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)$) and violates the triangle inequality`,
+          r`Because it only applies to discrete distributions`,
+          r`Because it requires continuous differentiability`,
+        ],
+        a: 1,
+        why: r`A formal metric must be symmetric ($d(x,y)=d(y,x)$) and satisfy the triangle inequality ($d(x,z) \le d(x,y)+d(y,z)$). KL divergence violates both properties.`,
+      },
+      {
+        q: r`What happens to $D_{\text{KL}}(P \parallel Q)$ if there exists an outcome $x$ where $P(x) > 0$ but $Q(x) = 0$?`,
+        o: [
+          r`It evaluates to 0`,
+          r`It evaluates to $+\infty$`,
+          r`It equals 1.0 bit`,
+          r`It is undefined and defaults to $-1$`,
+        ],
+        a: 1,
+        why: r`Because the formula involves $\ln(P(x) / Q(x))$, dividing a positive probability by zero causes the logarithm—and hence the divergence—to become infinite.`,
+      },
+      {
+        q: r`In variational inference, how does minimising reverse KL divergence ($D_{\text{KL}}(Q \parallel P)$) affect the approximating distribution $Q$?`,
+        o: [
+          r`It forces $Q$ to spread out over all modes of $P$`,
+          r`It acts as a mode-seeking objective, penalising $Q$ heavily whenever $Q > 0$ where $P \approx 0$, causing $Q$ to focus on a single dominant mode`,
+          r`It turns $Q$ into a uniform distribution`,
+          r`It prevents the model from updating parameters`,
+        ],
+        a: 1,
+        why: r`Reverse KL penalises positive density in $Q$ where $P$ has low density, forcing $Q$ to compress tightly onto one of the major modes of $P$.`,
+      },
+      {
+        q: r`What is the minimum possible value of the Kullback–Leibler divergence $D_{\text{KL}}(P \parallel Q)$?`,
+        o: [
+          r`$-\infty$`,
+          r`$-1.0$`,
+          r`0, achieved if and only if $P = Q$ almost everywhere`,
+          r`0.5`,
+        ],
+        a: 2,
+        why: r`Gibbs' inequality guarantees $D_{\text{KL}}(P \parallel Q) \ge 0$, with equality holding strictly if and only if $P$ and $Q$ are identical probability distributions.`,
+      },
+    ],
+    usedBy: ['logistic_regression', 'decision_tree_classifier'],
+    prereq: ['entropy-and-cross-entropy', 'probability-rules-and-bayes-theorem'],
+    related: ['jensen-shannon-divergence', 'loss-functions', 'maximum-likelihood-estimation'],
+    keywords: 'kl divergence kullback leibler relative entropy information divergence information theory asymmetry variational',
+  },
+  {
+    id: 'jensen-shannon-divergence',
+    short: 'Jensen–Shannon Divergence',
+    title: r`Jensen–Shannon Divergence`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Establish symmetric, bounded statistical distances between probability distributions using mixture averages and the square-root metric property.`,
+    lead: r`While the Kullback–Leibler divergence is fundamental to information theory, its asymmetry and unbounded nature create severe numerical instability when distributions have non-overlapping support. The Jensen–Shannon divergence (JSD) resolves these flaws by averaging KL divergences to a shared mixture distribution. Symmetrical, always finite, and bounded between 0 and 1, the square root of Jensen–Shannon divergence forms a true mathematical metric widely used in generative adversarial networks (GANs) and distribution drift monitoring.`,
+    intuition: [
+      r`Imagine auditing data drift between two model deployment environments. In training, user age follows distribution $P$; in production, user age follows distribution $Q$.`,
+      r`If there is even a single age category present in production that never occurred in training (say, users aged 95+), $P(95+) = 0$ while $Q(95+) > 0$. If you compute the forward KL divergence $D_{\text{KL}}(Q \parallel P)$, the ratio $Q(x) / P(x)$ divides by zero, blowing the score up to infinity! A single rare event completely blinds the metric to how closely the remaining 99.9% of the distribution matches.`,
+      r`The Jensen–Shannon divergence solves this by introducing a midpoint: the balanced mixture distribution $M = \frac{1}{2}(P + Q)$. Because $M$ contains half of $P$ and half of $Q$, $M(x)$ is strictly positive whenever either $P(x) > 0$ or $Q(x) > 0$. Neither distribution can ever divide by zero against $M$. JSD then measures the average divergence from both distributions to this midpoint: $\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M)$. For our financial market example ($P = [0.70, 0.20, 0.10]$ and $Q = [1/3, 1/3, 1/3]$), $M = [0.517, 0.267, 0.217]$. The divergences to $M$ produce $\text{JSD} \approx 0.108$ bits. Taking the base 2 logarithm guarantees JSD is bounded between 0 (identical) and 1 bit (completely disjoint). Furthermore, $\sqrt{\text{JSD}}$ satisfies the triangle inequality, creating a true metric distance between probability distributions.`,
+    ],
+    analogy: r`If KL divergence is like measuring the elevation difference between two hikers on a mountain where one hiker cannot see the other's cliff, Jensen–Shannon divergence is like finding the exact halfway basecamp and measuring how far each hiker must walk to meet in the middle.`,
+    steps: [
+      r`Given two distributions $P$ and $Q$ over the same space, construct the equal-weight midpoint mixture $M = \frac{1}{2}(P + Q)$.`,
+      r`Compute the forward KL divergence from $P$ to the mixture: $D_{\text{KL}}(P \parallel M)$.`,
+      r`Compute the forward KL divergence from $Q$ to the mixture: $D_{\text{KL}}(Q \parallel M)$.`,
+      r`Average the two divergences to obtain the Jensen–Shannon divergence: $\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M)$.`,
+      r`If using logarithm base 2, note that JSD is bounded in $[0, 1]$; if using natural logarithm $\ln$, JSD is bounded in $[0, \ln 2]$.`,
+      r`Compute the Jensen–Shannon distance $\sqrt{\text{JSD}}$ whenever a true mathematical metric satisfying the triangle inequality is required.`,
+    ],
+    math: [
+      {
+        h: 'Jensen–Shannon Divergence Definition',
+        tex: r`$$\text{JSD}(P \parallel Q) = \frac{1}{2} D_{\text{KL}}(P \parallel M) + \frac{1}{2} D_{\text{KL}}(Q \parallel M), \qquad M = \frac{1}{2}(P + Q)$$`,
+        p: r`Here $M$ is the equal-weight mixture distribution. Because $M(x) > 0$ wherever either $P(x) > 0$ or $Q(x) > 0$, the ratio never divides by zero, ensuring JSD is always well-defined and finite even for distributions with disjoint supports. Furthermore, JSD is strictly symmetric: $\text{JSD}(P \parallel Q) = \text{JSD}(Q \parallel P)$.`,
+      },
+      {
+        h: 'Entropy Formulation and Boundedness',
+        tex: r`$$\text{JSD}(P \parallel Q) = H(M) - \frac{1}{2}\left[H(P) + H(Q)\right]$$`,
+        p: r`JSD equals the Shannon entropy of the mixture distribution minus the average entropies of the individual distributions. By the strict concavity of Shannon entropy, $\text{JSD} \ge 0$, with equality if and only if $P = Q$. When measured in base 2 logarithm, JSD is bounded in $[0, 1]$ bit, reaching its theoretical maximum of $1.0$ bit when $P$ and $Q$ have completely disjoint support.`,
+      },
+      {
+        h: 'The Jensen–Shannon Distance Metric',
+        tex: r`$$d_{\text{JS}}(P, Q) = \sqrt{\text{JSD}(P \parallel Q)}$$`,
+        p: r`In 2003, Endres and Schindelin proved that the square root of the Jensen–Shannon divergence satisfies the triangle inequality: $d_{\text{JS}}(P, R) \le d_{\text{JS}}(P, Q) + d_{\text{JS}}(Q, R)$. Combined with non-negativity, symmetry, and identity of indiscernibles, $d_{\text{JS}}$ forms a true mathematical metric.`,
+      },
+    ],
+    keyPoints: [
+      r`Jensen–Shannon divergence is strictly symmetric: $\text{JSD}(P \parallel Q) = \text{JSD}(Q \parallel P)$.`,
+      r`JSD is bounded in $[0, 1]$ (when measured in bits) and remains finite even when distributions have completely disjoint support.`,
+      r`The square root $\sqrt{\text{JSD}}$ is a valid mathematical metric satisfying the triangle inequality.`,
+      r`The original formulation of Generative Adversarial Networks (Goodfellow et al., 2014) showed that an optimal discriminator minimax game is mathematically equivalent to minimising the Jensen–Shannon divergence between real and generated distributions.`,
+    ],
+    pitfalls: [
+      r`Using natural logarithm instead of $\log_2$ and assuming the upper bound is 1.0 (with natural log $\ln$, the upper bound is $\ln 2 \approx 0.6931$).`,
+      r`Forgetting that when distributions have disjoint support with zero overlap, JSD saturates at its maximum value (1.0), causing vanishing gradients in GAN training.`,
+      r`Confusing JSD (which is not a metric, but a squared distance) with the Jensen–Shannon distance $\sqrt{\text{JSD}}$ (a true metric).`,
+      r`Applying JSD to unnormalised weight vectors without ensuring $\sum p_i = 1$ and $\sum q_i = 1$.`,
+    ],
+    code: r`import numpy as np
+import scipy.spatial.distance as dist
+import scipy.stats as stats
+
+p = np.array([0.70, 0.20, 0.10])
+q = np.array([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0])
+
+# Midpoint mixture distribution M
+m = 0.5 * (p + q)
+
+# Jensen-Shannon divergence in bits
+jsd = 0.5 * stats.entropy(p, m, base=2) + 0.5 * stats.entropy(q, m, base=2)
+
+# Jensen-Shannon distance metric: sqrt(JSD)
+js_distance = dist.jensenshannon(p, q, base=2)
+
+# Completely disjoint distributions (maximal JSD)
+p_disjoint = np.array([1.0, 0.0])
+q_disjoint = np.array([0.0, 1.0])
+m_disjoint = 0.5 * (p_disjoint + q_disjoint)
+jsd_max = 0.5 * stats.entropy(p_disjoint, m_disjoint, base=2) + \
+          0.5 * stats.entropy(q_disjoint, m_disjoint, base=2)
+
+print(f"JSD(P || Q):          {jsd:.4f} bits")
+print(f"JS distance metric:   {js_distance:.4f}")
+print(f"Disjoint support JSD: {jsd_max:.4f} bits (bounded maximum = 1.0)")`,
+    quiz: [
+      {
+        q: r`Why is the Jensen–Shannon divergence preferred over the Kullback–Leibler divergence for monitoring data drift in production pipelines?`,
+        o: [
+          r`Because JSD is always symmetric and stays finite even when new categories appear that had zero probability in training`,
+          r`Because JSD requires only one distribution`,
+          r`Because JSD does not use logarithms`,
+          r`Because JSD cannot be computed on categorical data`,
+        ],
+        a: 0,
+        why: r`If a production distribution has an outcome unseen in training, KL divergence divides by zero and explodes to infinity. JSD compares against the average mixture $M$, remaining bounded and stable.`,
+      },
+      {
+        q: r`When calculated using base 2 logarithms, what is the maximum possible value of the Jensen–Shannon divergence $\text{JSD}(P \parallel Q)$?`,
+        o: [
+          r`$0.5$ bits`,
+          r`$1.0$ bit`,
+          r`$\infty$`,
+          r`$\ln 2$ bits`,
+        ],
+        a: 1,
+        why: r`When distributions $P$ and $Q$ have completely disjoint support (no shared non-zero states), $\text{JSD} = \log_2(2) = 1.0$ bit.`,
+      },
+      {
+        q: r`Which mathematical transformation turns the Jensen–Shannon divergence into a true distance metric that satisfies the triangle inequality?`,
+        o: [
+          r`Taking the square root ($\sqrt{\text{JSD}}$)`,
+          r`Squaring it ($\text{JSD}^2$)`,
+          r`Multiplying by 2`,
+          r`Inverting it ($1 / \text{JSD}$)`,
+        ],
+        a: 0,
+        why: r`By the Endres–Schindelin theorem (2003), the square root of the Jensen–Shannon divergence satisfies the triangle inequality, making $\sqrt{\text{JSD}}$ a true metric.`,
+      },
+      {
+        q: r`What issue arises in generative adversarial network (GAN) training when real and generated distributions have disjoint support under Jensen–Shannon divergence?`,
+        o: [
+          r`JSD becomes negative`,
+          r`JSD saturates at its constant maximum (1.0 bit), yielding zero gradients and halting generator learning`,
+          r`The discriminator loss oscillates uncontrollably`,
+          r`The mixture distribution cannot be formed`,
+        ],
+        a: 1,
+        why: r`When supports do not overlap, JSD is constantly 1.0 regardless of how far apart the distributions are in space, producing vanishing gradients that motivated Wasserstein GANs.`,
+      },
+    ],
+    usedBy: ['clustering-metrics', 'decision_tree_classifier'],
+    prereq: ['entropy-and-cross-entropy', 'kl-divergence'],
+    related: ['clustering-metrics', 'loss-functions'],
+    keywords: 'jensen shannon divergence jsd jensen shannon distance symmetric divergence information theory drift monitoring gans',
+  },
+  {
+    id: 'mutual-information',
+    short: 'Mutual Information',
+    title: r`Mutual Information`,
+    task: 'concepts',
+    module: 'Information theory',
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: r`Measure linear and non-linear dependence between random variables using information gain and entropy reduction.`,
+    lead: r`While Pearson correlation measures strictly linear associations and fails on curved dependencies, Mutual Information (MI) quantifies all forms of statistical dependence—linear, non-linear, and non-monotonic. Grounded in information theory, MI measures how much uncertainty about one random variable is eliminated by knowing the value of another. It serves as a foundational technique for non-linear feature selection, decision tree splitting, and representation learning.`,
+    intuition: [
+      r`Suppose you analyse the relationship between outdoor temperature $X$ and electricity demand $Y$. On freezing winter days and scorching summer days, electricity demand surges to power heating and air conditioning, while on mild spring days demand is low. The relationship forms a parabolic U-shape ($Y \approx X^2$).`,
+      r`If you compute Pearson's linear correlation coefficient $r$, the positive slope on the hot side cancels out the negative slope on the cold side, yielding $r \approx -0.058$ ($p = 0.193$). An analyst relying solely on linear correlation would mistakenly conclude that temperature has zero statistical relationship with electricity demand!`,
+      r`Mutual information avoids this blind spot entirely. It does not look for straight lines; it compares the joint distribution $P(X, Y)$ against the product of the marginals $P(X)P(Y)$ (what the joint distribution would look like if $X$ and $Y$ were completely independent). When temperature strongly dictates electricity demand, knowing $X$ removes substantial uncertainty from $Y$, yielding a high mutual information of $1.722$ bits. If two variables are truly statistically independent, $P(X, Y) = P(X)P(Y)$ everywhere, and mutual information drops to identically $0.0$ bits.`,
+    ],
+    analogy: r`Pearson correlation is like a rigid wooden ruler that can only measure straight paths; mutual information is like a flexible measuring tape that wraps around every curve and bend to measure true connection.`,
+    steps: [
+      r`Estimate the joint probability distribution $P(X, Y)$ and compute individual marginal distributions $P(X)$ and $P(Y)$.`,
+      r`For continuous variables, discretise features into two-dimensional grid bins or employ $k$-nearest neighbours estimators.`,
+      r`Compute the individual Shannon marginal entropies $H(X)$ and $H(Y)$.`,
+      r`Compute the joint entropy $H(X, Y)$ or the conditional entropy $H(Y \mid X)$.`,
+      r`Calculate mutual information: $I(X; Y) = H(X) + H(Y) - H(X, Y) = H(Y) - H(Y \mid X)$.`,
+      r`Rank candidate explanatory features by mutual information with the target label to perform non-linear feature selection.`,
+    ],
+    math: [
+      {
+        h: 'Mutual Information Definition via KL Divergence',
+        tex: r`$$I(X; Y) = D_{\text{KL}}\left(P(X, Y) \parallel P(X)P(Y)\right) = \sum_{x \in \mathcal{X}}\sum_{y \in \mathcal{Y}} P(x, y) \log_2\left(\frac{P(x, y)}{P(x)P(y)}\right)$$`,
+        p: r`Here $P(x, y)$ is the joint probability mass function, and $P(x)P(y)$ is the product of independent marginal distributions. Mutual information measures the Kullback–Leibler divergence between joint reality and the independent null baseline. By Gibbs' inequality, $I(X; Y) \ge 0$, with equality holding if and only if $X$ and $Y$ are statistically independent.`,
+      },
+      {
+        h: 'Entropy Decomposition and Symmetry',
+        tex: r`$$I(X; Y) = H(X) - H(X \mid Y) = H(Y) - H(Y \mid X) = H(X) + H(Y) - H(X, Y)$$`,
+        p: r`Here $H(Y)$ is the initial uncertainty in $Y$, and $H(Y \mid X)$ is the remaining uncertainty in $Y$ after observing $X$. Their difference represents the information gain about $Y$ provided by $X$. Because entropy Venn diagrams are symmetric, $I(X; Y) = I(Y; X)$.`,
+      },
+      {
+        h: 'Continuous Mutual Information and Gaussian Equivalence',
+        tex: r`$$I(X; Y) = -\frac{1}{2} \ln\left(1 - \rho^2\right) \quad \text{for jointly Gaussian variables}$$`,
+        p: r`When $X$ and $Y$ follow a bivariate normal distribution with correlation coefficient $\rho$, mutual information is an exact monotonic function of $\rho^2$. For non-Gaussian variables, $I(X; Y) \ge -\frac{1}{2}\ln(1 - \rho^2)$, capturing higher-order non-linear associations that linear correlation misses.`,
+      },
+    ],
+    keyPoints: [
+      r`Mutual information detects all forms of statistical association, including non-linear, non-monotonic, and periodic relationships.`,
+      r`$I(X; Y)$ is strictly non-negative and symmetric: $I(X; Y) = I(Y; X) \ge 0$, with $I(X; Y) = 0$ if and only if $X$ and $Y$ are independent.`,
+      r`In decision trees, the information gain splitting criterion is mathematically identical to the mutual information between the candidate split feature and the target class.`,
+      r`Unlike Pearson correlation, mutual information is invariant under any invertible, monotonic transformation of the variables.`,
+    ],
+    pitfalls: [
+      r`Naive binning on continuous data: too few bins underestimates true dependence; too many bins overestimates MI due to finite-sample sampling noise.`,
+      r`Expecting an upper bound of 1.0: unnormalised mutual information is bounded by $\min(H(X), H(Y))$; use normalised mutual information (NMI) if a $[0, 1]$ metric is required.`,
+      r`Feature redundancy in greedy selection: picking top features by individual MI can select highly collinear duplicates; use minimum redundancy maximum relevance (mRMR).`,
+      r`High computational cost: estimating high-dimensional joint mutual information suffers from the curse of dimensionality.`,
+    ],
+    code: r`import numpy as np
+import scipy.stats as stats
+
+rng = np.random.default_rng(42)
+n = 500
+
+# Parabolic non-linear relationship: Y = X^2 + noise
+x = rng.uniform(-3.0, 3.0, size=n)
+y = x**2 + rng.normal(loc=0.0, scale=0.5, size=n)
+
+# 1. Pearson linear correlation (fails on non-linear curves)
+r_val, p_r = stats.pearsonr(x, y)
+
+# 2. Discrete mutual information via 2D binning (Shannon formula in bits)
+bins = 12
+hist_2d, _, _ = np.histogram2d(x, y, bins=bins)
+p_xy = hist_2d / np.sum(hist_2d)
+p_x = np.sum(p_xy, axis=1, keepdims=True)
+p_y = np.sum(p_xy, axis=0, keepdims=True)
+
+# I(X; Y) = sum P(x,y) * log2(P(x,y) / (P(x)*P(y)))
+nonzero = p_xy > 0
+mi_bits = np.sum(p_xy[nonzero] * np.log2(p_xy[nonzero] / (p_x @ p_y)[nonzero]))
+
+print(f"Pearson correlation r: {r_val:.3f} (p-value: {p_r:.3f})")
+print(f"Mutual Information:    {mi_bits:.3f} bits")`,
+    quiz: [
+      {
+        q: r`Why does Pearson's correlation coefficient evaluate to approximately zero on a perfect parabolic relationship ($Y = X^2$ on $[-3, 3]$)?`,
+        o: [
+          r`Because parabolic data violates the central limit theorem`,
+          r`Because the positive linear trend on $X > 0$ cancels out the negative linear trend on $X < 0$`,
+          r`Because Pearson correlation can only be computed on positive values`,
+          r`Because the variance of $Y$ is zero`,
+        ],
+        a: 1,
+        why: r`Pearson correlation evaluates strictly linear slope. In symmetric U-shaped curves, positive and negative slopes cancel out, yielding $r \approx 0$ despite complete deterministic dependence.`,
+      },
+      {
+        q: r`Under what condition is the mutual information $I(X; Y)$ strictly equal to zero?`,
+        o: [
+          r`When $X$ and $Y$ are statistically independent`,
+          r`When $X$ and $Y$ have a negative linear correlation`,
+          r`When $X$ and $Y$ follow standard normal distributions`,
+          r`When the covariance of $X$ and $Y$ is positive`,
+        ],
+        a: 0,
+        why: r`By definition, $I(X; Y) = D_{\text{KL}}(P(X, Y) \parallel P(X)P(Y))$. The divergence is zero if and only if $P(X, Y) = P(X)P(Y)$, which is the exact definition of statistical independence.`,
+      },
+      {
+        q: r`In decision tree induction algorithms like ID3 and C4.5, what information-theoretic quantity corresponds to "information gain"?`,
+        o: [
+          r`Gini impurity difference`,
+          r`Mutual information between the candidate split feature and the target label`,
+          r`Kullback–Leibler divergence between tree branches`,
+          r`Cramér's V statistic`,
+        ],
+        a: 1,
+        why: r`Information gain is defined as $H(Y) - H(Y \mid X)$, which is mathematically identical to the mutual information $I(X; Y)$.`,
+      },
+      {
+        q: r`What is the theoretical upper bound on the mutual information $I(X; Y)$ between two discrete random variables?`,
+        o: [
+          r`1.0 bit`,
+          r`$\min(H(X), H(Y))$`,
+          r`$H(X) + H(Y)$`,
+          r`$\infty$ for any discrete variable`,
+        ],
+        a: 1,
+        why: r`Because knowing $X$ cannot eliminate more uncertainty than exists in $X$ itself or in $Y$, $I(X; Y) \le \min(H(X), H(Y))$.`,
+      },
+    ],
+    usedBy: ['decision_tree_classifier', 'feature-selection'],
+    prereq: ['entropy-and-cross-entropy', 'kl-divergence', 'probability-rules-and-bayes-theorem'],
+    related: ['correlation-pearson-spearman-kendall', 'feature-selection', 'decision_tree_classifier'],
+    keywords: 'mutual information mi entropy information gain non-linear dependence feature selection ksg contingency table',
+  },
+  {
+    id: "wasserstein-earth-movers-distance",
+    short: "Wasserstein Distance",
+    title: "Wasserstein (earth mover's) distance",
+    task: "concepts",
+    module: "Information theory",
+    level: 2,
+    minutes: 20,
+    noLab: true,
+    summary: "The Wasserstein distance (also known as the Earth Mover's Distance) measures the minimum work required to transform one probability distribution into another, defined as mass multiplied by physical ground distance. Unlike Kullback-Leibler (KL) divergence and Jensen-Shannon (JS) divergence, which collapse to infinite or constant values when probability distributions have non-overlapping supports, the Wasserstein distance provides a continuous, meaningful, and differentiable metric that reflects geometry in the underlying metric space. This geometric property makes the Wasserstein-1 metric fundamental to Optimal Transport, generative adversarial networks (WGAN), and domain adaptation.",
+    lead: "Suppose you have two discrete point mass distributions: P has all its probability mass at position x=0, and Q_1 has all its mass at x=1, while Q_2 has all its mass at x=100. Standard information-theoretic metrics like KL divergence or Total Variation see no difference between these two scenarios: in both cases, the distributions do not overlap, yielding maximal divergence. But clearly Q_1 is vastly closer to P than Q_2 is! The Wasserstein distance fixes this fatal flaw by factoring in the physical metric distance that probability mass must travel.",
+    intuition: [
+      "The Dirt Pile Analogy (Earth Mover's Distance): Imagine distribution P is a pile of dirt spread across the ground, and distribution Q is an excavation hole of identical volume. The Wasserstein-1 distance W_1(P, Q) is the minimum mechanical work (mass multiplied by transport distance) required to shovel and transport the dirt from pile P until it fills hole Q.",
+      "The Overlap Failure of KL and JS Divergences: In high-dimensional spaces (e.g. natural images), real data concentrates on low-dimensional manifolds. Two different manifolds in 1000-dimensional space almost never intersect. When supports do not overlap, KL divergence is infinite and JS divergence is constant log 2. Their gradients vanish everywhere, making neural network training impossible. The Wasserstein distance remains smooth, linear, and continuous regardless of overlap!",
+      "Kantorovich-Rubinstein Duality: Computing optimal transport directly requires solving a linear programming problem over all joint couplings \\gamma(x, y). The Kantorovich-Rubinstein duality reveals a magical alternative: W_1(P, Q) equals the maximum expectation difference sup_{||f||_L <= 1} [E_P[f(x)] - E_Q[f(y)]] over all 1-Lipschitz functions! This is the exact objective optimised by the WGAN critic."
+    ],
+    analogy: "Imagine moving furniture between two apartments. KL divergence is like a strict landlord who only checks whether a sofa is sitting in the exact same centimetre in both apartments: if it is moved by even one inch, they declare the apartments 100% completely different. The Wasserstein distance is the moving company invoice: it charges you based on the physical weight of the sofa multiplied by how many miles the lorry had to drive to deliver it.",
+    steps: [
+      {
+        "title": "Define ground metric space",
+        "desc": "Establish physical distance metric d(x, y) (e.g. Euclidean distance |x - y|) over support space X.",
+        "detail": "The ground metric defines the cost of transporting a unit of mass from location x to location y."
+      },
+      {
+        "title": "Formulate primal optimal transport coupling",
+        "desc": "Define set of joint probability distributions \\Pi(P, Q) whose marginals equal P and Q.",
+        "detail": "Each coupling \\gamma(x, y) represents a transport plan specifying how much mass moves from x to y. Marginal constraints ensure no dirt is created or destroyed."
+      },
+      {
+        "title": "Compute Wasserstein-1 distance in 1D via CDFs",
+        "desc": "For one-dimensional distributions, evaluate the integrated absolute difference between cumulative distribution functions.",
+        "detail": "Use the closed-form theorem: W_1(P, Q) = int |F_P(t) - F_Q(t)| dt. This avoids linear programming and calculates the exact optimal transport cost in O(N log N) time."
+      },
+      {
+        "title": "Apply Kantorovich-Rubinstein dual formulation for high dimensions",
+        "desc": "Frame transport cost as supremum over 1-Lipschitz continuous critic functions.",
+        "detail": "Maximise E_{x ~ P}[f(x)] - E_{y ~ Q}[f(y)] subject to |f(x) - f(y)| <= d(x, y). Enforce the Lipschitz constraint via gradient penalty or weight clipping."
+      },
+      {
+        "title": "Evaluate gradients for distribution alignment",
+        "desc": "Compute continuous non-vanishing gradients to guide generative model parameters.",
+        "detail": "Because W_1(P_\\theta, Q) provides meaningful linear gradients even when supports are completely disjoint, use its derivative to shift generated distributions toward target data."
+      }
+    ],
+    math: [
+      {
+        "h": "Primal Wasserstein-p Distance Formulation",
+        "tex": "W_p(P, Q) = \\left( \\inf_{\\gamma \\in \\Pi(P, Q)} \\mathbb{E}_{(x, y) \\sim \\gamma}\\left[ d(x, y)^p \\right] \\right)^{1/p}",
+        "p": "Here \\Pi(P, Q) denotes the collection of all joint probability distributions (couplings) \\gamma(x, y) having marginals P and Q respectively. For p=1, W_1 is the standard Earth Mover's Distance."
+      },
+      {
+        "h": "One-Dimensional Closed-Form via Cumulative Distribution Functions",
+        "tex": "W_1(P, Q) = \\int_{-\\infty}^\\infty \\big| F_P(t) - F_Q(t) \\big| \\, dt = \\int_0^1 \\big| F_P^{-1}(u) - F_Q^{-1}(u) \\big| \\, du",
+        "p": "In one dimension, optimal transport has a closed-form identity: the minimum cost equals the L_1 distance between the cumulative distribution functions F_P and F_Q, or equivalently, the integral of quantile function differences."
+      },
+      {
+        "h": "Kantorovich-Rubinstein Duality",
+        "tex": "W_1(P, Q) = \\sup_{\\|f\\|_L \\le 1} \\left( \\mathbb{E}_{x \\sim P}[f(x)] - \\mathbb{E}_{y \\sim Q}[f(y)] \\right)",
+        "p": "The dual theorem reformulates the infimum over joint couplings into a supremum over 1-Lipschitz continuous functions \\|f\\|_L \\le 1. This enables deep neural networks (such as WGAN critics) to approximate the Wasserstein distance without combinatorial optimisation."
+      }
+    ],
+    code: "\"\"\"\nWasserstein (Earth Mover's) Distance vs Kullback-Leibler (KL) Divergence\nDemonstrates 1D optimal transport, CDF integration, and linear gradient\nproperties under non-overlapping support translation.\n\"\"\"\n\nimport numpy as np\nfrom scipy import stats\n\ndef wasserstein_1d(samples_p: np.ndarray, samples_q: np.ndarray) -> float:\n    \"\"\"\n    Compute 1D Wasserstein-1 distance via sorted quantile differences.\n    O(N log N) closed-form optimal transport.\n    \"\"\"\n    p_sorted = np.sort(samples_p)\n    q_sorted = np.sort(samples_q)\n    # If sample sizes match, W_1 is simply mean absolute difference between sorted arrays\n    return float(np.mean(np.abs(p_sorted - q_sorted)))\n\n# Generate two 1D Gaussian distributions\n# P: N(0, 1), Q: N(delta, 1) as delta moves from 0 to 10\nnp.random.seed(42)\nn_samples = 5000\np_samples = np.random.normal(loc=0.0, scale=1.0, size=n_samples)\n\nprint(\"=== Demonstration: Wasserstein Distance vs Translation Delta ===\")\nprint(\"True analytical W_1 between N(0, 1) and N(delta, 1) is exactly |delta|.\\n\")\n\ndeltas = [0.0, 1.0, 2.5, 5.0, 10.0]\n\nfor delta in deltas:\n    q_samples = np.random.normal(loc=delta, scale=1.0, size=n_samples)\n    w1_dist = wasserstein_1d(p_samples, q_samples)\n    \n    # Analytical KL divergence between N(0, 1) and N(delta, 1): KL = delta^2 / 2\n    kl_div = 0.5 * (delta ** 2)\n    \n    print(f\"Shift delta = {delta:4.1f} | Empirical W_1 = {w1_dist:6.3f} (True: {delta:4.1f}) | KL Divergence = {kl_div:6.2f}\")\n\n# Discrete Optimal Transport via Linear Programming Demonstration\nprint(\"\\n=== Discrete Earth Mover's Distance on a Grid ===\")\n# Pile P at positions [0, 1, 2] with masses [0.5, 0.5, 0.0]\n# Hole Q at positions [0, 1, 2] with masses [0.0, 0.5, 0.5]\np_mass = np.array([0.5, 0.5, 0.0])\nq_mass = np.array([0.0, 0.5, 0.5])\n# Distance matrix between bins: |i - j|\ncost_matrix = np.array([\n    [0.0, 1.0, 2.0],\n    [1.0, 0.0, 1.0],\n    [2.0, 1.0, 0.0]\n])\n\n# Optimal plan: keep 0.5 at pos 1, move 0.5 from pos 0 to pos 2 (cost = 0.5 * 2 = 1.0)\n# Closed-form 1D discrete CDF:\ncdf_p = np.cumsum(p_mass)\ncdf_q = np.cumsum(q_mass)\ndiscrete_w1 = np.sum(np.abs(cdf_p - cdf_q))\n\nprint(f\"Distribution P masses: {p_mass}\")\nprint(f\"Distribution Q masses: {q_mass}\")\nprint(f\"Discrete 1D Wasserstein Cost: {discrete_w1:.3f} units of work\")\n",
+    keyPoints: [
+      "The Wasserstein distance measures the minimal work (mass * distance) required to morph one probability distribution into another.",
+      "Unlike KL and JS divergences, the Wasserstein metric reflects the underlying geometry of metric space and remains continuous even when supports are completely disjoint.",
+      "In one dimension, W_1 has an exact closed-form solution equal to the integrated absolute difference between cumulative distribution functions.",
+      "The Kantorovich-Rubinstein duality converts the primal coupling problem into a supremum over 1-Lipschitz continuous critic functions, powering WGAN architectures."
+    ],
+    pitfalls: [
+      "High computational complexity in multiple dimensions: Solving multi-dimensional discrete optimal transport scales cubically O(N^3) without Sinkhorn entropy regularisation.",
+      "Violating the Lipschitz constraint in dual estimation: If the critic network in WGAN fails to maintain ||f||_L <= 1, the objective ceases to approximate the true Wasserstein distance.",
+      "Assuming Wasserstein distance is dimensionless: W_1 inherits the physical units of the underlying sample space (e.g. metres, seconds, pixels), unlike unitless KL divergence."
+    ],
+    quiz: [
+      {
+        "q": "Why does the Wasserstein distance provide superior optimisation gradients compared to Jensen-Shannon divergence when training generative models?",
+        "o": [
+          "Because Wasserstein distance remains continuous, smooth, and informative even when generated and real data distributions reside on non-overlapping manifolds, avoiding vanishing gradients",
+          "Because Wasserstein distance is always equal to zero",
+          "Because Jensen-Shannon divergence cannot be computed on GPUs",
+          "Because Wasserstein distance ignores data outliers completely"
+        ],
+        "a": 0,
+        "why": "When distributions have disjoint supports, JS divergence saturates at log(2) with zero gradient. The Wasserstein distance grows linearly with physical separation distance, providing clean, non-vanishing gradients everywhere."
+      },
+      {
+        "q": "In one dimension, what is the closed-form formulation for the Wasserstein-1 distance between two distributions P and Q?",
+        "o": [
+          "The integral of the absolute difference between their cumulative distribution functions: int |F_P(t) - F_Q(t)| dt",
+          "The difference between their maximum values",
+          "The ratio of their standard deviations",
+          "The dot product of their probability density functions"
+        ],
+        "a": 0,
+        "why": "For 1D distributions, optimal transport preserves monotonic quantile order, meaning W_1 is exactly equal to the area between the two cumulative distribution curves."
+      },
+      {
+        "q": "What condition must the critic function f(x) satisfy in the Kantorovich-Rubinstein dual formulation of the Wasserstein-1 distance?",
+        "o": [
+          "It must be 1-Lipschitz continuous: |f(x) - f(y)| <= d(x, y) for all x and y",
+          "It must integrate to zero across all space",
+          "It must be strictly convex and positive everywhere",
+          "It must have an inverse function"
+        ],
+        "a": 0,
+        "why": "The Kantorovich-Rubinstein theorem proves that W_1(P, Q) is the supremum of E_P[f(x)] - E_Q[f(x)] over the family of 1-Lipschitz continuous functions."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kl-divergence",
+      "jensen-shannon-divergence"
+    ],
+    related: [
+      "kl-divergence",
+      "jensen-shannon-divergence",
+      "total-variation-hellinger-and-bhattacharyya-distances",
+      "entropy-and-cross-entropy"
+    ],
+    keywords: "wasserstein distance earth movers distance optimal transport kantorovich rubinstein duality wgan lipschitz continuity cdf coupling"
+  },
 ];
