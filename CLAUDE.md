@@ -37,6 +37,7 @@ Live: https://yogesh660.github.io/ml-model-zoo/
 - Quiz branches (`feature/quizzes-*`): merge, resolve HTML conflicts with `--ours`, rebuild, run `node scripts/dev/quiz-check.js --hard` and re-solve the hard calculations.
 - Quiz options are shuffled per question at build time (`quizOrder` in `scripts/build.js`), so the order in the source file does not matter.
 - The proxy in cloud sessions cannot delete remote branches: report the deletable ones for the owner to delete by hand.
+- `node scripts/dev/tracker.js <dir>` writes the Learn Hub Tracker data (lessons, paths, modules, branches, summary JSON). Seed `<dir>/branches.json` with the previous upload first so deleted branches stay listed.
 
 ## Lesson object (content/*.js)
 - All prose uses `r\`…\`` (String.raw); `$…$` / `$$…$$` is KaTeX; `[[lesson-id]]` or `[[lesson-id|text]]` links (build fails on unknown ids).
