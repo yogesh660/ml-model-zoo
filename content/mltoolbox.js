@@ -1388,4 +1388,1134 @@ print("Platt Calibrated ECE:", round(float(ece_cal), 3), "Brier Score:", round(f
     ],
     keywords: "ordinal classification, proportional odds, cumulative logit, ordered probit, thresholds, cut points, rank prediction, quadratic weighted kappa"
   },
+  {
+    id: "multi-label-classification",
+    short: "Multi-label classification",
+    title: "Multi-Label Classification",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Predict multiple non-mutually exclusive binary labels simultaneously: compare Binary Relevance, Classifier Chains, and label power-sets with Hamming loss.",
+    lead: "A document can belong to Politics, Economics, and Tech simultaneously; an image can contain a dog, a frisbee, and a tree. Multi-label learning addresses non-exclusive target vectors while accounting for label correlations.",
+    intuition: [
+      "In conventional classification, classes are strictly mutually exclusive: an email is either spam or not spam (binary), or an image is either a cat, dog, or bird (multi-class). In contrast, real-world objects frequently possess multiple simultaneous attributes: a film can belong to Comedy, Drama, and Romance; a biomedical article can discuss Genetics, Oncology, and Immunology; a customer can be tagged as Churn-Risk, High-Spender, and Mobile-User.",
+      "Multi-label learning maps feature vector $x$ to a binary target vector $y = [y_1, y_2, \\dots, y_L]^T \\in \\{0, 1\\}^L$. The fundamental algorithmic choice revolves around how to handle correlations among labels.",
+      "The simplest strategy is Binary Relevance: decompose the problem into $L$ completely independent binary classification tasks, one per label. While embarrassingly parallel and scalable, Binary Relevance is blind to label dependencies: knowing an image contains a \"beach\" vastly increases the probability of \"ocean\" and \"sand\", but Binary Relevance cannot exploit this co-occurrence.",
+      "Classifier Chains overcome this blind spot by ordering labels into a sequence and training each classifier with both original features $x$ and the ground-truth/predicted binary labels of all preceding classifiers in the chain. Label Powerset transforms the task into multi-class classification by treating every unique observed label combination as a distinct class, which models correlations perfectly but suffers from severe class explosion on rare combinations. Modern neural architectures employ independent sigmoid heads trained with binary cross-entropy loss."
+    ],
+    analogy: "Imagine assigning tags to songs in a music streaming library (e.g. Acoustic, Rock, Ballad, 90s, Instrumental). Binary Relevance hires five separate interns who sit in isolated soundproof booths and evaluate one tag each without speaking to each other. Classifier Chains seats the interns in a line: each intern listens to the song and glances at the tag decisions made by previous interns before making their own call.",
+    steps: [
+      {
+        "title": "1. Formulate binary target indicator matrix",
+        "body": "Structure targets as a binary matrix $Y \\in \\{0, 1\\}^{n \\times L}$, where $Y_{ij} = 1$ denotes presence of label $j$ on sample $i$."
+      },
+      {
+        "title": "2. Select decomposition or neural architecture",
+        "body": "Choose between Binary Relevance (fast, baseline), Classifier Chains (captures sequential correlations), or a shared deep neural backbone with $L$ independent sigmoid outputs."
+      },
+      {
+        "title": "3. Train with Binary Cross-Entropy loss",
+        "body": "Compute binary cross-entropy loss independently for each label head: $\\mathcal{L} = -\\frac{1}{L} \\sum_{j=1}^L [y_j \\log \\hat{p}_j + (1 - y_j) \\log (1 - \\hat{p}_j)]$. Average across all labels."
+      },
+      {
+        "title": "4. Evaluate with label-specific and subset metrics",
+        "body": "Evaluate predictions using Hamming Loss (fraction of incorrect individual label predictions), Subset Accuracy (fraction of instances where entire label set is 100% correct), and Macro/Micro F1 scores."
+      }
+    ],
+    math: [
+      {
+        "h": "Hamming Loss",
+        "tex": "\\operatorname{HL}(Y, \\hat{Y}) = \\frac{1}{n \\cdot L} \\sum_{i=1}^n \\sum_{j=1}^L \\mathbb{I}(Y_{ij} \\neq \\hat{Y}_{ij}) = \\frac{1}{n \\cdot L} \\|Y \\oplus \\hat{Y}\\|_1",
+        "p": "Measures the fraction of individual label mistakes across all instances and labels. A lower Hamming loss indicates higher per-label accuracy."
+      },
+      {
+        "h": "Subset Accuracy (Exact Match Ratio)",
+        "tex": "\\operatorname{Acc}_{\\mathrm{subset}} = \\frac{1}{n} \\sum_{i=1}^n \\mathbb{I}(Y_i = \\hat{Y}_i)",
+        "p": "The strictest metric: requires the entire predicted binary label vector to match ground truth exactly. Can be low even when individual label accuracy is above 95%."
+      },
+      {
+        "h": "Classifier Chain Conditional Factorisation",
+        "tex": "P(y_1, \\dots, y_L \\mid x) = \\prod_{j=1}^L P(y_j \\mid x, y_1, \\dots, y_{j-1})",
+        "p": "By the probability chain rule, joint label probability factorises into a product of conditional probabilities, implemented by conditioning each classifier on previous predictions."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Multi-label classification: Binary Relevance vs Classifier Chains from scratch\nnp.random.seed(42)\nn_samples = 300\nn_features = 8\nn_labels = 4\n\n# Generate synthetic correlated multi-label dataset\nX = np.random.normal(0, 1, (n_samples, n_features))\n# Latent signals generating co-occurring tags\nlatent_topic = X[:, 0] + X[:, 1]\n\n# Labels with strong dependencies (e.g. Label 2 often co-occurs with Label 0)\ny = np.zeros((n_samples, n_labels), dtype=int)\ny[:, 0] = (latent_topic + np.random.normal(0, 0.5, n_samples) > 0).astype(int)\ny[:, 1] = (X[:, 2] - X[:, 3] + np.random.normal(0, 0.5, n_samples) > 0).astype(int)\ny[:, 2] = (y[:, 0] * 0.7 + X[:, 4] + np.random.normal(0, 0.5, n_samples) > 0.3).astype(int)\ny[:, 3] = (y[:, 1] * 0.8 + X[:, 5] + np.random.normal(0, 0.5, n_samples) > 0.4).astype(int)\n\n# Train/Test Split\nn_train = 200\nX_train, X_test = X[:n_train], X[n_train:]\ny_train, y_test = y[:n_train], y[n_train:]\n\n# 1. Binary Relevance (L independent models)\nbr_models = [LogisticRegression(solver='liblinear') for _ in range(n_labels)]\nfor j in range(n_labels):\n    br_models[j].fit(X_train, y_train[:, j])\n\ny_pred_br = np.column_stack([m.predict(X_test) for m in br_models])\n\n# 2. Classifier Chains (Sequential conditioning)\nchain_order = [0, 1, 2, 3]\nchain_models = []\nX_train_augmented = X_train.copy()\n\nfor j in chain_order:\n    clf = LogisticRegression(solver='liblinear')\n    clf.fit(X_train_augmented, y_train[:, j])\n    chain_models.append(clf)\n    # Augment feature matrix with true labels during training\n    X_train_augmented = np.column_stack([X_train_augmented, y_train[:, j]])\n\n# Predict with Classifier Chain sequentially\nX_test_augmented = X_test.copy()\ny_pred_chain = np.zeros_like(y_test)\n\nfor idx, j in enumerate(chain_order):\n    preds_j = chain_models[idx].predict(X_test_augmented)\n    y_pred_chain[:, j] = preds_j\n    # Augment test features with PREDICTED labels\n    X_test_augmented = np.column_stack([X_test_augmented, preds_j])\n\n# Evaluation\ndef eval_multilabel(y_true, y_pred):\n    hamming_loss = np.mean(y_true != y_pred)\n    subset_acc = np.mean(np.all(y_true == y_pred, axis=1))\n    return hamming_loss, subset_acc\n\nhl_br, sa_br = eval_multilabel(y_test, y_pred_br)\nhl_chain, sa_chain = eval_multilabel(y_test, y_pred_chain)\n\nprint(f\"Binary Relevance  - Hamming Loss: {hl_br:.4f}, Subset Accuracy: {sa_br*100:.1f}%\")\nprint(f\"Classifier Chains - Hamming Loss: {hl_chain:.4f}, Subset Accuracy: {sa_chain*100:.1f}%\")\nprint(f\"Subset Accuracy Improvement: +{(sa_chain - sa_br)*100:.1f}% by capturing label correlations\")",
+    keyPoints: [
+      "Multi-label classification assigns instances multiple non-mutually exclusive binary labels $y \\in \\{0, 1\\}^L$.",
+      "Binary Relevance trains $L$ independent binary models; fast and scalable but ignores label co-occurrence dependencies.",
+      "Classifier Chains condition each label on predictions of preceding labels, capturing dependencies via the probability chain rule.",
+      "Standard multi-class Softmax activation is replaced with independent Sigmoids $\\sigma(z_j)$ trained via binary cross-entropy loss.",
+      "Evaluated via Hamming Loss (per-label error rate) and Subset Accuracy (fraction of instances where all labels match exactly)."
+    ],
+    pitfalls: [
+      "Using Softmax instead of Sigmoid: Softmax enforces a sum-to-one constraint across classes, forcing classes to compete and failing on multi-label targets.",
+      "Error propagation in Classifier Chains: If early classifiers in a chain make erroneous predictions, downstream classifiers receive corrupted features during inference.",
+      "Evaluating multi-label models with multi-class accuracy: Multi-class accuracy assumes a single scalar output; multi-label problems require Hamming loss or Macro/Micro F1."
+    ],
+    quiz: [
+      {
+        "q": "Why is independent Sigmoid activation used instead of Softmax in multi-label neural network heads?",
+        "o": [
+          "Sigmoid outputs independent probabilities for each label in [0, 1], whereas Softmax forces all class probabilities to sum to 1",
+          "Sigmoid is faster to compute than addition",
+          "Softmax cannot be differentiated during backpropagation",
+          "Sigmoids eliminate the need for hidden layers"
+        ],
+        "a": 0,
+        "why": "Softmax forces probabilities across all classes to sum to 1, assuming mutual exclusivity. Multi-label problems require each label to possess an independent probability in [0, 1] via Sigmoid."
+      },
+      {
+        "q": "What is the primary trade-off of Classifier Chains compared to Binary Relevance?",
+        "o": [
+          "Classifier Chains capture label correlations but are sensitive to chain ordering and test-time error propagation",
+          "Classifier Chains have O(1) computational complexity",
+          "Classifier Chains can only be used with decision trees",
+          "Classifier Chains cannot predict zero labels for an instance"
+        ],
+        "a": 0,
+        "why": "By feeding preceding predictions as features, Classifier Chains capture label correlations. However, early classification mistakes propagate down the chain, and training cannot be fully parallelised."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "logistic-regression-inference-odds-ratios-wald-tests"
+    ],
+    related: [
+      "logistic_regression",
+      "ordinal-classification",
+      "cost-sensitive-learning",
+      "confusion-matrix"
+    ],
+    keywords: "multi label classification, binary relevance, classifier chains, label powerset, hamming loss, subset accuracy, binary cross entropy, label correlation"
+  },
+  {
+    id: "cost-sensitive-learning",
+    short: "Cost-sensitive learning",
+    title: "Cost-Sensitive Learning",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Minimise expected financial loss rather than error count: master cost matrices, Bayes decision theory threshold shifting, and cost-weighted loss functions.",
+    lead: "In fraud detection, loan default, and cancer diagnosis, a false negative is vastly more catastrophic than a false positive. Cost-sensitive learning embeds domain cost asymmetry directly into model training and decision thresholds.",
+    intuition: [
+      "Standard machine learning algorithms treat all errors as equally harmful: misclassifying a legitimate £10 transaction as fraud (false positive) is assigned the identical loss as letting a £5,000 fraudulent wire transfer slip through undetected (false negative). In real-world enterprise environments—including fraud prevention, loan risk underwriting, medical pathology, and industrial turbine maintenance—costs are wildly asymmetric.",
+      "Cost-Sensitive Learning replaces generic accuracy maximisation with expected cost minimisation. This asymmetry is formally captured in a Cost Matrix $C$, where $C(i, j)$ specifies the financial, clinical, or operational cost of predicting class $i$ when the ground truth is class $j$.",
+      "Practitioners can incorporate cost asymmetry at three distinct levels of the machine learning pipeline: data-level, algorithm-level, and decision-level.",
+      "Data-level methods apply cost-proportionate sampling, over-sampling high-cost instances. Algorithm-level methods modify objective functions, weighting loss terms by their relative cost during gradient updates (cost-weighted empirical risk minimisation). Decision-level methods train standard probabilistic models and apply Bayes decision theory post-processing: shifting the classification decision threshold $p^*$ from 0.5 to the exact theoretical Bayes optimal cut-off dictated by the cost matrix ratio."
+    ],
+    analogy: "Imagine a smoke detector in a chemical refinery. A false positive triggers a loud siren and requires five minutes to silence (cost: £50 in staff annoyance). A false negative fails to sound an alarm during a toxic chemical fire, destroying the facility (cost: £10,000,000). Tuning the alarm sensitivity to minimise total error count treats both mistakes equally, risking disaster. A cost-sensitive alarm triggers at the slightest whiff of smoke because the asymmetric penalty of silence is existential.",
+    steps: [
+      {
+        "title": "1. Formulate the enterprise cost matrix",
+        "body": "Define cost matrix $C(i, j)$ quantifying costs of True Positives ($C_{TP}$), False Positives ($C_{FP}$), True Negatives ($C_{TN}$), and False Negatives ($C_{FN}$)."
+      },
+      {
+        "title": "2. Select incorporation strategy",
+        "body": "Decide whether to embed costs into loss functions during training (e.g. weighted cross-entropy) or adjust classification decision threshold $p^*$ post-processing on calibrated probabilities."
+      },
+      {
+        "title": "3. Derive Bayes risk-optimal decision threshold",
+        "body": "Under Bayes decision theory, predict positive whenever $P(Y=1 \\mid x) > p^*$, where $p^* = \\frac{C_{FP} - C_{TN}}{(C_{FP} - C_{TN}) + (C_{FN} - C_{TP})}$."
+      },
+      {
+        "title": "4. Calibrate probabilities and evaluate expected cost",
+        "body": "Calibrate classifier output probabilities (via Platt scaling or isotonic regression) and evaluate total financial loss $\\sum C(\\hat{y}_i, y_i)$ on test data rather than 0-1 accuracy."
+      }
+    ],
+    math: [
+      {
+        "h": "Expected Conditional Cost (Bayes Risk)",
+        "tex": "R(\\alpha = 1 \\mid x) = C_{TP} P(Y=1 \\mid x) + C_{FP} P(Y=0 \\mid x), \\quad R(\\alpha = 0 \\mid x) = C_{FN} P(Y=1 \\mid x) + C_{TN} P(Y=0 \\mid x)",
+        "p": "The expected risk of taking action alpha conditioned on feature vector x. Optimal Bayes decision selects the action minimising expected risk."
+      },
+      {
+        "h": "Bayes Optimal Decision Threshold",
+        "tex": "p^* = \\frac{C_{FP} - C_{TN}}{(C_{FP} - C_{TN}) + (C_{FN} - C_{TP})} \\approx \\frac{C_{FP}}{C_{FP} + C_{FN}} \\quad (\\text{when } C_{TP} = C_{TN} = 0)",
+        "p": "When false negatives cost 9 times more than false positives (C_FN = 90, C_FP = 10), the optimal threshold drops to p* = 10 / (10 + 90) = 0.10."
+      },
+      {
+        "h": "Cost-Weighted Cross-Entropy Loss",
+        "tex": "\\mathcal{L}_{\\mathrm{cost}}(\\theta) = -\\frac{1}{n} \\sum_{i=1}^n \\left[ w_1 y_i \\log \\hat{p}_i + w_0 (1 - y_i) \\log(1 - \\hat{p}_i) \\right], \\quad w_1 = C_{FN}, \\; w_0 = C_{FP}",
+        "p": "Directly penalises false negative gradient steps in proportion to financial penalty during backpropagation or IRLS updates."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# Cost-Sensitive Classification: Threshold Shifting vs Standard 0.5 Threshold\nnp.random.seed(42)\nn_samples = 2000\n\n# Synthetic fraudulent transactions: 95% legitimate (0), 5% fraud (1)\nX = np.random.normal(0, 1, (n_samples, 4))\nlatent = X[:, 0] * 1.2 - X[:, 1] * 0.8 + np.random.normal(0, 0.5, n_samples)\nprobs = 1.0 / (1.0 + np.exp(-latent))\ny = (probs > np.percentile(probs, 95)).astype(int)  # Exactly 5% fraud\n\n# Split into Train and Test\nn_train = 1200\nX_train, X_test = X[:n_train], X[n_train:]\ny_train, y_test = y[:n_train], y[n_train:]\n\n# Cost Matrix:\n# False Negative (missed fraud): £500\n# False Positive (manual fraud review): £20\n# True Positive / True Negative: £0\nC_FN = 500.0\nC_FP = 20.0\nC_TP = 0.0\nC_TN = 0.0\n\n# Bayes Optimal Threshold: p* = C_FP / (C_FP + C_FN)\nbayes_threshold = C_FP / (C_FP + C_FN)\nprint(f\"Theoretical Bayes optimal decision threshold: {bayes_threshold:.4f} (not 0.50!)\")\n\n# Fit standard probabilistic classifier\nmodel = LogisticRegression(solver='liblinear')\nmodel.fit(X_train, y_train)\ntest_probs = model.predict_proba(X_test)[:, 1]\n\n# Strategy 1: Standard Default Threshold (p = 0.50)\npreds_default = (test_probs >= 0.50).astype(int)\n\n# Strategy 2: Bayes Cost-Optimal Threshold (p = p*)\npreds_cost_optimal = (test_probs >= bayes_threshold).astype(int)\n\n# Financial Loss Calculation\ndef calculate_financial_cost(y_true, y_pred, c_fn, c_fp):\n    fn = np.sum((y_true == 1) & (y_pred == 0))\n    fp = np.sum((y_true == 0) & (y_pred == 1))\n    tp = np.sum((y_true == 1) & (y_pred == 1))\n    tn = np.sum((y_true == 0) & (y_pred == 0))\n    total_cost = fn * c_fn + fp * c_fp\n    return total_cost, fn, fp, tp, tn\n\ncost_def, fn_def, fp_def, tp_def, tn_def = calculate_financial_cost(y_test, preds_default, C_FN, C_FP)\ncost_opt, fn_opt, fp_opt, tp_opt, tn_opt = calculate_financial_cost(y_test, preds_cost_optimal, C_FN, C_FP)\n\nprint(\"\\n--- Performance Comparison on Test Set (800 samples) ---\")\nprint(f\"Default (p=0.50):       Total Cost: £{cost_def:,.2f} | Missed Frauds (FN): {fn_def} | False Alarms (FP): {fp_def}\")\nprint(f\"Cost-Optimal (p={bayes_threshold:.2f}): Total Cost: £{cost_opt:,.2f} | Missed Frauds (FN): {fn_opt} | False Alarms (FP): {fp_opt}\")\nprint(f\"Total Money Saved: £{cost_def - cost_opt:,.2f} ({((cost_def - cost_opt) / cost_def) * 100:.1f}% reduction in financial damage)\")",
+    keyPoints: [
+      "Replaces error count minimisation with expected loss minimisation based on a domain-specific cost matrix $C(i, j)$.",
+      "Bayes Decision Theory proves the optimal decision threshold is $p^* = \\frac{C_{FP} - C_{TN}}{(C_{FP} - C_{TN}) + (C_{FN} - C_{TP})}$.",
+      "Threshold tuning on well-calibrated probabilities avoids retraining and enables instant adaptation to fluctuating economic cost regimes.",
+      "Cost-weighted loss functions inject cost weights directly into gradients during empirical risk minimisation.",
+      "Evaluated using total enterprise cost, expected financial loss, or cost-sensitive profit curves rather than ROC AUC or 0-1 accuracy."
+    ],
+    pitfalls: [
+      "Uncalibrated probabilities: Bayes optimal threshold shifting strictly assumes predicted probabilities match empirical event frequencies; uncalibrated scores corrupt threshold performance.",
+      "Relying on accuracy as an evaluation metric: In asymmetric domains, a trivial model predicting \"Legitimate\" 100% of the time achieves 99% accuracy while bankrupting the firm.",
+      "Assuming static costs: Operational costs (e.g. manual audit wage, regulatory fine per breach) shift over time; hard-coding thresholds into codebases creates silent economic loss."
+    ],
+    quiz: [
+      {
+        "q": "If a False Negative costs £450 and a False Positive costs £50 (with zero cost for correct predictions), what is the Bayes optimal decision threshold?",
+        "o": [
+          "p* = 50 / (50 + 450) = 0.10",
+          "p* = 450 / (50 + 450) = 0.90",
+          "p* = 0.50",
+          "p* = 450 - 50 = 400"
+        ],
+        "a": 0,
+        "why": "From Bayes decision theory p* = C_FP / (C_FP + C_FN) = 50 / 500 = 0.10. Any sample with predicted risk > 10% should be flagged to minimise expected financial loss."
+      },
+      {
+        "q": "Why is probability calibration essential before applying Bayes decision threshold shifting?",
+        "o": [
+          "Because the theoretical optimal threshold p* relies on the model output representing true posterior probabilities P(Y=1|x)",
+          "Because calibration scales all features to zero mean and unit variance",
+          "Because uncalibrated models cannot compute predictions",
+          "Because calibration makes the dataset completely balanced"
+        ],
+        "a": 0,
+        "why": "The derivation of p* assumes hat{p} = P(Y=1|x). If model scores are uncalibrated (e.g. raw SVM margins or distorted tree scores), comparing them to p* destroys expected loss guarantees."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "logistic-regression-inference-odds-ratios-wald-tests",
+      "confusion-matrix"
+    ],
+    related: [
+      "logistic_regression",
+      "multi-label-classification",
+      "confusion-matrix",
+      "cross-validation"
+    ],
+    keywords: "cost sensitive learning, bayes decision theory, cost matrix, optimal threshold, false negative cost, class imbalance, probability calibration"
+  },
+  {
+    id: "self-organising-maps",
+    short: "Self-organising maps",
+    title: "Self-Organising Maps (Kohonen Networks)",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Unsupervised competitive neural network for non-linear dimensionality reduction and clustering: master Kohonen lattices, Best Matching Units (BMU), and topological neighbourhood adaptation.",
+    lead: "Developed by Teuvo Kohonen, Self-Organising Maps map high-dimensional complex manifolds onto a discrete, low-dimensional (typically 2D) grid of neurons while preserving spatial topology.",
+    intuition: [
+      "Exploring high-dimensional datasets with dozens or hundreds of features is difficult because human visual perception is confined to two and three dimensions. Standard linear projection methods like PCA can obliterate non-linear manifolds, while k-means clustering segments data without revealing the geometric relationships between cluster centroids.",
+      "Developed by Finnish neuroscientist Teuvo Kohonen in the 1980s, Self-Organising Maps (SOMs) provide a unique blend of vector quantisation, non-linear dimensionality reduction, and clustering. A SOM consists of a regular low-dimensional lattice of neurons (typically a 2D rectangular or hexagonal grid). Each neuron $i$ holds a weight vector $m_i$ possessing the identical dimensionality as the input data.",
+      "Learning occurs through an unsupervised competitive learning process inspired by retinotopic mapping in the cerebral cortex. When an input vector $x$ is presented, all neurons compete. The neuron whose weight vector is closest to $x$ in Euclidean space is declared the Best Matching Unit (BMU).",
+      "Unlike k-means—which updates only the winning centroid—a SOM updates both the BMU and its spatial topological neighbours on the 2D grid. The magnitude of the update decays with both topological grid distance (via a Gaussian neighbourhood kernel) and training iteration time. Consequently, neighbouring neurons on the 2D grid are pulled toward similar regions of high-dimensional space, preserving topological neighbourhood relations."
+    ],
+    analogy: "Imagine a flexible 2D rubber mesh laid out across a flat table. You drop points of molten solder in a 3D glass room above the table. For every drop of solder, you find the closest point on the rubber mesh (the BMU) and tug it upwards toward the solder drop. Because the rubber sheet is elastic, pulling the winning point also stretches neighbouring sections of the mesh upwards. Over thousands of tugs, the 2D rubber sheet drapes itself smoothly across the 3D contour of solder points.",
+    steps: [
+      {
+        "title": "1. Initialise lattice geometry and neuron weights",
+        "body": "Construct a 2D grid (e.g. $10 \\times 10$ rectangular or hexagonal neurons). Initialise weight vectors $m_i \\in \\mathbb{R}^d$ randomly or using the first two principal component axes."
+      },
+      {
+        "title": "2. Find Best Matching Unit (BMU)",
+        "body": "Present sample $x \\in \\mathbb{R}^d$. Calculate Euclidean distance to all neurons: $c = \\arg\\min_i \\|x - m_i\\|_2$."
+      },
+      {
+        "title": "3. Update topological neighbourhood weights",
+        "body": "Adjust weights of all neurons: $m_i(t+1) = m_i(t) + \\alpha(t) h_{ci}(t) [x - m_i(t)]$, where $\\alpha(t)$ is the decaying learning rate and $h_{ci}(t) = \\exp(-\\|r_c - r_i\\|^2 / (2 \\sigma(t)^2))$."
+      },
+      {
+        "title": "4. Decay radius and evaluate U-matrix",
+        "body": "Gradually reduce neighbourhood radius $\\sigma(t)$ and learning rate $\\alpha(t)$ over training epochs. Visualise clusters using the Unified Distance Matrix (U-matrix), displaying average distance between adjacent neurons."
+      }
+    ],
+    math: [
+      {
+        "h": "Best Matching Unit (BMU) Selection",
+        "tex": "c = \\arg\\min_{i \\in \\mathcal{V}} \\|x(t) - m_i(t)\\|_2",
+        "p": "Competitive step: the winner c is the neuron in lattice V with minimal Euclidean distance to input vector x(t)."
+      },
+      {
+        "h": "Weight Vector Update Rule",
+        "tex": "m_i(t+1) = m_i(t) + \\alpha(t) h_{ci}(t) [x(t) - m_i(t)], \\quad h_{ci}(t) = \\exp\\left(-\\frac{\\|r_c - r_i\\|^2}{2 \\sigma(t)^2}\\right)",
+        "p": "Neuron weights are pulled toward input x(t). The Gaussian spatial kernel h_ci(t) weights adaptation by the Euclidean distance between neuron coordinates r_c and r_i on the 2D lattice."
+      },
+      {
+        "h": "Quantisation and Topographic Errors",
+        "tex": "\\mathrm{QE} = \\frac{1}{n} \\sum_{k=1}^n \\|x_k - m_{c(k)}\\|, \\quad \\mathrm{TE} = \\frac{1}{n} \\sum_{k=1}^n u(x_k), \\quad u(x_k) = \\begin{cases} 0 & \\text{if 1st & 2nd BMU are adjacent} \\\\ 1 & \\text{otherwise} \\end{cases}",
+        "p": "Quantisation error (QE) measures reconstruction fidelity. Topographic error (TE) measures the proportion of samples whose 1st and 2nd BMUs are not lattice neighbours, quantifying topology preservation."
+      }
+    ],
+    code: "import numpy as np\n\n# 2D Self-Organising Map (SOM) from scratch\nclass SelfOrganisingMap:\n    def __init__(self, grid_size=(8, 8), input_dim=3, lr=0.5, sigma=2.0):\n        self.rows, self.cols = grid_size\n        self.n_neurons = self.rows * self.cols\n        self.input_dim = input_dim\n        self.lr_initial = lr\n        self.sigma_initial = sigma\n        \n        # Initialise weights randomly in [0, 1]\n        self.weights = np.random.uniform(0, 1, (self.rows, self.cols, self.input_dim))\n        \n        # 2D coordinates of neurons on the grid\n        self.grid_coords = np.array([[[r, c] for c in range(self.cols)] for r in range(self.rows)])\n        \n    def find_bmu(self, x):\n        # Compute Euclidean distance from x to all neurons\n        diff = self.weights - x\n        dist_sq = np.sum(diff**2, axis=-1)\n        bmu_idx = np.unravel_index(np.argmin(dist_sq), (self.rows, self.cols))\n        return bmu_idx\n        \n    def fit(self, X, n_epochs=100):\n        n_samples = len(X)\n        total_steps = n_epochs * n_samples\n        step = 0\n        \n        for epoch in range(n_epochs):\n            # Shuffle data\n            indices = np.random.permutation(n_samples)\n            for idx in indices:\n                x = X[idx]\n                step += 1\n                \n                # Decaying learning rate and radius\n                decay = np.exp(-step / total_steps)\n                lr = self.lr_initial * decay\n                sigma = max(self.sigma_initial * decay, 0.5)\n                \n                # Find BMU\n                bmu_r, bmu_c = self.find_bmu(x)\n                bmu_pos = np.array([bmu_r, bmu_c])\n                \n                # Compute grid distance from BMU to all neurons\n                grid_dist_sq = np.sum((self.grid_coords - bmu_pos)**2, axis=-1)\n                \n                # Gaussian neighbourhood kernel\n                h = np.exp(-grid_dist_sq / (2 * sigma**2))\n                \n                # Update weights\n                self.weights += lr * h[:, :, None] * (x - self.weights)\n\n# Synthetic 3D RGB colour cluster data (Red, Green, Blue, Yellow)\nnp.random.seed(42)\nreds = np.random.uniform([0.7, 0, 0], [1, 0.3, 0.3], (25, 3))\ngreens = np.random.uniform([0, 0.7, 0], [0.3, 1, 0.3], (25, 3))\nblues = np.random.uniform([0, 0, 0.7], [0.3, 0.3, 1], (25, 3))\nyellows = np.random.uniform([0.7, 0.7, 0], [1, 1, 0.3], (25, 3))\nX_colours = np.vstack([reds, greens, blues, yellows])\n\nsom = SelfOrganisingMap(grid_size=(6, 6), input_dim=3, lr=0.5, sigma=2.0)\nsom.fit(X_colours, n_epochs=50)\n\n# Calculate Quantisation Error\ndists = []\nfor x in X_colours:\n    bmu_r, bmu_c = som.find_bmu(x)\n    dists.append(np.linalg.norm(x - som.weights[bmu_r, bmu_c]))\nqe = np.mean(dists)\n\nprint(f\"SOM Lattice Dimensions: {som.rows}x{som.cols} ({som.n_neurons} neurons)\")\nprint(f\"Input Data: {X_colours.shape} (RGB colour vectors)\")\nprint(f\"Average Quantisation Error: {qe:.4f}\")\nprint(\"Top-left neuron weight (RGB):  \", som.weights[0, 0].round(3))\nprint(\"Bottom-right neuron weight (RGB):\", som.weights[-1, -1].round(3))",
+    keyPoints: [
+      "Unsupervised competitive neural network that projects high-dimensional data onto a low-dimensional topological grid (typically 2D).",
+      "Best Matching Unit (BMU) competition: the neuron closest in Euclidean distance to the input sample wins the iteration.",
+      "Topological preservation: the BMU and its spatial lattice neighbours are updated together via a decaying Gaussian neighbourhood kernel.",
+      "U-matrix (Unified Distance Matrix) visualises clustering boundaries by calculating Euclidean distance between adjacent neurons.",
+      "Quantisation error measures geometric distortion, while topographic error evaluates the proportion of broken neighbourhood relationships."
+    ],
+    pitfalls: [
+      "Scale sensitivity: SOMs rely on Euclidean distance; unscaled features with large numerical magnitudes dominate BMU selection and corrupt maps.",
+      "Dead neurons from poor initialisation: Random weight initialisation can leave peripheral neurons outside the data support that never win competition; PCA initialisation prevents dead neurons.",
+      "Computational scaling: Standard SOM scales as $O(n \\cdot N_{\\mathrm{neurons}} \\cdot d)$ per epoch, becoming sluggish on massive datasets."
+    ],
+    quiz: [
+      {
+        "q": "What is the crucial mechanism that allows a Self-Organising Map to preserve topology unlike standard k-means clustering?",
+        "o": [
+          "Updating both the winning neuron (BMU) and its spatial neighbours on the 2D lattice using a neighbourhood function",
+          "Using backpropagation and stochastic gradient descent",
+          "Normalising all feature columns to zero mean and unit variance",
+          "Fitting a linear regression model on the cluster labels"
+        ],
+        "a": 0,
+        "why": "In k-means, only the winning centroid is updated. In a SOM, the BMU and its topological neighbours on the 2D lattice are pulled toward the sample, preserving spatial topology."
+      },
+      {
+        "q": "What does the U-matrix (Unified Distance Matrix) represent in a trained SOM visualisation?",
+        "o": [
+          "The Euclidean distance between adjacent neurons on the lattice, where high values denote cluster boundaries and valleys denote cluster centres",
+          "The training loss curve plotted over epochs",
+          "The confusion matrix of classification predictions",
+          "The variance explained by each principal component"
+        ],
+        "a": 0,
+        "why": "The U-matrix displays distances between neighbouring neuron weight vectors; high-distance ridges signify boundaries separating distinct clusters."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kmeans_clustering"
+    ],
+    related: [
+      "kmeans_clustering",
+      "affinity_propagation",
+      "spectral_clustering",
+      "cross-validation"
+    ],
+    keywords: "self organising maps, som, kohonen network, bmu, competitive learning, u matrix, topological mapping, unsupervised learning"
+  },
+  {
+    id: "biclustering",
+    short: "Biclustering",
+    title: "Biclustering (Co-clustering)",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Simultaneously cluster rows and columns of a data matrix: master Spectral Co-clustering, Spectral Biclustering, and gene expression analysis.",
+    lead: "Traditional clustering groups rows across all features or features across all samples. Biclustering identifies local sub-matrices where a specific subset of samples exhibits coherent behaviour across a specific subset of features.",
+    intuition: [
+      "Traditional clustering algorithms partition observations based on their values across all measured features: k-means or DBSCAN compares samples along the entirety of feature space $\\mathbb{R}^d$. However, in genomics, e-commerce, and text mining, relationships are often strictly localized: a group of 50 genes may be co-regulated only in a tiny subset of 12 cancer patients, while expressing unrelated random baseline noise across the other 500 patients.",
+      "When classical clustering evaluates distance over all 20,000 genes, the localized 50-gene co-regulation is completely overwhelmed by the background noise of the other 19,950 uninformative genes. Similarly, in collaborative filtering, a group of 300 users may share identical preferences for French arthouse cinema, but have completely divergent preferences across Hollywood blockbusters and sports documentaries.",
+      "Biclustering (also termed co-clustering or two-mode clustering) solves this by clustering rows and columns simultaneously. Rather than partitioning the entire row space or column space globally, biclustering identifies local sub-matrices (biclusters) where a specific subset of rows exhibits coherent, correlated, or constant values across a specific subset of columns.",
+      "Spectral Co-clustering models the data matrix as an adjacency matrix of an undirected bipartite graph between row and column nodes. By computing singular vectors of the normalised data matrix, it solves a graph partition problem that rearranges rows and columns to expose block-diagonal and checkerboard structures."
+    ],
+    analogy: "Imagine a giant crossword puzzle grid filled with random jumbled letters. If you look at the whole grid at once, it appears completely chaotic. Biclustering is like finding hidden word rectangles: taking five specific rows and four specific columns, then sliding them together so their intersection forms a perfectly readable English word, even while all surrounding letters remain gibberish.",
+    steps: [
+      {
+        "title": "1. Formulate data matrix and select bicluster model",
+        "body": "Structure input matrix $A \\in \\mathbb{R}^{n \\times p}$. Determine whether seeking constant value blocks, constant row/column shifted blocks, or coherent scale/interaction sub-matrices."
+      },
+      {
+        "title": "2. Normalise bipartite graph representation",
+        "body": "For Spectral Co-clustering, compute row sums $R_i = \\sum_j A_{ij}$ and column sums $C_j = \\sum_i A_{ij}$. Construct normalised matrix $A_n = R^{-1/2} A C^{-1/2}$."
+      },
+      {
+        "title": "3. Extract singular vectors via SVD",
+        "body": "Compute Singular Value Decomposition $A_n = U \\Sigma V^T$. For $k$ biclusters, extract the second through $(1 + \\lceil \\log_2 k \\rceil)$ singular vectors from $U$ and $V$."
+      },
+      {
+        "title": "4. Cluster concatenated singular vectors",
+        "body": "Form matrix $Z = [R^{-1/2} U_k ; C^{-1/2} V_k]$. Apply k-means to $Z$ to simultaneously assign row labels and column labels, revealing block-diagonal structure."
+      }
+    ],
+    math: [
+      {
+        "h": "Mean Squared Residue (Cheng and Church Score)",
+        "tex": "H(I, J) = \\frac{1}{|I| |J|} \\sum_{i \\in I, j \\in J} (a_{ij} - a_{iJ} - a_{Ij} + a_{IJ})^2",
+        "p": "Measures coherence of a bicluster sub-matrix formed by rows I and columns J. Here a_iJ is row mean, a_Ij is column mean, and a_IJ is overall bicluster mean. A residue of zero indicates perfect additive coherence."
+      },
+      {
+        "h": "Normalised Bipartite Graph Laplacian",
+        "tex": "A_n = R^{-1/2} A C^{-1/2}, \\quad R = \\operatorname{diag}(A \\mathbf{1}_p), \\; C = \\operatorname{diag}(\\mathbf{1}_n^T A)",
+        "p": "Normalisation ensures degree-invariance on bipartite graph connecting row nodes to column nodes, mapping the problem directly into spectral graph theory."
+      },
+      {
+        "h": "Spectral Co-clustering Partition",
+        "tex": "z = \\begin{bmatrix} R^{-1/2} u \\\\ C^{-1/2} v \\end{bmatrix}, \\quad A_n v = \\sigma u, \\; A_n^T u = \\sigma v",
+        "p": "The left and right singular vectors u and v of normalised matrix A_n define coordinates that minimise normalised cut on the bipartite graph."
+      }
+    ],
+    code: "import numpy as np\nfrom sklearn.cluster import KMeans\n\n# Spectral Co-Clustering from scratch\ndef spectral_coclustering(A, n_clusters=2):\n    n_rows, n_cols = A.shape\n    \n    # 1. Row and Column marginals\n    R = np.sum(A, axis=1, keepdims=True)\n    C = np.sum(A, axis=0, keepdims=True)\n    \n    # Prevent division by zero\n    R[R == 0] = 1e-12\n    C[C == 0] = 1e-12\n    \n    # 2. Normalised matrix A_n = R^{-1/2} A C^{-1/2}\n    R_inv_sqrt = 1.0 / np.sqrt(R)\n    C_inv_sqrt = 1.0 / np.sqrt(C)\n    A_n = R_inv_sqrt * A * C_inv_sqrt\n    \n    # 3. SVD of normalised matrix\n    U, S, Vt = np.linalg.svd(A_n, full_matrices=False)\n    V = Vt.T\n    \n    # Use singular vectors corresponding to second largest singular values\n    # For n_clusters, take vectors 1 through n_clusters\n    n_vecs = int(np.ceil(np.log2(n_clusters))) + 1\n    U_sub = U[:, 1:n_vecs]\n    V_sub = V[:, 1:n_vecs]\n    \n    # Scale back by R^{-1/2} and C^{-1/2}\n    Z_rows = R_inv_sqrt * U_sub\n    Z_cols = C_inv_sqrt * V_sub\n    \n    # 4. Cluster rows and columns using k-means\n    km_rows = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit(Z_rows)\n    km_cols = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit(Z_cols)\n    \n    return km_rows.labels_, km_cols.labels_\n\n# Create synthetic matrix with 2 hidden block-diagonal biclusters\nnp.random.seed(42)\nn_r, n_c = 60, 40\ndata = np.random.uniform(1.0, 5.0, (n_r, n_c))\n\n# Bicluster 1: rows 0-24, cols 0-14 have elevated mean\ndata[0:25, 0:15] += 20.0\n# Bicluster 2: rows 25-59, cols 15-39 have elevated mean\ndata[25:60, 15:40] += 20.0\n\n# Shuffle rows and columns to scramble visual structure\nrow_perm = np.random.permutation(n_r)\ncol_perm = np.random.permutation(n_c)\nscrambled = data[row_perm, :][:, col_perm]\n\n# Run Spectral Co-clustering\nrow_labels, col_labels = spectral_coclustering(scrambled, n_clusters=2)\n\nprint(f\"Scrambled matrix shape: {scrambled.shape}\")\nprint(f\"Discovered row cluster sizes: {np.bincount(row_labels)}\")\nprint(f\"Discovered column cluster sizes: {np.bincount(col_labels)}\")\nprint(\"Row partition matches ground truth:\", len(np.unique(row_labels[row_perm < 25])) == 1)\nprint(\"Column partition matches ground truth:\", len(np.unique(col_labels[col_perm < 15])) == 1)",
+    keyPoints: [
+      "Simultaneously clusters rows and columns of a matrix, isolating local sub-matrices of coherent values.",
+      "Vital when target patterns exist only across a subset of features for a subset of samples (e.g. gene pathways or niche product tastes).",
+      "Spectral Co-clustering frames the task as finding a minimal normalised cut on a bipartite graph between rows and columns.",
+      "Solved efficiently via Singular Value Decomposition (SVD) of the row- and column-normalised data matrix.",
+      "Cheng-Church score (Mean Squared Residue) provides a standard quality benchmark for additive and constant biclusters."
+    ],
+    pitfalls: [
+      "Sensitivity to negative values: Spectral co-clustering interprets elements as bipartite edge weights, requiring non-negative entries ($A_{ij} \\ge 0$).",
+      "Overlapping biclusters: Standard spectral co-clustering produces disjoint partitions; soft or overlapping biclustering requires Plaid or iterative residue models.",
+      "Sensitivity to background noise scale: When matrix sparsity is extreme or noise variance exceeds signal jump, singular vectors fail to separate."
+    ],
+    quiz: [
+      {
+        "q": "Why does traditional k-means clustering fail to detect localized gene expression pathways across patients?",
+        "o": [
+          "k-means measures distance across all 20,000 genes, so the localized 50-gene signal is overwhelmed by noise in the remaining genes",
+          "k-means requires square symmetric matrices",
+          "k-means cannot be applied to biological data",
+          "k-means only works on binary zero-one data"
+        ],
+        "a": 0,
+        "why": "Traditional clustering computes Euclidean distances globally across all features. When a pathway is active only in a tiny fraction of genes, global distance is dominated by irrelevant background genes."
+      },
+      {
+        "q": "How does Spectral Co-clustering simultaneously assign cluster labels to both rows and columns?",
+        "o": [
+          "By representing the matrix as an undirected bipartite graph and clustering the concatenated left and right singular vectors",
+          "By running k-means on rows and then running linear regression on columns",
+          "By taking the inverse Fourier transform of the matrix",
+          "By discarding all columns with variance below 1.0"
+        ],
+        "a": 0,
+        "why": "Spectral Co-clustering frames rows and columns as bipartite graph nodes. SVD on the normalised matrix yields singular vectors corresponding to graph cuts for both rows and columns."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kmeans_clustering",
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "kmeans_clustering",
+      "spectral_clustering",
+      "svd-and-truncated-svd",
+      "self-organising-maps"
+    ],
+    keywords: "biclustering, co-clustering, two mode clustering, spectral coclustering, cheng church, gene expression, bipartite graph, singular value decomposition"
+  },
+  {
+    id: "time-series-clustering-with-dtw",
+    short: "Time-series DTW",
+    title: "Time-Series Clustering with Dynamic Time Warping",
+    task: "concepts",
+    module: "Beyond the basics",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Cluster temporal sequences of varying lengths and phase shifts: master Dynamic Time Warping (DTW) distance, Sakoe–Chiba warping bands, and k-DBA centroid averaging.",
+    lead: "Euclidean distance fails on time series when temporal patterns are out of phase or stretched in duration. Dynamic Time Warping non-linearly aligns the time axes of two sequences to measure true morphological similarity.",
+    intuition: [
+      "When clustering temporal sequences—such as electrocardiogram (ECG) heartbeats, smart-meter energy consumption profiles, gesture accelerometry, or financial stock trajectories—standard distance metrics fail. Euclidean distance strictly pairs sample $x_i(t)$ with sample $x_j(t)$ at the identical time index $t$. If one heartbeat is delayed by 50 milliseconds, or if one speaker pronounces a vowel twice as slowly, Euclidean distance reports a colossal distance even though the underlying morphological shapes are identical.",
+      "Dynamic Time Warping (DTW) overcomes this rigid lock-step assumption by warping the time dimension non-linearly. It allows multiple consecutive points in one sequence to match a single point in another, accommodating local tempo variations, phase shifts, and differing sequence lengths.",
+      "The optimal alignment is determined via dynamic programming, constructing an $n \\times m$ cost matrix where entry $(i, j)$ represents the minimal accumulated distance along a valid warping path from start $(1, 1)$ to end $(n, m)$. Valid paths must satisfy boundary conditions, monotonicity (time cannot flow backwards), and continuity (no time steps can be skipped).",
+      "To prevent pathological warping (where a single point in one sequence is matched to an entire plateau in another) and to accelerate computation from $O(n^2)$ to $O(n \\cdot w)$, practitioners apply global window constraints like the Sakoe–Chiba band. When clustering collections of time series, k-means is adapted using DTW Barycentre Averaging (DBA) to iteratively compute the optimal average centroid sequence."
+    ],
+    analogy: "Imagine comparing two musicians playing the identical trumpet solo. The first musician plays briskly in 4/4 time; the second plays with rubato, lingering on the high notes and rushing through the arpeggios. Comparing their sound waves sample-by-sample with Euclidean distance concludes they are playing completely different songs. Dynamic Time Warping acts like an expert conductor, stretching and compressing the time axis so each note aligns with its counterpart, recognising the identical melody.",
+    steps: [
+      {
+        "title": "1. Formulate pairwise distance cost matrix",
+        "body": "Given two sequences $X = (x_1, \\dots, x_n)$ and $Y = (y_1, \\dots, y_m)$, compute local pairwise distances $d(x_i, y_j) = (x_i - y_j)^2$."
+      },
+      {
+        "title": "2. Enforce Sakoe–Chiba warping window",
+        "body": "Constrain the search space: allow alignment only when $|i - j| \\le w$, where $w$ is the warping window width (typically 5–10% of sequence length)."
+      },
+      {
+        "title": "3. Fill dynamic programming accumulation table",
+        "body": "Compute cumulative cost: $D(i, j) = d(x_i, y_j) + \\min(D(i-1, j), D(i, j-1), D(i-1, j-1))$. The overall DTW distance is $\\sqrt{D(n, m)}$."
+      },
+      {
+        "title": "4. Cluster using k-medoids or k-DBA",
+        "body": "Compute pairwise DTW distance matrix across all $N$ time series and cluster using k-medoids (PAM), or iteratively update synthetic cluster centroids via DTW Barycentre Averaging (DBA)."
+      }
+    ],
+    math: [
+      {
+        "h": "Dynamic Programming Recurrence",
+        "tex": "D(i, j) = (x_i - y_j)^2 + \\min \\begin{cases} D(i - 1, j) & \\text{(insertion / warp Y)} \\\\ D(i, j - 1) & \\text{(deletion / warp X)} \\\\ D(i - 1, j - 1) & \\text{(match)} \\end{cases}",
+        "p": "Accumulated cost matrix recursion. Each step chooses the minimal cost preceding step to find the optimal global warping path."
+      },
+      {
+        "h": "Warping Path Constraints",
+        "tex": "W = (w_1, \\dots, w_K), \\quad w_1 = (1, 1), \\; w_K = (n, m), \\quad w_k = (i, j) \\implies w_{k+1} \\in \\{(i+1, j), (i, j+1), (i+1, j+1)\\}",
+        "p": "Enforces boundary conditions (paths must start at beginning and finish at end) and step size conditions (monotonicity and continuity)."
+      },
+      {
+        "h": "Sakoe–Chiba Warping Window Constraint",
+        "tex": "|i - j| \\le w",
+        "p": "Restricts the warping path to a corridor of width w around the main diagonal, preventing pathological time distortion and speeding up computation from O(nm) to O(nw)."
+      }
+    ],
+    code: "import numpy as np\n\n# Dynamic Time Warping (DTW) with Sakoe-Chiba Band from scratch\ndef dtw_distance(x, y, window=None):\n    n, m = len(x), len(y)\n    if window is None:\n        window = max(n, m)\n    else:\n        window = max(window, abs(n - m))\n        \n    # Initialise cost matrix with infinity\n    dtw_matrix = np.full((n + 1, m + 1), float('inf'))\n    dtw_matrix[0, 0] = 0.0\n    \n    for i in range(1, n + 1):\n        for j in range(max(1, i - window), min(m + 1, i + window + 1)):\n            cost = (x[i - 1] - y[j - 1])**2\n            dtw_matrix[i, j] = cost + min(\n                dtw_matrix[i - 1, j],      # Insertion\n                dtw_matrix[i, j - 1],      # Deletion\n                dtw_matrix[i - 1, j - 1]   # Match\n            )\n            \n    return np.sqrt(dtw_matrix[n, m])\n\n# Generate synthetic time-series with phase shift and tempo differences\nnp.random.seed(42)\nt = np.linspace(0, 4 * np.pi, 60)\n\n# Class 1: Sine wave with random phase shifts\nclass1_series = [np.sin(t + np.random.uniform(-0.8, 0.8)) + np.random.normal(0, 0.1, len(t)) for _ in range(10)]\n\n# Class 2: Square/Triangle wave\nclass2_series = [np.sign(np.sin(t + np.random.uniform(-0.8, 0.8))) + np.random.normal(0, 0.1, len(t)) for _ in range(10)]\n\nall_series = class1_series + class2_series\nN = len(all_series)\n\n# Compute pairwise DTW distance matrix\ndist_matrix = np.zeros((N, N))\nfor i in range(N):\n    for j in range(i + 1, N):\n        d = dtw_distance(all_series[i], all_series[j], window=10)\n        dist_matrix[i, j] = d\n        dist_matrix[j, i] = d\n\n# Simple k-medoids clustering on DTW distance matrix\ndef k_medoids(dist_mat, k=2, max_iters=20):\n    n = dist_mat.shape[0]\n    # Initialise medoids randomly\n    medoids = np.array([0, N - 1])\n    labels = np.zeros(n, dtype=int)\n    \n    for _ in range(max_iters):\n        # Assign samples to closest medoid\n        labels = np.argmin(dist_mat[:, medoids], axis=1)\n        # Update medoids\n        new_medoids = medoids.copy()\n        for cluster_id in range(k):\n            members = np.where(labels == cluster_id)[0]\n            if len(members) > 0:\n                sub_dist = dist_mat[np.ix_(members, members)]\n                best_member = members[np.argmin(np.sum(sub_dist, axis=1))]\n                new_medoids[cluster_id] = best_member\n        if np.array_equal(new_medoids, medoids):\n            break\n        medoids = new_medoids\n    return labels, medoids\n\nlabels, medoids = k_medoids(dist_matrix, k=2)\ntrue_labels = np.array([0]*10 + [1]*10)\nclustering_acc = max(np.mean(labels == true_labels), np.mean(labels == (1 - true_labels)))\n\nprint(f\"Total time series clustered: {N}\")\nprint(f\"DTW distance between phase-shifted identical waves: {dist_matrix[0, 1]:.3f}\")\nprint(f\"DTW distance between Sine and Square waves:        {dist_matrix[0, 10]:.3f}\")\nprint(f\"k-medoids Clustering Accuracy: {clustering_acc * 100:.1f}%\")",
+    keyPoints: [
+      "Non-linearly aligns temporal sequences to measure morphological similarity invariant to tempo changes and phase shifts.",
+      "Replaces rigid one-to-one Euclidean matching with one-to-many warping via dynamic programming in $O(n \\cdot m)$ time.",
+      "Sakoe–Chiba band $|i - j| \\le w$ prevents pathological distortions and accelerates calculation to $O(n \\cdot w)$.",
+      "Clustering is performed using k-medoids (PAM) on precomputed distance matrices or k-means with DTW Barycentre Averaging (DBA).",
+      "Standard benchmark for human gesture recognition, sensor telemetry, ECG cardiology, and speech processing."
+    ],
+    pitfalls: [
+      "Computational scaling: Pairwise DTW across $N$ time series of length $L$ requires $O(N^2 \\cdot L^2)$ operations; LB_Keogh lower bounding is necessary for large datasets.",
+      "Pathological warping: Without a Sakoe-Chiba or Itakura window constraint, a flat plateau in one series can match dozens of peaks in another, producing artificially low distances.",
+      "Triangular inequality violation: Standard DTW does not strictly satisfy the triangle inequality, meaning DTW is technically a semi-metric rather than a true metric."
+    ],
+    quiz: [
+      {
+        "q": "Why does Euclidean distance perform poorly compared to DTW when comparing audio speech signals of the same word?",
+        "o": [
+          "Euclidean distance requires exact lock-step temporal alignment, so speaking slightly slower or with a delayed start produces huge artificial distance",
+          "Euclidean distance cannot be computed on floating point numbers",
+          "Audio speech signals have infinite variance",
+          "Euclidean distance only works on 2D images"
+        ],
+        "a": 0,
+        "why": "Euclidean distance pairs points strictly by index t. If a speaker lingers on a syllable, waveforms fall out of phase, creating massive point-to-point Euclidean discrepancy."
+      },
+      {
+        "q": "What is the purpose of enforcing a Sakoe–Chiba band constraint |i - j| <= w in DTW?",
+        "o": [
+          "It prevents excessive pathological time stretching and reduces computational complexity from O(n^2) to O(nw)",
+          "It guarantees that the distance will always be zero",
+          "It transforms the time series into frequency domain Fourier coefficients",
+          "It eliminates the need for dynamic programming"
+        ],
+        "a": 0,
+        "why": "The Sakoe-Chiba band restricts warping to a diagonal corridor of width w, preventing extreme time warping blunders and speeding up computation."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "kmedoids_clustering"
+    ],
+    related: [
+      "kmedoids_clustering",
+      "kmeans_clustering",
+      "stationarity-acf-and-pacf",
+      "biclustering"
+    ],
+    keywords: "dtw, dynamic time warping, time series clustering, sakoe chiba band, k-dba, k-medoids, phase shift, alignment"
+  },
+  {
+    id: 'pca',
+    short: 'PCA',
+    title: 'Principal Component Analysis',
+    task: 'concepts',
+    module: 'Dimensionality reduction',
+    level: 1,
+    minutes: 16,
+    noLab: true,
+    summary: r`Linear dimensionality reduction projecting data onto orthogonal axes of maximal variance using singular value decomposition, compressing features while preserving global geometric variance.`,
+    lead: r`High-dimensional feature spaces suffer from multicollinearity, redundant measurements, and computational overhead. Principal Component Analysis (PCA) identifies an orthogonal sequence of linear projections that sequentially maximise variance, transforming correlated features into mutually uncorrelated principal components and compressing data with minimal reconstruction error.`,
+    intuition: [
+      r`Imagine holding a complex three-dimensional object—such as a teapot or a sculpture—in front of a blank wall under a single spotlight. If you align the light from a random angle, the cast shadow collapses into an unrecognisable blob where handles and spouts overlap. But as you rotate the object to its broadest, most characteristic orientation, the 2D shadow captures virtually all the defining contours of the 3D shape. PCA is the mathematical equivalent of finding that optimal orientation: it rotates high-dimensional coordinate axes until the projected shadow of the data exhibits the widest possible spread.`,
+      r`The fundamental premise of PCA is that directions exhibiting large variance convey the most informative differences between data points, whereas directions with negligible variance correspond to redundant noise or flat dimensions. When two sensors measure closely coupled phenomena (such as indoor temperature in Celsius and Fahrenheit), the data forms an elongated ellipse in 2D space. Instead of keeping both redundant features, PCA aligns the first principal axis along the major axis of the ellipse (capturing the shared thermal trend) and the second principal axis along the minor axis (capturing minor sensor noise).`,
+      r`Crucially, each consecutive principal component is constrained to be strictly orthogonal (perpendicular) to all preceding components. This guarantees that the newly created coordinates are completely decorrelated—their sample covariance is exactly zero. By selecting the top $k$ components that account for 90% or 95% of total variance, analysts dramatically compress datasets, eliminate multicollinearity for downstream linear models, and enable two- and three-dimensional exploratory scatter plots without discarding the primary patterns of variability.`,
+    ],
+    analogy: r`Rotating a 3D architectural model under a camera until you capture the single elevation angle that reveals the maximum building perimeter and room layout in a single 2D photograph.`,
+    steps: [
+      r`Centre the dataset by subtracting feature means: $X_c = X - \mathbf{1}\mu^T$, ensuring the origin lies at the geometric centroid. Optionally standardise features to unit variance if variables have unequal measurement scales.`,
+      r`Compute the sample covariance matrix $\Sigma = \frac{1}{n-1} X_c^T X_c$, or apply Singular Value Decomposition directly to the centred matrix $X_c = U S V^T$ to avoid numerical squaring of condition numbers.`,
+      r`Extract the right singular vectors $V$ (or eigenvectors of $\Sigma$) and their corresponding singular values $S$ (where eigenvalues $\lambda_j = S_j^2 / (n - 1)$).`,
+      r`Sort eigenvalues and singular vectors in descending order of explained variance $\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_d$.`,
+      r`Select the top $k$ principal axes $V_k \in \mathbb{R}^{d \times k}$ based on cumulative explained variance ratio criteria (e.g. 95% threshold or scree plot elbow).`,
+      r`Project the centred data onto the selected subspace to obtain lower-dimensional coordinates $Z = X_c V_k \in \mathbb{R}^{n \times k}$.`,
+      r`Quantify information retention via reconstruction error $\|X_c - Z V_k^T\|_F^2$, which equals the sum of discarded eigenvalues $\sum_{j=k+1}^d \lambda_j$.`,
+    ],
+    math: [
+      {
+        h: 'Covariance matrix and principal axis objective',
+        tex: r`$$\max_{w} \operatorname{Var}(X_c w) = \max_{w} \frac{1}{n-1} w^T X_c^T X_c w \quad \text{subject to} \quad w^T w = 1$$`,
+        p: r`Formulating the Lagrangian $\mathcal{L}(w, \lambda) = w^T \Sigma w - \lambda(w^T w - 1)$ and differentiating yields $\Sigma w = \lambda w$. The principal direction $w$ is the eigenvector of covariance matrix $\Sigma$ corresponding to the largest eigenvalue $\lambda_1 = \operatorname{Var}(X_c w_1)$. Subsequent orthogonal components correspond to eigenvectors ordered by descending eigenvalues.`,
+      },
+      {
+        h: 'SVD connection and computational efficiency',
+        tex: r`$$X_c = U S V^T, \qquad \Sigma = \frac{1}{n-1} X_c^T X_c = \frac{1}{n-1} V S^2 V^T$$`,
+        p: r`$U \in \mathbb{R}^{n \times d}$ and $V \in \mathbb{R}^{d \times d}$ are orthogonal matrices containing left and right singular vectors, and $S$ contains singular values $s_j$. Computing SVD directly on $X_c$ requires $O(n d \min(n, d))$ operations and preserves double-precision floating-point accuracy without forming the condition-squared product $X_c^T X_c$.`,
+      },
+      {
+        h: 'Explained variance ratio and optimal reconstruction',
+        tex: r`$$\operatorname{EVR}_k = \frac{\lambda_k}{\sum_{j=1}^d \lambda_j} = \frac{s_k^2}{\sum_{j=1}^d s_j^2}, \qquad \min_{\operatorname{rank}(\hat{X})=k} \|X_c - \hat{X}\|_F^2 = \sum_{j=k+1}^d \lambda_j$$`,
+        p: r`By the Eckart-Young-Mirsky theorem, the truncated projection $\hat{X} = Z V_k^T = X_c V_k V_k^T$ provides the optimal rank-$k$ approximation of centred matrix $X_c$ under both Frobenius and spectral matrix norms.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Generate synthetic 3D data with correlated features
+rng = np.random.default_rng(42)
+n_samples = 150
+z_true = rng.normal(0, 2, size=(n_samples, 1))
+noise = rng.normal(0, 0.3, size=(n_samples, 3))
+X = np.hstack([z_true * 2.0, z_true * -1.5, z_true * 0.5]) + noise
+
+# 1. Centre the data (zero mean)
+mu = np.mean(X, axis=0)
+X_c = X - mu
+
+# 2. Compute SVD: X_c = U * S * Vt
+U, S, Vt = np.linalg.svd(X_c, full_matrices=False)
+eigenvalues = (S ** 2) / (n_samples - 1)
+evr = eigenvalues / np.sum(eigenvalues)
+
+# 3. Project onto top k=2 principal components
+k = 2
+V_k = Vt[:k, :].T
+Z = X_c @ V_k
+
+# 4. Reconstruct and calculate reconstruction error
+X_reconstructed = Z @ V_k.T + mu
+rec_error = np.mean(np.sum((X - X_reconstructed) ** 2, axis=1))
+
+print(f"Explained variance ratio: {evr[:k].round(4)}")
+print(f"Total variance explained: {np.sum(evr[:k]) * 100:.2f}%")
+print(f"Mean squared reconstruction error: {rec_error:.4f}")`,
+    pitfalls: [
+      r`Scale sensitivity: Features measured in large units (e.g. annual salary in pounds) dominate total variance over smaller features (e.g. age in years). Without standardisation, PCA simply projects onto the largest arbitrary units rather than meaningful patterns.`,
+      r`Linearity restriction: PCA can only discover linear planar subspaces. Data arranged along non-linear manifolds (such as a Swiss roll, concentric rings, or helical curves) gets squashed and entangled.`,
+      r`Assuming high variance equals relevance: PCA is unsupervised and blind to target labels. The direction of maximum variance might represent uninformative measurement noise or illumination differences rather than the target classification signal.`,
+      r`Orthogonality constraint: Enforcing mutual orthogonality can force later principal components to blend distinct physical processes together, making individual components difficult to interpret as pure physical entities.`,
+    ],
+    keyPoints: [
+      r`Maximises projected variance while simultaneously minimising mean squared orthogonal reconstruction error.`,
+      r`Transforms correlated features into mutually orthogonal, linearly uncorrelated components.`,
+      r`Direct SVD of centred data $X_c = U S V^T$ is numerically superior to explicit eigendecomposition of the covariance matrix $\Sigma$.`,
+      r`Requires standardisation whenever input features carry differing units or non-comparable variance scales.`,
+    ],
+    quiz: [
+      {
+        q: r`Why must features usually be standardised before applying PCA?`,
+        o: [
+          r`Because PCA cannot run on negative numbers`,
+          r`Features with larger numerical scales artificially dominate the covariance matrix and principal axes`,
+          r`Because standardisation transforms non-linear relationships into linear ones`,
+          r`Standardisation guarantees that the total explained variance reaches exactly 100%`,
+        ],
+        a: 1,
+        why: r`Variance depends on the choice of units. If one feature is measured in millimetres and another in metres, the millimetre feature will display a million-fold greater variance and dominate the top principal component regardless of information content.`,
+      },
+      {
+        q: r`If the eigenvalues of the sample covariance matrix for a 4D dataset are $\lambda = [6.0, 2.5, 1.0, 0.5]$, what percentage of total variance is explained by the first two principal components?`,
+        o: [
+          r`60.0%`,
+          r`75.0%`,
+          r`85.0%`,
+          r`92.5%`,
+        ],
+        a: 2,
+        why: r`Total variance is the sum of all eigenvalues: $6.0 + 2.5 + 1.0 + 0.5 = 10.0$. The sum of the top two is $6.0 + 2.5 = 8.5$. The explained variance ratio is $8.5 / 10.0 = 0.85$ (or 85%).`,
+      },
+      {
+        q: r`How does Singular Value Decomposition ($X_c = U S V^T$) relate to the eigenvectors of the covariance matrix $\Sigma = \frac{1}{n-1}X_c^T X_c$?`,
+        o: [
+          r`The right singular vectors $V$ are the eigenvectors of $\Sigma$, and the eigenvalues are $\lambda_j = s_j^2 / (n-1)$`,
+          r`The left singular vectors $U$ are the eigenvectors of $\Sigma$, and the singular values $S$ are the eigenvalues`,
+          r`$V$ contains the principal scores, while $U$ contains the principal axes`,
+          r`SVD cannot be used for PCA unless $X$ is a square matrix`,
+        ],
+        a: 0,
+        why: r`Substituting $X_c = U S V^T$ into $\Sigma$ gives $\frac{1}{n-1} V S U^T U S V^T = \frac{1}{n-1} V S^2 V^T$ because $U^T U = I$. This proves $V$ are the orthonormal eigenvectors of $\Sigma$ with eigenvalues $\lambda_j = s_j^2 / (n-1)$.`,
+      },
+      {
+        q: r`What does the Eckart-Young-Mirsky theorem guarantee about the PCA rank-$k$ reconstruction $\hat{X} = X_c V_k V_k^T$?`,
+        o: [
+          r`It proves the reconstructed data has zero residual noise`,
+          r`It ensures the transformed components follow a multivariate normal distribution`,
+          r`It guarantees that all out-of-sample test samples have zero reconstruction error`,
+          r`It proves $\hat{X}$ is the optimal rank-$k$ approximation of $X_c$ minimising Frobenius reconstruction error`,
+        ],
+        a: 3,
+        why: r`The Eckart-Young-Mirsky theorem establishes that the truncated SVD reconstruction minimises the Frobenius distance $\|X_c - \hat{X}\|_F$ among all matrices of rank at most $k$.`,
+      },
+    ],
+    usedBy: ['linear_discriminant_analysis', 'logistic_regression'],
+    prereq: ['expectation-variance-and-covariance', 'ols_linear_regression'],
+    related: ['t-sne', 'umap', 'spectral_clustering'],
+    keywords: 'pca principal component analysis dimensionality reduction svd singular value decomposition covariance eigenvalues eigenvectors explained variance',
+  },
+  {
+    id: 't-sne',
+    short: 't-SNE',
+    title: 't-Distributed Stochastic Neighbour Embedding',
+    task: 'concepts',
+    module: 'Dimensionality reduction',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Non-linear dimensionality reduction that maps pairwise Euclidean distances to conditional probabilities, matching high-dimensional Gaussians to low-dimensional Student-t distributions via KL divergence.`,
+    lead: r`Linear projections like PCA inevitably collapse curved or clustered non-linear manifolds because they prioritise preserving large pairwise distances over local neighbourhood relationships. t-Distributed Stochastic Neighbour Embedding (t-SNE) converts pairwise distances into probabilities of neighbourhood co-occurrence, matching high-dimensional Gaussian affinities with heavy-tailed low-dimensional Student-t distributions to resolve the crowding problem and reveal clustered structures.`,
+    intuition: [
+      r`In high-dimensional spaces, geometry behaves counter-intuitively: the volume of a sphere grows exponentially with dimension $d$. Points distributed uniformly across a high-dimensional manifold have ample room to stay mutually equidistant from their neighbours. When attempting to project such data onto a two-dimensional sheet, geometry encounters the crowding problem: there simply is not enough area in 2D to accommodate all the moderate-distance neighbours without crushing distinct clusters on top of each other.`,
+      r`t-SNE solves this crowding problem through an elegant distribution mismatch. In the original high-dimensional space, pairwise proximity is modelled using a Gaussian distribution, which decays exponentially fast ($e^{-d^2}$). In the low-dimensional embedding space, t-SNE models proximity using a heavy-tailed Student-t distribution with 1 degree of freedom (the Cauchy distribution, decaying as $(1 + d^2)^{-1}$). Because the Student-t distribution has much heavier tails than the Gaussian, moderate-distance points must be pushed much further apart in 2D to yield the same probability match. This creates repulsive breathing room, allowing distinct clusters to separate cleanly.`,
+      r`Instead of preserving rigid metric distances, t-SNE preserves neighbourhood topology. The perplexity parameter specifies the effective number of nearest neighbours each point considers when establishing its local bandwidth $\sigma_i$. Dense regions automatically adopt a narrow $\sigma_i$ while sparse regions broaden $\sigma_i$. The algorithm then minimises the Kullback-Leibler (KL) divergence between high-dimensional affinities $P$ and low-dimensional affinities $Q$ using gradient descent. Points that are close neighbours in high dimensions exert strong attractive forces, while low-dimensional normalisation creates global repulsion.`,
+    ],
+    analogy: r`Unravelling a tangled ball of wool onto a flat tabletop: short threads between neighbouring fibres act as elastic bands pulling nearby loops together, while an overall outward pressure forces separate skeins of yarn to unfurl into isolated clusters.`,
+    steps: [
+      r`Calculate pairwise Euclidean distances $\|x_i - x_j\|$ between all sample pairs in the original high-dimensional feature space.`,
+      r`For each data point $x_i$, perform binary search to determine a unique Gaussian bandwidth $\sigma_i$ such that the Shannon entropy of its conditional probability distribution matches the user-defined perplexity: $\operatorname{Perp}(P_i) = 2^{H(P_i)}$.`,
+      r`Compute asymmetric conditional probabilities $p_{j|i}$ and symmetrise them into joint probabilities $p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}$, setting diagonal self-affinities $p_{ii} = 0$.`,
+      r`Initialise low-dimensional coordinates $y_i \in \mathbb{R}^2$ randomly from a Gaussian distribution with small variance (or using the first two PCA components for stable global layout).`,
+      r`Compute low-dimensional affinities $q_{ij}$ using the Cauchy / Student-t kernel $(1 + \|y_i - y_j\|^2)^{-1}$, normalised over all pairs.`,
+      r`Compute the analytical gradient of the KL divergence $\frac{\partial \mathcal{L}}{\partial y_i} = 4 \sum_j (p_{ij} - q_{ij})(y_i - y_j)(1 + \|y_i - y_j\|^2)^{-1}$.`,
+      r`Update coordinates $y_i$ via gradient descent with momentum and early exaggeration (multiplying high-dimensional probabilities $p_{ij}$ by a factor of 4 to 12 during initial iterations to encourage compact cluster formation).`,
+    ],
+    math: [
+      {
+        h: 'High-dimensional conditional probabilities and perplexity',
+        tex: r`$$p_{j \mid i} = \frac{\exp\left(-\frac{\|x_i - x_j\|^2}{2\sigma_i^2}\right)}{\sum_{k \ne i} \exp\left(-\frac{\|x_i - x_k\|^2}{2\sigma_i^2}\right)}, \qquad \operatorname{Perp}(P_i) = 2^{-\sum_{j} p_{j \mid i} \log_2 p_{j \mid i}}$$`,
+        p: r`The variance $\sigma_i^2$ is determined independently for each sample via binary search so that the perplexity matches the user specification (typically between 5 and 50). This adapts to varying local data density.`,
+      },
+      {
+        h: 'Symmetrisation and low-dimensional Student-t kernel',
+        tex: r`$$p_{ij} = \frac{p_{j \mid i} + p_{i \mid j}}{2n}, \qquad q_{ij} = \frac{\left(1 + \|y_i - y_j\|^2\right)^{-1}}{\sum_{k} \sum_{l \ne k} \left(1 + \|y_k - y_l\|^2\right)^{-1}}$$`,
+        p: r`Symmetrisation ensures that outliers (which have tiny $p_{j|i}$ for all $j$) still exert meaningful gradients. The low-dimensional Cauchy distribution decays as the inverse square of distance, preventing crowding.`,
+      },
+      {
+        h: 'Cost function and analytical gradient',
+        tex: r`$$\mathcal{L}_{KL} = \sum_{i} \sum_{j \ne i} p_{ij} \log \frac{p_{ij}}{q_{ij}}, \qquad \frac{\partial \mathcal{L}}{\partial y_i} = 4 \sum_{j} (p_{ij} - q_{ij})(y_i - y_j)\left(1 + \|y_i - y_j\|^2\right)^{-1}$$`,
+        p: r`The asymmetry of KL divergence heavily penalises false negatives (large $p_{ij}$ modelled by small $q_{ij}$), which pulls high-dimensional neighbours together. False positives (small $p_{ij}$ with moderate $q_{ij}$) receive very mild penalties, allowing distant clusters to position themselves freely.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic dataset: two well-separated clusters in 4D space
+rng = np.random.default_rng(42)
+X = np.vstack([rng.normal(-3, 0.5, (20, 4)), rng.normal(3, 0.5, (20, 4))])
+n = len(X)
+
+# 1. High-dimensional pairwise Gaussian affinities and symmetrisation
+D2 = np.sum((X[:, None, :] - X[None, :, :]) ** 2, axis=-1)
+np.fill_diagonal(D2, np.inf)
+P_cond = np.exp(-D2 / 2.0)
+P_cond = P_cond / P_cond.sum(axis=1, keepdims=True)
+P = np.maximum((P_cond + P_cond.T) / (2 * n), 1e-12)
+
+# 2. Initialise low-dimensional embedding coordinates
+Y = rng.normal(0, 1e-4, (n, 2))
+lr, n_iter = 50.0, 120
+
+# 3. Minimise KL divergence via gradient descent
+for _ in range(n_iter):
+    dist_y = np.sum((Y[:, None, :] - Y[None, :, :]) ** 2, axis=-1)
+    inv = 1.0 / (1.0 + dist_y)
+    np.fill_diagonal(inv, 0.0)
+    Q = np.maximum(inv / np.sum(inv), 1e-12)
+    grad = 4 * np.sum((P - Q)[:, :, None] * inv[:, :, None] * (Y[:, None, :] - Y[None, :, :]), axis=1)
+    Y -= lr * grad
+
+kl_div = np.sum(P * np.log(P / Q))
+print(f"Final KL divergence: {kl_div:.4f}")
+print(f"Cluster 1 centre in 2D: {Y[:20].mean(axis=0).round(2)}")
+print(f"Cluster 2 centre in 2D: {Y[20:].mean(axis=0).round(2)}")`,
+    pitfalls: [
+      r`Inter-cluster distances are meaningless: t-SNE prioritises local neighbourhood preservation; the distance between two distant cluster centres in the 2D plot does not reflect true metric separation in high dimensions.`,
+      r`Cluster sizes and densities reflect perplexity: t-SNE expands dense clusters and contracts sparse clusters so they appear to have similar spread in 2D. Apparent cluster radius cannot be interpreted as geometric variance.`,
+      r`Non-parametric and non-inductive: Standard t-SNE does not learn a functional mapping $f(x) \to y$. New test samples cannot be projected without rerunning the entire optimisation from scratch.`,
+      r`Stochastic non-convex optimisation: The KL divergence objective has many local minima. Different random initialisations and perplexity values can yield visually distinct layouts.`,
+    ],
+    keyPoints: [
+      r`Replaces metric distance preservation with probability distribution matching via Kullback-Leibler divergence.`,
+      r`Heavy-tailed Student-t kernel in low-dimensional space resolves the high-dimensional crowding problem.`,
+      r`Adaptive Gaussian bandwidth $\sigma_i$ dynamically scales to match local density via the perplexity hyperparameter.`,
+      r`Designed primarily as an exploratory visualisation technique rather than a feature extraction pipeline for downstream models.`,
+    ],
+    quiz: [
+      {
+        q: r`Why does t-SNE use a Student-t distribution in the low-dimensional space instead of a Gaussian distribution?`,
+        o: [
+          r`Because Student-t distributions are faster to evaluate computationally`,
+          r`Because Student-t distributions ensure global linear orthogonality`,
+          r`Because high-dimensional data always follows a Student-t distribution`,
+          r`Because the heavy tails of the Student-t distribution alleviate the crowding problem by pushing moderate-distance points apart`,
+        ],
+        a: 3,
+        why: r`In low dimensions, area is constrained. The heavy inverse-square tails of the Student-t distribution ($1/(1+d^2)$) require points with small to moderate affinities to be mapped further apart than a Gaussian would, preventing separate clusters from collapsing into a dense central clump.`,
+      },
+      {
+        q: r`What is the primary role of the perplexity hyperparameter in t-SNE?`,
+        o: [
+          r`It sets the effective number of nearest neighbours used to adapt the local Gaussian bandwidth $\sigma_i$ for each point`,
+          r`It determines the final number of clusters displayed in the 2D plot`,
+          r`It specifies the learning rate of the gradient descent optimiser`,
+          r`It controls the number of principal components retained during initialisation`,
+        ],
+        a: 0,
+        why: r`Perplexity represents the effective continuous degrees of freedom or target neighbourhood size $2^{H(P_i)}$. Binary search tunes $\sigma_i$ per point so its conditional entropy matches $\log_2(\text{perplexity})$.`,
+      },
+      {
+        q: r`Why can the distance between two widely separated clusters in a t-SNE plot NOT be interpreted as true high-dimensional geometric distance?`,
+        o: [
+          r`Because t-SNE strictly preserves metric distances using geodesic shortest paths`,
+          r`Because t-SNE normalises all cluster centroids to lie on the unit circle`,
+          r`Because the KL divergence penalty focuses almost entirely on preserving local neighbours, leaving distant clusters free to settle anywhere`,
+          r`Because t-SNE introduces artificial random Gaussian jitter to cluster centroids at every iteration`,
+        ],
+        a: 2,
+        why: r`The asymmetric term $p_{ij} \log(p_{ij}/q_{ij})$ approaches zero whenever $p_{ij} \approx 0$. When points belong to different clusters, their $p_{ij}$ is virtually zero, meaning the loss exerts negligible attractive or metric constraints on their relative positions.`,
+      },
+      {
+        q: r`Why can standard t-SNE not directly transform a single new, unseen test sample into 2D coordinates?`,
+        o: [
+          r`Because t-SNE is a supervised algorithm requiring ground truth labels for transformation`,
+          r`Because t-SNE is a non-parametric embedding that optimises sample coordinates directly rather than learning a parametric mapping function`,
+          r`Because t-SNE coordinates are only valid when sample count is an exact power of two`,
+          r`Because the Student-t distribution cannot be evaluated on individual points`,
+        ],
+        a: 1,
+        why: r`t-SNE does not learn an encoder or projection matrix $W$; it directly optimises the array of 2D coordinates $Y \in \mathbb{R}^{n \times 2}$ via gradient descent over all pairs. Projecting a new point requires rerunning optimisation or using parametric extensions.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['pca', 'kl-divergence'],
+    related: ['pca', 'umap', 'spectral_clustering'],
+    keywords: 'tsne t-sne t-distributed stochastic neighbour embedding dimensionality reduction manifold learning perplexity kl divergence student-t',
+  },
+  {
+    id: 'umap',
+    short: 'UMAP',
+    title: 'Uniform Manifold Approximation and Projection',
+    task: 'concepts',
+    module: 'Dimensionality reduction',
+    level: 2,
+    minutes: 18,
+    noLab: true,
+    summary: r`Non-linear manifold dimensionality reduction rooted in Riemannian geometry and algebraic topology, preserving both local and global structure with faster SGD optimisation.`,
+    lead: r`While t-SNE produces compelling cluster visualisations, it suffers from quadratic computational scaling, loses broad global continuum arrangements, and cannot readily project out-of-sample observations. Uniform Manifold Approximation and Projection (UMAP) combines theoretical foundations in Riemannian geometry and fuzzy simplicial sets with negative-sampling stochastic gradient descent, delivering faster execution and superior preservation of global trajectory structures.`,
+    intuition: [
+      r`UMAP begins with three mathematical assumptions: first, that data lies on an underlying Riemannian manifold; second, that the Riemannian metric is locally constant (meaning space stretches or compresses depending on point density); and third, that the manifold is locally connected. Under these assumptions, the metric space around every point can be rescaled such that the distance to its first nearest neighbour is normalised to a baseline value. This ensures that even in extremely sparse regions of the dataset, no point is left isolated from the neighbourhood graph.`,
+      r`In high dimensions, UMAP represents neighbourhood relationships as a fuzzy simplicial set—a topological structure where edges, triangles, and higher-order simplices have probabilistic degrees of membership. The fuzzy membership between two points reflects the probability that an edge exists between them. By computing the fuzzy set union across all points, UMAP creates a robust topological graph that models both tight local clusters and bridging corridors across distant groups.`,
+      r`In low dimensions, UMAP places points to recreate the high-dimensional fuzzy simplicial set as closely as possible. Instead of using KL divergence (which only penalises false negatives), UMAP optimises the fuzzy set cross-entropy loss. This objective function includes both an attractive term (drawing high-probability neighbours together) and a repulsive term (pushing non-neighbours apart globally). Optimised via stochastic gradient descent with negative sampling (similar to Word2Vec), UMAP runs orders of magnitude faster than t-SNE and preserves broad global continuums.`,
+    ],
+    analogy: r`Constructing a flexible wire-mesh net over the folds and contours of an origami sculpture, then laying the mesh down flat by pulling interconnected wires taut while gentle repellers keep unrelated folds from tangling.`,
+    steps: [
+      r`Construct a $k$-nearest neighbour graph across the input dataset using approximate nearest neighbours (such as nearest neighbour descent).`,
+      r`For each point $x_i$, compute the local distance $\rho_i$ to its immediate nearest neighbour, establishing the local connectivity constraint.`,
+      r`Perform a binary search to find the local scale $\sigma_i$ such that the sum of directed fuzzy memberships satisfies $\sum_{j} \exp(-\max(0, d(x_i, x_j) - \rho_i)/\sigma_i) = \log_2(k)$.`,
+      r`Symmetrise the directed affinities using the fuzzy set union formula: $p_{ij} = p_{j|i} + p_{i|j} - p_{j|i} p_{i|j}$.`,
+      r`Formulate the low-dimensional affinity kernel $q_{ij} = (1 + a \|y_i - y_j\|^{2b})^{-1}$, fitting parameters $a$ and $b$ to match the chosen minimum distance hyperparameter min_dist.`,
+      r`Initialise the low-dimensional layout using spectral embedding (the eigenvectors of the normalised Laplacian of the fuzzy graph) to preserve global macro-structure.`,
+      r`Optimise the low-dimensional coordinates using stochastic gradient descent (SGD) on the fuzzy cross-entropy loss, alternating between attractive edge updates and negative-sampled repulsive updates.`,
+    ],
+    math: [
+      {
+        h: 'Local metric scaling and directed fuzzy membership',
+        tex: r`$$p_{j \mid i} = \exp\left(-\frac{\max(0, d(x_i, x_j) - \rho_i)}{\sigma_i}\right), \qquad \sum_{j=1}^k \exp\left(-\frac{\max(0, d(x_i, x_j) - \rho_i)}{\sigma_i}\right) = \log_2(k)$$`,
+        p: r`$\rho_i = \min_{j \ne i} d(x_i, x_j)$ represents the distance to $x_i$'s nearest neighbour. Subtracting $\rho_i$ ensures that $p_{j|i} = 1$ for the closest neighbour, guaranteeing local graph connectivity.`,
+      },
+      {
+        h: 'Fuzzy set algebraic union',
+        tex: r`$$p_{ij} = p_{j \mid i} + p_{i \mid j} - p_{j \mid i} p_{i \mid j}$$`,
+        p: r`Because the local metrics defined by $\sigma_i$ and $\sigma_j$ differ, $p_{j|i} \ne p_{i|j}$. UMAP treats directed memberships as fuzzy probabilities and applies the standard algebraic t-conorm for fuzzy union to produce a symmetric graph.`,
+      },
+      {
+        h: 'Fuzzy set cross-entropy and low-dimensional gradient',
+        tex: r`$$\mathcal{L}_{CE} = \sum_{i \ne j} \left( p_{ij} \log \frac{p_{ij}}{q_{ij}} + (1 - p_{ij}) \log \frac{1 - p_{ij}}{1 - q_{ij}} \right), \quad q_{ij} = \frac{1}{1 + a \|y_i - y_j\|^{2b}}$$`,
+        p: r`The first term exerts attractive forces along high-probability edges ($p_{ij} \to 1$). The second term exerts repulsive forces across non-connected pairs ($p_{ij} \to 0$), preserving global separation without requiring low-dimensional partition functions.`,
+      },
+    ],
+    code: r`import numpy as np
+
+# Synthetic 3D points forming two separate groups
+rng = np.random.default_rng(42)
+X = np.vstack([rng.normal(-4, 0.5, (15, 3)), rng.normal(4, 0.5, (15, 3))])
+n = len(X)
+
+# 1. High-dimensional distances, local connectivity rho, and scale sigma
+D = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=-1)
+np.fill_diagonal(D, np.inf)
+rho = np.min(D, axis=1)
+sigma = np.mean(np.sort(D, axis=1)[:, :5], axis=1)
+np.fill_diagonal(D, 0.0)
+
+# 2. Fuzzy simplicial set: directed affinities and symmetric fuzzy union
+P_cond = np.exp(-np.maximum(0.0, D - rho[:, None]) / sigma[:, None])
+np.fill_diagonal(P_cond, 0.0)
+P = P_cond + P_cond.T - P_cond * P_cond.T
+
+# 3. Optimise low-dimensional coordinates via fuzzy cross-entropy gradient
+Y = rng.normal(0, 1.0, (n, 2))
+lr, a, b = 0.2, 1.0, 1.0
+for _ in range(80):
+    dist_sq = np.sum((Y[:, None, :] - Y[None, :, :]) ** 2, axis=-1)
+    np.fill_diagonal(dist_sq, np.inf)
+    inv = 1.0 / (1.0 + a * (dist_sq ** b))
+    np.fill_diagonal(inv, 0.0)
+    diff = Y[:, None, :] - Y[None, :, :]
+    attract = -2.0 * b * (P * inv)[:, :, None] * diff
+    repel = 2.0 * b * ((1.0 - P) * (1.0 - inv) * inv)[:, :, None] * diff
+    Y += lr * np.sum(attract + repel, axis=1)
+
+print(f"Cluster 1 centre in 2D: {Y[:15].mean(axis=0).round(2)}")
+print(f"Cluster 2 centre in 2D: {Y[15:].mean(axis=0).round(2)}")`,
+    pitfalls: [
+      r`Hyperparameter sensitivity: The n_neighbours parameter dictates the scale of focus (small values highlight micro-structure, while large values capture global trajectories). The min_dist parameter controls how tightly clustered points pack together.`,
+      r`Distances are not linear metrics: While UMAP preserves global relative arrangements substantially better than t-SNE, the Euclidean distance between distant clusters in the embedding cannot be interpreted as a calibrated metric.`,
+      r`Stochastic layout variation: Although spectral initialisation provides deterministic macro-positioning, subsequent stochastic gradient descent with negative sampling introduces minor run-to-run variations unless a fixed random seed is set.`,
+      r`Non-uniform density assumption: The fundamental premise that data is uniformly distributed on the manifold means UMAP actively normalises away differences in local cluster density.`,
+    ],
+    keyPoints: [
+      r`Preserves both local neighbourhood clustering and global continuum trajectories more effectively than t-SNE.`,
+      r`Uses fuzzy simplicial sets and fuzzy cross-entropy, eliminating the $O(n^2)$ partition function normalisation.`,
+      r`Spectral graph Laplacian initialisation anchors global layout before stochastic gradient descent refinement.`,
+      r`Supports inductive projection: new unseen samples can be embedded into an existing layout using local fuzzy set transforms.`,
+    ],
+    quiz: [
+      {
+        q: r`What is the primary purpose of the local connectivity parameter $\rho_i$ in UMAP?`,
+        o: [
+          r`It sets the learning rate for gradient descent`,
+          r`It forces all points to lie on a hypersphere of radius $\rho_i$`,
+          r`It ensures that the distance to the nearest neighbour is zero in the local metric, guaranteeing graph connectivity`,
+          r`It controls the number of negative samples per edge update`,
+        ],
+        a: 2,
+        why: r`By subtracting $\rho_i = \min_{j \ne i} d(x_i, x_j)$ inside the exponential kernel, the affinity to the immediate nearest neighbour evaluates to $\exp(0) = 1$. This ensures that every point connects to at least one neighbour with 100% fuzzy certainty.`,
+      },
+      {
+        q: r`Why does UMAP's optimisation scale to millions of data points much faster than standard t-SNE?`,
+        o: [
+          r`UMAP only evaluates every tenth data point`,
+          r`UMAP solves a closed-form matrix inversion instead of using iterative gradient descent`,
+          r`UMAP computes exact Voronoi diagrams on CPU cores`,
+          r`UMAP replaces the global $O(n^2)$ denominator normalisation with edge-wise stochastic gradient descent and negative sampling`,
+        ],
+        a: 3,
+        why: r`t-SNE's denominator $\sum_{k \ne l} (1 + \|y_k - y_l\|^2)^{-1}$ couples all $n^2$ pairs. UMAP's fuzzy cross-entropy optimises individual graph edges with negative sampling, scaling as $O(n \log n)$ or $O(n)$ with approximate nearest neighbours.`,
+      },
+      {
+        q: r`How does UMAP's objective function differ fundamentally from t-SNE's Kullback-Leibler divergence?`,
+        o: [
+          r`UMAP uses fuzzy cross-entropy, which includes an explicit repulsive term $(1 - p_{ij})\log(1 - q_{ij})$ for non-neighbours`,
+          r`UMAP uses mean squared error between pairwise Euclidean distance matrices`,
+          r`UMAP minimises the Wasserstein-1 (Earth Mover's) distance between point clouds`,
+          r`UMAP has no objective function and relies solely on spectral decomposition`,
+        ],
+        a: 0,
+        why: r`t-SNE's KL divergence only penalises large $p_{ij}$ with small $q_{ij}$. UMAP's fuzzy cross-entropy has two terms: $p_{ij}\log(p_{ij}/q_{ij})$ pulls neighbours together, and $(1 - p_{ij})\log((1 - p_{ij})/(1 - q_{ij}))$ pushes non-connected pairs apart.`,
+      },
+      {
+        q: r`Which hyperparameter in UMAP directly controls how tightly packed embedded points appear within their clusters?`,
+        o: [
+          r`n_neighbours`,
+          r`min_dist`,
+          r`metric`,
+          r`learning_rate`,
+        ],
+        a: 1,
+        why: r`min_dist specifies the minimum allowable distance between points in the low-dimensional space, fitting the parameters $a$ and $b$ of the low-dimensional kernel. Lower values create densely packed clumps, while higher values preserve broader dispersion.`,
+      },
+    ],
+    usedBy: [],
+    prereq: ['pca', 't-sne'],
+    related: ['t-sne', 'pca', 'spectral_clustering'],
+    keywords: 'umap uniform manifold approximation projection dimensionality reduction fuzzy simplicial sets manifold learning topology sgd',
+  },
+  {
+    id: "svd-and-truncated-svd",
+    short: "SVD & truncated SVD",
+    title: "Singular Value Decomposition and Truncated SVD",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Decompose any matrix into orthogonal rotation and scaling components: master the Eckart–Young–Mirsky low-rank theorem and Latent Semantic Analysis (LSA).",
+    lead: "While eigendecomposition applies only to square matrices, Singular Value Decomposition (SVD) factors any rectangular matrix into orthonormal singular vectors and singular values, providing the optimal low-rank matrix approximation.",
+    intuition: [
+      "Every rectangular matrix $X \\in \\mathbb{R}^{n \\times p}$ represents a linear transformation mapping vectors from $\\mathbb{R}^p$ to $\\mathbb{R}^n$. Geometrically, any linear transformation maps an origin-centred unit hypersphere into a hyper-ellipsoid. The Singular Value Decomposition (SVD) formalises this geometric reality into three elementary operations: an initial orthogonal rotation in $\\mathbb{R}^p$, an axis-aligned stretching, and a secondary orthogonal rotation in $\\mathbb{R}^n$.",
+      "Mathematically, SVD decomposes $X = U \\Sigma V^T$, where $U \\in \\mathbb{R}^{n \\times n}$ contains orthonormal left singular vectors (eigenvectors of $X X^T$), $V \\in \\mathbb{R}^{p \\times p}$ contains orthonormal right singular vectors (eigenvectors of $X^T X$), and $\\Sigma \\in \\mathbb{R}^{n \\times p}$ is a diagonal matrix of non-negative singular values $\\sigma_1 \\ge \\sigma_2 \\ge \\dots \\ge \\sigma_r > 0$ ordered by magnitude.",
+      "The foundational power of SVD lies in the Eckart–Young–Mirsky theorem. It proves that keeping only the top $k$ singular values and their corresponding singular vectors—constructing Truncated SVD $X_k = \\sum_{i=1}^k \\sigma_i u_i v_i^T$—yields the mathematically optimal rank-$k$ approximation of $X$ under both the Frobenius norm and spectral norm.",
+      "Truncated SVD is ubiquitous across machine learning: in text mining, applying Truncated SVD to sparse term-document matrices constitutes Latent Semantic Analysis (LSA), compressing thousands of vocabulary words into dense semantic concept vectors; in recommendation systems, it underpins matrix factorisation; in signal processing, it denoises data by truncating small noise singular values."
+    ],
+    analogy: "Imagine a complex orchestral recording featuring 100 instruments playing at once. SVD decomposes the master audio track into distinct, independent sonic layers ordered by volume. The first few singular vectors capture the massive booming rhythm section and lead vocals (the low-rank signal). The tiny 90th to 100th singular vectors capture the faint rustle of sheet music and background air conditioning (the noise). Truncating the matrix keeps the music intact while eliminating the hiss.",
+    steps: [
+      {
+        "title": "1. Formulate rectangular data matrix",
+        "body": "Structure matrix $X \\in \\mathbb{R}^{n \\times p}$ (e.g. document-term count matrix, user-item ratings, or sensor channels)."
+      },
+      {
+        "title": "2. Compute SVD factorization",
+        "body": "Compute $X = U \\Sigma V^T$. In thin/reduced SVD for $n > p$, $U \\in \\mathbb{R}^{n \\times p}$, $\\Sigma \\in \\mathbb{R}^{p \\times p}$, and $V \\in \\mathbb{R}^{p \\times p}$."
+      },
+      {
+        "title": "3. Truncate to desired rank k",
+        "body": "Select rank $k \\ll \\min(n, p)$. Retain the first $k$ columns of $U$ ($U_k$), the top $k \\times k$ block of $\\Sigma$ ($\\Sigma_k$), and the first $k$ columns of $V$ ($V_k$)."
+      },
+      {
+        "title": "4. Project and reconstruct",
+        "body": "Obtain low-dimensional sample coordinates: $Z = X V_k = U_k \\Sigma_k$. Reconstruct low-rank approximation: $\\hat{X}_k = U_k \\Sigma_k V_k^T$."
+      }
+    ],
+    math: [
+      {
+        "h": "Full Singular Value Decomposition",
+        "tex": "X = U \\Sigma V^T = \\sum_{i=1}^r \\sigma_i u_i v_i^T, \\quad U^T U = I_n, \\; V^T V = I_p, \\; \\sigma_1 \\ge \\sigma_2 \\ge \\dots \\ge 0",
+        "p": "Decomposes matrix X into a sum of r rank-1 outer products u_i v_i^T, weighted by descending singular values sigma_i."
+      },
+      {
+        "h": "Eckart–Young–Mirsky Low-Rank Approximation Theorem",
+        "tex": "\\min_{\\operatorname{rank}(B) = k} \\|X - B\\|_F = \\|X - X_k\\|_F = \\sqrt{\\sum_{i=k+1}^r \\sigma_i^2}, \\quad X_k = U_k \\Sigma_k V_k^T",
+        "p": "Truncated SVD provides the exact best rank-k approximation under Frobenius norm. The minimum achievable reconstruction error equals the square root of discarded singular values squared."
+      },
+      {
+        "h": "Mathematical Equivalence to PCA",
+        "tex": "\\operatorname{Cov}(X) = \\frac{1}{n - 1} X_c^T X_c = \\frac{1}{n - 1} V \\Sigma^2 V^T",
+        "p": "When data matrix X_c is mean-centred across rows, the right singular vectors V of X_c are identical to the principal component loading vectors of Cov(X), with eigenvalues lambda_i = sigma_i^2 / (n - 1)."
+      }
+    ],
+    code: "import numpy as np\n\n# Truncated SVD and Latent Semantic Analysis (LSA) from scratch\nnp.random.seed(42)\n\n# Synthetic Term-Document Matrix (6 terms x 8 documents)\n# Terms: [algorithm, coding, neural, python, finance, stocks, trading, investment]\nterms = ['neural', 'python', 'algorithm', 'finance', 'stocks', 'trading']\ndocs = [f\"Doc_{i+1}\" for i in range(8)]\n\n# Docs 0-3 are Tech articles; Docs 4-7 are Finance articles\nX = np.array([\n    # D1  D2  D3  D4  D5  D6  D7  D8\n    [ 3,  2,  4,  3,  0,  0,  0,  0],  # neural\n    [ 4,  5,  3,  4,  1,  0,  0,  0],  # python\n    [ 2,  3,  4,  2,  0,  1,  0,  0],  # algorithm\n    [ 0,  0,  0,  1,  4,  5,  3,  4],  # finance\n    [ 0,  0,  0,  0,  5,  4,  5,  3],  # stocks\n    [ 0,  1,  0,  0,  3,  4,  4,  5],  # trading\n], dtype=float)\n\n# 1. Compute Full SVD: X = U Sigma V^T\nU, S, Vt = np.linalg.svd(X, full_matrices=False)\nV = Vt.T\n\n# 2. Truncate to rank k=2 (discovering 2 latent concepts: Tech vs Finance)\nk = 2\nU_k = U[:, :k]\nS_k = np.diag(S[:k])\nV_k = V[:, :k]\n\n# Low-rank reconstruction\nX_reconstructed = U_k @ S_k @ V_k.T\n\n# Frobenius reconstruction error\nerr_actual = np.linalg.norm(X - X_reconstructed, 'fro')\nerr_theoretical = np.sqrt(np.sum(S[k:]**2))\n\n# Document representation in 2D latent concept space\ndoc_coords = V_k @ S_k\n\nprint(f\"Singular values of term-document matrix: {S.round(2)}\")\nprint(f\"Explained variance by top {k} components: {(np.sum(S[:k]**2) / np.sum(S**2))*100:.1f}%\")\nprint(f\"Actual Frobenius Error:      {err_actual:.4f}\")\nprint(f\"Theoretical Eckart-Young Error: {err_theoretical:.4f} (exact match!)\")\n\nprint(\"\\nDocument coordinates in 2D Latent Semantic Space:\")\nfor d_name, coord in zip(docs, doc_coords):\n    category = \"Tech\" if coord[0] > coord[1] else \"Finance\"\n    print(f\"  {d_name}: [{coord[0]:+5.2f}, {coord[1]:+5.2f}] -> Identified as {category}\")",
+    keyPoints: [
+      "Decomposes any rectangular matrix $X \\in \\mathbb{R}^{n \\times p}$ into orthonormal singular vectors and singular values: $X = U \\Sigma V^T$.",
+      "Eckart–Young–Mirsky theorem guarantees that Truncated SVD $X_k = U_k \\Sigma_k V_k^T$ is the optimal rank-$k$ approximation under Frobenius and spectral norms.",
+      "Underpins Latent Semantic Analysis (LSA), transforming sparse high-dimensional term-document matrices into dense low-dimensional semantic representations.",
+      "Unlike PCA, Truncated SVD does not require centreing data to zero mean, preserving memory sparsity in massive term-document or rating matrices.",
+      "Right singular vectors $V$ of mean-centred data correspond exactly to principal component directions in PCA."
+    ],
+    pitfalls: [
+      "Confusing SVD with PCA: PCA requires column-centreing first; running SVD without centreing finds directions of maximum energy from the origin, not maximum variance around the mean.",
+      "Negative values in semantic concepts: SVD generates both positive and negative entries, meaning latent components lack strict parts-based physical interpretability; Non-Negative Matrix Factorisation (NMF) solves this.",
+      "High memory consumption with dense matrices: Full SVD of an $n \\times p$ matrix requires $O(\\min(n p^2, n^2 p))$ operations; randomized SVD or Lanczos iterations should be used for large matrices."
+    ],
+    quiz: [
+      {
+        "q": "What does the Eckart–Young–Mirsky theorem establish regarding Truncated SVD?",
+        "o": [
+          "Truncating SVD to rank k yields the mathematically optimal rank-k matrix approximation under both Frobenius and spectral norms",
+          "SVD singular values must always sum to 1",
+          "All rectangular matrices can be diagonalized using real numbers",
+          "Truncating SVD guarantees zero reconstruction error"
+        ],
+        "a": 0,
+        "why": "The Eckart-Young-Mirsky theorem is the bedrock result proving that X_k = U_k Sigma_k V_k^T minimises ||X - B||_F over all matrices B with rank <= k."
+      },
+      {
+        "q": "Why is Truncated SVD preferred over standard PCA for high-dimensional sparse text data (e.g. TF-IDF matrices)?",
+        "o": [
+          "centreing the matrix for PCA destroys sparsity (turning zeros into non-zeros), exhausting RAM, whereas Truncated SVD operates directly on sparse matrices",
+          "Truncated SVD cannot be computed on dense matrices",
+          "PCA only works on images, not text",
+          "Truncated SVD requires no matrix multiplications"
+        ],
+        "a": 0,
+        "why": "Column-centreing in PCA subtracts the mean, converting a 99% sparse matrix into a 100% dense matrix that instantly blows up RAM. Truncated SVD operates directly on sparse formats."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance"
+    ],
+    related: [
+      "ols-inference-t-tests-f-test-r2-and-adjusted-r2",
+      "biclustering",
+      "kernel-pca",
+      "pls-and-principal-component-regression"
+    ],
+    keywords: "svd, singular value decomposition, truncated svd, eckart young mirsky, low rank approximation, latent semantic analysis, lsa, matrix factorisation"
+  },
+  {
+    id: "kernel-pca",
+    short: "Kernel PCA",
+    title: "Kernel Principal Component Analysis",
+    task: "concepts",
+    module: "Dimensionality reduction",
+    level: 2,
+    minutes: 16,
+    noLab: true,
+    summary: "Unfold non-linear manifolds by performing PCA in reproducing kernel Hilbert spaces: master the kernel trick, double centring, and pre-image challenges.",
+    lead: "Linear PCA projects data onto straight hyperplanes, failing when data lies on concentric spheres, Swiss rolls, or curved manifolds. Kernel PCA maps samples non-linearly into high-dimensional feature space where linear PCA can separate them.",
+    intuition: [
+      "Principal Component Analysis (PCA) is inherently linear: it discovers orthogonal straight lines and flat hyperplanes that capture maximum variance. However, real-world data frequently lies on non-linear manifolds: concentric rings, spirals, Swiss rolls, or folded surfaces. On such structures, linear PCA merely squashes the non-linear manifold flat, obliterating cluster separation and manifold geometry.",
+      "Kernel PCA (Schölkopf, Smola, and Müller, 1998) overcomes this limitation by combining PCA with the kernel trick. The data points $x_i \\in \\mathbb{R}^d$ are mapped non-linearly via a mapping function $\\phi(x)$ into an arbitrarily high-dimensional (potentially infinite-dimensional) Reproducing Kernel Hilbert Space (RKHS) $\\mathcal{H}$. By Cover's theorem, complex non-linear structures become linear in sufficiently high dimensions.",
+      "Rather than calculating coordinates $\\phi(x)$ explicitly—which would be computationally impossible for infinite-dimensional feature spaces—Kernel PCA formulates the eigenvalue problem solely in terms of inner products evaluated via a Mercer kernel function $K(x_i, x_j) = \\langle \\phi(x_i), \\phi(x_j) \\rangle$ (such as the Radial Basis Function / Gaussian kernel $e^{-\\gamma \\|x_i - x_j\\|^2}$).",
+      "Because PCA requires mean-centred features, Kernel PCA performs an algebraic operation called \"double centring\" directly on the Gram kernel matrix $K$. Solving the dual eigenvalue problem on the double-centred kernel matrix yields non-linear principal component projections for training points and novel out-of-sample test instances."
+    ],
+    analogy: "Imagine two concentric rings of iron filings sitting on a flat wooden tabletop: an inner circular ring surrounded by an outer ring. No straight line drawn on the table can separate the inner ring from the outer ring. Now place a strong magnet beneath the centre of the table. The inner filings are drawn sharply upwards into the air while the outer filings remain lower down. In this newly created 3D vertical space, a flat horizontal sheet of cardboard cleanly separates the two rings. Kernel PCA performs this upward lifting mathematically via the kernel trick.",
+    steps: [
+      {
+        "title": "1. Select kernel function and compute Gram matrix",
+        "body": "Choose a valid Mercer kernel (e.g. Gaussian RBF $K(x, x') = \\exp(-\\gamma \\|x - x'\\|^2)$). Compute $n \\times n$ Gram matrix $K_{ij} = K(x_i, x_j)$."
+      },
+      {
+        "title": "2. Perform kernel double centring",
+        "body": "Because feature vectors $\\phi(x)$ must be mean-centred in $\\mathcal{H}$, compute double-centred kernel matrix: $\\tilde{K} = K - \\mathbf{1}_n K - K \\mathbf{1}_n + \\mathbf{1}_n K \\mathbf{1}_n$, where $\\mathbf{1}_n$ has all entries equal to $1/n$."
+      },
+      {
+        "title": "3. Solve dual eigenvalue problem",
+        "body": "Solve $\\tilde{K} \\alpha_k = \\lambda_k \\alpha_k$. Normalise eigenvectors such that $\\lambda_k \\|\\alpha_k\\|^2 = 1$."
+      },
+      {
+        "title": "4. Project novel test points",
+        "body": "Project arbitrary sample $x$ onto $k$-th non-linear principal component: $y_k(x) = \\sum_{i=1}^n \\alpha_{ki} \\tilde{K}(x_i, x)$."
+      }
+    ],
+    math: [
+      {
+        "h": "Dual Kernel PCA Eigenvalue Problem",
+        "tex": "\\tilde{K} \\alpha_k = \\lambda_k \\alpha_k, \\quad \\text{subject to } \\lambda_k (\\alpha_k^T \\alpha_k) = 1",
+        "p": "The primal PCA problem in feature space H translates into an n x n dual eigenvalue problem on the Gram matrix K, eliminating dependence on feature dimension."
+      },
+      {
+        "h": "Gram Matrix Double Centring",
+        "tex": "\\tilde{K} = K - \\frac{1}{n} J K - \\frac{1}{n} K J + \\frac{1}{n^2} J K J, \\quad J = \\mathbf{1}_n \\mathbf{1}_n^T",
+        "p": "Ensures that implicit feature mappings phi(x) have zero mean in Hilbert space without ever computing phi(x) explicitly."
+      },
+      {
+        "h": "Out-of-Sample Non-Linear Projection",
+        "tex": "y_k(x) = \\langle v_k, \\phi(x) \\rangle = \\sum_{i=1}^n \\alpha_{ki} \\tilde{K}(x_i, x)",
+        "p": "Projects novel input x onto the k-th non-linear principal component eigenvector v_k via linear combination of kernel evaluations."
+      }
+    ],
+    code: "import numpy as np\n\n# Kernel PCA with Radial Basis Function (RBF) Kernel from scratch\nclass KernelPCA:\n    def __init__(self, n_components=2, gamma=1.0):\n        self.n_components = n_components\n        self.gamma = gamma\n        self.alphas = None\n        self.lambdas = None\n        self.X_fit = None\n        self.K_fit = None\n        \n    def _rbf_kernel(self, X1, X2):\n        # Pairwise squared Euclidean distance\n        dists_sq = np.sum(X1**2, axis=1)[:, None] + np.sum(X2**2, axis=1)[None, :] - 2 * (X1 @ X2.T)\n        return np.exp(-self.gamma * np.maximum(dists_sq, 0))\n        \n    def fit_transform(self, X):\n        self.X_fit = X\n        n = X.shape[0]\n        \n        # 1. Compute Gram Matrix\n        K = self._rbf_kernel(X, X)\n        self.K_fit = K\n        \n        # 2. Kernel Double Centring\n        one_n = np.ones((n, n)) / n\n        K_tilde = K - one_n @ K - K @ one_n + one_n @ K @ one_n\n        \n        # 3. Eigenvalue Decomposition\n        eigenvals, eigenvecs = np.linalg.eigh(K_tilde)\n        \n        # Sort eigenvalues in descending order\n        idx = np.argsort(eigenvals)[::-1]\n        eigenvals = eigenvals[idx]\n        eigenvecs = eigenvecs[:, idx]\n        \n        # Select top k components\n        top_evals = eigenvals[:self.n_components]\n        top_evecs = eigenvecs[:, :self.n_components]\n        \n        # Normalise eigenvectors: lambda_k * ||alpha_k||^2 = 1\n        for k in range(self.n_components):\n            if top_evals[k] > 1e-10:\n                top_evecs[:, k] /= np.sqrt(top_evals[k])\n                \n        self.alphas = top_evecs\n        self.lambdas = top_evals\n        \n        # Projected training coordinates\n        return K_tilde @ self.alphas\n\n# Generate non-linearly separable concentric circles\nnp.random.seed(42)\nn_per_ring = 100\n\n# Inner circle\nr_inner = np.random.normal(1.0, 0.1, n_per_ring)\ntheta_inner = np.random.uniform(0, 2 * np.pi, n_per_ring)\nX_inner = np.column_stack([r_inner * np.cos(theta_inner), r_inner * np.sin(theta_inner)])\n\n# Outer circle\nr_outer = np.random.normal(3.0, 0.1, n_per_ring)\ntheta_outer = np.random.uniform(0, 2 * np.pi, n_per_ring)\nX_outer = np.column_stack([r_outer * np.cos(theta_outer), r_outer * np.sin(theta_outer)])\n\nX = np.vstack([X_inner, X_outer])\ny = np.array([0]*n_per_ring + [1]*n_per_ring)\n\n# Fit Kernel PCA with gamma=0.5\nkpca = KernelPCA(n_components=2, gamma=0.5)\nX_kpca = kpca.fit_transform(X)\n\n# Evaluate linear separability along the 1st principal component\npc1 = X_kpca[:, 0]\n# Find optimal split threshold\nthresholds = np.linspace(np.min(pc1), np.max(pc1), 100)\nbest_acc = max(np.mean((pc1 > t) == y) for t in thresholds)\n\nprint(f\"Dataset: Concentric Circles ({X.shape[0]} samples)\")\nprint(f\"Top 2 Kernel PCA eigenvalues: {kpca.lambdas[:2].round(3)}\")\nprint(f\"Linear separability on 1st Kernel PC: {best_acc * 100:.1f}% (100% cleanly separated!)\")",
+    keyPoints: [
+      "Unfolds complex non-linear manifolds by projecting data into a high-dimensional Hilbert space where linear PCA applies.",
+      "Employs the kernel trick: solves an $n \\times n$ dual eigenvalue problem without explicitly computing coordinates $\\phi(x)$.",
+      "Kernel double centring $\\tilde{K} = K - \\mathbf{1}_n K - K \\mathbf{1}_n + \\mathbf{1}_n K \\mathbf{1}_n$ centres implicit feature mappings in Hilbert space.",
+      "Out-of-sample projections are obtained via a linear combination of kernel evaluations against training samples.",
+      "Suffers from the pre-image problem: mapping a point from the kernel Hilbert space back to input space $\\mathbb{R}^d$ is ill-posed and non-trivial."
+    ],
+    pitfalls: [
+      "Hyperparameter sensitivity: Performance depends heavily on the kernel parameter (e.g. $\\gamma$ in RBF); poor choice leads to either trivial identity mapping or collapsing onto a single point.",
+      "Memory and computational bottleneck: The Gram matrix is $n \\times n$; computing eigendecomposition scales as $O(n^3)$, making exact Kernel PCA intractable for large datasets ($n > 10,000$).",
+      "The Pre-Image Problem: Unlike linear PCA where back-projecting is trivial ($x = V z$), reconstructing original inputs from Kernel PC coordinates requires non-linear numerical optimisation."
+    ],
+    quiz: [
+      {
+        "q": "Why does standard linear PCA fail on concentric circular datasets while Kernel PCA succeeds?",
+        "o": [
+          "Linear PCA only finds orthogonal straight lines, squashing both rings together, while Kernel PCA maps rings into a Hilbert space where they separate linearly",
+          "Linear PCA requires that sample size n is smaller than feature count p",
+          "Kernel PCA requires labels while linear PCA is unsupervised",
+          "Linear PCA can only handle datasets with fewer than 50 samples"
+        ],
+        "a": 0,
+        "why": "Linear PCA is restricted to linear coordinate rotations. Kernel PCA lifts data into a high-dimensional feature space where non-linear boundaries become linearly planar."
+      },
+      {
+        "q": "What is the \"pre-image problem\" in Kernel PCA?",
+        "o": [
+          "Reconstructing an original input vector x from its low-dimensional Kernel PC projection is non-trivial because the inverse mapping from Hilbert space does not generally exist in closed form",
+          "Initialising the Gram matrix takes too much time",
+          "Finding the eigenvalues of a symmetric matrix produces complex numbers",
+          "Kernel PCA cannot project out-of-sample test points"
+        ],
+        "a": 0,
+        "why": "In linear PCA, reconstruction is x_hat = V_k z. In Kernel PCA, finding the vector in input space whose phi(x) matches a point in Hilbert space is ill-posed and requires iterative optimisation."
+      }
+    ],
+    usedBy: [],
+    prereq: [
+      "expectation-variance-and-covariance",
+      "svd-and-truncated-svd"
+    ],
+    related: [
+      "svd-and-truncated-svd",
+      "biclustering",
+      "support_vector_classifier",
+      "pls-and-principal-component-regression"
+    ],
+    keywords: "kernel pca, principal component analysis, non linear dimensionality reduction, rbf kernel, kernel trick, gram matrix, double centring, pre image problem"
+  },
 ];
