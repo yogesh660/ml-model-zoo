@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../assets/site.css?v=mvvn7bvl">
-<link rel="stylesheet" href="../../assets/learn.css?v=mvvn7bvl">
+<link rel="stylesheet" href="../../assets/site.css?v=mvvomc8n">
+<link rel="stylesheet" href="../../assets/learn.css?v=mvvomc8n">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
@@ -77,14 +77,14 @@
       </section>
       <section class="reveal" id="how">
         <h2 class="h3"><span>02</span> Step by step</h2>
-        <ol class="steps"><li>[object Object]</li><li>[object Object]</li><li>[object Object]</li><li>[object Object]</li><li>[object Object]</li></ol>
+        <ol class="steps"><li><strong>Encode text at multiple scales</strong><p>Convert a sequence into a hierarchy of discrete concept codes.</p><p>A multiscale residual VQ-VAE produces a coarse code sequence followed by residual code sequences.</p></li><li><strong>Predict the coarsest concepts</strong><p>Generate a global semantic scaffold before fine detail.</p><p>A transformer predicts the first code level using the prompt and conditioning context.</p></li><li><strong>Refine levels in parallel</strong><p>Predict all codes within each finer level together.</p><p>Conditioned on previous levels, the model predicts residual codes for the next level.</p></li><li><strong>Decode codes back into text</strong><p>Use the learned decoder to reconstruct the final sequence.</p><p>Quality depends on both the hierarchy and the reconstruction model, so speed alone is not enough.</p></li><li><strong>Evaluate the real trade-off</strong><p>Compare quality, latency, memory and controllability against baselines.</p><p>Report hardware, batch size, output length and decoding settings; NCM is an emerging alternative, not a proven universal replacement.</p></li></ol>
       </section>
       <section class="reveal" id="maths">
         <h2 class="h3"><span>03</span> The maths</h2>
         <ol class="math-steps">
-          <li><h3>Hierarchical representation</h3><div class="formula">z = (z^{(0)}, z^{(1)}, \\ldots, z^{(L)}), \\qquad x \\approx D(z)</div><p>Text $x$ is represented by discrete code levels and reconstructed by decoder $D$.</p></li>
-          <li><h3>Level-wise factorisation</h3><div class="formula">p(z \\mid c) = \\prod_{\\ell=0}^{L} p\\left(z^{(\\ell)} \\mid z^{(<\\ell)}, c\\right)</div><p>The ordered product is across levels; codes within a level can be predicted in parallel.</p></li>
-          <li><h3>Sequential-work comparison</h3><div class="formula">T_{\\text{NCM}} \\approx L T_{\\text{stage}} \\quad \\text{vs} \\quad T_{\\text{AR}} \\approx N T_{\\text{token}}</div><p>If refinement stages $L$ are fewer than output tokens $N$, sequential work may fall; actual latency also depends on hardware and memory movement.</p></li>
+          <li><h3>Hierarchical representation</h3><div class="formula">$$z = (z^{(0)}, z^{(1)}, \ldots, z^{(L)}), \qquad x \approx D(z)$$</div><p>Text $x$ is represented by discrete code levels and reconstructed by decoder $D$.</p></li>
+          <li><h3>Level-wise factorisation</h3><div class="formula">$$p(z \mid c) = \prod_{\ell=0}^{L} p\left(z^{(\ell)} \mid z^{(<\ell)}, c\right)$$</div><p>The ordered product is across levels; codes within a level can be predicted in parallel.</p></li>
+          <li><h3>Sequential-work comparison</h3><div class="formula">$$T_{\text{NCM}} \approx L T_{\text{stage}} \quad \text{vs} \quad T_{\text{AR}} \approx N T_{\text{token}}$$</div><p>If refinement stages $L$ are fewer than output tokens $N$, sequential work may fall; actual latency also depends on hardware and memory movement.</p></li>
         </ol>
       </section>
       <section class="reveal" id="takeaways">
@@ -93,12 +93,28 @@
       </section>
       <section class="reveal" id="code">
         <h2 class="h3"><span>05</span> In code</h2>
-        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="c"># Conceptual schedule, not a production NCM implementation</span>
-levels = [<span class="s">&quot;coarse&quot;</span>, <span class="s">&quot;mid&quot;</span>, <span class="s">&quot;fine&quot;</span>]
-codes = {}
-<span class="k">for</span> level <span class="k">in</span> levels:
-    codes[level] = <span class="f">predict_level</span>(level, previous_levels=codes)
-text = <span class="f">decode_hierarchy</span>(codes)</code></pre></div>
+        <div class="code"><div class="code-head"><span>python</span><button class="copy" type="button"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Copy</span></button></div><pre class="no-math"><code><span class="c"># Minimal executable sketch of the coarse-to-fine schedule.</span>
+<span class="c"># It demonstrates the control flow, not a trained NCM model.</span>
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass
+
+@<span class="f">dataclass</span>(frozen=<span class="k">True</span>)
+<span class="k">class</span> ConceptCode:
+    level: str
+    symbols: tuple[str, ...]
+
+<span class="k">def</span> <span class="f">encode_prompt</span>(prompt: str) -&gt; dict[str, ConceptCode]:
+    words = prompt.<span class="f">split</span>()
+    <span class="k">return</span> {
+        <span class="s">&quot;coarse&quot;</span>: <span class="f">ConceptCode</span>(<span class="s">&quot;coarse&quot;</span>, (<span class="s">&quot; &quot;</span>.<span class="f">join</span>(words[:<span class="n">2</span>]),)),
+        <span class="s">&quot;mid&quot;</span>: <span class="f">ConceptCode</span>(<span class="s">&quot;mid&quot;</span>, <span class="f">tuple</span>(words[<span class="n">2</span>:<span class="n">4</span>])),
+        <span class="s">&quot;fine&quot;</span>: <span class="f">ConceptCode</span>(<span class="s">&quot;fine&quot;</span>, <span class="f">tuple</span>(words[<span class="n">4</span>:])),
+    }
+
+<span class="k">def</span> <span class="f">decode_hierarchy</span>(codes: dict[str, ConceptCode]) -&gt; str:
+    <span class="k">return</span> <span class="s">&quot; &quot;</span>.<span class="f">join</span>(symbol <span class="k">for</span> code <span class="k">in</span> codes.<span class="f">values</span>() <span class="k">for</span> symbol <span class="k">in</span> code.symbols).<span class="f">strip</span>()
+
+codes = <span class="f">encode_prompt</span>(<span class="s">&quot;a small model learns useful concepts&quot;</span>)
+<span class="k">print</span>(<span class="f">decode_hierarchy</span>(codes))</code></pre></div>
         <h3 class="subhead" style="margin:34px 0 16px">Common pitfalls</h3><ul class="pitfalls"><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Calling NCM a proven replacement for LLMs: current evidence supports a promising generation schedule, not universal superiority.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Comparing wall-clock claims without reporting hardware, batch size, output length or baseline decoding settings.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Assuming parallel code prediction removes all sequential work: NCM still has an ordered refinement schedule and reconstruction pass.</span></li><li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span>Confusing concept codes with transparent reasoning traces: the hierarchy is a learned representation.</span></li></ul>
       </section>
       <section class="reveal" id="quiz">
@@ -154,11 +170,11 @@ text = <span class="f">decode_hierarchy</span>(codes)</code></pre></div>
   <span>© 2026 YOGESH AWATE</span>
 </footer>
 
-<script src="../../assets/site.js?v=mvvn7bvl" defer></script>
-<script src="../../assets/labs/core.js?v=mvvn7bvl" defer></script>
-<script src="../../assets/labs/algos.js?v=mvvn7bvl" defer></script>
-<script src="../../assets/labs/models.js?v=mvvn7bvl" defer></script>
-<script src="../../assets/labs/concepts.js?v=mvvn7bvl" defer></script>
-<script src="../../assets/learn.js?v=mvvn7bvl" defer></script>
+<script src="../../assets/site.js?v=mvvomc8n" defer></script>
+<script src="../../assets/labs/core.js?v=mvvomc8n" defer></script>
+<script src="../../assets/labs/algos.js?v=mvvomc8n" defer></script>
+<script src="../../assets/labs/models.js?v=mvvomc8n" defer></script>
+<script src="../../assets/labs/concepts.js?v=mvvomc8n" defer></script>
+<script src="../../assets/learn.js?v=mvvomc8n" defer></script>
 </body>
 </html>

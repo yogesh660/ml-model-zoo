@@ -150,6 +150,19 @@ function rich(s, rootRel) {
   return out;
 }
 
+// Lesson authors may supply either an inline/display-delimited expression or
+// raw TeX. Normalise raw TeX here so every formula reaches KaTeX consistently.
+function formula(s, rootRel) {
+  const rendered = rich(s, rootRel);
+  return /\$/.test(String(s)) ? rendered : `$$${rendered}$$`;
+}
+
+function stepHtml(step, rootRel) {
+  if (typeof step === 'string') return rich(step, rootRel);
+  if (!step || typeof step !== 'object') return '';
+  return `<strong>${rich(step.title || '', rootRel)}</strong>${step.desc ? `<p>${rich(step.desc, rootRel)}</p>` : ''}${step.detail ? `<p>${rich(step.detail, rootRel)}</p>` : ''}`;
+}
+
 function highlightPython(code) {
   const re = /(#[^\n]*)|("""[\s\S]*?"""|f?"(?:[^"\\\n]|\\.)*"|f?'(?:[^'\\\n]|\\.)*')|\b(import|from|as|def|return|for|in|if|else|elif|while|class|with|lambda|None|True|False|and|or|not|print|range|len|super|self)\b|\b(\d+\.?\d*(?:e-?\d+)?)\b|\b([A-Za-z_]\w*)(?=\()/g;
   let out = '', last = 0, m;
@@ -518,7 +531,7 @@ function lessonPage(l) {
         ${(l.intuition || []).map(p => `<p>${R(p)}</p>`).join('\n        ')}
         ${l.analogy ? `<div class="analogy"><small class="kicker">In everyday terms</small><p>${R(l.analogy)}</p></div>` : ''}`);
   add('how', isModel ? 'How it works' : 'Step by step', `
-        <ol class="steps">${(l.steps || []).map(s => `<li>${R(s)}</li>`).join('')}</ol>`);
+        <ol class="steps">${(l.steps || []).map(s => `<li>${stepHtml(s, rootRel)}</li>`).join('')}</ol>`);
   if (l.architecture) add('arch', 'The architecture', `
         <p>${R(l.archIntro || 'Hover over any part (or tap it on a phone) to see what it does.')}</p>
         <div class="arch" data-architecture="${l.architecture}" style="margin-top:18px"><noscript><p class="lab-noscript">The diagram needs JavaScript.</p></noscript></div>`);
@@ -531,7 +544,7 @@ function lessonPage(l) {
         ${l.tryThis && l.tryThis.length ? `<div class="try"><small class="kicker">Things to try</small><ol>${l.tryThis.map(t => `<li>${R(t)}</li>`).join('')}</ol></div>` : ''}`);
   add('maths', 'The maths', `
         <ol class="math-steps">${(l.math || []).map(m => `
-          <li><h3>${R(m.h)}</h3><div class="formula">${R(m.tex)}</div><p>${R(m.p)}</p></li>`).join('')}
+          <li><h3>${R(m.h)}</h3><div class="formula">${formula(m.tex, rootRel)}</div><p>${R(m.p)}</p></li>`).join('')}
         </ol>`);
   if (isModel) {
     add('tuning', 'Hyperparameters', `

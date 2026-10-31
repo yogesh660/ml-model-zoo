@@ -5496,9 +5496,9 @@ print(f"  F1-Score:  {bs_f1:.4f}")
       { title: r`Evaluate the real trade-off`, desc: r`Compare quality, latency, memory and controllability against baselines.`, detail: r`Report hardware, batch size, output length and decoding settings; NCM is an emerging alternative, not a proven universal replacement.` },
     ],
     math: [
-      { h: r`Hierarchical representation`, tex: r`z = (z^{(0)}, z^{(1)}, \\ldots, z^{(L)}), \\qquad x \\approx D(z)`, p: r`Text $x$ is represented by discrete code levels and reconstructed by decoder $D$.` },
-      { h: r`Level-wise factorisation`, tex: r`p(z \\mid c) = \\prod_{\\ell=0}^{L} p\\left(z^{(\\ell)} \\mid z^{(<\\ell)}, c\\right)`, p: r`The ordered product is across levels; codes within a level can be predicted in parallel.` },
-      { h: r`Sequential-work comparison`, tex: r`T_{\\text{NCM}} \\approx L T_{\\text{stage}} \\quad \\text{vs} \\quad T_{\\text{AR}} \\approx N T_{\\text{token}}`, p: r`If refinement stages $L$ are fewer than output tokens $N$, sequential work may fall; actual latency also depends on hardware and memory movement.` },
+      { h: r`Hierarchical representation`, tex: r`z = (z^{(0)}, z^{(1)}, \ldots, z^{(L)}), \qquad x \approx D(z)`, p: r`Text $x$ is represented by discrete code levels and reconstructed by decoder $D$.` },
+      { h: r`Level-wise factorisation`, tex: r`p(z \mid c) = \prod_{\ell=0}^{L} p\left(z^{(\ell)} \mid z^{(<\ell)}, c\right)`, p: r`The ordered product is across levels; codes within a level can be predicted in parallel.` },
+      { h: r`Sequential-work comparison`, tex: r`T_{\text{NCM}} \approx L T_{\text{stage}} \quad \text{vs} \quad T_{\text{AR}} \approx N T_{\text{token}}`, p: r`If refinement stages $L$ are fewer than output tokens $N$, sequential work may fall; actual latency also depends on hardware and memory movement.` },
     ],
     keyPoints: [
       r`NCM means Next-Concept Modeling: a coarse-to-fine language-modeling framework, not a claim that LLMs are obsolete.`,
@@ -5517,12 +5517,28 @@ print(f"  F1-Score:  {bs_f1:.4f}")
       r`Assuming parallel code prediction removes all sequential work: NCM still has an ordered refinement schedule and reconstruction pass.`,
       r`Confusing concept codes with transparent reasoning traces: the hierarchy is a learned representation.`,
     ],
-    code: r`# Conceptual schedule, not a production NCM implementation
-levels = ["coarse", "mid", "fine"]
-codes = {}
-for level in levels:
-    codes[level] = predict_level(level, previous_levels=codes)
-text = decode_hierarchy(codes)`,
+    code: r`# Minimal executable sketch of the coarse-to-fine schedule.
+# It demonstrates the control flow, not a trained NCM model.
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class ConceptCode:
+    level: str
+    symbols: tuple[str, ...]
+
+def encode_prompt(prompt: str) -> dict[str, ConceptCode]:
+    words = prompt.split()
+    return {
+        "coarse": ConceptCode("coarse", (" ".join(words[:2]),)),
+        "mid": ConceptCode("mid", tuple(words[2:4])),
+        "fine": ConceptCode("fine", tuple(words[4:])),
+    }
+
+def decode_hierarchy(codes: dict[str, ConceptCode]) -> str:
+    return " ".join(symbol for code in codes.values() for symbol in code.symbols).strip()
+
+codes = encode_prompt("a small model learns useful concepts")
+print(decode_hierarchy(codes))`,
     quiz: [
       { q: r`What is the main difference between NCM and ordinary autoregressive decoding?`, o: ["NCM predicts one token at a time", "NCM predicts a hierarchy of concept codes and refines levels in parallel", "NCM removes the text decoder", "NCM only works for images"], a: 1, why: r`NCM changes the representation and schedule: it predicts coarse-to-fine code levels, with parallel work inside each level.` },
       { q: r`Why is “NCM replaces LLMs” too strong?`, o: ["NCM cannot represent text", "NCM is emerging and needs task-specific quality and systems evaluation", "LLMs never generate sequentially", "NCM has no learned parameters"], a: 1, why: r`NCM is promising, but its quality, memory and deployment trade-offs remain open.` },
