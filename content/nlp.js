@@ -5470,4 +5470,66 @@ print(f"  F1-Score:  {bs_f1:.4f}")
     ],
     "keywords": "bias and fairness in nlp, bias and fairness in nlp: demographic disparities, toxicity, and mitigation strategies, natural language processing, deep learning"
   },
+  {
+    id: 'next-concept-modelling-ncm',
+    short: 'Next-Concept Modeling',
+    title: 'Next-Concept Modelling (NCM): beyond next-token prediction',
+    task: 'concepts',
+    module: 'Language models',
+    level: 3,
+    minutes: 18,
+    noLab: true,
+    summary: r`Next-Concept Modeling (NCM) is an emerging coarse-to-fine approach to text generation. Instead of predicting one token after another, an NCM system predicts a hierarchy of discrete concept codes, then refines those codes in parallel into text. It is a promising research direction for reducing sequential decoding, but it is not yet a drop-in replacement for large language models (LLMs).`,
+    lead: r`Autoregressive language models repeatedly run a decoder to choose the next token. NCM changes the unit of prediction: a multiscale encoder represents text as coarse and fine codes, and a transformer predicts one level at a time, with all codes within that level generated in parallel.`,
+    intuition: [
+      r`A sentence has broad meaning, phrase-level structure and word-level detail. NCM represents those scales explicitly instead of forcing one token stream to learn every scale at once.`,
+      r`Coarse-to-fine decoding trades one long chain for a short sequence of refinement stages. Positions inside a stage can be predicted together, creating an opportunity for lower latency on long outputs.`,
+      r`The hierarchy is learned: a multiscale residual vector-quantised autoencoder maps text into discrete codes, with finer levels carrying residual detail.`,
+      r`NCM still uses transformer components and a text decoder. The distinction is the representation and generation schedule, not the disappearance of language modelling.`,
+    ],
+    analogy: r`Imagine drafting a map. An autoregressive model draws one street segment at a time. NCM sketches the city outline, then districts, then streets; all streets in one district can be refined together.`,
+    steps: [
+      { title: r`Encode text at multiple scales`, desc: r`Convert a sequence into a hierarchy of discrete concept codes.`, detail: r`A multiscale residual VQ-VAE produces a coarse code sequence followed by residual code sequences.` },
+      { title: r`Predict the coarsest concepts`, desc: r`Generate a global semantic scaffold before fine detail.`, detail: r`A transformer predicts the first code level using the prompt and conditioning context.` },
+      { title: r`Refine levels in parallel`, desc: r`Predict all codes within each finer level together.`, detail: r`Conditioned on previous levels, the model predicts residual codes for the next level.` },
+      { title: r`Decode codes back into text`, desc: r`Use the learned decoder to reconstruct the final sequence.`, detail: r`Quality depends on both the hierarchy and the reconstruction model, so speed alone is not enough.` },
+      { title: r`Evaluate the real trade-off`, desc: r`Compare quality, latency, memory and controllability against baselines.`, detail: r`Report hardware, batch size, output length and decoding settings; NCM is an emerging alternative, not a proven universal replacement.` },
+    ],
+    math: [
+      { h: r`Hierarchical representation`, tex: r`z = (z^{(0)}, z^{(1)}, \\ldots, z^{(L)}), \\qquad x \\approx D(z)`, p: r`Text $x$ is represented by discrete code levels and reconstructed by decoder $D$.` },
+      { h: r`Level-wise factorisation`, tex: r`p(z \\mid c) = \\prod_{\\ell=0}^{L} p\\left(z^{(\\ell)} \\mid z^{(<\\ell)}, c\\right)`, p: r`The ordered product is across levels; codes within a level can be predicted in parallel.` },
+      { h: r`Sequential-work comparison`, tex: r`T_{\\text{NCM}} \\approx L T_{\\text{stage}} \\quad \\text{vs} \\quad T_{\\text{AR}} \\approx N T_{\\text{token}}`, p: r`If refinement stages $L$ are fewer than output tokens $N$, sequential work may fall; actual latency also depends on hardware and memory movement.` },
+    ],
+    keyPoints: [
+      r`NCM means Next-Concept Modeling: a coarse-to-fine language-modeling framework, not a claim that LLMs are obsolete.`,
+      r`A multiscale residual VQ-VAE supplies discrete concept-code levels; a transformer predicts one level at a time.`,
+      r`Codes within a level can be generated in parallel, reducing sequential dependency on output length.`,
+      r`Quality, reconstruction fidelity, memory use and hardware utilisation must be measured alongside speed.`,
+    ],
+    usedBy: [
+      'transformer_networks',
+      'decoding-greedy-beam-top-k-top-p',
+      'evaluating-llms-benchmarks-and-judges',
+    ],
+    pitfalls: [
+      r`Calling NCM a proven replacement for LLMs: current evidence supports a promising generation schedule, not universal superiority.`,
+      r`Comparing wall-clock claims without reporting hardware, batch size, output length or baseline decoding settings.`,
+      r`Assuming parallel code prediction removes all sequential work: NCM still has an ordered refinement schedule and reconstruction pass.`,
+      r`Confusing concept codes with transparent reasoning traces: the hierarchy is a learned representation.`,
+    ],
+    code: r`# Conceptual schedule, not a production NCM implementation
+levels = ["coarse", "mid", "fine"]
+codes = {}
+for level in levels:
+    codes[level] = predict_level(level, previous_levels=codes)
+text = decode_hierarchy(codes)`,
+    quiz: [
+      { q: r`What is the main difference between NCM and ordinary autoregressive decoding?`, o: ["NCM predicts one token at a time", "NCM predicts a hierarchy of concept codes and refines levels in parallel", "NCM removes the text decoder", "NCM only works for images"], a: 1, why: r`NCM changes the representation and schedule: it predicts coarse-to-fine code levels, with parallel work inside each level.` },
+      { q: r`Why is “NCM replaces LLMs” too strong?`, o: ["NCM cannot represent text", "NCM is emerging and needs task-specific quality and systems evaluation", "LLMs never generate sequentially", "NCM has no learned parameters"], a: 1, why: r`NCM is promising, but its quality, memory and deployment trade-offs remain open.` },
+      { q: r`What does a residual code level contribute?`, o: ["Detail not already represented by coarser levels", "It deletes the prompt", "It guarantees factuality", "It replaces evaluation"], a: 0, why: r`Residual levels add information needed to reconstruct finer-grained text.` },
+    ],
+    related: ['transformer_networks', 'sequence-to-sequence-with-attention', 'decoding-greedy-beam-top-k-top-p', 'evaluating-llms-benchmarks-and-judges'],
+    prereq: ['transformer_networks'],
+    keywords: 'next-concept modeling, NCM, coarse-to-fine generation, parallel text generation, language models, autoregressive decoding',
+  },
 ];
